@@ -13,7 +13,7 @@ const transactionTypeValues = Object.values(TransactionType) as [
 
 const moneySchema = z.coerce.number().finite().positive();
 
-export const createTransactionSchema = z.object({
+const createTransactionBaseSchema = z.object({
   householdId: z.string().min(1),
   accountId: z.string().min(1),
   transferAccountId: z.string().min(1).optional(),
@@ -31,14 +31,46 @@ export const createTransactionSchema = z.object({
   occurredAt: z.coerce.date(),
 });
 
-export const updateTransactionSchema = createTransactionSchema.partial().extend({
-  householdId: z.string().min(1),
-  transferAccountId: z.string().min(1).nullable().optional(),
-  categoryId: z.string().min(1).nullable().optional(),
-  goalId: z.string().min(1).nullable().optional(),
-  debtId: z.string().min(1).nullable().optional(),
-  investmentTransactionId: z.string().min(1).nullable().optional(),
+export const createTransactionSchema = createTransactionBaseSchema.superRefine((data, ctx) => {
+  if (data.type === TransactionType.TRANSFER && !data.transferAccountId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "transferAccountId es requerido para transferencias",
+      path: ["transferAccountId"],
+    });
+  }
+  if (data.transferAccountId && data.accountId === data.transferAccountId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "La cuenta destino no puede ser igual a la cuenta origen",
+      path: ["transferAccountId"],
+    });
+  }
 });
+
+export const updateTransactionSchema = createTransactionBaseSchema
+  .partial()
+  .extend({
+    householdId: z.string().min(1),
+    transferAccountId: z.string().min(1).nullable().optional(),
+    categoryId: z.string().min(1).nullable().optional(),
+    goalId: z.string().min(1).nullable().optional(),
+    debtId: z.string().min(1).nullable().optional(),
+    investmentTransactionId: z.string().min(1).nullable().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.transferAccountId &&
+      data.accountId &&
+      data.accountId === data.transferAccountId
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "La cuenta destino no puede ser igual a la cuenta origen",
+        path: ["transferAccountId"],
+      });
+    }
+  });
 
 export const listTransactionsSchema = z
   .object({
