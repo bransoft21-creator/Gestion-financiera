@@ -1,4 +1,4 @@
-import { BudgetPeriod, CategoryType, TransactionType } from "@prisma/client";
+import { BudgetPeriod, CategoryType, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { ForbiddenError, NotFoundError } from "../api/errors";
 import type {
@@ -7,6 +7,11 @@ import type {
   UpdateBudgetInput,
 } from "../schemas/budgets";
 import { assertHouseholdAccess } from "./households";
+
+const activeTransactionWhere = {
+  deletedAt: null,
+  status: { not: TransactionStatus.CANCELED },
+} satisfies Prisma.TransactionWhereInput;
 
 export async function listBudgets(userProfileId: string, input: BudgetPeriodInput) {
   const period = resolvePeriod(input.year, input.month);
@@ -41,7 +46,7 @@ export async function listBudgets(userProfileId: string, input: BudgetPeriodInpu
 
   return budgets.map((budget) => {
     const spentAmount = spendingByCategory.get(budget.categoryId) ?? 0;
-    const plannedAmount = Number(budget.plannedAmount);
+    const plannedAmount = toFiniteNumber(budget.plannedAmount);
     const usagePercent = plannedAmount > 0 ? (spentAmount / plannedAmount) * 100 : 0;
 
     return {
@@ -52,8 +57,8 @@ export async function listBudgets(userProfileId: string, input: BudgetPeriodInpu
       year: budget.year,
       month: budget.month,
       plannedAmount,
-      reservedAmount: Number(budget.reservedAmount),
-      alertThreshold: budget.alertThreshold ? Number(budget.alertThreshold) : null,
+      reservedAmount: toFiniteNumber(budget.reservedAmount),
+      alertThreshold: budget.alertThreshold ? toFiniteNumber(budget.alertThreshold) : null,
       spentAmount,
       usagePercent,
       category: budget.category,
@@ -168,7 +173,7 @@ async function getRealSpendingByCategory(householdId: string, year: number, mont
     where: {
       householdId,
       type: TransactionType.EXPENSE,
-      deletedAt: null,
+      ...activeTransactionWhere,
       categoryId: {
         not: null,
       },
@@ -190,7 +195,7 @@ async function getRealSpendingByCategory(householdId: string, year: number, mont
 
     totals.set(
       transaction.categoryId,
-      (totals.get(transaction.categoryId) ?? 0) + Number(transaction.amount),
+      (totals.get(transaction.categoryId) ?? 0) + toFiniteNumber(transaction.amount),
     );
 
     return totals;
@@ -204,4 +209,9 @@ function resolvePeriod(year?: number, month?: number) {
     year: year ?? now.getFullYear(),
     month: month ?? now.getMonth() + 1,
   };
+}
+
+function toFiniteNumber(value: Prisma.Decimal | number) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : 0;
 }

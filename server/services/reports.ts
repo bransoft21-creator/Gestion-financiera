@@ -1,7 +1,14 @@
-import { TransactionType } from "@prisma/client";
+import { Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import type { MonthlyReportInput } from "../schemas/reports";
 import { assertHouseholdAccess } from "./households";
+
+const ARGENTINA_TIME_ZONE = "America/Argentina/Buenos_Aires";
+const ARGENTINA_UTC_OFFSET_HOURS = 3;
+const activeTransactionWhere = {
+  deletedAt: null,
+  status: { not: TransactionStatus.CANCELED },
+} satisfies Prisma.TransactionWhereInput;
 
 export async function getMonthlyReport(userProfileId: string, input: MonthlyReportInput) {
   await assertHouseholdAccess(userProfileId, input.householdId);
@@ -15,7 +22,7 @@ export async function getMonthlyReport(userProfileId: string, input: MonthlyRepo
     prisma.transaction.findMany({
       where: {
         householdId: input.householdId,
-        deletedAt: null,
+        ...activeTransactionWhere,
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
         occurredAt: { gte: rangeStart, lt: rangeEnd },
       },
@@ -24,7 +31,7 @@ export async function getMonthlyReport(userProfileId: string, input: MonthlyRepo
     prisma.transaction.findMany({
       where: {
         householdId: input.householdId,
-        deletedAt: null,
+        ...activeTransactionWhere,
         type: TransactionType.EXPENSE,
         categoryId: { not: null },
         occurredAt: {
@@ -43,14 +50,15 @@ export async function getMonthlyReport(userProfileId: string, input: MonthlyRepo
 
     const income = slice
       .filter((t) => t.type === TransactionType.INCOME)
-      .reduce((s, t) => s + Number(t.amount), 0);
+      .reduce((s, t) => s + toFiniteNumber(t.amount), 0);
 
     const expenses = slice
       .filter((t) => t.type === TransactionType.EXPENSE)
-      .reduce((s, t) => s + Number(t.amount), 0);
+      .reduce((s, t) => s + toFiniteNumber(t.amount), 0);
 
-    const savings = Math.max(income - expenses, 0);
-    const savingsRate = income > 0 ? Math.round((savings / income) * 100) : 0;
+    const balance = income - expenses;
+    const savings = Math.max(balance, 0);
+    const savingsRate = income > 0 ? Math.round((Math.max(balance, 0) / income) * 100) : 0;
 
     return { label, year, month, income, expenses, savings, savingsRate };
   });
@@ -60,7 +68,7 @@ export async function getMonthlyReport(userProfileId: string, input: MonthlyRepo
 
   for (const t of categoryTransactions) {
     if (!t.categoryId || !t.category) continue;
-    const amount = Number(t.amount);
+    const amount = toFiniteNumber(t.amount);
     totalExpenses += amount;
     const existing = categoryTotals.get(t.categoryId);
     categoryTotals.set(t.categoryId, {
@@ -86,12 +94,44 @@ export async function getMonthlyReport(userProfileId: string, input: MonthlyRepo
 
 function buildMonthSlots(now: Date, months: number) {
   const slots = [];
+  const currentPeriod = getArgentinaPeriod(now);
+
   for (let i = months - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const start = new Date(d.getFullYear(), d.getMonth(), 1);
-    const end = new Date(d.getFullYear(), d.getMonth() + 1, 1);
-    const label = new Intl.DateTimeFormat("es-AR", { month: "short", year: "2-digit" }).format(d);
-    slots.push({ label, year: d.getFullYear(), month: d.getMonth() + 1, start, end });
+    const monthIndex = currentPeriod.year * 12 + currentPeriod.month - 1 - i;
+    const year = Math.floor(monthIndex / 12);
+    const month = monthIndex - year * 12;
+    const start = argentinaMonthStartUtc(year, month);
+    const end = argentinaMonthStartUtc(year, month + 1);
+    const label = new Intl.DateTimeFormat("es-AR", {
+      month: "short",
+      year: "2-digit",
+      timeZone: ARGENTINA_TIME_ZONE,
+    }).format(start);
+
+    slots.push({ label, year, month: month + 1, start, end });
   }
+
   return slots;
+}
+
+function getArgentinaPeriod(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "numeric",
+    timeZone: ARGENTINA_TIME_ZONE,
+  }).formatToParts(date);
+
+  return {
+    year: Number(parts.find((part) => part.type === "year")?.value),
+    month: Number(parts.find((part) => part.type === "month")?.value),
+  };
+}
+
+function argentinaMonthStartUtc(year: number, month: number) {
+  return new Date(Date.UTC(year, month, 1, ARGENTINA_UTC_OFFSET_HOURS));
+}
+
+function toFiniteNumber(value: Prisma.Decimal | number) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : 0;
 }

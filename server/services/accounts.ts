@@ -13,9 +13,9 @@ function serializeAccount(account: AccountRecord) {
     name: account.name,
     type: account.type,
     currency: account.currency,
-    openingBalance: Number(account.openingBalance),
-    currentBalance: Number(account.currentBalance),
-    creditLimit: account.creditLimit ? Number(account.creditLimit) : null,
+    openingBalance: toFiniteNumber(account.openingBalance),
+    currentBalance: toFiniteNumber(account.currentBalance),
+    creditLimit: account.creditLimit ? toFiniteNumber(account.creditLimit) : null,
     isArchived: account.isArchived,
     createdAt: account.createdAt.toISOString(),
     updatedAt: account.updatedAt.toISOString(),
@@ -26,11 +26,16 @@ function computeNetWorth(accounts: AccountRecord[]) {
   const active = accounts.filter((a) => !a.isArchived && !a.deletedAt);
   const assets = active
     .filter((a) => a.type !== AccountType.CREDIT_CARD)
-    .reduce((sum, a) => sum + Number(a.currentBalance), 0);
+    .reduce((sum, a) => sum + toFiniteNumber(a.currentBalance), 0);
   const liabilities = active
     .filter((a) => a.type === AccountType.CREDIT_CARD)
-    .reduce((sum, a) => sum + Number(a.currentBalance), 0);
+    .reduce((sum, a) => sum + toFiniteNumber(a.currentBalance), 0);
   return { assets, liabilities, netWorth: assets - liabilities };
+}
+
+function toFiniteNumber(value: Prisma.Decimal | number) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : 0;
 }
 
 export async function listAccounts(userProfileId: string, input: ListAccountsInput) {

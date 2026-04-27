@@ -16,7 +16,6 @@ import {
   X,
 } from "lucide-react";
 import { z } from "zod";
-import { EmptyState } from "@/components/app/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -161,11 +160,12 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
     return transactions.filter((t) => t.description?.toLowerCase().includes(q));
   }, [transactions, search]);
 
+  const groupedTransactions = useMemo(() => {
+    return groupTransactionsByDate(displayedTransactions);
+  }, [displayedTransactions]);
+
   const totalAmount = useMemo(() => {
-    return displayedTransactions.reduce((sum, t) => {
-      const n = Number(t.amount);
-      return t.type === "INCOME" ? sum + n : sum - n;
-    }, 0);
+    return displayedTransactions.reduce((sum, transaction) => sum + getSignedAmount(transaction), 0);
   }, [displayedTransactions]);
 
   useEffect(() => {
@@ -607,25 +607,50 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                 Cargando transacciones
               </div>
             ) : displayedTransactions.length === 0 ? (
-              <EmptyState
-                icon={ReceiptText}
-                title={search ? "Sin resultados" : "Sin transacciones"}
-                description={
-                  search
+              <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-secondary/20 p-8 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-muted-foreground shadow-sm">
+                  <ReceiptText className="h-6 w-6" aria-hidden="true" />
+                </div>
+                <h2 className="mt-4 text-lg font-semibold">{search ? "Sin resultados" : "Sin transacciones"}</h2>
+                <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                  {search
                     ? "Ningún movimiento coincide con la búsqueda."
-                    : "Creá el primer movimiento o ajustá los filtros para ver otros resultados."
-                }
-              />
+                    : "Creá el primer movimiento o ajustá los filtros para ver otros resultados."}
+                </p>
+                {!search ? (
+                  <Button
+                    type="button"
+                    className="mt-5"
+                    onClick={() => {
+                      resetForm();
+                      setIsFormOpen(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                    Agregar primera transacción
+                  </Button>
+                ) : null}
+              </div>
             ) : (
-              <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
-                {displayedTransactions.map((transaction) => (
-                  <TransactionRow
-                    key={transaction.id}
-                    transaction={transaction}
-                    isDeleting={deletingTransactionId === transaction.id}
-                    onEdit={startEditing}
-                    onDelete={handleDelete}
-                  />
+              <div className="space-y-6">
+                {groupedTransactions.map((group) => (
+                  <section key={group.label} className="space-y-3">
+                    <div className="sticky top-2 z-10 flex items-center justify-between rounded-full border border-border bg-background/90 px-3 py-2 text-xs font-semibold uppercase tracking-normal text-muted-foreground shadow-sm backdrop-blur">
+                      <span>{group.label}</span>
+                      <span>{group.transactions.length}</span>
+                    </div>
+                    <div className="space-y-3">
+                      {group.transactions.map((transaction) => (
+                        <TransactionCard
+                          key={transaction.id}
+                          transaction={transaction}
+                          isDeleting={deletingTransactionId === transaction.id}
+                          onEdit={startEditing}
+                          onDelete={handleDelete}
+                        />
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             )}
@@ -666,7 +691,7 @@ function Field({
   );
 }
 
-function TransactionRow({
+function TransactionCard({
   transaction,
   isDeleting,
   onEdit,
@@ -678,58 +703,171 @@ function TransactionRow({
   onDelete: (transactionId: string) => void;
 }) {
   const Icon = transactionIcons[transaction.type];
-  const isPositive = transaction.type === "INCOME";
+  const tone = getTransactionTone(transaction.type);
+  const signedAmount = getSignedAmount(transaction);
 
   return (
-    <div className="grid gap-3 bg-card p-4 xl:grid-cols-[1fr_auto_auto] xl:items-center">
-      <div className="flex min-w-0 gap-3">
+    <article
+      className="group cursor-pointer rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md active:scale-[0.99]"
+      role="button"
+      tabIndex={0}
+      onClick={() => onEdit(transaction)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onEdit(transaction);
+        }
+      }}
+    >
+      <div className="flex items-start gap-3">
         <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-            isPositive ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
-          }`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${tone.icon}`}
         >
           <Icon className="h-5 w-5" aria-hidden="true" />
         </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{transaction.description ?? "Sin descripción"}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{transaction.description ?? "Sin descripción"}</p>
+              <p className="mt-1 truncate text-xs text-muted-foreground">
+                {transaction.category?.name ?? "Sin categoría"} · {transaction.account.name}
+              </p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className={`text-base font-bold leading-none ${tone.amount}`}>
+                {signedAmount > 0 ? "+" : signedAmount < 0 ? "-" : ""}
+                {formatMoney(Math.abs(signedAmount), transaction.currency)}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{transaction.currency}</p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <Badge className={`border-0 ${tone.badge}`}>{transactionTypeLabels[transaction.type]}</Badge>
+            <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-xs text-muted-foreground">
               <CalendarDays className="h-3 w-3" aria-hidden="true" />
               {formatDate(transaction.occurredAt)}
             </span>
-            <span>{transaction.account.name}</span>
-            {transaction.category ? <span>{transaction.category.name}</span> : <span>Sin categoría</span>}
           </div>
         </div>
       </div>
-      <div className="text-left sm:text-right">
-        <p className={`text-sm font-semibold ${isPositive ? "text-emerald-400" : "text-rose-400"}`}>
-          {isPositive ? "+" : "-"} {formatMoney(transaction.amount, transaction.currency)}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">{transactionTypeLabels[transaction.type]}</p>
-      </div>
-      <div className="flex gap-2 xl:justify-end">
-        <Button type="button" variant="outline" size="sm" onClick={() => onEdit(transaction)}>
+
+      <div className="mt-4 grid grid-cols-[1fr_auto] gap-2 border-t border-border pt-3">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="justify-start text-muted-foreground"
+          onClick={(event) => {
+            event.stopPropagation();
+            onEdit(transaction);
+          }}
+        >
           <Pencil className="h-4 w-4" aria-hidden="true" />
-          Editar
+          Ver / editar
         </Button>
         <Button
           type="button"
-          variant="destructive"
-          size="sm"
-          onClick={() => onDelete(transaction.id)}
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete(transaction.id);
+          }}
           disabled={isDeleting}
+          aria-label="Eliminar transacción"
         >
           {isDeleting ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
             <Trash2 className="h-4 w-4" aria-hidden="true" />
           )}
-          Eliminar
         </Button>
       </div>
-    </div>
+    </article>
   );
+}
+
+function groupTransactionsByDate(transactions: TransactionItem[]) {
+  const groups = new Map<string, TransactionItem[]>();
+
+  transactions.forEach((transaction) => {
+    const label = getDateGroupLabel(transaction.occurredAt);
+    groups.set(label, [...(groups.get(label) ?? []), transaction]);
+  });
+
+  return Array.from(groups.entries()).map(([label, items]) => ({
+    label,
+    transactions: items,
+  }));
+}
+
+function getDateGroupLabel(value: string) {
+  const date = startOfDay(new Date(value));
+  const today = startOfDay(new Date());
+  const yesterday = addDays(today, -1);
+
+  if (date.getTime() === today.getTime()) return "Hoy";
+  if (date.getTime() === yesterday.getTime()) return "Ayer";
+  if (date >= startOfWeek(today) && date < yesterday) return "Esta semana";
+
+  return new Intl.DateTimeFormat("es-AR", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function startOfDay(date: Date) {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function startOfWeek(date: Date) {
+  const next = startOfDay(date);
+  const day = next.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  next.setDate(next.getDate() + diff);
+  return next;
+}
+
+function getTransactionTone(type: TransactionType) {
+  if (type === "INCOME") {
+    return {
+      icon: "bg-emerald-500/15 text-emerald-500",
+      amount: "text-emerald-500",
+      badge: "bg-emerald-500/10 text-emerald-500",
+    };
+  }
+
+  if (type === "TRANSFER") {
+    return {
+      icon: "bg-sky-500/15 text-sky-500",
+      amount: "text-sky-500",
+      badge: "bg-sky-500/10 text-sky-500",
+    };
+  }
+
+  return {
+    icon: "bg-rose-500/15 text-rose-500",
+    amount: "text-rose-500",
+    badge: "bg-rose-500/10 text-rose-500",
+  };
+}
+
+function getSignedAmount(transaction: TransactionItem) {
+  const amount = Number(transaction.amount);
+  if (!Number.isFinite(amount)) return 0;
+  if (transaction.type === "INCOME") return amount;
+  if (transaction.type === "TRANSFER") return 0;
+  return -amount;
 }
 
 function isCategoryAllowedForType(categoryType: CategoryType, transactionType: TransactionType) {
@@ -756,7 +894,7 @@ function isCategoryAllowedForType(categoryType: CategoryType, transactionType: T
   return categoryType === "TRANSFER" || categoryType === "ADJUSTMENT";
 }
 
-function formatMoney(value: string, currency: CurrencyCode) {
+function formatMoney(value: string | number, currency: CurrencyCode) {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency,

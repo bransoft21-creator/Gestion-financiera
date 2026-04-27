@@ -1,8 +1,12 @@
-import { DebtStatus, Prisma, TransactionType } from "@prisma/client";
+import { DebtStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { assertHouseholdAccess } from "./households";
 
 const chartColors = ["#f97316", "#ef4444", "#06b6d4", "#eab308", "#8b5cf6", "#14b8a6"];
+const activeTransactionWhere = {
+  deletedAt: null,
+  status: { not: TransactionStatus.CANCELED },
+} satisfies Prisma.TransactionWhereInput;
 
 const dashboardTransactionInclude = {
   account: {
@@ -39,7 +43,7 @@ export async function getDashboardSummary(
     prisma.transaction.findMany({
       where: {
         householdId,
-        deletedAt: null,
+        ...activeTransactionWhere,
         occurredAt: { gte: monthStart, lt: nextMonthStart },
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
       },
@@ -49,7 +53,7 @@ export async function getDashboardSummary(
     prisma.transaction.findMany({
       where: {
         householdId,
-        deletedAt: null,
+        ...activeTransactionWhere,
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
       },
       include: dashboardTransactionInclude,
@@ -70,12 +74,12 @@ export async function getDashboardSummary(
   const expenses = sumTransactionsByType(monthTransactions, TransactionType.EXPENSE);
   const balance = income - expenses;
   const estimatedSavings = Math.max(balance, 0);
-  const savingsRate = income > 0 ? Math.round((estimatedSavings / income) * 100) : 0;
+  const savingsRate = income > 0 ? Math.round((Math.max(balance, 0) / income) * 100) : 0;
   const expensesByCategory = getExpensesByCategory(monthTransactions);
   const expensesByCategoryId = getExpenseTotalsByCategoryId(monthTransactions);
   const budgetMetrics = getBudgetMetrics(budgets, expensesByCategoryId);
   const available = balance - budgetMetrics.remainingReserved;
-  const totalOutstandingDebt = Number(debtAggregate._sum.outstandingAmount ?? 0);
+  const totalOutstandingDebt = toFiniteNumber(debtAggregate._sum.outstandingAmount ?? 0);
 
   return {
     period: {
@@ -101,7 +105,7 @@ export async function getDashboardSummary(
       id: transaction.id,
       type: transaction.type,
       currency: transaction.currency,
-      amount: Number(transaction.amount),
+      amount: toFiniteNumber(transaction.amount),
       description: transaction.description,
       occurredAt: transaction.occurredAt.toISOString(),
       account: transaction.account,
@@ -128,7 +132,7 @@ function getExpenseTotalsByCategoryId(transactions: DashboardTransaction[]) {
 
     totals.set(
       transaction.category.id,
-      (totals.get(transaction.category.id) ?? 0) + Number(transaction.amount),
+      (totals.get(transaction.category.id) ?? 0) + toFiniteNumber(transaction.amount),
     );
 
     return totals;
@@ -141,7 +145,7 @@ function getBudgetMetrics(
 ) {
   return budgets.reduce(
     (totals, budget) => {
-      const plannedAmount = Number(budget.plannedAmount);
+      const plannedAmount = toFiniteNumber(budget.plannedAmount);
       const spentAmount = expensesByCategoryId.get(budget.categoryId) ?? 0;
 
       return {
@@ -164,7 +168,7 @@ function sumTransactionsByType(transactions: DashboardTransaction[], type: Trans
       return total;
     }
 
-    return total + Number(transaction.amount);
+    return total + toFiniteNumber(transaction.amount);
   }, 0);
 }
 
@@ -178,7 +182,7 @@ function getExpensesByCategory(transactions: DashboardTransaction[]) {
 
     const key = transaction.category?.id ?? "uncategorized";
     const existing = totals.get(key);
-    const nextValue = (existing?.value ?? 0) + Number(transaction.amount);
+    const nextValue = (existing?.value ?? 0) + toFiniteNumber(transaction.amount);
 
     totals.set(key, {
       name: transaction.category?.name ?? "Sin categoría",
@@ -241,4 +245,9 @@ function buildAlerts({
   }
 
   return alerts.slice(0, 4);
+}
+
+function toFiniteNumber(value: Prisma.Decimal | number) {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : 0;
 }
