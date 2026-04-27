@@ -1,0 +1,499 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CurrencyCode {
+  ARS
+  USD
+}
+
+enum HouseholdRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum HouseholdMemberStatus {
+  INVITED
+  ACTIVE
+  REMOVED
+}
+
+enum AccountType {
+  CASH
+  BANK
+  CREDIT_CARD
+  DIGITAL_WALLET
+  SAVINGS
+  OTHER
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  DEBT
+  GOAL
+  INVESTMENT
+  ADJUSTMENT
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  ADJUSTMENT
+  DEBT_PAYMENT
+  GOAL_CONTRIBUTION
+  INVESTMENT
+}
+
+enum TransactionStatus {
+  PENDING
+  CONFIRMED
+  CANCELED
+}
+
+enum BudgetPeriod {
+  MONTHLY
+}
+
+enum RecurrenceFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum GoalStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELED
+}
+
+enum DebtType {
+  LOAN
+  CREDIT_CARD
+  PERSONAL
+  INSTALLMENT
+  OTHER
+}
+
+enum DebtStatus {
+  ACTIVE
+  PAID
+  PAUSED
+  DEFAULTED
+  CANCELED
+}
+
+enum InvestmentAccountType {
+  BROKERAGE
+  RETIREMENT
+  CRYPTO
+  OTHER
+}
+
+enum InvestmentAssetType {
+  STOCK
+  BOND
+  ETF
+  MUTUAL_FUND
+  CRYPTO
+  CASH_EQUIVALENT
+  OTHER
+}
+
+enum InvestmentTransactionType {
+  BUY
+  SELL
+  DIVIDEND
+  INTEREST
+  DEPOSIT
+  WITHDRAWAL
+  FEE
+  TAX
+}
+
+model UserProfile {
+  id         String    @id @default(cuid())
+  supabaseId String    @unique
+  email      String    @unique
+  fullName   String?
+  avatarUrl  String?
+  locale     String    @default("es-AR")
+  timezone   String    @default("America/Argentina/Buenos_Aires")
+  currency   CurrencyCode @default(ARS)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  memberships          HouseholdMember[]
+  createdHouseholds    Household[]             @relation("HouseholdCreatedBy")
+  accounts             Account[]               @relation("AccountCreatedBy")
+  categories           Category[]              @relation("CategoryCreatedBy")
+  transactions         Transaction[]           @relation("TransactionCreatedBy")
+  budgets              Budget[]                @relation("BudgetCreatedBy")
+  recurringExpenses    RecurringExpense[]      @relation("RecurringExpenseCreatedBy")
+  goals                Goal[]                  @relation("GoalCreatedBy")
+  debts                Debt[]                  @relation("DebtCreatedBy")
+  investmentAccounts   InvestmentAccount[]     @relation("InvestmentAccountCreatedBy")
+  investmentAssets     InvestmentAsset[]       @relation("InvestmentAssetCreatedBy")
+  investmentActivities InvestmentTransaction[] @relation("InvestmentTransactionCreatedBy")
+}
+
+model Household {
+  id              String       @id @default(cuid())
+  name            String
+  defaultCurrency CurrencyCode @default(ARS)
+  createdById     String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  deletedAt       DateTime?
+
+  createdBy              UserProfile             @relation("HouseholdCreatedBy", fields: [createdById], references: [id])
+  members                HouseholdMember[]
+  accounts               Account[]
+  categories             Category[]
+  transactions           Transaction[]
+  budgets                Budget[]
+  recurringExpenses      RecurringExpense[]
+  goals                  Goal[]
+  debts                  Debt[]
+  monthlySnapshots       MonthlySnapshot[]
+  investmentAccounts     InvestmentAccount[]
+  investmentAssets       InvestmentAsset[]
+  investmentTransactions InvestmentTransaction[]
+
+  @@index([createdById])
+}
+
+model HouseholdMember {
+  id            String                  @id @default(cuid())
+  householdId   String
+  userProfileId String
+  role          HouseholdRole           @default(MEMBER)
+  status        HouseholdMemberStatus   @default(ACTIVE)
+  joinedAt      DateTime?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  deletedAt     DateTime?
+
+  household   Household   @relation(fields: [householdId], references: [id])
+  userProfile UserProfile @relation(fields: [userProfileId], references: [id])
+
+  @@unique([householdId, userProfileId])
+  @@index([userProfileId])
+}
+
+model Account {
+  id              String       @id @default(cuid())
+  householdId     String
+  createdById     String
+  name            String
+  type            AccountType
+  currency        CurrencyCode @default(ARS)
+  openingBalance  Decimal      @default(0) @db.Decimal(18, 2)
+  currentBalance  Decimal      @default(0) @db.Decimal(18, 2)
+  creditLimit     Decimal?     @db.Decimal(18, 2)
+  isArchived      Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  deletedAt       DateTime?
+
+  household              Household               @relation(fields: [householdId], references: [id])
+  createdBy              UserProfile             @relation("AccountCreatedBy", fields: [createdById], references: [id])
+  transactions           Transaction[]           @relation("TransactionAccount")
+  transferTransactionsTo Transaction[]           @relation("TransactionTransferAccount")
+  recurringExpenses      RecurringExpense[]
+  investmentAccounts     InvestmentAccount[]
+
+  @@index([householdId])
+  @@index([createdById])
+}
+
+model Category {
+  id          String       @id @default(cuid())
+  householdId String
+  createdById String
+  name        String
+  type        CategoryType
+  color       String?
+  icon        String?
+  parentId    String?
+  isSystem    Boolean      @default(false)
+  isArchived  Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  household          Household          @relation(fields: [householdId], references: [id])
+  createdBy          UserProfile        @relation("CategoryCreatedBy", fields: [createdById], references: [id])
+  parent             Category?          @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children           Category[]         @relation("CategoryHierarchy")
+  transactions       Transaction[]
+  budgets            Budget[]
+  recurringExpenses  RecurringExpense[]
+
+  @@unique([householdId, name, type])
+  @@index([householdId])
+  @@index([createdById])
+  @@index([parentId])
+}
+
+model Transaction {
+  id                        String            @id @default(cuid())
+  householdId               String
+  createdById               String
+  accountId                 String
+  transferAccountId         String?
+  categoryId                String?
+  goalId                    String?
+  debtId                    String?
+  investmentTransactionId   String?
+  type                      TransactionType
+  status                    TransactionStatus @default(CONFIRMED)
+  currency                  CurrencyCode      @default(ARS)
+  amount                    Decimal           @db.Decimal(18, 2)
+  transferAmount            Decimal?          @db.Decimal(18, 2)
+  description               String?
+  notes                     String?
+  occurredAt                DateTime
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+  deletedAt                 DateTime?
+
+  household             Household              @relation(fields: [householdId], references: [id])
+  createdBy             UserProfile            @relation("TransactionCreatedBy", fields: [createdById], references: [id])
+  account               Account                @relation("TransactionAccount", fields: [accountId], references: [id])
+  transferAccount       Account?               @relation("TransactionTransferAccount", fields: [transferAccountId], references: [id])
+  category              Category?              @relation(fields: [categoryId], references: [id])
+  goal                  Goal?                  @relation(fields: [goalId], references: [id])
+  debt                  Debt?                  @relation(fields: [debtId], references: [id])
+  investmentTransaction InvestmentTransaction? @relation("FinanceTransactionInvestmentTransaction", fields: [investmentTransactionId], references: [id])
+
+  @@index([householdId, occurredAt])
+  @@index([accountId])
+  @@index([transferAccountId])
+  @@index([categoryId])
+  @@index([goalId])
+  @@index([debtId])
+  @@index([investmentTransactionId])
+  @@index([createdById])
+}
+
+model Budget {
+  id            String       @id @default(cuid())
+  householdId   String
+  createdById   String
+  categoryId    String
+  currency      CurrencyCode @default(ARS)
+  period        BudgetPeriod @default(MONTHLY)
+  year          Int
+  month         Int
+  plannedAmount Decimal      @db.Decimal(18, 2)
+  reservedAmount Decimal     @default(0) @db.Decimal(18, 2)
+  alertThreshold Decimal?    @db.Decimal(5, 2)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
+
+  household Household   @relation(fields: [householdId], references: [id])
+  createdBy UserProfile @relation("BudgetCreatedBy", fields: [createdById], references: [id])
+  category  Category    @relation(fields: [categoryId], references: [id])
+
+  @@unique([householdId, categoryId, year, month])
+  @@index([householdId, year, month])
+  @@index([createdById])
+}
+
+model RecurringExpense {
+  id              String              @id @default(cuid())
+  householdId     String
+  createdById     String
+  accountId       String?
+  categoryId      String?
+  name            String
+  currency        CurrencyCode        @default(ARS)
+  amount          Decimal             @db.Decimal(18, 2)
+  frequency       RecurrenceFrequency
+  nextDueDate     DateTime
+  lastGeneratedAt DateTime?
+  endDate         DateTime?
+  isActive        Boolean             @default(true)
+  notes           String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  deletedAt       DateTime?
+
+  household Household   @relation(fields: [householdId], references: [id])
+  createdBy UserProfile @relation("RecurringExpenseCreatedBy", fields: [createdById], references: [id])
+  account   Account?    @relation(fields: [accountId], references: [id])
+  category  Category?   @relation(fields: [categoryId], references: [id])
+
+  @@index([householdId, nextDueDate])
+  @@index([createdById])
+  @@index([accountId])
+  @@index([categoryId])
+}
+
+model Goal {
+  id                    String       @id @default(cuid())
+  householdId           String
+  createdById           String
+  name                  String
+  currency              CurrencyCode @default(ARS)
+  targetAmount          Decimal      @db.Decimal(18, 2)
+  currentAmount         Decimal      @default(0) @db.Decimal(18, 2)
+  requiredMonthlyAmount Decimal?     @db.Decimal(18, 2)
+  targetDate            DateTime?
+  status                GoalStatus   @default(ACTIVE)
+  notes                 String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  deletedAt             DateTime?
+
+  household    Household     @relation(fields: [householdId], references: [id])
+  createdBy    UserProfile   @relation("GoalCreatedBy", fields: [createdById], references: [id])
+  transactions Transaction[]
+
+  @@index([householdId, status])
+  @@index([createdById])
+}
+
+model Debt {
+  id                String       @id @default(cuid())
+  householdId       String
+  createdById       String
+  name              String
+  lender            String?
+  type              DebtType
+  status            DebtStatus   @default(ACTIVE)
+  currency          CurrencyCode @default(ARS)
+  originalAmount    Decimal      @db.Decimal(18, 2)
+  outstandingAmount Decimal      @db.Decimal(18, 2)
+  minimumPayment    Decimal?     @db.Decimal(18, 2)
+  interestRate      Decimal?     @db.Decimal(7, 4)
+  nextDueDate       DateTime?
+  dueDay            Int?
+  notes             String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  deletedAt         DateTime?
+
+  household    Household     @relation(fields: [householdId], references: [id])
+  createdBy    UserProfile   @relation("DebtCreatedBy", fields: [createdById], references: [id])
+  transactions Transaction[]
+
+  @@index([householdId, status])
+  @@index([householdId, nextDueDate])
+  @@index([createdById])
+}
+
+model MonthlySnapshot {
+  id                        String       @id @default(cuid())
+  householdId               String
+  currency                  CurrencyCode @default(ARS)
+  year                      Int
+  month                     Int
+  incomeAmount              Decimal      @default(0) @db.Decimal(18, 2)
+  expenseAmount             Decimal      @default(0) @db.Decimal(18, 2)
+  reservedAmount            Decimal      @default(0) @db.Decimal(18, 2)
+  goalAllocatedAmount       Decimal      @default(0) @db.Decimal(18, 2)
+  debtOutstandingAmount     Decimal      @default(0) @db.Decimal(18, 2)
+  upcomingObligationsAmount Decimal      @default(0) @db.Decimal(18, 2)
+  availableAmount           Decimal      @default(0) @db.Decimal(18, 2)
+  createdAt                 DateTime     @default(now())
+  updatedAt                 DateTime     @updatedAt
+  deletedAt                 DateTime?
+
+  household Household @relation(fields: [householdId], references: [id])
+
+  @@unique([householdId, currency, year, month])
+  @@index([householdId, year, month])
+}
+
+model InvestmentAccount {
+  id          String                @id @default(cuid())
+  householdId String
+  createdById String
+  accountId   String?
+  name        String
+  provider    String?
+  type        InvestmentAccountType
+  currency    CurrencyCode          @default(USD)
+  isActive    Boolean               @default(true)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  deletedAt   DateTime?
+
+  household    Household               @relation(fields: [householdId], references: [id])
+  createdBy    UserProfile             @relation("InvestmentAccountCreatedBy", fields: [createdById], references: [id])
+  account      Account?                @relation(fields: [accountId], references: [id])
+  transactions InvestmentTransaction[]
+
+  @@index([householdId])
+  @@index([createdById])
+  @@index([accountId])
+}
+
+model InvestmentAsset {
+  id          String              @id @default(cuid())
+  householdId String
+  createdById String
+  symbol      String
+  name        String
+  type        InvestmentAssetType
+  currency    CurrencyCode        @default(USD)
+  exchange    String?
+  isin        String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  deletedAt   DateTime?
+
+  household    Household               @relation(fields: [householdId], references: [id])
+  createdBy    UserProfile             @relation("InvestmentAssetCreatedBy", fields: [createdById], references: [id])
+  transactions InvestmentTransaction[]
+
+  @@unique([householdId, symbol, type])
+  @@index([householdId])
+  @@index([createdById])
+}
+
+model InvestmentTransaction {
+  id                  String                    @id @default(cuid())
+  householdId         String
+  createdById         String
+  investmentAccountId String
+  assetId             String?
+  type                InvestmentTransactionType
+  currency            CurrencyCode              @default(USD)
+  quantity            Decimal?                  @db.Decimal(24, 8)
+  price               Decimal?                  @db.Decimal(18, 6)
+  amount              Decimal                   @db.Decimal(18, 2)
+  fees                Decimal                   @default(0) @db.Decimal(18, 2)
+  taxes               Decimal                   @default(0) @db.Decimal(18, 2)
+  occurredAt          DateTime
+  notes               String?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  deletedAt           DateTime?
+
+  household          Household     @relation(fields: [householdId], references: [id])
+  createdBy          UserProfile   @relation("InvestmentTransactionCreatedBy", fields: [createdById], references: [id])
+  investmentAccount  InvestmentAccount @relation(fields: [investmentAccountId], references: [id])
+  asset              InvestmentAsset?  @relation(fields: [assetId], references: [id])
+  financeTransaction Transaction[]     @relation("FinanceTransactionInvestmentTransaction")
+
+  @@index([householdId, occurredAt])
+  @@index([createdById])
+  @@index([investmentAccountId])
+  @@index([assetId])
+}

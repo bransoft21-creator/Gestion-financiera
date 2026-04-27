@@ -1,0 +1,781 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowDownCircle,
+  ArrowRightLeft,
+  ArrowUpCircle,
+  CalendarDays,
+  Download,
+  Pencil,
+  Loader2,
+  Plus,
+  ReceiptText,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
+import { z } from "zod";
+import { EmptyState } from "@/components/app/empty-state";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+type TransactionType =
+  | "INCOME"
+  | "EXPENSE"
+  | "TRANSFER"
+  | "ADJUSTMENT"
+  | "DEBT_PAYMENT"
+  | "GOAL_CONTRIBUTION"
+  | "INVESTMENT";
+
+type CategoryType = "INCOME" | "EXPENSE" | "TRANSFER" | "DEBT" | "GOAL" | "INVESTMENT" | "ADJUSTMENT";
+type CurrencyCode = "ARS" | "USD";
+
+type AccountOption = {
+  id: string;
+  name: string;
+  type: string;
+  currency: CurrencyCode;
+};
+
+type CategoryOption = {
+  id: string;
+  name: string;
+  type: CategoryType;
+};
+
+type TransactionItem = {
+  id: string;
+  type: TransactionType;
+  currency: CurrencyCode;
+  amount: string;
+  description: string | null;
+  notes: string | null;
+  occurredAt: string;
+  account: {
+    id: string;
+    name: string;
+  };
+  category: {
+    id: string;
+    name: string;
+  } | null;
+};
+
+type TransactionsClientProps = {
+  householdId: string;
+  accounts: AccountOption[];
+  categories: CategoryOption[];
+};
+
+type FormState = {
+  type: TransactionType;
+  accountId: string;
+  categoryId: string;
+  currency: CurrencyCode;
+  amount: string;
+  occurredAt: string;
+  description: string;
+  notes: string;
+};
+
+type Filters = {
+  type: string;
+  categoryId: string;
+  from: string;
+  to: string;
+};
+
+type FormErrors = Partial<Record<keyof FormState, string>>;
+
+const transactionTypeLabels: Record<TransactionType, string> = {
+  INCOME: "Ingreso",
+  EXPENSE: "Gasto",
+  TRANSFER: "Transferencia",
+  ADJUSTMENT: "Ajuste",
+  DEBT_PAYMENT: "Pago de deuda",
+  GOAL_CONTRIBUTION: "Aporte a meta",
+  INVESTMENT: "Inversión",
+};
+
+const transactionTypes = Object.keys(transactionTypeLabels) as TransactionType[];
+const transactionIcons = {
+  INCOME: ArrowUpCircle,
+  EXPENSE: ArrowDownCircle,
+  TRANSFER: ArrowRightLeft,
+  ADJUSTMENT: ArrowDownCircle,
+  DEBT_PAYMENT: ArrowDownCircle,
+  GOAL_CONTRIBUTION: ArrowDownCircle,
+  INVESTMENT: ArrowDownCircle,
+} satisfies Record<TransactionType, typeof ArrowDownCircle>;
+
+const formSchema = z.object({
+  type: z.enum(transactionTypes),
+  accountId: z.string().min(1, "Seleccioná una cuenta."),
+  categoryId: z.string().optional(),
+  currency: z.enum(["ARS", "USD"]),
+  amount: z.coerce.number().positive("Ingresá un monto mayor a cero."),
+  occurredAt: z.string().min(1, "Seleccioná una fecha."),
+  description: z.string().trim().min(2, "Agregá una descripción.").max(160),
+  notes: z.string().trim().max(1000).optional(),
+});
+
+export function TransactionsClient({ householdId, accounts, categories }: TransactionsClientProps) {
+  const [transactions, setTransactions] = useState<TransactionItem[]>([]);
+  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<Filters>({
+    type: "",
+    categoryId: "",
+    from: "",
+    to: "",
+  });
+  const [form, setForm] = useState<FormState>({
+    type: "EXPENSE",
+    accountId: accounts[0]?.id ?? "",
+    categoryId: "",
+    currency: accounts[0]?.currency ?? "ARS",
+    amount: "",
+    occurredAt: new Date().toISOString().slice(0, 10),
+    description: "",
+    notes: "",
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
+  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const filteredCategories = useMemo(() => {
+    return categories.filter((category) => isCategoryAllowedForType(category.type, form.type));
+  }, [categories, form.type]);
+
+  const displayedTransactions = useMemo(() => {
+    if (!search.trim()) return transactions;
+    const q = search.trim().toLowerCase();
+    return transactions.filter((t) => t.description?.toLowerCase().includes(q));
+  }, [transactions, search]);
+
+  const totalAmount = useMemo(() => {
+    return displayedTransactions.reduce((sum, t) => {
+      const n = Number(t.amount);
+      return t.type === "INCOME" ? sum + n : sum - n;
+    }, 0);
+  }, [displayedTransactions]);
+
+  useEffect(() => {
+    void loadTransactions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function loadTransactions(nextFilters = filters) {
+    setIsLoading(true);
+    setMessage(null);
+
+    try {
+      const params = new URLSearchParams({ householdId, limit: "100" });
+
+      if (nextFilters.type) params.set("type", nextFilters.type);
+      if (nextFilters.categoryId) params.set("categoryId", nextFilters.categoryId);
+      if (nextFilters.from) params.set("from", nextFilters.from);
+      if (nextFilters.to) params.set("to", nextFilters.to);
+
+      const response = await fetch(`/api/transactions?${params.toString()}`);
+      const payload = (await response.json()) as { data?: TransactionItem[]; error?: string };
+
+      if (!response.ok) {
+        setMessage(payload.error ?? "No se pudieron cargar las transacciones.");
+        return;
+      }
+
+      setTransactions(payload.data ?? []);
+    } catch {
+      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleFilterSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await loadTransactions(filters);
+  }
+
+  async function handleTransactionSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage(null);
+
+    const parsed = formSchema.safeParse(form);
+
+    if (!parsed.success) {
+      const nextErrors: FormErrors = {};
+      parsed.error.issues.forEach((issue) => {
+        const field = issue.path[0];
+        if (typeof field === "string") {
+          nextErrors[field as keyof FormState] = issue.message;
+        }
+      });
+      setErrors(nextErrors);
+      return;
+    }
+
+    setErrors({});
+    setIsSaving(true);
+
+    try {
+      const url = editingTransactionId
+        ? `/api/transactions/${editingTransactionId}`
+        : "/api/transactions";
+      const response = await fetch(url, {
+        method: editingTransactionId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          householdId,
+          type: parsed.data.type,
+          accountId: parsed.data.accountId,
+          categoryId: parsed.data.categoryId || (editingTransactionId ? null : undefined),
+          currency: parsed.data.currency,
+          amount: parsed.data.amount,
+          occurredAt: parsed.data.occurredAt,
+          description: parsed.data.description,
+          notes: editingTransactionId ? (parsed.data.notes ?? "") : parsed.data.notes || undefined,
+        }),
+      });
+
+      const payload = (await response.json()) as { data?: TransactionItem; error?: string };
+
+      if (!response.ok) {
+        setMessage(payload.error ?? "No se pudo guardar la transacción.");
+        return;
+      }
+
+      resetForm();
+      setIsFormOpen(false);
+      await loadTransactions(filters);
+    } catch {
+      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleDelete(transactionId: string) {
+    const shouldDelete = window.confirm("¿Eliminar esta transacción? Esta acción usará soft delete.");
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    setDeletingTransactionId(transactionId);
+    setMessage(null);
+
+    try {
+      const response = await fetch(
+        `/api/transactions/${transactionId}?${new URLSearchParams({ householdId }).toString()}`,
+        { method: "DELETE" },
+      );
+      const payload = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        setMessage(payload.error ?? "No se pudo eliminar la transacción.");
+        return;
+      }
+
+      if (editingTransactionId === transactionId) {
+        resetForm();
+      }
+
+      await loadTransactions(filters);
+    } catch {
+      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+    } finally {
+      setDeletingTransactionId(null);
+    }
+  }
+
+  function startEditing(transaction: TransactionItem) {
+    setEditingTransactionId(transaction.id);
+    setIsFormOpen(true);
+    setErrors({});
+    setMessage(null);
+    setForm({
+      type: transaction.type,
+      accountId: transaction.account.id,
+      categoryId: transaction.category?.id ?? "",
+      currency: transaction.currency,
+      amount: String(Number(transaction.amount)),
+      occurredAt: transaction.occurredAt.slice(0, 10),
+      description: transaction.description ?? "",
+      notes: transaction.notes ?? "",
+    });
+  }
+
+  function resetForm() {
+    setEditingTransactionId(null);
+    setErrors({});
+    setForm({
+      type: "EXPENSE",
+      accountId: accounts[0]?.id ?? "",
+      categoryId: "",
+      currency: accounts[0]?.currency ?? "ARS",
+      amount: "",
+      occurredAt: new Date().toISOString().slice(0, 10),
+      description: "",
+      notes: "",
+    });
+  }
+
+  function updateForm<Key extends keyof FormState>(key: Key, value: FormState[Key]) {
+    setForm((current) => ({
+      ...current,
+      [key]: value,
+      ...(key === "type" ? { categoryId: "" } : {}),
+    }));
+  }
+
+  function exportCsv() {
+    const header = ["Fecha", "Tipo", "Descripción", "Categoría", "Cuenta", "Moneda", "Monto"];
+    const rows = displayedTransactions.map((t) => [
+      t.occurredAt.slice(0, 10),
+      transactionTypeLabels[t.type],
+      t.description ?? "",
+      t.category?.name ?? "",
+      t.account.name,
+      t.currency,
+      (t.type === "INCOME" ? "" : "-") + Number(t.amount).toFixed(2),
+    ]);
+    const csv = [header, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `transacciones-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
+      {isFormOpen ? (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 lg:hidden"
+          onClick={() => setIsFormOpen(false)}
+        />
+      ) : null}
+
+      <Card
+        className={`${
+          isFormOpen
+            ? "fixed inset-x-0 bottom-0 z-50 max-h-[88vh] overflow-y-auto rounded-b-none rounded-t-2xl border-b-0 animate-slide-up"
+            : "hidden"
+        } xl:block`}
+      >
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <Plus className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <div>
+              <CardTitle>{editingTransactionId ? "Editar transacción" : "Nueva transacción"}</CardTitle>
+              <CardDescription>
+                {editingTransactionId ? "Actualizá los campos necesarios." : "Alta rápida con validación."}
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="ml-auto xl:hidden"
+              onClick={() => setIsFormOpen(false)}
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={handleTransactionSubmit}>
+            <Field label="Tipo" error={errors.type}>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={form.type}
+                onChange={(event) => updateForm("type", event.target.value as TransactionType)}
+              >
+                {transactionTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {transactionTypeLabels[type]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Cuenta" error={errors.accountId}>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={form.accountId}
+                onChange={(event) => updateForm("accountId", event.target.value)}
+              >
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name} · {account.currency}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Categoría" error={errors.categoryId}>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={form.categoryId}
+                onChange={(event) => updateForm("categoryId", event.target.value)}
+              >
+                <option value="">Sin categoría</option>
+                {filteredCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Moneda" error={errors.currency}>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={form.currency}
+                  onChange={(event) => updateForm("currency", event.target.value as CurrencyCode)}
+                >
+                  <option value="ARS">ARS</option>
+                  <option value="USD">USD</option>
+                </select>
+              </Field>
+              <Field label="Monto" error={errors.amount}>
+                <Input
+                  inputMode="decimal"
+                  value={form.amount}
+                  onChange={(event) => updateForm("amount", event.target.value)}
+                  placeholder="0"
+                />
+              </Field>
+            </div>
+
+            <Field label="Fecha" error={errors.occurredAt}>
+              <Input
+                type="date"
+                value={form.occurredAt}
+                onChange={(event) => updateForm("occurredAt", event.target.value)}
+              />
+            </Field>
+
+            <Field label="Descripción" error={errors.description}>
+              <Input
+                value={form.description}
+                onChange={(event) => updateForm("description", event.target.value)}
+                placeholder="Ej: Compra supermercado"
+              />
+            </Field>
+
+            <Field label="Notas" error={errors.notes}>
+              <textarea
+                className="min-h-20 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={form.notes}
+                onChange={(event) => updateForm("notes", event.target.value)}
+                placeholder="Detalle opcional"
+              />
+            </Field>
+
+            {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
+
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+              <Button className="h-11 w-full" disabled={isSaving || accounts.length === 0}>
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+                {editingTransactionId ? "Guardar cambios" : "Guardar transacción"}
+              </Button>
+              {editingTransactionId ? (
+                <Button type="button" variant="outline" className="h-11 w-full" onClick={resetForm}>
+                  <X className="h-4 w-4" aria-hidden="true" />
+                  Cancelar
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-muted-foreground">
+                <Search className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div>
+                <CardTitle>Filtros</CardTitle>
+                <CardDescription>Tipo, categoría y rango de fechas.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                <Input
+                  className="pl-9"
+                  placeholder="Buscar por descripción…"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </div>
+            </div>
+            <form className="grid gap-3 md:grid-cols-5" onSubmit={handleFilterSubmit}>
+              <select
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={filters.type}
+                onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}
+              >
+                <option value="">Todos los tipos</option>
+                {transactionTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {transactionTypeLabels[type]}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={filters.categoryId}
+                onChange={(event) => setFilters((current) => ({ ...current, categoryId: event.target.value }))}
+              >
+                <option value="">Todas las categorías</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+
+              <Input
+                type="date"
+                value={filters.from}
+                onChange={(event) => setFilters((current) => ({ ...current, from: event.target.value }))}
+              />
+              <Input
+                type="date"
+                value={filters.to}
+                onChange={(event) => setFilters((current) => ({ ...current, to: event.target.value }))}
+              />
+              <Button disabled={isLoading}>
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+                Aplicar
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle>Listado</CardTitle>
+                <CardDescription>
+                  {displayedTransactions.length} movimiento{displayedTransactions.length !== 1 ? "s" : ""} ·{" "}
+                  <span className={totalAmount >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                    {totalAmount >= 0 ? "+" : ""}{formatMoneyBalance(totalAmount)}
+                  </span>
+                </CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={exportCsv}
+                disabled={displayedTransactions.length === 0}
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+                Exportar CSV
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                Cargando transacciones
+              </div>
+            ) : displayedTransactions.length === 0 ? (
+              <EmptyState
+                icon={ReceiptText}
+                title={search ? "Sin resultados" : "Sin transacciones"}
+                description={
+                  search
+                    ? "Ningún movimiento coincide con la búsqueda."
+                    : "Creá el primer movimiento o ajustá los filtros para ver otros resultados."
+                }
+              />
+            ) : (
+              <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+                {displayedTransactions.map((transaction) => (
+                  <TransactionRow
+                    key={transaction.id}
+                    transaction={transaction}
+                    isDeleting={deletingTransactionId === transaction.id}
+                    onEdit={startEditing}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      <Button
+        type="button"
+        size="icon"
+        className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 shadow-xl shadow-violet-500/30 hover:shadow-violet-500/50 xl:hidden"
+        onClick={() => {
+          resetForm();
+          setIsFormOpen(true);
+        }}
+        aria-label="Nueva transacción"
+      >
+        <Plus className="h-6 w-6" aria-hidden="true" />
+      </Button>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      {children}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  );
+}
+
+function TransactionRow({
+  transaction,
+  isDeleting,
+  onEdit,
+  onDelete,
+}: {
+  transaction: TransactionItem;
+  isDeleting: boolean;
+  onEdit: (transaction: TransactionItem) => void;
+  onDelete: (transactionId: string) => void;
+}) {
+  const Icon = transactionIcons[transaction.type];
+  const isPositive = transaction.type === "INCOME";
+
+  return (
+    <div className="grid gap-3 bg-card p-4 xl:grid-cols-[1fr_auto_auto] xl:items-center">
+      <div className="flex min-w-0 gap-3">
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+            isPositive ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+          }`}
+        >
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{transaction.description ?? "Sin descripción"}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <CalendarDays className="h-3 w-3" aria-hidden="true" />
+              {formatDate(transaction.occurredAt)}
+            </span>
+            <span>{transaction.account.name}</span>
+            {transaction.category ? <span>{transaction.category.name}</span> : <span>Sin categoría</span>}
+          </div>
+        </div>
+      </div>
+      <div className="text-left sm:text-right">
+        <p className={`text-sm font-semibold ${isPositive ? "text-emerald-400" : "text-rose-400"}`}>
+          {isPositive ? "+" : "-"} {formatMoney(transaction.amount, transaction.currency)}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">{transactionTypeLabels[transaction.type]}</p>
+      </div>
+      <div className="flex gap-2 xl:justify-end">
+        <Button type="button" variant="outline" size="sm" onClick={() => onEdit(transaction)}>
+          <Pencil className="h-4 w-4" aria-hidden="true" />
+          Editar
+        </Button>
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          onClick={() => onDelete(transaction.id)}
+          disabled={isDeleting}
+        >
+          {isDeleting ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          )}
+          Eliminar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function isCategoryAllowedForType(categoryType: CategoryType, transactionType: TransactionType) {
+  if (transactionType === "INCOME") {
+    return categoryType === "INCOME";
+  }
+
+  if (transactionType === "EXPENSE") {
+    return categoryType === "EXPENSE";
+  }
+
+  if (transactionType === "DEBT_PAYMENT") {
+    return categoryType === "DEBT";
+  }
+
+  if (transactionType === "GOAL_CONTRIBUTION") {
+    return categoryType === "GOAL";
+  }
+
+  if (transactionType === "INVESTMENT") {
+    return categoryType === "INVESTMENT";
+  }
+
+  return categoryType === "TRANSFER" || categoryType === "ADJUSTMENT";
+}
+
+function formatMoney(value: string, currency: CurrencyCode) {
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 2,
+  }).format(Number(value));
+}
+
+function formatMoneyBalance(value: number) {
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+}
