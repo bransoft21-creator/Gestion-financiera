@@ -46,6 +46,20 @@ export const createTransactionSchema = createTransactionBaseSchema.superRefine((
       path: ["transferAccountId"],
     });
   }
+  if (data.type === TransactionType.DEBT_PAYMENT && !data.debtId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "debtId es requerido para pagos de deuda",
+      path: ["debtId"],
+    });
+  }
+  if (data.type === TransactionType.GOAL_CONTRIBUTION && !data.goalId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "goalId es requerido para contribuciones a meta",
+      path: ["goalId"],
+    });
+  }
 });
 
 export const updateTransactionSchema = createTransactionBaseSchema
