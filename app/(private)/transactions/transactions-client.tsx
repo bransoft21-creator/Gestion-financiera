@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   ArrowDownCircle,
   ArrowRightLeft,
@@ -379,7 +380,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       <Card
         className={`${
           isFormOpen
-            ? "fixed inset-x-0 bottom-0 z-50 max-h-[90dvh] overflow-y-auto rounded-b-none rounded-t-2xl border-b-0 animate-slide-up"
+            ? "fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 max-h-[calc(100dvh-96px)] overflow-y-auto rounded-2xl animate-slide-up"
             : "hidden"
         } xl:block`}
       >
@@ -406,6 +407,22 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
           </div>
         </CardHeader>
         <CardContent className={isFormOpen ? "pb-0 xl:pb-5" : undefined}>
+          {accounts.length === 0 ? (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4">
+                <p className="text-sm font-semibold text-foreground">Primero necesitás una cuenta</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Para registrar movimientos hace falta crear una cuenta, billetera o tarjeta.
+                </p>
+              </div>
+              <Button asChild className="h-11 w-full">
+                <Link href="/accounts">
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Crear cuenta
+                </Link>
+              </Button>
+            </div>
+          ) : (
           <form className="space-y-4" onSubmit={handleTransactionSubmit}>
             <Field label="Tipo" error={errors.type}>
               <select
@@ -498,7 +515,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
             {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
 
-            <div className="sticky bottom-0 -mx-5 grid gap-2 border-t border-border bg-card/95 p-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] backdrop-blur sm:grid-cols-2 xl:static xl:mx-0 xl:border-0 xl:bg-transparent xl:p-0 xl:backdrop-blur-none 2xl:grid-cols-2">
+            <div className="sticky bottom-0 -mx-5 grid gap-2 border-t border-border bg-card/95 p-5 backdrop-blur sm:grid-cols-2 xl:static xl:mx-0 xl:border-0 xl:bg-transparent xl:p-0 xl:backdrop-blur-none 2xl:grid-cols-2">
               <Button className="h-11 w-full" disabled={isSaving || accounts.length === 0}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                 {editingTransactionId ? "Guardar cambios" : "Guardar transacción"}
@@ -511,6 +528,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               ) : null}
             </div>
           </form>
+          )}
         </CardContent>
       </Card>
 
