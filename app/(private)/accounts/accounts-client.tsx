@@ -11,9 +11,11 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -105,7 +107,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
       };
 
       if (!response.ok) {
-        setMessage(payload.error ?? "No se pudieron cargar las cuentas.");
+        toast.error(payload.error ?? "No se pudieron cargar las cuentas.");
         return;
       }
 
@@ -116,7 +118,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
         setNetWorth(payload.data.netWorth);
       }
     } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setIsLoading(false);
     }
@@ -166,6 +168,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
         return;
       }
 
+      toast.success(editingAccountId ? "Cuenta actualizada." : "Cuenta creada.");
       resetForm();
       setIsFormOpen(false);
       await loadAccounts();
@@ -187,13 +190,14 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
       const payload = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        setMessage(payload.error ?? `No se pudo ${label} la cuenta.`);
+        toast.error(payload.error ?? `No se pudo ${label} la cuenta.`);
         return;
       }
 
+      toast.success(`Cuenta ${isArchived ? "restaurada" : "archivada"}.`);
       await loadAccounts();
     } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     }
   }
 
@@ -375,9 +379,17 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                Cargando cuentas
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-3 p-4">
+                    <Skeleton className="h-10 w-10 rounded-xl" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                    <Skeleton className="h-5 w-24" />
+                  </div>
+                ))}
               </div>
             ) : activeAccounts.length === 0 ? (
               <EmptyState

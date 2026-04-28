@@ -36,6 +36,35 @@ Construir primero un MVP sólido, escalable y profesional.
 
 No desarrollar todo de golpe.
 
+## Control de tokens (crítico)
+
+Optimiza al máximo el uso de tokens. Obligatorio.
+
+1. Responde SIEMPRE de forma concisa, directa y accionable.
+2. No expliques teoría innecesaria.
+3. No repitas contexto ya mencionado.
+4. No hagas resúmenes largos.
+5. No generes código completo si no es necesario.
+6. Solo muestra: diff o fragmentos modificados, funciones afectadas, archivos impactados.
+7. Si un cambio es grande: divide en pasos pequeños y entrega uno por vez.
+8. No avances a la siguiente fase sin confirmación.
+9. Si algo es obvio o estándar, omítelo.
+10. Prioriza listas cortas sobre párrafos largos.
+
+Formato de respuesta obligatorio:
+
+```
+FASE ACTUAL: (1-2 líneas)
+CAMBIOS: - punto 1 / - punto 2
+ARCHIVOS: - archivo 1
+CÓDIGO (solo si aplica): (mínimo necesario)
+PRUEBA RÁPIDA: - paso 1
+RIESGOS: - punto 1 (si aplica)
+SIGUIENTE PASO: (una línea)
+```
+
+> Si la respuesta supera lo necesario → recórtala. Si dudas → responde menos, no más.
+
 ## Reglas de trabajo
 
 - Trabajar por fases pequeñas.

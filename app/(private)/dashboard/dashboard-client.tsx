@@ -79,7 +79,7 @@ function formatMoney(value: number, currency: "ARS" | "USD" = "ARS") {
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("es-AR", {
-    day: "2-digit", month: "short", year: "numeric",
+    day: "2-digit", month: "short", year: "numeric", timeZone: "UTC",
   }).format(new Date(value));
 }
 
@@ -387,20 +387,20 @@ export function DashboardClient() {
       <HeroCard metrics={metrics} />
 
       {/* Stat cards */}
-      <section className="mb-6 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="stagger-in mb-6 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Ingresos del mes" value={formatMoney(metrics.income)}
           detail="↑ transacciones de ingreso" icon={ArrowUpCircle} tone="positive"
-          rawValue={metrics.income} formatter={formatMoney} animationDelay={0} />
+          rawValue={metrics.income} formatter={formatMoney} />
         <StatCard label="Gastos del mes" value={formatMoney(metrics.expenses)}
           detail="transacciones tipo gasto" icon={ArrowDownCircle} tone="danger"
-          rawValue={metrics.expenses} formatter={formatMoney} animationDelay={60} />
+          rawValue={metrics.expenses} formatter={formatMoney} />
         <StatCard label="Presupuesto reservado" value={formatMoney(metrics.remainingReservedBudget)}
           detail="pendiente de gastar" icon={Lock} tone="warning"
-          rawValue={metrics.remainingReservedBudget} formatter={formatMoney} animationDelay={120} />
+          rawValue={metrics.remainingReservedBudget} formatter={formatMoney} />
         <StatCard label="Obligaciones del mes" value={formatMoney(metrics.upcomingObligations)}
           detail="recurrentes, metas y deuda" icon={CreditCard}
           tone={metrics.upcomingObligations === 0 ? "positive" : "warning"}
-          rawValue={metrics.upcomingObligations} formatter={formatMoney} animationDelay={180} />
+          rawValue={metrics.upcomingObligations} formatter={formatMoney} />
       </section>
 
       {/* Charts row */}

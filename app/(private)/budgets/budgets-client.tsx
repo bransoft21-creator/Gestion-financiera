@@ -1,9 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { AlertTriangle, BarChart3, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,13 +93,13 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
       const payload = (await response.json()) as { data?: BudgetItem[]; error?: string };
 
       if (!response.ok) {
-        setMessage(payload.error ?? "No se pudieron cargar los presupuestos.");
+        toast.error(payload.error ?? "No se pudieron cargar los presupuestos.");
         return;
       }
 
       setBudgets(payload.data ?? []);
     } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setIsLoading(false);
     }
@@ -151,6 +154,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
         return;
       }
 
+      toast.success(editingBudgetId ? "Presupuesto actualizado." : "Presupuesto creado.");
       resetForm();
       await loadBudgets();
     } catch {
@@ -178,17 +182,18 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
       const payload = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        setMessage(payload.error ?? "No se pudo eliminar el presupuesto.");
+        toast.error(payload.error ?? "No se pudo eliminar el presupuesto.");
         return;
       }
 
+      toast.success("Presupuesto eliminado.");
       if (editingBudgetId === budgetId) {
         resetForm();
       }
 
       await loadBudgets();
     } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setDeletingBudgetId(null);
     }
@@ -237,7 +242,32 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
           </div>
         </CardHeader>
         <CardContent>
+          {categories.length === 0 ? (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4">
+                <p className="text-sm font-semibold text-foreground">Necesitás categorías de gasto</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Creá al menos una categoría de tipo <strong>Gasto</strong> para poder asignarle un presupuesto mensual.
+                </p>
+              </div>
+              <Button asChild className="h-11 w-full">
+                <Link href="/categories">
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Crear categoría de gasto
+                </Link>
+              </Button>
+            </div>
+          ) : (
           <form className="space-y-4" onSubmit={handleSubmit}>
+            {!editingBudgetId && availableCategories.length === 0 ? (
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                <p className="text-sm font-semibold text-foreground">Todas las categorías ya tienen presupuesto</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Editá uno existente o eliminalo para crear uno nuevo en esa categoría.
+                </p>
+              </div>
+            ) : null}
+
             <Field label="Categoría" error={errors.categoryId}>
               <select
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -276,7 +306,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
             {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
 
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-              <Button className="h-11 w-full" disabled={isSaving || availableCategories.length === 0}>
+              <Button className="h-11 w-full" disabled={isSaving || (!editingBudgetId && availableCategories.length === 0)}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                 {editingBudgetId ? "Guardar cambios" : "Crear presupuesto"}
               </Button>
@@ -288,6 +318,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
               ) : null}
             </div>
           </form>
+          )}
         </CardContent>
       </Card>
 
@@ -341,9 +372,23 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
           </CardHeader>
           <CardContent>
           {isLoading ? (
-            <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-              Cargando presupuestos
+            <div className="grid gap-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="rounded-xl border border-border p-4 space-y-3">
+                  <div className="flex gap-3">
+                    <Skeleton className="h-4 w-4 rounded-sm mt-1 shrink-0" />
+                    <div className="space-y-1.5 flex-1">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-40" />
+                    </div>
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                  <Skeleton className="h-1.5 w-full rounded-full" />
+                  <div className="grid grid-cols-4 gap-2">
+                    {[1,2,3,4].map((j) => <Skeleton key={j} className="h-14 rounded-xl" />)}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : budgets.length === 0 ? (
             <EmptyState

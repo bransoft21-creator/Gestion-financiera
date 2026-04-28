@@ -1,3 +1,4 @@
+import { Toaster } from "sonner";
 import { BottomNav } from "./bottom-nav";
 import { GlobalProcessingIndicator } from "./global-processing-indicator";
 import { LogoutButton } from "./logout-button";
@@ -34,6 +35,13 @@ export function AppShell({ children, userName, userEmail }: AppShellProps) {
         </main>
       </div>
       <BottomNav />
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          style: { background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))" },
+        }}
+        richColors
+      />
     </div>
   );
 }

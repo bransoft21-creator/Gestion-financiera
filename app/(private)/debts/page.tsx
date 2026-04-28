@@ -5,7 +5,7 @@ import { DebtsClient } from "./debts-client";
 
 export default async function DebtsPage() {
   const { userProfile } = await getCurrentUser();
-  const { household } = await getDebtWorkspace(userProfile.id);
+  const { household, accounts } = await getDebtWorkspace(userProfile.id);
 
   return (
     <>
@@ -13,7 +13,7 @@ export default async function DebtsPage() {
         title="Deudas"
         description="Préstamos, tarjetas de crédito y cuotas. Seguimiento de saldo pendiente, pagos mínimos y vencimientos."
       />
-      <DebtsClient householdId={household.id} />
+      <DebtsClient householdId={household.id} accounts={accounts} />
     </>
   );
 }

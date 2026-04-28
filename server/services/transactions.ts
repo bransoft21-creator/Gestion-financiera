@@ -1,4 +1,4 @@
-import { TransactionType } from "@prisma/client";
+import { TransactionStatus, TransactionType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { ApiError, ForbiddenError, NotFoundError } from "../api/errors";
 import type {
@@ -105,11 +105,11 @@ export async function listTransactions(
       accountId: input.accountId,
       categoryId: input.categoryId,
       type: input.type,
-      status: input.status,
+      status: input.status ?? { not: TransactionStatus.CANCELED },
       deletedAt: null,
       occurredAt: {
         gte: input.from,
-        lte: input.to,
+        lte: input.to ? new Date(input.to.getTime() + 86_400_000 - 1) : undefined,
       },
     },
     include: transactionInclude,

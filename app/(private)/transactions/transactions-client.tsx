@@ -16,8 +16,10 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,9 +50,12 @@ type CategoryOption = {
   type: CategoryType;
 };
 
+type TransactionStatus = "PENDING" | "CONFIRMED" | "CANCELED";
+
 type TransactionItem = {
   id: string;
   type: TransactionType;
+  status: TransactionStatus;
   currency: CurrencyCode;
   amount: string;
   description: string | null;
@@ -75,6 +80,7 @@ type TransactionsClientProps = {
 type FormState = {
   type: TransactionType;
   accountId: string;
+  transferAccountId: string;
   categoryId: string;
   currency: CurrencyCode;
   amount: string;
@@ -103,7 +109,7 @@ const transactionTypeLabels: Record<TransactionType, string> = {
 };
 
 const transactionTypes = Object.keys(transactionTypeLabels) as TransactionType[];
-const supportedFormTransactionTypes = ["INCOME", "EXPENSE", "ADJUSTMENT"] as const;
+const supportedFormTransactionTypes = ["INCOME", "EXPENSE", "TRANSFER", "ADJUSTMENT"] as const;
 const transactionIcons = {
   INCOME: ArrowUpCircle,
   EXPENSE: ArrowDownCircle,
@@ -115,14 +121,23 @@ const transactionIcons = {
 } satisfies Record<TransactionType, typeof ArrowDownCircle>;
 
 const formSchema = z.object({
-  type: z.enum(supportedFormTransactionTypes),
+  type: z.enum(transactionTypes as [TransactionType, ...TransactionType[]]),
   accountId: z.string().min(1, "Seleccioná una cuenta."),
+  transferAccountId: z.string().optional(),
   categoryId: z.string().optional(),
   currency: z.enum(["ARS", "USD"]),
   amount: z.coerce.number().positive("Ingresá un monto mayor a cero."),
   occurredAt: z.string().min(1, "Seleccioná una fecha."),
   description: z.string().trim().min(2, "Agregá una descripción.").max(160),
   notes: z.string().trim().max(1000).optional(),
+}).superRefine((data, ctx) => {
+  if (data.type === "TRANSFER") {
+    if (!data.transferAccountId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Seleccioná la cuenta destino.", path: ["transferAccountId"] });
+    } else if (data.transferAccountId === data.accountId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La cuenta destino debe ser diferente.", path: ["transferAccountId"] });
+    }
+  }
 });
 
 export function TransactionsClient({ householdId, accounts, categories }: TransactionsClientProps) {
@@ -137,6 +152,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   const [form, setForm] = useState<FormState>({
     type: "EXPENSE",
     accountId: accounts[0]?.id ?? "",
+    transferAccountId: "",
     categoryId: "",
     currency: accounts[0]?.currency ?? "ARS",
     amount: "",
@@ -191,13 +207,13 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       const payload = (await response.json()) as { data?: TransactionItem[]; error?: string };
 
       if (!response.ok) {
-        setMessage(payload.error ?? "No se pudieron cargar las transacciones.");
+        toast.error(payload.error ?? "No se pudieron cargar las transacciones.");
         return;
       }
 
       setTransactions(payload.data ?? []);
     } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setIsLoading(false);
     }
@@ -233,20 +249,35 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       const url = editingTransactionId
         ? `/api/transactions/${editingTransactionId}`
         : "/api/transactions";
+
+      const isNonBasicEdit =
+        !!editingTransactionId && !isSupportedFormTransactionType(parsed.data.type);
+
+      const body = isNonBasicEdit
+        ? {
+            householdId,
+            amount: parsed.data.amount,
+            occurredAt: parsed.data.occurredAt,
+            description: parsed.data.description,
+            notes: parsed.data.notes || null,
+          }
+        : {
+            householdId,
+            type: parsed.data.type,
+            accountId: parsed.data.accountId,
+            transferAccountId: parsed.data.type === "TRANSFER" ? (parsed.data.transferAccountId || undefined) : undefined,
+            categoryId: parsed.data.categoryId || (editingTransactionId ? null : undefined),
+            currency: parsed.data.currency,
+            amount: parsed.data.amount,
+            occurredAt: parsed.data.occurredAt,
+            description: parsed.data.description,
+            notes: editingTransactionId ? (parsed.data.notes ?? "") : parsed.data.notes || undefined,
+          };
+
       const response = await fetch(url, {
         method: editingTransactionId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          householdId,
-          type: parsed.data.type,
-          accountId: parsed.data.accountId,
-          categoryId: parsed.data.categoryId || (editingTransactionId ? null : undefined),
-          currency: parsed.data.currency,
-          amount: parsed.data.amount,
-          occurredAt: parsed.data.occurredAt,
-          description: parsed.data.description,
-          notes: editingTransactionId ? (parsed.data.notes ?? "") : parsed.data.notes || undefined,
-        }),
+        body: JSON.stringify(body),
       });
 
       const payload = (await response.json()) as { data?: TransactionItem; error?: string };
@@ -256,6 +287,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
         return;
       }
 
+      toast.success(editingTransactionId ? "Transacción actualizada." : "Transacción guardada.");
       resetForm();
       setIsFormOpen(false);
       await loadTransactions(filters);
@@ -284,30 +316,24 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       const payload = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        setMessage(payload.error ?? "No se pudo eliminar la transacción.");
+        toast.error(payload.error ?? "No se pudo eliminar la transacción.");
         return;
       }
 
+      toast.success("Transacción eliminada.");
       if (editingTransactionId === transactionId) {
         resetForm();
       }
 
       await loadTransactions(filters);
     } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setDeletingTransactionId(null);
     }
   }
 
   function startEditing(transaction: TransactionItem) {
-    if (!isSupportedFormTransactionType(transaction.type)) {
-      setMessage(
-        `${transactionTypeLabels[transaction.type]} requiere campos específicos que todavía no están disponibles en este formulario.`,
-      );
-      return;
-    }
-
     setEditingTransactionId(transaction.id);
     setIsFormOpen(true);
     setErrors({});
@@ -315,6 +341,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
     setForm({
       type: transaction.type,
       accountId: transaction.account.id,
+      transferAccountId: "",
       categoryId: transaction.category?.id ?? "",
       currency: transaction.currency,
       amount: String(Number(transaction.amount)),
@@ -330,6 +357,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
     setForm({
       type: "EXPENSE",
       accountId: accounts[0]?.id ?? "",
+      transferAccountId: "",
       categoryId: "",
       currency: accounts[0]?.currency ?? "ARS",
       amount: "",
@@ -424,21 +452,30 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             </div>
           ) : (
           <form className="space-y-4" onSubmit={handleTransactionSubmit}>
-            <Field label="Tipo" error={errors.type}>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={form.type}
-                onChange={(event) => updateForm("type", event.target.value as TransactionType)}
-              >
-                {supportedFormTransactionTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {transactionTypeLabels[type]}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            {editingTransactionId && !isSupportedFormTransactionType(form.type) ? (
+              <Field label="Tipo">
+                <div className="flex h-10 items-center gap-2 rounded-md border border-input bg-secondary/30 px-3">
+                  <Badge>{transactionTypeLabels[form.type]}</Badge>
+                  <span className="text-xs text-muted-foreground">Solo podés editar monto, fecha, descripción y notas.</span>
+                </div>
+              </Field>
+            ) : (
+              <Field label="Tipo" error={errors.type}>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={form.type}
+                  onChange={(event) => updateForm("type", event.target.value as TransactionType)}
+                >
+                  {supportedFormTransactionTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {transactionTypeLabels[type]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
 
-            <Field label="Cuenta" error={errors.accountId}>
+            <Field label={form.type === "TRANSFER" ? "Cuenta origen" : "Cuenta"} error={errors.accountId}>
               <select
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={form.accountId}
@@ -452,20 +489,39 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               </select>
             </Field>
 
-            <Field label="Categoría" error={errors.categoryId}>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={form.categoryId}
-                onChange={(event) => updateForm("categoryId", event.target.value)}
-              >
-                <option value="">Sin categoría</option>
-                {filteredCategories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            {form.type === "TRANSFER" && !editingTransactionId ? (
+              <Field label="Cuenta destino" error={errors.transferAccountId}>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={form.transferAccountId}
+                  onChange={(event) => updateForm("transferAccountId", event.target.value)}
+                >
+                  <option value="">Seleccioná cuenta destino</option>
+                  {accounts.filter((a) => a.id !== form.accountId).map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name} · {account.currency}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
+
+            {form.type !== "TRANSFER" ? (
+              <Field label="Categoría" error={errors.categoryId}>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={form.categoryId}
+                  onChange={(event) => updateForm("categoryId", event.target.value)}
+                >
+                  <option value="">Sin categoría</option>
+                  {filteredCategories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : null}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Moneda" error={errors.currency}>
@@ -628,9 +684,20 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                Cargando transacciones
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="rounded-2xl border border-border p-4 space-y-3">
+                    <div className="flex gap-3">
+                      <Skeleton className="h-11 w-11 rounded-2xl shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-40" />
+                        <Skeleton className="h-3 w-28" />
+                      </div>
+                      <Skeleton className="h-5 w-20 shrink-0" />
+                    </div>
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                ))}
               </div>
             ) : displayedTransactions.length === 0 ? (
               <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-secondary/20 p-8 text-center">
@@ -770,6 +837,12 @@ function TransactionCard({
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Badge className={`border-0 ${tone.badge}`}>{transactionTypeLabels[transaction.type]}</Badge>
+            {transaction.status === "PENDING" && (
+              <Badge className="border-amber-500/30 bg-amber-500/10 text-amber-400">Pendiente</Badge>
+            )}
+            {transaction.status === "CANCELED" && (
+              <Badge className="border-border bg-secondary text-muted-foreground line-through">Cancelada</Badge>
+            )}
             <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-xs text-muted-foreground">
               <CalendarDays className="h-3 w-3" aria-hidden="true" />
               {formatDate(transaction.occurredAt)}
@@ -830,38 +903,22 @@ function groupTransactionsByDate(transactions: TransactionItem[]) {
 }
 
 function getDateGroupLabel(value: string) {
-  const date = startOfDay(new Date(value));
-  const today = startOfDay(new Date());
-  const yesterday = addDays(today, -1);
+  const [y, m, d] = value.slice(0, 10).split("-").map(Number);
+  const date = Date.UTC(y, m - 1, d);
+  const now = new Date();
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = today - 86_400_000;
+  const weekStart = today - (((now.getDay() + 6) % 7) * 86_400_000);
 
-  if (date.getTime() === today.getTime()) return "Hoy";
-  if (date.getTime() === yesterday.getTime()) return "Ayer";
-  if (date >= startOfWeek(today) && date < yesterday) return "Esta semana";
+  if (date === today) return "Hoy";
+  if (date === yesterday) return "Ayer";
+  if (date >= weekStart && date < yesterday) return "Esta semana";
 
   return new Intl.DateTimeFormat("es-AR", {
     month: "long",
     year: "numeric",
-  }).format(date);
-}
-
-function startOfDay(date: Date) {
-  const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
-  return next;
-}
-
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function startOfWeek(date: Date) {
-  const next = startOfDay(date);
-  const day = next.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  next.setDate(next.getDate() + diff);
-  return next;
+    timeZone: "UTC",
+  }).format(new Date(date));
 }
 
 function getTransactionTone(type: TransactionType) {
@@ -947,5 +1004,6 @@ function formatDate(value: string) {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    timeZone: "UTC",
   }).format(new Date(value));
 }

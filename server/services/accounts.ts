@@ -73,15 +73,27 @@ export async function updateAccount(
 ) {
   await assertAccountAccess(userProfileId, accountId, input.householdId);
 
+  const updateData: Prisma.AccountUpdateInput = {
+    name: input.name,
+    type: input.type,
+    currency: input.currency,
+    creditLimit: input.creditLimit,
+    isArchived: input.isArchived,
+  };
+
+  if (input.openingBalance !== undefined) {
+    const current = await prisma.account.findUniqueOrThrow({
+      where: { id: accountId },
+      select: { openingBalance: true },
+    });
+    const delta = input.openingBalance - toFiniteNumber(current.openingBalance);
+    updateData.openingBalance = input.openingBalance;
+    updateData.currentBalance = { increment: delta };
+  }
+
   const account = await prisma.account.update({
     where: { id: accountId },
-    data: {
-      name: input.name,
-      type: input.type,
-      currency: input.currency,
-      creditLimit: input.creditLimit,
-      isArchived: input.isArchived,
-    },
+    data: updateData,
   });
 
   return serializeAccount(account);

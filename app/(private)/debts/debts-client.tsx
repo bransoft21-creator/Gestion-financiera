@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CreditCard, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { CheckCircle2, CreditCard, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +15,8 @@ import { Label } from "@/components/ui/label";
 type DebtType = "LOAN" | "CREDIT_CARD" | "PERSONAL" | "INSTALLMENT" | "OTHER";
 type DebtStatus = "ACTIVE" | "PAID" | "PAUSED" | "DEFAULTED" | "CANCELED";
 type CurrencyCode = "ARS" | "USD";
+
+type AccountOption = { id: string; name: string };
 
 type DebtItem = {
   id: string;
@@ -31,7 +35,7 @@ type DebtItem = {
   paidPercent: number;
 };
 
-type DebtsClientProps = { householdId: string };
+type DebtsClientProps = { householdId: string; accounts: AccountOption[] };
 
 type FormState = {
   name: string;
@@ -99,7 +103,7 @@ const defaultForm: FormState = {
   notes: "",
 };
 
-export function DebtsClient({ householdId }: DebtsClientProps) {
+export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
   const [todayMs] = useState(() => Date.now());
   const [debts, setDebts] = useState<DebtItem[]>([]);
   const [totalOutstanding, setTotalOutstanding] = useState(0);
@@ -112,6 +116,10 @@ export function DebtsClient({ householdId }: DebtsClientProps) {
   const [errors, setErrors] = useState<FormErrors>({});
   const [message, setMessage] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [payingDebtId, setPayingDebtId] = useState<string | null>(null);
+  const [quickPayDebtId, setQuickPayDebtId] = useState<string | null>(null);
+  const [quickPayAccountId, setQuickPayAccountId] = useState<string>("");
+  const [quickPayAmount, setQuickPayAmount] = useState<string>("");
 
   useEffect(() => {
     void loadDebts();
@@ -131,7 +139,7 @@ export function DebtsClient({ householdId }: DebtsClientProps) {
       };
 
       if (!response.ok) {
-        setMessage(payload.error ?? "No se pudieron cargar las deudas.");
+        toast.error(payload.error ?? "No se pudieron cargar las deudas.");
         return;
       }
 
@@ -140,7 +148,7 @@ export function DebtsClient({ householdId }: DebtsClientProps) {
         setTotalOutstanding(payload.data.totalOutstanding);
       }
     } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setIsLoading(false);
     }
@@ -194,6 +202,7 @@ export function DebtsClient({ householdId }: DebtsClientProps) {
         return;
       }
 
+      toast.success(editingDebtId ? "Deuda actualizada." : "Deuda registrada.");
       resetForm();
       setIsFormOpen(false);
       await loadDebts();
@@ -217,16 +226,77 @@ export function DebtsClient({ householdId }: DebtsClientProps) {
       const payload = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        setMessage(payload.error ?? "No se pudo eliminar la deuda.");
+        toast.error(payload.error ?? "No se pudo eliminar la deuda.");
         return;
       }
 
+      toast.success("Deuda eliminada.");
       if (editingDebtId === debtId) resetForm();
       await loadDebts();
     } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setDeletingDebtId(null);
+    }
+  }
+
+  function openQuickPay(debt: DebtItem) {
+    setQuickPayDebtId(debt.id);
+    setQuickPayAccountId(accounts[0]?.id ?? "");
+    setQuickPayAmount(
+      String(debt.minimumPayment ?? debt.outstandingAmount),
+    );
+  }
+
+  function cancelQuickPay() {
+    setQuickPayDebtId(null);
+    setQuickPayAccountId("");
+    setQuickPayAmount("");
+  }
+
+  async function handlePayConfirm(debt: DebtItem) {
+    if (!quickPayAccountId) {
+      toast.error("Seleccioná una cuenta para registrar el pago.");
+      return;
+    }
+    const amount = parseFloat(quickPayAmount);
+    if (!amount || amount <= 0) {
+      toast.error("Ingresá un monto válido.");
+      return;
+    }
+
+    setPayingDebtId(debt.id);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const response = await fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          householdId,
+          type: "DEBT_PAYMENT",
+          status: "COMPLETED",
+          accountId: quickPayAccountId,
+          debtId: debt.id,
+          amount,
+          currency: debt.currency,
+          description: `Pago: ${debt.name}`,
+          occurredAt: today,
+        }),
+      });
+
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        toast.error(payload.error ?? "No se pudo registrar el pago.");
+        return;
+      }
+
+      toast.success(`Pago de ${debt.name} registrado correctamente.`);
+      cancelQuickPay();
+      await loadDebts();
+    } catch {
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
+    } finally {
+      setPayingDebtId(null);
     }
   }
 
@@ -374,14 +444,23 @@ export function DebtsClient({ householdId }: DebtsClientProps) {
 
       <div className="space-y-6">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Deuda activa total</p>
-            <p className="mt-2 text-2xl font-bold tabular-nums text-rose-400">{formatMoney(totalOutstanding, "ARS")}</p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Deudas registradas</p>
-            <p className="mt-2 text-2xl font-bold tabular-nums text-foreground">{debts.length}</p>
-          </div>
+          {isLoading ? (
+            <>
+              <Skeleton className="h-[80px] rounded-xl" />
+              <Skeleton className="h-[80px] rounded-xl" />
+            </>
+          ) : (
+            <>
+              <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Deuda activa total</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-rose-400">{formatMoney(totalOutstanding, "ARS")}</p>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-4">
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Deudas registradas</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-foreground">{debts.length}</p>
+              </div>
+            </>
+          )}
         </div>
 
         <Card>
@@ -409,9 +488,8 @@ export function DebtsClient({ householdId }: DebtsClientProps) {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                Cargando deudas
+              <div className="grid gap-3">
+                {[0, 1].map((i) => <Skeleton key={i} className="h-[148px] rounded-xl" />)}
               </div>
             ) : debts.length === 0 ? (
               <EmptyState
@@ -426,9 +504,19 @@ export function DebtsClient({ householdId }: DebtsClientProps) {
                     key={debt.id}
                     debt={debt}
                     todayMs={todayMs}
+                    accounts={accounts}
                     isDeleting={deletingDebtId === debt.id}
+                    isPaying={payingDebtId === debt.id}
+                    isQuickPayOpen={quickPayDebtId === debt.id}
+                    quickPayAccountId={quickPayAccountId}
+                    quickPayAmount={quickPayAmount}
                     onEdit={() => startEditing(debt)}
                     onDelete={() => handleDelete(debt.id)}
+                    onQuickPayOpen={() => openQuickPay(debt)}
+                    onQuickPayCancel={cancelQuickPay}
+                    onQuickPayAccountChange={setQuickPayAccountId}
+                    onQuickPayAmountChange={setQuickPayAmount}
+                    onQuickPayConfirm={() => handlePayConfirm(debt)}
                   />
                 ))}
               </div>
@@ -453,15 +541,35 @@ export function DebtsClient({ householdId }: DebtsClientProps) {
 function DebtCard({
   debt,
   todayMs,
+  accounts,
   isDeleting,
+  isPaying,
+  isQuickPayOpen,
+  quickPayAccountId,
+  quickPayAmount,
   onEdit,
   onDelete,
+  onQuickPayOpen,
+  onQuickPayCancel,
+  onQuickPayAccountChange,
+  onQuickPayAmountChange,
+  onQuickPayConfirm,
 }: {
   debt: DebtItem;
   todayMs: number;
+  accounts: AccountOption[];
   isDeleting: boolean;
+  isPaying: boolean;
+  isQuickPayOpen: boolean;
+  quickPayAccountId: string;
+  quickPayAmount: string;
   onEdit: () => void;
   onDelete: () => void;
+  onQuickPayOpen: () => void;
+  onQuickPayCancel: () => void;
+  onQuickPayAccountChange: (v: string) => void;
+  onQuickPayAmountChange: (v: string) => void;
+  onQuickPayConfirm: () => void;
 }) {
   const [displayWidth, setDisplayWidth] = useState(0);
   const mounted = useRef(false);
@@ -485,6 +593,7 @@ function DebtCard({
     ? Math.round((new Date(debt.nextDueDate).getTime() - todayMs) / 86400000)
     : null;
   const urgent = daysUntil !== null && daysUntil <= 7;
+  const canPay = debt.status === "ACTIVE" && accounts.length > 0;
 
   return (
     <div className={`rounded-xl border bg-card p-4 animate-fade-up transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${urgent ? "border-rose-500/25" : "border-border"}`}>
@@ -527,7 +636,23 @@ function DebtCard({
       </div>
       <p className="mt-1 text-xs text-muted-foreground">{debt.paidPercent.toFixed(0)}% pagado</p>
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
+        {canPay && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isPaying}
+            onClick={isQuickPayOpen ? onQuickPayCancel : onQuickPayOpen}
+          >
+            {isPaying ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+            )}
+            Registrar pago
+          </Button>
+        )}
         <Button type="button" variant="outline" size="sm" onClick={onEdit}>
           <Pencil className="h-4 w-4" aria-hidden="true" />
           Editar
@@ -537,16 +662,56 @@ function DebtCard({
           Eliminar
         </Button>
       </div>
+
+      {isQuickPayOpen && (
+        <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-3">
+          <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Registrar pago</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Cuenta</label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={quickPayAccountId}
+                onChange={(e) => onQuickPayAccountChange(e.target.value)}
+              >
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Monto ({debt.currency})</label>
+              <Input
+                inputMode="decimal"
+                value={quickPayAmount}
+                onChange={(e) => onQuickPayAmountChange(e.target.value)}
+                placeholder="0"
+                className="h-9"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={isPaying}
+              onClick={onQuickPayConfirm}
+            >
+              {isPaying ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+              Confirmar
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={onQuickPayCancel}>
+              <X className="h-4 w-4" aria-hidden="true" />
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function formatMoney(value: number, currency: CurrencyCode) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
 }
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {

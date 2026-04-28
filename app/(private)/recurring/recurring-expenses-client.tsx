@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Bell,
   CalendarClock,
+  CheckCircle2,
   Loader2,
   Pause,
   Pencil,
@@ -13,6 +14,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -104,6 +106,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
   const [isSaving, setIsSaving] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>(defaultForm);
@@ -196,6 +199,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
         return;
       }
 
+      toast.success(editingId ? "Recurrente actualizado." : "Recurrente creado.");
       resetForm();
       setIsFormOpen(false);
       await loadItems();
@@ -218,13 +222,14 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
       const payload = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        setMessage(payload.error ?? "No se pudo cambiar el estado.");
+        toast.error(payload.error ?? "No se pudo cambiar el estado.");
         return;
       }
 
+      toast.success(item.isActive ? "Recurrente pausado." : "Recurrente activado.");
       await loadItems();
     } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setTogglingId(null);
     }
@@ -243,16 +248,55 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
       const payload = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        setMessage(payload.error ?? "No se pudo eliminar.");
+        toast.error(payload.error ?? "No se pudo eliminar.");
         return;
       }
 
+      toast.success("Recurrente eliminado.");
       if (editingId === id) resetForm();
       await loadItems();
     } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handlePay(item: RecurringItem) {
+    if (!item.account) {
+      toast.error("Asigná una cuenta al recurrente antes de registrar el pago.");
+      return;
+    }
+    setPayingId(item.id);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const response = await fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          householdId,
+          type: "EXPENSE",
+          status: "COMPLETED",
+          accountId: item.account.id,
+          categoryId: item.category?.id ?? undefined,
+          amount: item.amount,
+          currency: item.currency,
+          description: item.name,
+          occurredAt: today,
+        }),
+      });
+
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        toast.error(payload.error ?? "No se pudo registrar el pago.");
+        return;
+      }
+
+      toast.success(`Pago de ${item.name} registrado correctamente.`);
+    } catch {
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
+    } finally {
+      setPayingId(null);
     }
   }
 
@@ -457,9 +501,11 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
                     item={item}
                     isToggling={togglingId === item.id}
                     isDeleting={deletingId === item.id}
+                    isPaying={payingId === item.id}
                     onEdit={() => startEditing(item)}
                     onToggle={() => handleToggle(item)}
                     onDelete={() => handleDelete(item.id)}
+                    onPay={() => handlePay(item)}
                   />
                 ))}
               </div>
@@ -485,16 +531,20 @@ function RecurringRow({
   item,
   isToggling,
   isDeleting,
+  isPaying,
   onEdit,
   onToggle,
   onDelete,
+  onPay,
 }: {
   item: RecurringItem;
   isToggling: boolean;
   isDeleting: boolean;
+  isPaying: boolean;
   onEdit: () => void;
   onToggle: () => void;
   onDelete: () => void;
+  onPay: () => void;
 }) {
   const frequencyLabels: Record<Frequency, string> = {
     WEEKLY: "Semanal",
@@ -552,6 +602,20 @@ function RecurringRow({
         </p>
       </div>
       <div className="flex gap-2 xl:justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={isPaying || !item.isActive || !item.account}
+          title={!item.account ? "Asigná una cuenta para registrar el pago" : "Registrar pago"}
+          onClick={onPay}
+        >
+          {isPaying ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+          )}
+        </Button>
         <Button type="button" variant="outline" size="sm" onClick={onEdit}>
           <Pencil className="h-4 w-4" aria-hidden="true" />
         </Button>
@@ -577,7 +641,7 @@ function formatMoney(value: number, currency: CurrencyCode) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+  return new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(value));
 }
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {

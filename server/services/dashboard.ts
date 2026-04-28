@@ -37,8 +37,8 @@ export async function getDashboardSummary(
 ) {
   await assertHouseholdAccess(userProfileId, householdId);
 
-  const monthStart = new Date(year, month - 1, 1);
-  const nextMonthStart = new Date(year, month, 1);
+  const monthStart = new Date(Date.UTC(year, month - 1, 1));
+  const nextMonthStart = new Date(Date.UTC(year, month, 1));
 
   const [
     monthTransactions,

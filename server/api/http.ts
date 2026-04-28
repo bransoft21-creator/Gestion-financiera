@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { ApiError } from "./errors";
 
@@ -23,6 +24,15 @@ export function handleApiError(error: unknown) {
       },
       { status: 400 },
     );
+  }
+
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2002") {
+      return NextResponse.json(
+        { error: "Ya existe un registro con esos datos para este período." },
+        { status: 409 },
+      );
+    }
   }
 
   console.error(error);

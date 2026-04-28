@@ -4,31 +4,49 @@
 
 @layer base {
   :root {
-    --background: 228 20% 7%;
-    --foreground: 210 40% 95%;
-    --card: 228 20% 10%;
-    --card-foreground: 210 40% 95%;
-    --primary: 262 83% 58%;
+    /* Core surfaces — richer, deeper dark */
+    --background: 230 22% 5.5%;
+    --foreground: 210 35% 94%;
+    --card: 230 20% 9%;
+    --card-foreground: 210 35% 94%;
+
+    /* Brand */
+    --primary: 263 80% 60%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 225 20% 15%;
-    --secondary-foreground: 210 40% 95%;
-    --muted: 225 20% 15%;
-    --muted-foreground: 215 16% 50%;
-    --accent: 262 83% 58%;
+
+    /* Secondary / muted surfaces */
+    --secondary: 228 18% 14%;
+    --secondary-foreground: 210 35% 94%;
+    --muted: 228 18% 14%;
+    --muted-foreground: 215 14% 52%;
+
+    /* Accent (same as primary) */
+    --accent: 263 80% 60%;
     --accent-foreground: 0 0% 100%;
+
+    /* Destructive */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 225 20% 18%;
-    --input: 225 20% 20%;
-    --ring: 262 83% 58%;
+
+    /* Form */
+    --border: 228 16% 17%;
+    --input: 228 16% 18%;
+    --ring: 263 80% 60%;
     --radius: 0.75rem;
 
-    /* Design system aliases */
-    --violet: hsl(262 83% 58%);
-    --surface: hsl(228 20% 10%);
-    --surface-el: hsl(228 20% 13%);
-    --text: hsl(210 40% 95%);
-    --muted-color: hsl(215 16% 50%);
+    /* Design-system aliases */
+    --violet: hsl(263 80% 60%);
+    --surface: hsl(230 20% 9%);
+    --surface-el: hsl(230 20% 12%);
+    --surface-2: hsl(230 22% 13%);
+    --text: hsl(210 35% 94%);
+    --muted-color: hsl(215 14% 52%);
+
+    /* Glow tokens for subtle effects */
+    --glow-primary: rgba(124, 58, 237, 0.14);
+    --glow-emerald: rgba(52, 211, 153, 0.10);
+    --glow-rose: rgba(248, 113, 113, 0.10);
+    --glow-sky: rgba(56, 189, 248, 0.10);
   }
 
   * {
@@ -37,27 +55,41 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  /* Selection color matches brand */
+  ::selection {
+    background-color: hsl(var(--primary) / 0.28);
+    color: hsl(var(--foreground));
   }
 
   select {
     color-scheme: dark;
   }
 
-  /* Scrollbar */
+  /* Thinner, on-brand scrollbar */
   ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 2px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }
 
-  /* Ensure animate-in from tailwindcss-animate holds the from-state before playing */
+  /* Ensure animate-in holds from-state before playing */
   .animate-in {
     animation-fill-mode: both;
   }
 
-  /* Smooth scrolling throughout */
   html {
     scroll-behavior: smooth;
   }
+
+  /* Headings — tighter tracking by default */
+  h1, h2, h3, h4 {
+    letter-spacing: -0.015em;
+  }
 }
 
+/* ── Keyframes ── */
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -68,6 +100,12 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes stagger-item-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Animation utility classes ── */
 .fade-in {
   animation: fade-in-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -76,6 +114,19 @@
   animation: slide-up-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/*
+  .stagger-in — apply to a grid/flex parent whose children have an animate-in class.
+  Each child gets a cascading delay for a natural card-reveal effect.
+*/
+.stagger-in > *:nth-child(1)  { animation-delay:  30ms; }
+.stagger-in > *:nth-child(2)  { animation-delay:  90ms; }
+.stagger-in > *:nth-child(3)  { animation-delay: 150ms; }
+.stagger-in > *:nth-child(4)  { animation-delay: 210ms; }
+.stagger-in > *:nth-child(5)  { animation-delay: 270ms; }
+.stagger-in > *:nth-child(6)  { animation-delay: 330ms; }
+.stagger-in > *:nth-child(n+7){ animation-delay: 390ms; }
+
+/* ── Privacy mode: blur monetary values ── */
 html[data-hide-amounts="true"] .tabular-nums {
   color: transparent !important;
   filter: blur(7px);
@@ -83,12 +134,22 @@ html[data-hide-amounts="true"] .tabular-nums {
   user-select: none;
 }
 
+/* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   .fade-in, .slide-up { animation: none !important; }
+  .stagger-in > * { animation-delay: 0ms !important; }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Glass morphism surface */
+  .glass {
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid hsl(var(--border) / 0.7);
   }
 }

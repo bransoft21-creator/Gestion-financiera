@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { CalendarDays, Loader2, Pencil, Plus, Sparkles, Target, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,13 +99,13 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
       const payload = (await response.json()) as { data?: GoalItem[]; error?: string };
 
       if (!response.ok) {
-        setMessage(payload.error ?? "No se pudieron cargar las metas.");
+        toast.error(payload.error ?? "No se pudieron cargar las metas.");
         return;
       }
 
       setGoals(payload.data ?? []);
     } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setIsLoading(false);
     }
@@ -153,6 +155,7 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
         return;
       }
 
+      toast.success(editingGoalId ? "Meta actualizada." : "Meta creada.");
       resetForm();
       await loadGoals();
     } catch {
@@ -180,17 +183,18 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
       const payload = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        setMessage(payload.error ?? "No se pudo eliminar la meta.");
+        toast.error(payload.error ?? "No se pudo eliminar la meta.");
         return;
       }
 
+      toast.success("Meta eliminada.");
       if (editingGoalId === goalId) {
         resetForm();
       }
 
       await loadGoals();
     } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setDeletingGoalId(null);
     }
@@ -361,9 +365,22 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
           </CardHeader>
           <CardContent>
           {isLoading ? (
-            <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-              Cargando metas
+            <div className="grid gap-3">
+              {[1, 2].map((i) => (
+                <div key={i} className="rounded-xl border border-border p-4 space-y-4">
+                  <div className="flex gap-3">
+                    <Skeleton className="h-10 w-10 rounded-xl shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-36" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-16 w-16 rounded-full shrink-0" />
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[1,2,3,4].map((j) => <Skeleton key={j} className="h-14 rounded-xl" />)}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : goals.length === 0 ? (
             <EmptyState
@@ -537,5 +554,6 @@ function formatDate(value: string) {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    timeZone: "UTC",
   }).format(new Date(value));
 }

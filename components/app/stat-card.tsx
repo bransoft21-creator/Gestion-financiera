@@ -17,18 +17,27 @@ type StatCardProps = {
   animationDelay?: number;
 };
 
-const toneIconClasses = {
-  default: "bg-sky-500/15 text-sky-400",
-  positive: "bg-emerald-500/15 text-emerald-400",
-  warning: "bg-amber-500/15 text-amber-400",
-  danger: "bg-rose-500/15 text-rose-400",
-};
-
-const toneValueClasses = {
-  default: "text-sky-400",
-  positive: "text-emerald-400",
-  warning: "text-amber-400",
-  danger: "text-rose-400",
+const toneConfig = {
+  default: {
+    icon: "bg-sky-500/15 text-sky-400",
+    value: "text-sky-400",
+    line: "from-sky-500/60 via-sky-500/20 to-transparent",
+  },
+  positive: {
+    icon: "bg-emerald-500/15 text-emerald-400",
+    value: "text-emerald-400",
+    line: "from-emerald-500/60 via-emerald-500/20 to-transparent",
+  },
+  warning: {
+    icon: "bg-amber-500/15 text-amber-400",
+    value: "text-amber-400",
+    line: "from-amber-500/60 via-amber-500/20 to-transparent",
+  },
+  danger: {
+    icon: "bg-rose-500/15 text-rose-400",
+    value: "text-rose-400",
+    line: "from-rose-500/60 via-rose-500/20 to-transparent",
+  },
 };
 
 function AnimatedValue({
@@ -57,26 +66,34 @@ export function StatCard({
   animationDelay,
 }: StatCardProps) {
   const hasAnimation = rawValue !== undefined && formatter !== undefined;
+  const config = toneConfig[tone];
 
   return (
     <Card
       className={cn(
-        "relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg animate-in fade-in slide-in-from-bottom-3 duration-500",
+        "relative overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-500",
         highlight && "border-primary/30 bg-gradient-to-br from-primary/10 to-card",
       )}
       style={animationDelay !== undefined ? { animationDelay: `${animationDelay}ms` } : undefined}
     >
-      {highlight && (
-        <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-violet-500 to-indigo-500" />
-      )}
+      {/* Top accent line — color-coded by tone */}
+      <div
+        className={cn(
+          "absolute inset-x-0 top-0 h-px bg-gradient-to-r",
+          highlight ? "from-violet-500/80 via-indigo-500/40 to-transparent" : config.line,
+        )}
+      />
+
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {label}
+            </p>
             <p
               className={cn(
                 "mt-2 text-2xl font-bold tracking-tight tabular-nums",
-                highlight ? "text-foreground" : toneValueClasses[tone],
+                highlight ? "text-foreground" : config.value,
               )}
             >
               {hasAnimation ? (
@@ -87,7 +104,7 @@ export function StatCard({
             </p>
             <p className="mt-1.5 text-xs text-muted-foreground">{detail}</p>
           </div>
-          <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", toneIconClasses[tone])}>
+          <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", config.icon)}>
             <Icon className="h-5 w-5" aria-hidden="true" />
           </div>
         </div>

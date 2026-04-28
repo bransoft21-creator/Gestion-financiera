@@ -167,8 +167,8 @@ async function assertBudgetCategory(householdId: string, categoryId: string) {
 }
 
 async function getRealSpendingByCategory(householdId: string, year: number, month: number) {
-  const start = new Date(year, month - 1, 1);
-  const end = new Date(year, month, 1);
+  const start = new Date(Date.UTC(year, month - 1, 1));
+  const end = new Date(Date.UTC(year, month, 1));
   const transactions = await prisma.transaction.findMany({
     where: {
       householdId,

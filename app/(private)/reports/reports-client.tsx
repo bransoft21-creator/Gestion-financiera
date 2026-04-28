@@ -8,20 +8,23 @@ import {
   Star,
   TrendingDown,
   TrendingUp,
+  Wallet,
 } from "lucide-react";
 import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import { EmptyState } from "@/components/app/empty-state";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type TrendPoint = {
@@ -51,8 +54,13 @@ type ReportsClientProps = {
   householdId: string;
 };
 
-const MONTHS_OPTIONS = [3, 6, 12] as const;
-type MonthsOption = (typeof MONTHS_OPTIONS)[number];
+const PERIODS = [
+  { value: 3, label: "3 meses" },
+  { value: 6, label: "6 meses" },
+  { value: 12, label: "Último año" },
+] as const;
+
+type MonthsOption = (typeof PERIODS)[number]["value"];
 
 export function ReportsClient({ householdId }: ReportsClientProps) {
   const [report, setReport] = useState<MonthlyReport | null>(null);
@@ -108,31 +116,36 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
   const hasTrend = report && report.trend.length > 0;
   const hasCategories = report && report.topCategories.length > 0;
 
-  const lastMonth = report?.trend[report.trend.length - 1];
+  const totalIncome = report?.trend.reduce((s, p) => s + p.income, 0) ?? 0;
+  const totalExpenses = report?.trend.reduce((s, p) => s + p.expenses, 0) ?? 0;
+  const totalSavings = report?.trend.reduce((s, p) => s + p.savings, 0) ?? 0;
   const avgSavingsRate =
     report && report.trend.length > 0
       ? Math.round(report.trend.reduce((s, p) => s + p.savingsRate, 0) / report.trend.length)
       : 0;
+  const bestMonth = report?.trend.length
+    ? report.trend.reduce((a, b) => (a.savings > b.savings ? a : b))
+    : null;
+  const worstMonth = report?.trend.length
+    ? report.trend.reduce((a, b) => (a.expenses > b.expenses ? a : b))
+    : null;
 
   return (
     <div className="space-y-6">
+      {/* Period selector */}
       <div
         className="flex w-fit rounded-[10px] border border-border p-1"
         style={{ background: "var(--surface)" }}
       >
-        {([
-          [3, "Mensual"],
-          [6, "Trimestral"],
-          [12, "Anual"],
-        ] as const).map(([option, label]) => (
+        {PERIODS.map(({ value, label }) => (
           <button
-            key={option}
+            key={value}
             type="button"
             disabled={isLoading}
-            onClick={() => setMonths(option)}
+            onClick={() => setMonths(value)}
             className="rounded-[7px] px-4 py-2 text-xs font-semibold transition-all duration-150 disabled:opacity-50"
             style={
-              months === option
+              months === value
                 ? { background: "hsl(var(--primary))", color: "#fff", boxShadow: "0 2px 8px rgba(124,58,237,.35)" }
                 : { background: "transparent", color: "hsl(var(--muted-foreground))" }
             }
@@ -157,27 +170,39 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
         />
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <KpiCard
-              label="Promedio de ahorro"
-              value={formatMoney(report.trend.reduce((s, p) => s + p.savings, 0) / report.trend.length)}
-              color="#34d399"
-              Icon={PiggyBank}
-            />
-            <KpiCard
-              label="Mejor mes"
-              value={report.trend.reduce((a, b) => (a.savings > b.savings ? a : b)).label}
-              color="#a78bfa"
-              Icon={Star}
-            />
-            <KpiCard
-              label="Tasa promedio"
-              value={`${avgSavingsRate}%`}
-              color="#60a5fa"
-              Icon={TrendingUp}
-            />
+          {/* Period summary */}
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard label="Ingresos totales" value={formatMoney(totalIncome)} color="#34d399" Icon={TrendingUp} />
+            <KpiCard label="Gastos totales" value={formatMoney(totalExpenses)} color="#f87171" Icon={TrendingDown} />
+            <KpiCard label="Ahorro neto" value={formatMoney(totalSavings)} color="#60a5fa" Icon={Wallet} />
+            <KpiCard label="Tasa promedio" value={`${avgSavingsRate}%`} color="#a78bfa" Icon={PiggyBank} />
           </div>
 
+          {/* Insights row */}
+          {(bestMonth ?? worstMonth) ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {bestMonth && (
+                <div className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/8 p-4">
+                  <Star className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden="true" />
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Mejor mes</p>
+                    <p className="text-sm font-semibold">{bestMonth.label} · {formatMoney(bestMonth.savings)} ahorrado</p>
+                  </div>
+                </div>
+              )}
+              {worstMonth && (
+                <div className="flex items-center gap-3 rounded-xl border border-rose-500/20 bg-rose-500/8 p-4">
+                  <TrendingDown className="h-5 w-5 shrink-0 text-rose-400" aria-hidden="true" />
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-rose-400">Mayor gasto</p>
+                    <p className="text-sm font-semibold">{worstMonth.label} · {formatMoney(worstMonth.expenses)} gastado</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {/* Income vs Expenses chart */}
           <Card>
             <CardHeader>
               <CardTitle>Ingresos vs Gastos</CardTitle>
@@ -221,10 +246,11 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
             </CardContent>
           </Card>
 
+          {/* Savings rate chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Evolución del ahorro</CardTitle>
-              <CardDescription>Porcentaje de ahorro mensual (ingresos − gastos) / ingresos.</CardDescription>
+              <CardTitle>Tasa de ahorro</CardTitle>
+              <CardDescription>Porcentaje mensual: (ingresos − gastos) / ingresos.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-[240px] w-full">
@@ -267,54 +293,110 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
             </CardContent>
           </Card>
 
+          {/* Categories */}
           {hasCategories ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Top categorías de gasto</CardTitle>
-                <CardDescription>Distribución del último mes registrado.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3.5">
-                  {report.topCategories.map((cat) => (
-                    <div key={cat.categoryId} className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-4 text-sm">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span
-                            className="h-2 w-2 shrink-0 rounded-sm"
-                            style={{ backgroundColor: cat.color ?? "#6366f1" }}
+            <div className="grid gap-6 xl:grid-cols-2">
+              {/* Pie chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Distribución por categoría</CardTitle>
+                  <CardDescription>Participación de cada categoría en el gasto del período.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+                    <div className="h-[200px] w-full max-w-[200px] shrink-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={report.topCategories}
+                            dataKey="total"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={52}
+                            outerRadius={80}
+                            paddingAngle={2}
+                          >
+                            {report.topCategories.map((cat) => (
+                              <Cell key={cat.categoryId} fill={cat.color ?? "#6366f1"} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value) => [formatMoney(Number(value)), ""]}
+                            contentStyle={{
+                              backgroundColor: "hsl(var(--card))",
+                              border: "1px solid hsl(var(--border))",
+                              borderRadius: "0.75rem",
+                              fontSize: 12,
+                            }}
                           />
-                          <span className="truncate font-medium">{cat.name}</span>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-3 text-right">
-                          <span className="text-muted-foreground">{cat.percentage}%</span>
-                          <span className="font-semibold tabular-nums" style={{ color: cat.color ?? "#6366f1" }}>
-                            {formatMoney(cat.total)}
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="w-full space-y-2 min-w-0">
+                      {report.topCategories.map((cat) => (
+                        <div key={cat.categoryId} className="flex items-center justify-between gap-2 text-sm">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: cat.color ?? "#6366f1" }} />
+                            <span className="truncate text-xs font-medium">{cat.name}</span>
+                          </div>
+                          <span className="shrink-0 text-xs font-semibold tabular-nums" style={{ color: cat.color ?? "#6366f1" }}>
+                            {cat.percentage}%
                           </span>
                         </div>
-                      </div>
-                      <div className="h-[5px] w-full overflow-hidden rounded-full bg-secondary">
-                        <div
-                          className="h-full rounded-full transition-[width] duration-700 ease-out"
-                          style={{ width: `${cat.percentage}%`, backgroundColor: cat.color ?? "#6366f1" }}
-                        />
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Bars */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Top categorías de gasto</CardTitle>
+                  <CardDescription>Monto acumulado en el período seleccionado.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3.5">
+                    {report.topCategories.map((cat) => (
+                      <div key={cat.categoryId} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-4 text-sm">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: cat.color ?? "#6366f1" }} />
+                            <span className="truncate font-medium">{cat.name}</span>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-3 text-right">
+                            <span className="text-muted-foreground">{cat.percentage}%</span>
+                            <span className="font-semibold tabular-nums" style={{ color: cat.color ?? "#6366f1" }}>
+                              {formatMoney(cat.total)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="h-[5px] w-full overflow-hidden rounded-full bg-secondary">
+                          <div
+                            className="h-full rounded-full transition-[width] duration-700 ease-out"
+                            style={{ width: `${cat.percentage}%`, backgroundColor: cat.color ?? "#6366f1" }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           ) : (
             <Card>
               <CardContent className="flex h-32 items-center justify-center">
-                <p className="text-sm text-muted-foreground">Sin gastos por categoría en el último mes.</p>
+                <p className="text-sm text-muted-foreground">Sin gastos por categoría en el período.</p>
               </CardContent>
             </Card>
           )}
 
+          {/* Savings bars */}
           <Card>
             <CardHeader>
-              <CardTitle>Evolución del ahorro neto</CardTitle>
-              <CardDescription>Saldo disponible por mes.</CardDescription>
+              <CardTitle>Ahorro neto por mes</CardTitle>
+              <CardDescription>Saldo disponible (ingresos − gastos) para cada mes del período.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex gap-3 overflow-x-auto pb-1">
@@ -323,17 +405,20 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                   return report.trend.map((d, i) => {
                     const h = Math.max(12, (d.savings / (max || 1)) * 100);
                     const isLast = i === report.trend.length - 1;
+                    const isNegative = d.savings < 0;
                     return (
                       <div key={d.label} className="flex min-w-[44px] flex-1 flex-col items-center gap-1.5">
-                        <span className="whitespace-nowrap text-[11px] font-bold tabular-nums text-emerald-400">
-                          ${(d.savings / 1000).toFixed(0)}k
+                        <span className={`whitespace-nowrap text-[11px] font-bold tabular-nums ${isNegative ? "text-rose-400" : "text-emerald-400"}`}>
+                          {isNegative ? "-" : ""}${(Math.abs(d.savings) / 1000).toFixed(0)}k
                         </span>
                         <div className="flex h-24 w-full items-end justify-center">
                           <div
                             className="w-[70%] min-h-[6px] rounded-t-[4px]"
                             style={{
                               height: `${h}%`,
-                              background: "linear-gradient(180deg,#34d399,#34d39944)",
+                              background: isNegative
+                                ? "linear-gradient(180deg,#f87171,#f8717144)"
+                                : "linear-gradient(180deg,#34d399,#34d39944)",
                               boxShadow: isLast ? "0 0 12px rgba(52,211,153,.3)" : "none",
                               transition: "height 0.85s ease",
                             }}
@@ -347,13 +432,6 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
               </div>
             </CardContent>
           </Card>
-
-          <div className="flex flex-col items-center gap-2 py-4 text-center text-muted-foreground">
-            <TrendingDown className="h-7 w-7" aria-hidden="true" />
-            <p className="text-[13px]">
-              Más reportes próximamente — flujo de caja, comparación por período y exportación PDF.
-            </p>
-          </div>
         </>
       )}
     </div>
