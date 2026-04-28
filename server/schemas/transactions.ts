@@ -11,7 +11,7 @@ const transactionTypeValues = Object.values(TransactionType) as [
   ...TransactionType[],
 ];
 
-const moneySchema = z.coerce.number().finite().positive();
+const moneySchema = z.coerce.number().finite().positive().max(999_999_999_999);
 
 const createTransactionBaseSchema = z.object({
   householdId: z.string().min(1),
