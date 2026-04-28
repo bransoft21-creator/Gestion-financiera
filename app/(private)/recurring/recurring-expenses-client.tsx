@@ -17,6 +17,14 @@ import {
 import { toast } from "sonner";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
+import {
+  MobileCreateFab,
+  MobileFormOverlay,
+  mobileFormActionsClass,
+  mobileFormCardClass,
+  mobileFormContentClass,
+} from "@/components/app/mobile-form";
+import { moneySchema } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,7 +86,7 @@ const frequencies = Object.keys(frequencyLabels) as Frequency[];
 const formSchema = z.object({
   name: z.string().trim().min(2, "Ingresá un nombre.").max(100),
   currency: z.enum(["ARS", "USD"]),
-  amount: z.coerce.number().positive("Ingresá un monto mayor a cero."),
+  amount: moneySchema(),
   frequency: z.enum(frequencies as [Frequency, ...Frequency[]]),
   nextDueDate: z.string().min(1, "Seleccioná la próxima fecha."),
   endDate: z.string().optional(),
@@ -192,9 +200,10 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
         }),
       });
 
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as { error?: string; fieldErrors?: FormErrors };
 
       if (!response.ok) {
+        if (payload.fieldErrors) setErrors(payload.fieldErrors);
         setMessage(payload.error ?? "No se pudo guardar el gasto recurrente.");
         return;
       }
@@ -330,20 +339,9 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
 
   return (
     <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-      {isFormOpen ? (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 xl:hidden"
-          onClick={() => setIsFormOpen(false)}
-        />
-      ) : null}
+      <MobileFormOverlay isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} />
 
-      <Card
-        className={`${
-          isFormOpen
-            ? "fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 max-h-[calc(100dvh-96px)] overflow-y-auto rounded-2xl animate-slide-up"
-            : "hidden"
-        } xl:block`}
-      >
+      <Card className={mobileFormCardClass(isFormOpen)}>
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -360,7 +358,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
             </Button>
           </div>
         </CardHeader>
-        <CardContent className={isFormOpen ? "pb-0 xl:pb-5" : undefined}>
+        <CardContent className={mobileFormContentClass(isFormOpen)}>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Field label="Nombre" error={errors.name}>
               <Input value={form.name} onChange={(e) => updateForm("name", e.target.value)} placeholder="Ej: Netflix, Alquiler, Gym" />
@@ -413,7 +411,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
 
             {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
 
-            <div className="sticky bottom-0 -mx-5 grid gap-2 border-t border-border bg-card/95 p-5 backdrop-blur sm:grid-cols-2 xl:static xl:mx-0 xl:border-0 xl:bg-transparent xl:p-0 xl:backdrop-blur-none 2xl:grid-cols-2">
+            <div className={mobileFormActionsClass()}>
               <Button className="h-11 w-full" disabled={isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                 {editingId ? "Guardar cambios" : "Crear recurrente"}
@@ -474,7 +472,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
                     {f === "all" ? "Todos" : f === "active" ? "Activos" : "Inactivos"}
                   </Button>
                 ))}
-                <Button type="button" size="sm" onClick={() => { resetForm(); setIsFormOpen(true); }}>
+                <Button type="button" size="sm" className="hidden xl:inline-flex" onClick={() => { resetForm(); setIsFormOpen(true); }}>
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   Nuevo
                 </Button>
@@ -514,15 +512,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
         </Card>
       </div>
 
-      <Button
-        type="button"
-        size="icon"
-        className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 shadow-xl shadow-violet-500/30 xl:hidden"
-        onClick={() => { resetForm(); setIsFormOpen(true); }}
-        aria-label="Nuevo recurrente"
-      >
-        <Plus className="h-6 w-6" aria-hidden="true" />
-      </Button>
+      <MobileCreateFab label="Nuevo recurrente" onClick={() => { resetForm(); setIsFormOpen(true); }} />
     </div>
   );
 }

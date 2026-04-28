@@ -28,7 +28,7 @@ export function AppShell({ children, userName, userEmail }: AppShellProps) {
         <Sidebar userName={userName} userEmail={userEmail} />
         <main className="min-w-0 flex-1 overflow-x-hidden">
           <PageTransition>
-            <div className="mx-auto w-full max-w-[1200px] px-4 pb-[88px] pt-5 lg:px-8 lg:py-7">
+            <div className="mx-auto w-full max-w-[1200px] px-4 pb-[calc(112px+env(safe-area-inset-bottom))] pt-5 lg:px-8 lg:py-7">
               {children}
             </div>
           </PageTransition>

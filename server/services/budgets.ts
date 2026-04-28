@@ -1,6 +1,8 @@
 import { BudgetPeriod, CategoryType, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { argentinaMonthRangeUtc } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { ForbiddenError, NotFoundError } from "../api/errors";
+import { computeBudgetReservation } from "./financial-ledger";
 import type {
   BudgetPeriodInput,
   CreateBudgetInput,
@@ -47,6 +49,7 @@ export async function listBudgets(userProfileId: string, input: BudgetPeriodInpu
   return budgets.map((budget) => {
     const spentAmount = spendingByCategory.get(budget.categoryId) ?? 0;
     const plannedAmount = toFiniteNumber(budget.plannedAmount);
+    const remainingReserved = computeBudgetReservation({ plannedAmount, spentAmount });
     const usagePercent = plannedAmount > 0 ? (spentAmount / plannedAmount) * 100 : 0;
 
     return {
@@ -57,9 +60,10 @@ export async function listBudgets(userProfileId: string, input: BudgetPeriodInpu
       year: budget.year,
       month: budget.month,
       plannedAmount,
-      reservedAmount: toFiniteNumber(budget.reservedAmount),
-      alertThreshold: budget.alertThreshold ? toFiniteNumber(budget.alertThreshold) : null,
+      reservedAmount: remainingReserved,
+      alertThreshold: budget.alertThreshold != null ? toFiniteNumber(budget.alertThreshold) : null,
       spentAmount,
+      remainingReserved,
       usagePercent,
       category: budget.category,
       createdAt: budget.createdAt.toISOString(),
@@ -167,8 +171,7 @@ async function assertBudgetCategory(householdId: string, categoryId: string) {
 }
 
 async function getRealSpendingByCategory(householdId: string, year: number, month: number) {
-  const start = new Date(Date.UTC(year, month - 1, 1));
-  const end = new Date(Date.UTC(year, month, 1));
+  const { start, end } = argentinaMonthRangeUtc(year, month);
   const transactions = await prisma.transaction.findMany({
     where: {
       householdId,

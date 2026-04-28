@@ -5,6 +5,14 @@ import { CalendarDays, Loader2, Pencil, Plus, Sparkles, Target, Trash2, X } from
 import { toast } from "sonner";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
+import {
+  MobileCreateFab,
+  MobileFormOverlay,
+  mobileFormActionsClass,
+  mobileFormCardClass,
+  mobileFormContentClass,
+} from "@/components/app/mobile-form";
+import { moneySchema, optionalMoneySchema } from "@/lib/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,9 +64,9 @@ const statuses = Object.keys(statusLabels) as GoalStatus[];
 const goalSchema = z.object({
   name: z.string().trim().min(2, "Ingresá un nombre.").max(100),
   currency: z.enum(["ARS", "USD"]),
-  targetAmount: z.coerce.number().positive("Ingresá un objetivo mayor a cero."),
-  currentAmount: z.coerce.number().nonnegative("El monto actual no puede ser negativo."),
-  requiredMonthlyAmount: z.coerce.number().nonnegative().optional(),
+  targetAmount: moneySchema(),
+  currentAmount: moneySchema({ allowZero: true }),
+  requiredMonthlyAmount: optionalMoneySchema({ allowZero: true }),
   targetDate: z.string().optional(),
   status: z.enum(statuses),
   notes: z.string().trim().max(1000).optional(),
@@ -80,6 +88,7 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
   const [form, setForm] = useState<FormState>(defaultForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -142,21 +151,23 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
           currency: parsed.data.currency,
           targetAmount: parsed.data.targetAmount,
           currentAmount: parsed.data.currentAmount,
-          requiredMonthlyAmount: parsed.data.requiredMonthlyAmount || (editingGoalId ? null : undefined),
+          requiredMonthlyAmount: parsed.data.requiredMonthlyAmount ?? (editingGoalId ? null : undefined),
           targetDate: parsed.data.targetDate || (editingGoalId ? null : undefined),
           status: parsed.data.status,
           notes: parsed.data.notes || (editingGoalId ? null : undefined),
         }),
       });
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as { error?: string; fieldErrors?: FormErrors };
 
       if (!response.ok) {
+        if (payload.fieldErrors) setErrors(payload.fieldErrors);
         setMessage(payload.error ?? "No se pudo guardar la meta.");
         return;
       }
 
       toast.success(editingGoalId ? "Meta actualizada." : "Meta creada.");
       resetForm();
+      setIsFormOpen(false);
       await loadGoals();
     } catch {
       setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
@@ -209,11 +220,12 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
       currency: goal.currency,
       targetAmount: String(goal.targetAmount),
       currentAmount: String(goal.currentAmount),
-      requiredMonthlyAmount: goal.requiredMonthlyAmount ? String(goal.requiredMonthlyAmount) : "",
+      requiredMonthlyAmount: goal.requiredMonthlyAmount != null ? String(goal.requiredMonthlyAmount) : "",
       targetDate: goal.targetDate ? goal.targetDate.slice(0, 10) : "",
       status: goal.status,
       notes: goal.notes ?? "",
     });
+    setIsFormOpen(true);
   }
 
   function resetForm() {
@@ -234,7 +246,9 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
 
   return (
     <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-      <Card>
+      <MobileFormOverlay isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} />
+
+      <Card className={mobileFormCardClass(isFormOpen)}>
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -244,9 +258,12 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
               <CardTitle>{editingGoalId ? "Editar meta" : "Nueva meta"}</CardTitle>
               <CardDescription>Objetivo, progreso y fecha esperada.</CardDescription>
             </div>
+            <Button type="button" variant="ghost" size="icon" className="ml-auto xl:hidden" onClick={() => setIsFormOpen(false)}>
+              <X className="h-5 w-5" aria-hidden="true" />
+            </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className={mobileFormContentClass(isFormOpen)}>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Field label="Nombre" error={errors.name}>
               <Input value={form.name} onChange={(event) => updateForm("name", event.target.value)} />
@@ -322,7 +339,7 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
 
             {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
 
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+            <div className={mobileFormActionsClass("xl:grid-cols-1 2xl:grid-cols-2")}>
               <Button className="h-11 w-full" disabled={isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                 {editingGoalId ? "Guardar cambios" : "Crear meta"}
@@ -356,11 +373,17 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle>Listado</CardTitle>
-                <CardDescription>{goals.length} metas activas o históricas.</CardDescription>
+                <div>
+                  <CardTitle>Listado</CardTitle>
+                  <CardDescription>{goals.length} metas activas o históricas.</CardDescription>
+                </div>
+              <div className="flex items-center gap-2">
+                <Badge>No afecta disponible real</Badge>
+                <Button type="button" size="sm" className="hidden xl:inline-flex" onClick={() => { resetForm(); setIsFormOpen(true); }}>
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Nueva
+                </Button>
               </div>
-              <Badge>No afecta disponible real</Badge>
             </div>
           </CardHeader>
           <CardContent>
@@ -404,6 +427,7 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
         </CardContent>
         </Card>
       </div>
+      <MobileCreateFab label="Nueva meta" onClick={() => { resetForm(); setIsFormOpen(true); }} />
     </div>
   );
 }

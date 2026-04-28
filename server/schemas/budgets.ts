@@ -1,8 +1,8 @@
 import { CurrencyCode } from "@prisma/client";
 import { z } from "zod";
+import { moneySchema, optionalMoneySchema } from "@/lib/money";
 
 const currencyValues = Object.values(CurrencyCode) as [CurrencyCode, ...CurrencyCode[]];
-const moneySchema = z.coerce.number().finite().positive();
 
 export const budgetPeriodSchema = z.object({
   householdId: z.string().min(1),
@@ -16,15 +16,15 @@ export const createBudgetSchema = z.object({
   currency: z.enum(currencyValues).default(CurrencyCode.ARS),
   year: z.coerce.number().int().min(2000).max(2100),
   month: z.coerce.number().int().min(1).max(12),
-  plannedAmount: moneySchema,
-  reservedAmount: z.coerce.number().finite().nonnegative().default(0),
+  plannedAmount: moneySchema(),
+  reservedAmount: moneySchema({ allowZero: true }).default(0),
   alertThreshold: z.coerce.number().finite().positive().max(100).optional(),
 });
 
 export const updateBudgetSchema = createBudgetSchema.partial().extend({
   householdId: z.string().min(1),
-  plannedAmount: moneySchema.optional(),
-  reservedAmount: z.coerce.number().finite().nonnegative().optional(),
+  plannedAmount: optionalMoneySchema(),
+  reservedAmount: optionalMoneySchema({ allowZero: true }),
   alertThreshold: z.coerce.number().finite().positive().max(100).nullable().optional(),
 });
 

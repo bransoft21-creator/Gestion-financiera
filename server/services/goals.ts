@@ -106,7 +106,7 @@ function serializeGoal(goal: GoalRecord) {
     currency: goal.currency,
     targetAmount: Number(goal.targetAmount),
     currentAmount: Number(goal.currentAmount),
-    requiredMonthlyAmount: goal.requiredMonthlyAmount ? Number(goal.requiredMonthlyAmount) : null,
+    requiredMonthlyAmount: goal.requiredMonthlyAmount != null ? Number(goal.requiredMonthlyAmount) : null,
     targetDate: goal.targetDate?.toISOString() ?? null,
     status: goal.status,
     notes: goal.notes,

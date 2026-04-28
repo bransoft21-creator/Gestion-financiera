@@ -7,6 +7,16 @@ export class ApiError extends Error {
   }
 }
 
+export class FieldApiError extends ApiError {
+  constructor(
+    status: number,
+    message: string,
+    public readonly fieldErrors: Record<string, string>,
+  ) {
+    super(status, message);
+  }
+}
+
 export class UnauthorizedError extends ApiError {
   constructor(message = "Authentication required") {
     super(401, message);

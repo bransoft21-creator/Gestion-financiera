@@ -1,10 +1,9 @@
 import { Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { ARGENTINA_TIME_ZONE, argentinaMonthStartUtc } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import type { MonthlyReportInput } from "../schemas/reports";
 import { assertHouseholdAccess } from "./households";
 
-const ARGENTINA_TIME_ZONE = "America/Argentina/Buenos_Aires";
-const ARGENTINA_UTC_OFFSET_HOURS = 3;
 const activeTransactionWhere = {
   deletedAt: null,
   status: { not: TransactionStatus.CANCELED },
@@ -125,10 +124,6 @@ function getArgentinaPeriod(date: Date) {
     year: Number(parts.find((part) => part.type === "year")?.value),
     month: Number(parts.find((part) => part.type === "month")?.value),
   };
-}
-
-function argentinaMonthStartUtc(year: number, month: number) {
-  return new Date(Date.UTC(year, month, 1, ARGENTINA_UTC_OFFSET_HOURS));
 }
 
 function toFiniteNumber(value: Prisma.Decimal | number) {

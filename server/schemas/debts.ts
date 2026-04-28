@@ -1,11 +1,10 @@
 import { CurrencyCode, DebtStatus, DebtType } from "@prisma/client";
 import { z } from "zod";
+import { moneySchema, nullableMoneySchema } from "@/lib/money";
 
 const currencyValues = Object.values(CurrencyCode) as [CurrencyCode, ...CurrencyCode[]];
 const debtTypeValues = Object.values(DebtType) as [DebtType, ...DebtType[]];
 const debtStatusValues = Object.values(DebtStatus) as [DebtStatus, ...DebtStatus[]];
-
-const moneySchema = z.coerce.number().finite().positive();
 
 export const listDebtsSchema = z.object({
   householdId: z.string().min(1),
@@ -18,9 +17,9 @@ export const createDebtSchema = z.object({
   lender: z.string().trim().max(100).optional(),
   type: z.enum(debtTypeValues),
   currency: z.enum(currencyValues).default(CurrencyCode.ARS),
-  originalAmount: moneySchema,
-  outstandingAmount: moneySchema,
-  minimumPayment: moneySchema.optional(),
+  originalAmount: moneySchema(),
+  outstandingAmount: moneySchema(),
+  minimumPayment: moneySchema().optional(),
   interestRate: z.coerce.number().finite().nonnegative().max(999).optional(),
   nextDueDate: z.coerce.date().optional(),
   dueDay: z.coerce.number().int().min(1).max(31).optional(),
@@ -30,7 +29,7 @@ export const createDebtSchema = z.object({
 export const updateDebtSchema = createDebtSchema.partial().extend({
   householdId: z.string().min(1),
   lender: z.string().trim().max(100).nullable().optional(),
-  minimumPayment: moneySchema.nullable().optional(),
+  minimumPayment: nullableMoneySchema(),
   interestRate: z.coerce.number().finite().nonnegative().max(999).nullable().optional(),
   nextDueDate: z.coerce.date().nullable().optional(),
   dueDay: z.coerce.number().int().min(1).max(31).nullable().optional(),

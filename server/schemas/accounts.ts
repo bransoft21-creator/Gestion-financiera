@@ -1,5 +1,6 @@
 import { AccountType, CurrencyCode } from "@prisma/client";
 import { z } from "zod";
+import { moneySchema, nullableMoneySchema } from "@/lib/money";
 
 const accountTypeValues = Object.values(AccountType) as [AccountType, ...AccountType[]];
 const currencyValues = Object.values(CurrencyCode) as [CurrencyCode, ...CurrencyCode[]];
@@ -14,13 +15,13 @@ export const createAccountSchema = z.object({
   name: z.string().trim().min(1).max(80),
   type: z.enum(accountTypeValues),
   currency: z.enum(currencyValues).default(CurrencyCode.ARS),
-  openingBalance: z.coerce.number().finite().default(0),
-  creditLimit: z.coerce.number().finite().positive().optional(),
+  openingBalance: moneySchema({ allowNegative: true, allowZero: true }).default(0),
+  creditLimit: moneySchema().optional(),
 });
 
 export const updateAccountSchema = createAccountSchema.partial().extend({
   householdId: z.string().min(1),
-  creditLimit: z.coerce.number().finite().positive().nullable().optional(),
+  creditLimit: nullableMoneySchema(),
   isArchived: z.boolean().optional(),
 });
 

@@ -1,6 +1,7 @@
 import { DebtStatus, GoalStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { argentinaMonthRangeUtc } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
-import { computeAvailableMoney, toFiniteNumber } from "./financial-ledger";
+import { computeFinancialHealth, toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
 
 const chartColors = ["#f97316", "#ef4444", "#06b6d4", "#eab308", "#8b5cf6", "#14b8a6"];
@@ -37,8 +38,7 @@ export async function getDashboardSummary(
 ) {
   await assertHouseholdAccess(userProfileId, householdId);
 
-  const monthStart = new Date(Date.UTC(year, month - 1, 1));
-  const nextMonthStart = new Date(Date.UTC(year, month, 1));
+  const { start: monthStart, end: nextMonthStart } = argentinaMonthRangeUtc(year, month);
 
   const [
     monthTransactions,
@@ -109,28 +109,19 @@ export async function getDashboardSummary(
 
   const income = sumTransactionsByType(monthTransactions, TransactionType.INCOME);
   const expenses = sumTransactionsByType(monthTransactions, TransactionType.EXPENSE);
-  const balance = income - expenses;
-  const estimatedSavings = Math.max(balance, 0);
-  const savingsRate = income > 0 ? Math.round((Math.max(balance, 0) / income) * 100) : 0;
   const expensesByCategory = getExpensesByCategory(monthTransactions);
   const expensesByCategoryId = getExpenseTotalsByCategoryId(monthTransactions);
-  const budgetMetrics = getBudgetMetrics(budgets, expensesByCategoryId);
-  const totalOutstandingDebt = toFiniteNumber(debtAggregate._sum.outstandingAmount ?? 0);
-  const upcomingRecurringExpenses = sumAmounts(recurringExpenses, "amount");
-  const requiredGoalContributions = sumNullableAmounts(activeGoals, "requiredMonthlyAmount");
-  const upcomingDebtPayments = upcomingDebts.reduce((sum, debt) => {
-    return sum + Math.min(
-      toFiniteNumber(debt.minimumPayment ?? debt.outstandingAmount),
-      toFiniteNumber(debt.outstandingAmount),
-    );
-  }, 0);
-  const availableMetrics = computeAvailableMoney({
+  const health = computeFinancialHealth({
     income,
     expenses,
-    reservedBudget: budgetMetrics.remainingReserved,
-    recurringExpenses: upcomingRecurringExpenses,
-    requiredGoalContributions,
-    debtPayments: upcomingDebtPayments,
+    budgets: budgets.map((budget) => ({
+      plannedAmount: budget.plannedAmount,
+      spentAmount: expensesByCategoryId.get(budget.categoryId) ?? 0,
+    })),
+    recurringExpenses,
+    goals: activeGoals,
+    debts: upcomingDebts,
+    totalOutstandingDebt: debtAggregate._sum.outstandingAmount ?? 0,
   });
 
   return {
@@ -140,22 +131,7 @@ export async function getDashboardSummary(
       from: monthStart.toISOString(),
       to: nextMonthStart.toISOString(),
     },
-    metrics: {
-      income,
-      expenses,
-      balance,
-      estimatedSavings,
-      savingsRate,
-      totalBudgeted: budgetMetrics.totalBudgeted,
-      budgetedSpent: budgetMetrics.budgetedSpent,
-      remainingReservedBudget: budgetMetrics.remainingReserved,
-      upcomingRecurringExpenses,
-      requiredGoalContributions,
-      upcomingDebtPayments,
-      upcomingObligations: availableMetrics.upcomingObligations,
-      realAvailable: availableMetrics.realAvailable,
-      totalOutstandingDebt,
-    },
+    metrics: health,
     expensesByCategory,
     latestTransactions: latestTransactions.map((transaction) => ({
       id: transaction.id,
@@ -170,29 +146,15 @@ export async function getDashboardSummary(
     alerts: buildAlerts({
       income,
       expenses,
-      balance,
-      estimatedSavings,
+      balance: health.balance,
+      estimatedSavings: health.estimatedSavings,
       transactionCount: monthTransactions.length,
       expensesByCategory,
-      remainingReservedBudget: budgetMetrics.remainingReserved,
-      upcomingObligations: availableMetrics.upcomingObligations,
-      realAvailable: availableMetrics.realAvailable,
+      remainingReservedBudget: health.remainingReservedBudget,
+      upcomingObligations: health.upcomingObligations,
+      realAvailable: health.realAvailable,
     }),
   };
-}
-
-function sumAmounts<T extends Record<K, Prisma.Decimal | number>, K extends keyof T>(
-  items: T[],
-  key: K,
-) {
-  return items.reduce((sum, item) => sum + toFiniteNumber(item[key]), 0);
-}
-
-function sumNullableAmounts<T extends Record<K, Prisma.Decimal | number | null>, K extends keyof T>(
-  items: T[],
-  key: K,
-) {
-  return items.reduce((sum, item) => sum + toFiniteNumber(item[key] ?? 0), 0);
 }
 
 function getExpenseTotalsByCategoryId(transactions: DashboardTransaction[]) {
@@ -208,29 +170,6 @@ function getExpenseTotalsByCategoryId(transactions: DashboardTransaction[]) {
 
     return totals;
   }, new Map<string, number>());
-}
-
-function getBudgetMetrics(
-  budgets: Array<{ categoryId: string; plannedAmount: Prisma.Decimal }>,
-  expensesByCategoryId: Map<string, number>,
-) {
-  return budgets.reduce(
-    (totals, budget) => {
-      const plannedAmount = toFiniteNumber(budget.plannedAmount);
-      const spentAmount = expensesByCategoryId.get(budget.categoryId) ?? 0;
-
-      return {
-        totalBudgeted: totals.totalBudgeted + plannedAmount,
-        budgetedSpent: totals.budgetedSpent + spentAmount,
-        remainingReserved: totals.remainingReserved + Math.max(plannedAmount - spentAmount, 0),
-      };
-    },
-    {
-      totalBudgeted: 0,
-      budgetedSpent: 0,
-      remainingReserved: 0,
-    },
-  );
 }
 
 function sumTransactionsByType(transactions: DashboardTransaction[], type: TransactionType) {

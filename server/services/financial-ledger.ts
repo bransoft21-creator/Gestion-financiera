@@ -56,6 +56,32 @@ type AvailableMoneyInput = {
   debtPayments: number;
 };
 
+type BudgetReservationInput = {
+  plannedAmount: Prisma.Decimal | number;
+  spentAmount: Prisma.Decimal | number;
+};
+
+type MonthlyDebtPaymentInput = {
+  minimumPayment: Prisma.Decimal | number | null;
+  outstandingAmount: Prisma.Decimal | number;
+};
+
+type DebtPaymentResultInput = {
+  originalAmount: Prisma.Decimal | number;
+  outstandingAmount: Prisma.Decimal | number;
+  paymentAmount: Prisma.Decimal | number;
+};
+
+type FinancialHealthInput = {
+  income: number;
+  expenses: number;
+  budgets: BudgetReservationInput[];
+  recurringExpenses: Array<{ amount: Prisma.Decimal | number }>;
+  goals: Array<{ requiredMonthlyAmount: Prisma.Decimal | number | null }>;
+  debts: MonthlyDebtPaymentInput[];
+  totalOutstandingDebt: Prisma.Decimal | number;
+};
+
 // Ledger convention: account balances are signed. Credit-card debt is negative,
 // and a payment transfer increases the card balance toward zero.
 export function computeTransactionBalanceDeltas(transaction: BalanceInput): BalanceDelta {
@@ -181,6 +207,101 @@ export function computeAvailableMoney(input: AvailableMoneyInput) {
   };
 }
 
+export function computeBudgetReservation(input: BudgetReservationInput) {
+  return Math.max(toFiniteNumber(input.plannedAmount) - toFiniteNumber(input.spentAmount), 0);
+}
+
+export function computeMonthlyDebtPayment(input: MonthlyDebtPaymentInput) {
+  return Math.min(
+    toFiniteNumber(input.minimumPayment ?? input.outstandingAmount),
+    toFiniteNumber(input.outstandingAmount),
+  );
+}
+
+export function computeDebtPaymentResult(input: DebtPaymentResultInput) {
+  const originalAmount = toFiniteNumber(input.originalAmount);
+  const outstandingAmount = toFiniteNumber(input.outstandingAmount);
+  const paymentAmount = toFiniteNumber(input.paymentAmount);
+  const nextOutstandingAmount = Math.max(outstandingAmount - paymentAmount, 0);
+  const paidAmount = Math.max(originalAmount - nextOutstandingAmount, 0);
+
+  return {
+    outstandingAmount: nextOutstandingAmount,
+    paidPercent: originalAmount > 0 ? Math.min((paidAmount / originalAmount) * 100, 100) : 0,
+    isPaid: nextOutstandingAmount === 0,
+  };
+}
+
+export function getDebtPaymentAmountError(
+  paymentAmount: Prisma.Decimal | number,
+  outstandingAmount: Prisma.Decimal | number,
+) {
+  const amount = toFiniteNumber(paymentAmount);
+  const outstanding = toFiniteNumber(outstandingAmount);
+
+  if (amount <= 0) {
+    return "Ingresá un monto mayor a cero.";
+  }
+
+  if (amount > outstanding) {
+    return `El pago no puede superar el saldo pendiente (${outstanding.toFixed(2)}).`;
+  }
+
+  return null;
+}
+
+// Official dashboard formula:
+// income/expenses = confirmed, non-deleted income and expense transactions in the selected month.
+// reserved budget = sum of max(planned budget - spent in that budget category, 0).
+// obligations = active recurring expenses due this month + active goal monthly contributions + active debt payments due this month.
+// real available = income - expenses - reserved budget - obligations.
+// savings rate = max(income - expenses, 0) / income.
+// total debt = active outstanding debt, independent from this month's minimum payments.
+export function computeFinancialHealth(input: FinancialHealthInput) {
+  const balance = input.income - input.expenses;
+  const reservedBudget = input.budgets.reduce(
+    (sum, budget) => sum + computeBudgetReservation(budget),
+    0,
+  );
+  const recurringExpenses = input.recurringExpenses.reduce(
+    (sum, item) => sum + toFiniteNumber(item.amount),
+    0,
+  );
+  const requiredGoalContributions = input.goals.reduce(
+    (sum, goal) => sum + toFiniteNumber(goal.requiredMonthlyAmount ?? 0),
+    0,
+  );
+  const debtPayments = input.debts.reduce(
+    (sum, debt) => sum + computeMonthlyDebtPayment(debt),
+    0,
+  );
+  const availableMoney = computeAvailableMoney({
+    income: input.income,
+    expenses: input.expenses,
+    reservedBudget,
+    recurringExpenses,
+    requiredGoalContributions,
+    debtPayments,
+  });
+
+  return {
+    income: input.income,
+    expenses: input.expenses,
+    balance,
+    estimatedSavings: Math.max(balance, 0),
+    savingsRate: input.income > 0 ? Math.round((Math.max(balance, 0) / input.income) * 100) : 0,
+    totalBudgeted: input.budgets.reduce((sum, budget) => sum + toFiniteNumber(budget.plannedAmount), 0),
+    budgetedSpent: input.budgets.reduce((sum, budget) => sum + toFiniteNumber(budget.spentAmount), 0),
+    remainingReservedBudget: reservedBudget,
+    upcomingRecurringExpenses: recurringExpenses,
+    requiredGoalContributions,
+    upcomingDebtPayments: debtPayments,
+    upcomingObligations: availableMoney.upcomingObligations,
+    realAvailable: availableMoney.realAvailable,
+    totalOutstandingDebt: toFiniteNumber(input.totalOutstandingDebt),
+  };
+}
+
 export function toFiniteNumber(value: Prisma.Decimal | number) {
   const amount = Number(value);
   return Number.isFinite(amount) ? amount : 0;
@@ -193,12 +314,19 @@ async function applyDebtDelta(
 ): Promise<void> {
   const debt = await tx.debt.findFirst({
     where: { id: debtId, deletedAt: null },
-    select: { outstandingAmount: true, status: true },
+    select: { originalAmount: true, outstandingAmount: true, status: true },
   });
 
   if (!debt) return;
 
-  const newOutstanding = Math.max(0, toFiniteNumber(debt.outstandingAmount) + delta);
+  const newOutstanding =
+    delta < 0
+      ? computeDebtPaymentResult({
+          originalAmount: debt.originalAmount,
+          outstandingAmount: debt.outstandingAmount,
+          paymentAmount: Math.abs(delta),
+        }).outstandingAmount
+      : toFiniteNumber(debt.outstandingAmount) + delta;
 
   await tx.debt.update({
     where: { id: debtId },

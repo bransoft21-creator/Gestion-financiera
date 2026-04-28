@@ -1,5 +1,7 @@
 import { CurrencyCode, TransactionStatus, TransactionType } from "@prisma/client";
 import { z } from "zod";
+import { argentinaDayStartFromInput, transactionDateFromInput } from "@/lib/dates";
+import { moneySchema } from "@/lib/money";
 
 const currencyValues = Object.values(CurrencyCode) as [CurrencyCode, ...CurrencyCode[]];
 const transactionStatusValues = Object.values(TransactionStatus) as [
@@ -10,8 +12,8 @@ const transactionTypeValues = Object.values(TransactionType) as [
   TransactionType,
   ...TransactionType[],
 ];
-
-const moneySchema = z.coerce.number().finite().positive().max(999_999_999_999);
+const transactionDateSchema = z.preprocess(transactionDateFromInput, z.date());
+const filterDateSchema = z.preprocess(argentinaDayStartFromInput, z.date());
 
 const createTransactionBaseSchema = z.object({
   householdId: z.string().min(1),
@@ -24,11 +26,11 @@ const createTransactionBaseSchema = z.object({
   type: z.enum(transactionTypeValues),
   status: z.enum(transactionStatusValues).default(TransactionStatus.CONFIRMED),
   currency: z.enum(currencyValues).default(CurrencyCode.ARS),
-  amount: moneySchema,
-  transferAmount: moneySchema.optional(),
+  amount: moneySchema(),
+  transferAmount: moneySchema().optional(),
   description: z.string().trim().max(160).optional(),
   notes: z.string().trim().max(1000).optional(),
-  occurredAt: z.coerce.date(),
+  occurredAt: transactionDateSchema,
 });
 
 export const createTransactionSchema = createTransactionBaseSchema.superRefine((data, ctx) => {
@@ -93,8 +95,8 @@ export const listTransactionsSchema = z
     categoryId: z.string().min(1).optional(),
     type: z.enum(transactionTypeValues).optional(),
     status: z.enum(transactionStatusValues).optional(),
-    from: z.coerce.date().optional(),
-    to: z.coerce.date().optional(),
+    from: filterDateSchema.optional(),
+    to: filterDateSchema.optional(),
     limit: z.coerce.number().int().positive().max(100).default(50),
   })
   .refine((data) => !data.from || !data.to || data.from <= data.to, {

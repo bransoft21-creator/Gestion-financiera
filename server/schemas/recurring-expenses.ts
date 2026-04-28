@@ -1,5 +1,6 @@
 import { CurrencyCode, RecurrenceFrequency } from "@prisma/client";
 import { z } from "zod";
+import { moneySchema } from "@/lib/money";
 
 const currencyValues = Object.values(CurrencyCode) as [CurrencyCode, ...CurrencyCode[]];
 const frequencyValues = Object.values(RecurrenceFrequency) as [
@@ -18,7 +19,7 @@ export const createRecurringExpenseSchema = z.object({
   categoryId: z.string().min(1).optional(),
   name: z.string().trim().min(2).max(100),
   currency: z.enum(currencyValues).default(CurrencyCode.ARS),
-  amount: z.coerce.number().finite().positive(),
+  amount: moneySchema(),
   frequency: z.enum(frequencyValues),
   nextDueDate: z.coerce.date(),
   endDate: z.coerce.date().optional(),

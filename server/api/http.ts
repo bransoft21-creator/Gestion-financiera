@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
-import { ApiError } from "./errors";
+import { ApiError, FieldApiError } from "./errors";
 
 export function ok<T>(data: T, init?: ResponseInit) {
   return NextResponse.json({ data }, init);
@@ -12,14 +12,32 @@ export function created<T>(data: T) {
 }
 
 export function handleApiError(error: unknown) {
+  if (error instanceof FieldApiError) {
+    return NextResponse.json(
+      { error: error.message, fieldErrors: error.fieldErrors },
+      { status: error.status },
+    );
+  }
+
   if (error instanceof ApiError) {
     return NextResponse.json({ error: error.message }, { status: error.status });
   }
 
   if (error instanceof ZodError) {
+    const fieldErrors = error.issues.reduce<Record<string, string>>((fields, issue) => {
+      const field = issue.path[0];
+
+      if (typeof field === "string" && !fields[field]) {
+        fields[field] = issue.message;
+      }
+
+      return fields;
+    }, {});
+
     return NextResponse.json(
       {
-        error: "Validation error",
+        error: "Revisá los campos marcados.",
+        fieldErrors,
         issues: error.issues,
       },
       { status: 400 },

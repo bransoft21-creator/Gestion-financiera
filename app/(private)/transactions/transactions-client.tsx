@@ -18,6 +18,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
+import {
+  MobileCreateFab,
+  MobileFormOverlay,
+  mobileFormActionsClass,
+  mobileFormCardClass,
+  mobileFormContentClass,
+} from "@/components/app/mobile-form";
+import { formatArgentinaDateInput } from "@/lib/dates";
+import { moneySchema } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -65,6 +74,10 @@ type TransactionItem = {
     id: string;
     name: string;
   };
+  transferAccount: {
+    id: string;
+    name: string;
+  } | null;
   category: {
     id: string;
     name: string;
@@ -126,7 +139,7 @@ const formSchema = z.object({
   transferAccountId: z.string().optional(),
   categoryId: z.string().optional(),
   currency: z.enum(["ARS", "USD"]),
-  amount: z.coerce.number().positive("Ingresá un monto mayor a cero."),
+  amount: moneySchema(),
   occurredAt: z.string().min(1, "Seleccioná una fecha."),
   description: z.string().trim().min(2, "Agregá una descripción.").max(160),
   notes: z.string().trim().max(1000).optional(),
@@ -156,7 +169,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
     categoryId: "",
     currency: accounts[0]?.currency ?? "ARS",
     amount: "",
-    occurredAt: new Date().toISOString().slice(0, 10),
+    occurredAt: formatArgentinaDateInput(),
     description: "",
     notes: "",
   });
@@ -280,9 +293,10 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
         body: JSON.stringify(body),
       });
 
-      const payload = (await response.json()) as { data?: TransactionItem; error?: string };
+      const payload = (await response.json()) as { data?: TransactionItem; error?: string; fieldErrors?: FormErrors };
 
       if (!response.ok) {
+        if (payload.fieldErrors) setErrors(payload.fieldErrors);
         setMessage(payload.error ?? "No se pudo guardar la transacción.");
         return;
       }
@@ -323,6 +337,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       toast.success("Transacción eliminada.");
       if (editingTransactionId === transactionId) {
         resetForm();
+        setIsFormOpen(false);
       }
 
       await loadTransactions(filters);
@@ -341,7 +356,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
     setForm({
       type: transaction.type,
       accountId: transaction.account.id,
-      transferAccountId: "",
+      transferAccountId: transaction.transferAccount?.id ?? "",
       categoryId: transaction.category?.id ?? "",
       currency: transaction.currency,
       amount: String(Number(transaction.amount)),
@@ -361,7 +376,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       categoryId: "",
       currency: accounts[0]?.currency ?? "ARS",
       amount: "",
-      occurredAt: new Date().toISOString().slice(0, 10),
+      occurredAt: formatArgentinaDateInput(),
       description: "",
       notes: "",
     });
@@ -397,20 +412,11 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-      {isFormOpen ? (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 lg:hidden"
-          onClick={() => setIsFormOpen(false)}
-        />
-      ) : null}
+    <div className={`grid gap-6 ${isFormOpen ? "xl:grid-cols-[360px_1fr]" : ""}`}>
+      <MobileFormOverlay isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} />
 
       <Card
-        className={`${
-          isFormOpen
-            ? "fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 max-h-[calc(100dvh-96px)] overflow-y-auto rounded-2xl animate-slide-up"
-            : "hidden"
-        } xl:block`}
+        className={mobileFormCardClass(isFormOpen, undefined, { desktopAlwaysOpen: false })}
       >
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -434,7 +440,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             </Button>
           </div>
         </CardHeader>
-        <CardContent className={isFormOpen ? "pb-0 xl:pb-5" : undefined}>
+        <CardContent className={mobileFormContentClass(isFormOpen)}>
           {accounts.length === 0 ? (
             <div className="space-y-4">
               <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4">
@@ -571,13 +577,21 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
             {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
 
-            <div className="sticky bottom-0 -mx-5 grid gap-2 border-t border-border bg-card/95 p-5 backdrop-blur sm:grid-cols-2 xl:static xl:mx-0 xl:border-0 xl:bg-transparent xl:p-0 xl:backdrop-blur-none 2xl:grid-cols-2">
+            <div className={mobileFormActionsClass()}>
               <Button className="h-11 w-full" disabled={isSaving || accounts.length === 0}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                 {editingTransactionId ? "Guardar cambios" : "Guardar transacción"}
               </Button>
               {editingTransactionId ? (
-                <Button type="button" variant="outline" className="h-11 w-full" onClick={resetForm}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full"
+                  onClick={() => {
+                    resetForm();
+                    setIsFormOpen(false);
+                  }}
+                >
                   <X className="h-4 w-4" aria-hidden="true" />
                   Cancelar
                 </Button>
@@ -680,6 +694,18 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                 <Download className="h-4 w-4" aria-hidden="true" />
                 Exportar CSV
               </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="hidden xl:inline-flex"
+                onClick={() => {
+                  resetForm();
+                  setIsFormOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Nueva
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -713,7 +739,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                 {!search ? (
                   <Button
                     type="button"
-                    className="mt-5"
+                    className="mt-5 inline-flex"
                     onClick={() => {
                       resetForm();
                       setIsFormOpen(true);
@@ -750,18 +776,13 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
           </CardContent>
         </Card>
       </div>
-      <Button
-        type="button"
-        size="icon"
-        className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 shadow-xl shadow-violet-500/30 hover:shadow-violet-500/50 xl:hidden"
+      <MobileCreateFab
+        label="Nueva transacción"
         onClick={() => {
           resetForm();
           setIsFormOpen(true);
         }}
-        aria-label="Nueva transacción"
-      >
-        <Plus className="h-6 w-6" aria-hidden="true" />
-      </Button>
+      />
     </div>
   );
 }

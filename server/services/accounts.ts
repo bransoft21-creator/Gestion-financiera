@@ -16,7 +16,7 @@ function serializeAccount(account: AccountRecord) {
     currency: account.currency,
     openingBalance: toFiniteNumber(account.openingBalance),
     currentBalance: toFiniteNumber(account.currentBalance),
-    creditLimit: account.creditLimit ? toFiniteNumber(account.creditLimit) : null,
+    creditLimit: account.creditLimit != null ? toFiniteNumber(account.creditLimit) : null,
     isArchived: account.isArchived,
     createdAt: account.createdAt.toISOString(),
     updatedAt: account.updatedAt.toISOString(),

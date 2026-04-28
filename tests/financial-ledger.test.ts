@@ -4,6 +4,11 @@ import { AccountType, TransactionStatus, TransactionType } from "@prisma/client"
 import {
   computeAccountSummary,
   computeAvailableMoney,
+  computeBudgetReservation,
+  computeDebtPaymentResult,
+  computeFinancialHealth,
+  computeMonthlyDebtPayment,
+  getDebtPaymentAmountError,
   computeTransactionBalanceDeltas,
   computeTransactionLinkedEntityEffects,
   reverseBalanceDeltas,
@@ -118,5 +123,86 @@ describe("financial ledger", () => {
         realAvailable: 65_000,
       },
     );
+  });
+
+  it("computes the official dashboard financial health formula", () => {
+    assert.deepEqual(
+      computeFinancialHealth({
+        income: 500_000,
+        expenses: 180_000,
+        budgets: [
+          { plannedAmount: 100_000, spentAmount: 65_000 },
+          { plannedAmount: 20_000, spentAmount: 25_000 },
+        ],
+        recurringExpenses: [{ amount: 50_000 }],
+        goals: [{ requiredMonthlyAmount: 30_000 }, { requiredMonthlyAmount: null }],
+        debts: [
+          { minimumPayment: 40_000, outstandingAmount: 150_000 },
+          { minimumPayment: null, outstandingAmount: 12_000 },
+        ],
+        totalOutstandingDebt: 162_000,
+      }),
+      {
+        income: 500_000,
+        expenses: 180_000,
+        balance: 320_000,
+        estimatedSavings: 320_000,
+        savingsRate: 64,
+        totalBudgeted: 120_000,
+        budgetedSpent: 90_000,
+        remainingReservedBudget: 35_000,
+        upcomingRecurringExpenses: 50_000,
+        requiredGoalContributions: 30_000,
+        upcomingDebtPayments: 52_000,
+        upcomingObligations: 132_000,
+        realAvailable: 153_000,
+        totalOutstandingDebt: 162_000,
+      },
+    );
+  });
+
+  it("keeps budget reservation and debt payment bounded", () => {
+    assert.equal(computeBudgetReservation({ plannedAmount: 10_000, spentAmount: 0 }), 10_000);
+    assert.equal(computeBudgetReservation({ plannedAmount: 10_000, spentAmount: 12_500 }), 0);
+    assert.equal(computeMonthlyDebtPayment({ minimumPayment: 20_000, outstandingAmount: 8_000 }), 8_000);
+    assert.equal(computeMonthlyDebtPayment({ minimumPayment: null, outstandingAmount: 8_000 }), 8_000);
+  });
+
+  it("computes partial debt payments and paid status", () => {
+    assert.deepEqual(
+      computeDebtPaymentResult({
+        originalAmount: 80_000,
+        outstandingAmount: 80_000,
+        paymentAmount: 15_000,
+      }),
+      {
+        outstandingAmount: 65_000,
+        paidPercent: 18.75,
+        isPaid: false,
+      },
+    );
+
+    assert.deepEqual(
+      computeDebtPaymentResult({
+        originalAmount: 80_000,
+        outstandingAmount: 15_000.5,
+        paymentAmount: 15_000.5,
+      }),
+      {
+        outstandingAmount: 0,
+        paidPercent: 100,
+        isPaid: true,
+      },
+    );
+  });
+
+  it("validates debt payment limits", () => {
+    assert.equal(getDebtPaymentAmountError(0, 80_000), "Ingresá un monto mayor a cero.");
+    assert.equal(getDebtPaymentAmountError(-1, 80_000), "Ingresá un monto mayor a cero.");
+    assert.equal(
+      getDebtPaymentAmountError(80_000.01, 80_000),
+      "El pago no puede superar el saldo pendiente (80000.00).",
+    );
+    assert.equal(getDebtPaymentAmountError(15_000.5, 80_000), null);
   });
 });

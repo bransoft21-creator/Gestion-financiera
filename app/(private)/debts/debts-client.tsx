@@ -5,6 +5,15 @@ import { CheckCircle2, CreditCard, Loader2, Pencil, Plus, Trash2, X } from "luci
 import { toast } from "sonner";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
+import {
+  MobileCreateFab,
+  MobileFormOverlay,
+  mobileFormActionsClass,
+  mobileFormCardClass,
+  mobileFormContentClass,
+} from "@/components/app/mobile-form";
+import { formatArgentinaDateInput } from "@/lib/dates";
+import { moneySchema, optionalMoneySchema, parseMoneyInput } from "@/lib/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -79,9 +88,9 @@ const formSchema = z.object({
   type: z.enum(debtTypes as [DebtType, ...DebtType[]]),
   status: z.enum(debtStatuses as [DebtStatus, ...DebtStatus[]]),
   currency: z.enum(["ARS", "USD"]),
-  originalAmount: z.coerce.number().positive("Ingresá el monto original."),
-  outstandingAmount: z.coerce.number().positive("Ingresá el saldo pendiente."),
-  minimumPayment: z.coerce.number().positive().optional(),
+  originalAmount: moneySchema(),
+  outstandingAmount: moneySchema(),
+  minimumPayment: optionalMoneySchema(),
   interestRate: z.coerce.number().nonnegative().max(999).optional(),
   nextDueDate: z.string().optional(),
   dueDay: z.coerce.number().int().min(1).max(31).optional(),
@@ -120,6 +129,7 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
   const [quickPayDebtId, setQuickPayDebtId] = useState<string | null>(null);
   const [quickPayAccountId, setQuickPayAccountId] = useState<string>("");
   const [quickPayAmount, setQuickPayAmount] = useState<string>("");
+  const [quickPayErrors, setQuickPayErrors] = useState<{ accountId?: string; amount?: string; debtId?: string }>({});
 
   useEffect(() => {
     void loadDebts();
@@ -195,9 +205,10 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
         }),
       });
 
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as { error?: string; fieldErrors?: FormErrors };
 
       if (!response.ok) {
+        if (payload.fieldErrors) setErrors(payload.fieldErrors);
         setMessage(payload.error ?? "No se pudo guardar la deuda.");
         return;
       }
@@ -246,46 +257,54 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
     setQuickPayAmount(
       String(debt.minimumPayment ?? debt.outstandingAmount),
     );
+    setQuickPayErrors({});
   }
 
   function cancelQuickPay() {
     setQuickPayDebtId(null);
     setQuickPayAccountId("");
     setQuickPayAmount("");
+    setQuickPayErrors({});
   }
 
   async function handlePayConfirm(debt: DebtItem) {
     if (!quickPayAccountId) {
-      toast.error("Seleccioná una cuenta para registrar el pago.");
+      setQuickPayErrors({ accountId: "Seleccioná una cuenta para registrar el pago." });
       return;
     }
-    const amount = parseFloat(quickPayAmount);
-    if (!amount || amount <= 0) {
-      toast.error("Ingresá un monto válido.");
+    const parsedAmount = parseMoneyInput(quickPayAmount);
+    if (!parsedAmount.success || parsedAmount.data == null) {
+      setQuickPayErrors({ amount: parsedAmount.success ? "Ingresá un monto." : parsedAmount.error });
+      return;
+    }
+    if (parsedAmount.data > debt.outstandingAmount) {
+      setQuickPayErrors({ amount: `El pago no puede superar el saldo pendiente (${formatMoney(debt.outstandingAmount, debt.currency)}).` });
       return;
     }
 
+    setQuickPayErrors({});
     setPayingDebtId(debt.id);
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = formatArgentinaDateInput();
       const response = await fetch("/api/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           householdId,
           type: "DEBT_PAYMENT",
-          status: "COMPLETED",
+          status: "CONFIRMED",
           accountId: quickPayAccountId,
           debtId: debt.id,
-          amount,
+          amount: parsedAmount.data,
           currency: debt.currency,
           description: `Pago: ${debt.name}`,
           occurredAt: today,
         }),
       });
 
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as { error?: string; fieldErrors?: { accountId?: string; amount?: string; debtId?: string } };
       if (!response.ok) {
+        if (payload.fieldErrors) setQuickPayErrors(payload.fieldErrors);
         toast.error(payload.error ?? "No se pudo registrar el pago.");
         return;
       }
@@ -313,8 +332,8 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
       currency: debt.currency,
       originalAmount: String(debt.originalAmount),
       outstandingAmount: String(debt.outstandingAmount),
-      minimumPayment: debt.minimumPayment ? String(debt.minimumPayment) : "",
-      interestRate: debt.interestRate ? String(debt.interestRate) : "",
+      minimumPayment: debt.minimumPayment != null ? String(debt.minimumPayment) : "",
+      interestRate: debt.interestRate != null ? String(debt.interestRate) : "",
       nextDueDate: debt.nextDueDate ? debt.nextDueDate.slice(0, 10) : "",
       dueDay: debt.dueDay ? String(debt.dueDay) : "",
       notes: debt.notes ?? "",
@@ -333,20 +352,9 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
 
   return (
     <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
-      {isFormOpen ? (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 xl:hidden"
-          onClick={() => setIsFormOpen(false)}
-        />
-      ) : null}
+      <MobileFormOverlay isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} />
 
-      <Card
-        className={`${
-          isFormOpen
-            ? "fixed inset-x-3 bottom-[calc(76px+env(safe-area-inset-bottom))] z-50 max-h-[calc(100dvh-96px)] overflow-y-auto rounded-2xl animate-slide-up"
-            : "hidden"
-        } xl:block`}
-      >
+      <Card className={mobileFormCardClass(isFormOpen)}>
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -363,7 +371,7 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className={isFormOpen ? "pb-0 xl:pb-5" : undefined}>
+        <CardContent className={mobileFormContentClass(isFormOpen)}>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Field label="Nombre" error={errors.name}>
               <Input value={form.name} onChange={(e) => updateForm("name", e.target.value)} placeholder="Ej: Préstamo personal banco" />
@@ -426,7 +434,7 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
 
             {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
 
-            <div className="sticky bottom-0 -mx-5 grid gap-2 border-t border-border bg-card/95 p-5 backdrop-blur sm:grid-cols-2 xl:static xl:mx-0 xl:border-0 xl:bg-transparent xl:p-0 xl:backdrop-blur-none 2xl:grid-cols-2">
+            <div className={mobileFormActionsClass()}>
               <Button className="h-11 w-full" disabled={isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                 {editingDebtId ? "Guardar cambios" : "Registrar deuda"}
@@ -479,7 +487,7 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
                   <option value="">Todos los estados</option>
                   {debtStatuses.map((s) => <option key={s} value={s}>{debtStatusLabels[s]}</option>)}
                 </select>
-                <Button type="button" size="sm" onClick={() => { resetForm(); setIsFormOpen(true); }}>
+                <Button type="button" size="sm" className="hidden xl:inline-flex" onClick={() => { resetForm(); setIsFormOpen(true); }}>
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   Nueva
                 </Button>
@@ -510,6 +518,7 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
                     isQuickPayOpen={quickPayDebtId === debt.id}
                     quickPayAccountId={quickPayAccountId}
                     quickPayAmount={quickPayAmount}
+                    quickPayErrors={quickPayErrors}
                     onEdit={() => startEditing(debt)}
                     onDelete={() => handleDelete(debt.id)}
                     onQuickPayOpen={() => openQuickPay(debt)}
@@ -525,15 +534,7 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
         </Card>
       </div>
 
-      <Button
-        type="button"
-        size="icon"
-        className="fixed bottom-24 right-4 z-30 h-14 w-14 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 shadow-xl shadow-violet-500/30 xl:hidden"
-        onClick={() => { resetForm(); setIsFormOpen(true); }}
-        aria-label="Nueva deuda"
-      >
-        <Plus className="h-6 w-6" aria-hidden="true" />
-      </Button>
+      <MobileCreateFab label="Nueva deuda" onClick={() => { resetForm(); setIsFormOpen(true); }} />
     </div>
   );
 }
@@ -547,6 +548,7 @@ function DebtCard({
   isQuickPayOpen,
   quickPayAccountId,
   quickPayAmount,
+  quickPayErrors,
   onEdit,
   onDelete,
   onQuickPayOpen,
@@ -563,6 +565,7 @@ function DebtCard({
   isQuickPayOpen: boolean;
   quickPayAccountId: string;
   quickPayAmount: string;
+  quickPayErrors: { accountId?: string; amount?: string; debtId?: string };
   onEdit: () => void;
   onDelete: () => void;
   onQuickPayOpen: () => void;
@@ -606,7 +609,7 @@ function DebtCard({
           {debt.lender && <p className="mt-0.5 text-xs text-muted-foreground">{debt.lender}</p>}
           <p className="mt-1 text-xs text-muted-foreground">
             {debtTypeLabels[debt.type]} · {debt.currency}
-            {debt.interestRate ? ` · ${debt.interestRate}% TNA` : ""}
+            {debt.interestRate != null ? ` · ${debt.interestRate}% TNA` : ""}
           </p>
           {daysUntil !== null && (
             <div className={`mt-2 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${
@@ -676,6 +679,8 @@ function DebtCard({
               >
                 {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
+              {quickPayErrors.accountId ? <p className="text-xs text-destructive">{quickPayErrors.accountId}</p> : null}
+              {quickPayErrors.debtId ? <p className="text-xs text-destructive">{quickPayErrors.debtId}</p> : null}
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Monto ({debt.currency})</label>
@@ -686,6 +691,7 @@ function DebtCard({
                 placeholder="0"
                 className="h-9"
               />
+              {quickPayErrors.amount ? <p className="text-xs text-destructive">{quickPayErrors.amount}</p> : null}
             </div>
           </div>
           <div className="flex gap-2">

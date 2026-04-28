@@ -1,6 +1,7 @@
-import { TransactionStatus, TransactionType } from "@prisma/client";
+import { Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { nextArgentinaDayStart } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
-import { ApiError, ForbiddenError, NotFoundError } from "../api/errors";
+import { ApiError, FieldApiError, ForbiddenError, NotFoundError } from "../api/errors";
 import type {
   CreateTransactionInput,
   ListTransactionsInput,
@@ -13,6 +14,8 @@ import {
   computeTransactionLinkedEntityEffects,
   reverseBalanceDeltas,
   reverseLinkedEntityEffects,
+  getDebtPaymentAmountError,
+  toFiniteNumber,
 } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
 
@@ -44,6 +47,10 @@ export async function createTransaction(
   await assertTransactionReferencesBelongToHousehold(input.householdId, input);
 
   return prisma.$transaction(async (tx) => {
+    if (input.type === TransactionType.DEBT_PAYMENT) {
+      await assertDebtPaymentAllowed(tx, input);
+    }
+
     const transaction = await tx.transaction.create({
       data: {
         householdId: input.householdId,
@@ -109,7 +116,7 @@ export async function listTransactions(
       deletedAt: null,
       occurredAt: {
         gte: input.from,
-        lte: input.to ? new Date(input.to.getTime() + 86_400_000 - 1) : undefined,
+        lt: input.to ? nextArgentinaDayStart(input.to) : undefined,
       },
     },
     include: transactionInclude,
@@ -154,6 +161,20 @@ export async function updateTransaction(
     }
     if (newType === TransactionType.GOAL_CONTRIBUTION && !newGoalId) {
       throw new ApiError(400, "goalId es requerido para contribuciones a meta");
+    }
+
+    if (newType === TransactionType.DEBT_PAYMENT) {
+      const nextAmount = input.amount ?? current.amount;
+      const previousDebtCredit =
+        current.type === TransactionType.DEBT_PAYMENT && current.debtId === newDebtId
+          ? current.amount
+          : 0;
+
+      await assertDebtPaymentAllowed(tx, {
+        householdId: input.householdId,
+        debtId: newDebtId,
+        amount: nextAmount,
+      }, previousDebtCredit);
     }
 
     // 1. Revert old balance and side effects.
@@ -232,6 +253,60 @@ export async function updateTransaction(
 
     return updated;
   });
+}
+
+async function assertDebtPaymentAllowed(
+  tx: Prisma.TransactionClient,
+  input: { householdId: string; debtId?: string | null; amount?: Prisma.Decimal | number | null },
+  previousDebtCredit: Prisma.Decimal | number = 0,
+) {
+  if (!input.debtId) {
+    throw new FieldApiError(400, "Revisá los campos marcados.", {
+      debtId: "Seleccioná una deuda.",
+    });
+  }
+
+  if (input.amount == null) {
+    throw new FieldApiError(400, "Revisá los campos marcados.", {
+      amount: "Ingresá un monto.",
+    });
+  }
+
+  const debt = await tx.debt.findFirst({
+    where: {
+      id: input.debtId,
+      householdId: input.householdId,
+      deletedAt: null,
+    },
+    select: {
+      outstandingAmount: true,
+      status: true,
+    },
+  });
+
+  if (!debt) {
+    throw new FieldApiError(400, "Revisá los campos marcados.", {
+      debtId: "La deuda seleccionada no existe.",
+    });
+  }
+
+  const isEditingExistingPayment = toFiniteNumber(previousDebtCredit) > 0;
+
+  if (debt.status !== "ACTIVE" && !(isEditingExistingPayment && debt.status === "PAID")) {
+    throw new FieldApiError(400, "Revisá los campos marcados.", {
+      debtId: "Solo se pueden pagar deudas activas.",
+    });
+  }
+
+  const amount = toFiniteNumber(input.amount);
+  const outstanding = toFiniteNumber(debt.outstandingAmount) + toFiniteNumber(previousDebtCredit);
+  const amountError = getDebtPaymentAmountError(amount, outstanding);
+
+  if (amountError) {
+    throw new FieldApiError(400, "Revisá los campos marcados.", {
+      amount: amountError,
+    });
+  }
 }
 
 export async function deleteTransaction(

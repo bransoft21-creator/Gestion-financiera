@@ -6,6 +6,7 @@ import { AlertTriangle, BarChart3, Loader2, Pencil, Plus, Trash2, X } from "luci
 import { toast } from "sonner";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
+import { moneySchema } from "@/lib/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ type BudgetItem = {
   month: number;
   plannedAmount: number;
   reservedAmount: number;
+  remainingReserved: number;
   spentAmount: number;
   usagePercent: number;
   category: CategoryOption;
@@ -47,7 +49,7 @@ type FormErrors = Partial<Record<keyof FormState, string>>;
 
 const budgetSchema = z.object({
   categoryId: z.string().min(1, "Seleccioná una categoría."),
-  plannedAmount: z.coerce.number().positive("Ingresá un monto mayor a cero."),
+  plannedAmount: moneySchema(),
   currency: z.enum(["ARS", "USD"]),
 });
 
@@ -147,9 +149,10 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
           plannedAmount: parsed.data.plannedAmount,
         }),
       });
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as { error?: string; fieldErrors?: FormErrors };
 
       if (!response.ok) {
+        if (payload.fieldErrors) setErrors(payload.fieldErrors);
         setMessage(payload.error ?? "No se pudo guardar el presupuesto.");
         return;
       }
@@ -327,6 +330,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
         {!isLoading && budgets.length > 0 && (() => {
           const totalPlanned = budgets.reduce((s, b) => s + b.plannedAmount, 0);
           const totalSpent = budgets.reduce((s, b) => s + b.spentAmount, 0);
+          const totalReserved = budgets.reduce((s, b) => s + b.remainingReserved, 0);
           const globalPct = totalPlanned > 0 ? Math.round((totalSpent / totalPlanned) * 100) : 0;
           const barColor = globalPct >= 100 ? "#f87171" : globalPct >= 80 ? "#fbbf24" : "#34d399";
           return (
@@ -343,7 +347,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
                   {[
                     { label: "Presupuestado", val: totalPlanned, color: "text-foreground" },
                     { label: "Gastado", val: totalSpent, color: globalPct > 80 ? "text-amber-400" : "text-emerald-400" },
-                    { label: "Disponible", val: totalPlanned - totalSpent, color: totalSpent > totalPlanned ? "text-rose-400" : "text-foreground" },
+                    { label: "Reservado", val: totalReserved, color: "text-foreground" },
                   ].map(({ label, val, color }) => (
                     <div key={label} className="text-right">
                       <p className="text-[11px] text-muted-foreground">{label}</p>
@@ -447,7 +451,7 @@ function BudgetCard({
 }) {
   const usage = Math.min(budget.usagePercent, 999);
   const alert = getBudgetAlert(budget.usagePercent);
-  const remaining = Math.max(budget.plannedAmount - budget.spentAmount, 0);
+  const remaining = budget.remainingReserved;
   const [displayWidth, setDisplayWidth] = useState(0);
   const mounted = useRef(false);
 
@@ -493,7 +497,7 @@ function BudgetCard({
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <BudgetMetric label="Presupuestado" value={formatMoney(budget.plannedAmount, budget.currency)} />
         <BudgetMetric label="Gastado" value={formatMoney(budget.spentAmount, budget.currency)} />
-        <BudgetMetric label="Restante" value={formatMoney(remaining, budget.currency)} />
+        <BudgetMetric label="Reservado" value={formatMoney(remaining, budget.currency)} />
         <BudgetMetric label="Uso" value={`${usage.toFixed(0)}%`} />
       </div>
 
