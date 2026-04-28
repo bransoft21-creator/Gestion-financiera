@@ -100,6 +100,7 @@ const defaultForm: FormState = {
 };
 
 export function DebtsClient({ householdId }: DebtsClientProps) {
+  const [todayMs] = useState(() => Date.now());
   const [debts, setDebts] = useState<DebtItem[]>([]);
   const [totalOutstanding, setTotalOutstanding] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -424,6 +425,7 @@ export function DebtsClient({ householdId }: DebtsClientProps) {
                   <DebtCard
                     key={debt.id}
                     debt={debt}
+                    todayMs={todayMs}
                     isDeleting={deletingDebtId === debt.id}
                     onEdit={() => startEditing(debt)}
                     onDelete={() => handleDelete(debt.id)}
@@ -450,11 +452,13 @@ export function DebtsClient({ householdId }: DebtsClientProps) {
 
 function DebtCard({
   debt,
+  todayMs,
   isDeleting,
   onEdit,
   onDelete,
 }: {
   debt: DebtItem;
+  todayMs: number;
   isDeleting: boolean;
   onEdit: () => void;
   onDelete: () => void;
@@ -478,7 +482,7 @@ function DebtCard({
   };
 
   const daysUntil = debt.nextDueDate
-    ? Math.round((new Date(debt.nextDueDate).getTime() - Date.now()) / 86400000)
+    ? Math.round((new Date(debt.nextDueDate).getTime() - todayMs) / 86400000)
     : null;
   const urgent = daysUntil !== null && daysUntil <= 7;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, BarChart3, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
@@ -76,12 +76,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
     return categories.filter((category) => !usedCategoryIds.has(category.id));
   }, [budgets, categories, editingBudgetId]);
 
-  useEffect(() => {
-    void loadBudgets();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function loadBudgets() {
+  const loadBudgets = useCallback(async () => {
     setIsLoading(true);
     setMessage(null);
 
@@ -105,7 +100,15 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [currentMonth, currentYear, householdId]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadBudgets();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadBudgets]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

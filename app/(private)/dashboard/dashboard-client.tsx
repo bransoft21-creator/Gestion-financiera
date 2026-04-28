@@ -44,6 +44,10 @@ type DashboardSummary = {
     totalBudgeted: number;
     budgetedSpent: number;
     remainingReservedBudget: number;
+    upcomingRecurringExpenses: number;
+    requiredGoalContributions: number;
+    upcomingDebtPayments: number;
+    upcomingObligations: number;
     realAvailable: number;
     savingsRate: number;
     totalOutstandingDebt: number;
@@ -85,7 +89,11 @@ function useCountUp(target: number, ms = 850) {
   const [val, setVal] = useState(0);
   const raf = useRef<number>(0);
   useEffect(() => {
-    if (!target) { setVal(0); return; }
+    if (!target) {
+      raf.current = requestAnimationFrame(() => setVal(0));
+      return () => cancelAnimationFrame(raf.current);
+    }
+
     let start: number | null = null;
     const go = (t: number) => {
       if (!start) start = t;
@@ -131,6 +139,7 @@ function HeroCard({ metrics }: { metrics: DashboardSummary["metrics"] }) {
             <MiniStat label="Ingresos" value={metrics.income} color="#34d399" icon={<ArrowUpCircle className="h-3.5 w-3.5" />} />
             <MiniStat label="Gastos" value={metrics.expenses} color="#f87171" icon={<ArrowDownCircle className="h-3.5 w-3.5" />} />
             <MiniStat label="Reservado" value={metrics.remainingReservedBudget} color="#fbbf24" icon={<Lock className="h-3.5 w-3.5" />} />
+            <MiniStat label="Obligaciones" value={metrics.upcomingObligations} color="#60a5fa" icon={<CreditCard className="h-3.5 w-3.5" />} />
           </div>
         </div>
         <div className="text-right">
@@ -388,10 +397,10 @@ export function DashboardClient() {
         <StatCard label="Presupuesto reservado" value={formatMoney(metrics.remainingReservedBudget)}
           detail="pendiente de gastar" icon={Lock} tone="warning"
           rawValue={metrics.remainingReservedBudget} formatter={formatMoney} animationDelay={120} />
-        <StatCard label="Deuda pendiente" value={formatMoney(metrics.totalOutstandingDebt)}
-          detail="total adeudado activo" icon={CreditCard}
-          tone={metrics.totalOutstandingDebt === 0 ? "positive" : "warning"}
-          rawValue={metrics.totalOutstandingDebt} formatter={formatMoney} animationDelay={180} />
+        <StatCard label="Obligaciones del mes" value={formatMoney(metrics.upcomingObligations)}
+          detail="recurrentes, metas y deuda" icon={CreditCard}
+          tone={metrics.upcomingObligations === 0 ? "positive" : "warning"}
+          rawValue={metrics.upcomingObligations} formatter={formatMoney} animationDelay={180} />
       </section>
 
       {/* Charts row */}
@@ -461,8 +470,10 @@ export function DashboardClient() {
               <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/15 text-violet-400">
                 <Sparkles className="h-4 w-4" aria-hidden="true" />
               </div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Metas</p>
-              <p className="mt-1 text-sm font-bold text-muted-foreground">Ver metas →</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Deuda total</p>
+              <p className="mt-1 text-base font-bold text-muted-foreground tabular-nums">
+                {formatMoney(metrics.totalOutstandingDebt)}
+              </p>
             </div>
           </div>
         </div>

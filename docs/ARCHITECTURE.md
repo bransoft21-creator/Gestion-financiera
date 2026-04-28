@@ -104,3 +104,26 @@ El calculo de dinero disponible real debe considerar al menos:
 - Deudas proximas.
 
 Este calculo debe mantenerse como logica de dominio reutilizable, no como una resta aislada dentro de una pantalla.
+
+## Ledger Financiero
+
+La logica contable compartida vive en `server/services/financial-ledger.ts`.
+Las pantallas y servicios de dominio no deben recalcular saldos o efectos
+financieros criticos por su cuenta cuando exista una funcion del ledger.
+
+Convencion de saldos:
+
+- `Account.currentBalance` y `Account.openingBalance` son saldos firmados.
+- Cuentas de activo con saldo positivo suman a activos.
+- Cualquier cuenta con saldo negativo suma a pasivos por su valor absoluto.
+- Una tarjeta de credito con deuda debe tener saldo negativo.
+- Un pago de tarjeta se modela como transferencia desde la cuenta pagadora hacia la tarjeta; esa transferencia reduce la cuenta origen y aumenta el saldo de la tarjeta hacia cero.
+- El patrimonio neto se calcula como la suma de saldos firmados de cuentas activas, sin conversion automatica de moneda.
+
+Efectos de transacciones:
+
+- `INCOME` y `ADJUSTMENT` aumentan la cuenta origen.
+- `EXPENSE`, `DEBT_PAYMENT`, `GOAL_CONTRIBUTION` e `INVESTMENT` reducen la cuenta origen.
+- `TRANSFER` reduce la cuenta origen y aumenta la cuenta destino.
+- `DEBT_PAYMENT` tambien reduce el saldo pendiente de la deuda asociada.
+- `GOAL_CONTRIBUTION` tambien aumenta el monto actual de la meta asociada.

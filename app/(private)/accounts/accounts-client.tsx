@@ -295,7 +295,10 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
                   <option value="USD">USD</option>
                 </select>
               </Field>
-              <Field label="Saldo inicial" error={errors.openingBalance}>
+              <Field
+                label={form.type === "CREDIT_CARD" ? "Saldo inicial (deuda en negativo)" : "Saldo inicial"}
+                error={errors.openingBalance}
+              >
                 <Input
                   inputMode="decimal"
                   value={form.openingBalance}
@@ -339,7 +342,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
       <div className="space-y-6">
         <div className="grid gap-3 sm:grid-cols-3">
           <SummaryCard label="Activos" value={formatMoney(assets, "ARS")} tone="positive" />
-          <SummaryCard label="Pasivos (crédito)" value={formatMoney(liabilities, "ARS")} tone="danger" />
+          <SummaryCard label="Pasivos" value={formatMoney(liabilities, "ARS")} tone="danger" />
           <SummaryCard label="Patrimonio neto" value={formatMoney(netWorth, "ARS")} tone={netWorth >= 0 ? "default" : "warning"} highlight />
         </div>
 

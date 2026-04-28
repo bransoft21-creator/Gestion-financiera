@@ -1,4 +1,4 @@
-import { DebtStatus, GoalStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { TransactionType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { ApiError, ForbiddenError, NotFoundError } from "../api/errors";
 import type {
@@ -6,185 +6,15 @@ import type {
   ListTransactionsInput,
   UpdateTransactionInput,
 } from "../schemas/transactions";
+import {
+  applyBalanceDeltas,
+  applyLinkedEntityEffects,
+  computeTransactionBalanceDeltas,
+  computeTransactionLinkedEntityEffects,
+  reverseBalanceDeltas,
+  reverseLinkedEntityEffects,
+} from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
-
-// ---------------------------------------------------------------------------
-// Balance delta helpers
-// ---------------------------------------------------------------------------
-
-type BalanceDelta = { accountId: string; delta: number }[];
-
-function computeBalanceDelta(t: {
-  type: TransactionType;
-  status: TransactionStatus;
-  accountId: string;
-  transferAccountId?: string | null;
-  amount: Prisma.Decimal | number;
-  transferAmount?: Prisma.Decimal | number | null;
-}): BalanceDelta {
-  if (t.status === TransactionStatus.CANCELED) return [];
-
-  const amount = Number(t.amount);
-  const transferAmount = t.transferAmount != null ? Number(t.transferAmount) : amount;
-
-  switch (t.type) {
-    case TransactionType.INCOME:
-    case TransactionType.ADJUSTMENT:
-      return [{ accountId: t.accountId, delta: amount }];
-
-    case TransactionType.EXPENSE:
-    case TransactionType.DEBT_PAYMENT:
-    case TransactionType.GOAL_CONTRIBUTION:
-    case TransactionType.INVESTMENT:
-      return [{ accountId: t.accountId, delta: -amount }];
-
-    case TransactionType.TRANSFER:
-      if (!t.transferAccountId) return [{ accountId: t.accountId, delta: -amount }];
-      return [
-        { accountId: t.accountId, delta: -amount },
-        { accountId: t.transferAccountId, delta: transferAmount },
-      ];
-
-    default:
-      return [];
-  }
-}
-
-async function applyBalanceDelta(
-  tx: Prisma.TransactionClient,
-  deltas: BalanceDelta,
-): Promise<void> {
-  for (const { accountId, delta } of deltas) {
-    await tx.account.update({
-      where: { id: accountId },
-      data: { currentBalance: { increment: delta } },
-    });
-  }
-}
-
-function reverseDeltas(deltas: BalanceDelta): BalanceDelta {
-  return deltas.map((d) => ({ ...d, delta: -d.delta }));
-}
-
-// ---------------------------------------------------------------------------
-// Debt / goal side-effect helpers
-// ---------------------------------------------------------------------------
-
-type SideEffects = {
-  debtId: string | null;
-  debtDelta: number; // negative → reduces outstandingAmount (paying down)
-  goalId: string | null;
-  goalDelta: number; // positive → increases currentAmount (contributing)
-};
-
-const NO_SIDE_EFFECTS: SideEffects = {
-  debtId: null,
-  debtDelta: 0,
-  goalId: null,
-  goalDelta: 0,
-};
-
-function computeSideEffects(t: {
-  type: TransactionType;
-  status: TransactionStatus;
-  debtId?: string | null;
-  goalId?: string | null;
-  amount: Prisma.Decimal | number;
-}): SideEffects {
-  if (t.status === TransactionStatus.CANCELED) return NO_SIDE_EFFECTS;
-
-  const amount = Number(t.amount);
-
-  if (t.type === TransactionType.DEBT_PAYMENT && t.debtId) {
-    return { ...NO_SIDE_EFFECTS, debtId: t.debtId, debtDelta: -amount };
-  }
-
-  if (t.type === TransactionType.GOAL_CONTRIBUTION && t.goalId) {
-    return { ...NO_SIDE_EFFECTS, goalId: t.goalId, goalDelta: amount };
-  }
-
-  return NO_SIDE_EFFECTS;
-}
-
-function reverseSideEffects(effects: SideEffects): SideEffects {
-  return {
-    debtId: effects.debtId,
-    debtDelta: -effects.debtDelta,
-    goalId: effects.goalId,
-    goalDelta: -effects.goalDelta,
-  };
-}
-
-async function applySideEffects(
-  tx: Prisma.TransactionClient,
-  effects: SideEffects,
-): Promise<void> {
-  if (effects.debtId && effects.debtDelta !== 0) {
-    await applyDebtDelta(tx, effects.debtId, effects.debtDelta);
-  }
-  if (effects.goalId && effects.goalDelta !== 0) {
-    await applyGoalDelta(tx, effects.goalId, effects.goalDelta);
-  }
-}
-
-async function applyDebtDelta(
-  tx: Prisma.TransactionClient,
-  debtId: string,
-  delta: number,
-): Promise<void> {
-  const debt = await tx.debt.findFirst({
-    where: { id: debtId, deletedAt: null },
-    select: { outstandingAmount: true, status: true },
-  });
-
-  // Debt may have been deleted after the transaction was created — skip silently.
-  if (!debt) return;
-
-  const newOutstanding = Math.max(0, Number(debt.outstandingAmount) + delta);
-
-  await tx.debt.update({
-    where: { id: debtId },
-    data: {
-      outstandingAmount: newOutstanding,
-      // Paid off → mark PAID; previously PAID but now has balance again → reopen as ACTIVE.
-      ...(newOutstanding === 0
-        ? { status: DebtStatus.PAID }
-        : debt.status === DebtStatus.PAID
-        ? { status: DebtStatus.ACTIVE }
-        : {}),
-    },
-  });
-}
-
-async function applyGoalDelta(
-  tx: Prisma.TransactionClient,
-  goalId: string,
-  delta: number,
-): Promise<void> {
-  const goal = await tx.goal.findFirst({
-    where: { id: goalId, deletedAt: null },
-    select: { currentAmount: true, targetAmount: true, status: true },
-  });
-
-  // Goal may have been deleted after the transaction was created — skip silently.
-  if (!goal) return;
-
-  const newCurrent = Math.max(0, Number(goal.currentAmount) + delta);
-  const target = Number(goal.targetAmount);
-
-  await tx.goal.update({
-    where: { id: goalId },
-    data: {
-      currentAmount: newCurrent,
-      // Reached target → mark COMPLETED; previously COMPLETED but now below target → reopen as ACTIVE.
-      ...(newCurrent >= target
-        ? { status: GoalStatus.COMPLETED }
-        : goal.status === GoalStatus.COMPLETED
-        ? { status: GoalStatus.ACTIVE }
-        : {}),
-    },
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Public service functions
@@ -236,9 +66,9 @@ export async function createTransaction(
       include: transactionInclude,
     });
 
-    await applyBalanceDelta(
+    await applyBalanceDeltas(
       tx,
-      computeBalanceDelta({
+      computeTransactionBalanceDeltas({
         type: transaction.type,
         status: transaction.status,
         accountId: transaction.accountId,
@@ -248,9 +78,9 @@ export async function createTransaction(
       }),
     );
 
-    await applySideEffects(
+    await applyLinkedEntityEffects(
       tx,
-      computeSideEffects({
+      computeTransactionLinkedEntityEffects({
         type: transaction.type,
         status: transaction.status,
         debtId: transaction.debtId,
@@ -327,10 +157,10 @@ export async function updateTransaction(
     }
 
     // 1. Revert old balance and side effects.
-    await applyBalanceDelta(
+    await applyBalanceDeltas(
       tx,
-      reverseDeltas(
-        computeBalanceDelta({
+      reverseBalanceDeltas(
+        computeTransactionBalanceDeltas({
           type: current.type,
           status: current.status,
           accountId: current.accountId,
@@ -341,10 +171,10 @@ export async function updateTransaction(
       ),
     );
 
-    await applySideEffects(
+    await applyLinkedEntityEffects(
       tx,
-      reverseSideEffects(
-        computeSideEffects({
+      reverseLinkedEntityEffects(
+        computeTransactionLinkedEntityEffects({
           type: current.type,
           status: current.status,
           debtId: current.debtId,
@@ -377,9 +207,9 @@ export async function updateTransaction(
     });
 
     // 3. Apply new balance and side effects from the persisted final state.
-    await applyBalanceDelta(
+    await applyBalanceDeltas(
       tx,
-      computeBalanceDelta({
+      computeTransactionBalanceDeltas({
         type: updated.type,
         status: updated.status,
         accountId: updated.accountId,
@@ -389,9 +219,9 @@ export async function updateTransaction(
       }),
     );
 
-    await applySideEffects(
+    await applyLinkedEntityEffects(
       tx,
-      computeSideEffects({
+      computeTransactionLinkedEntityEffects({
         type: updated.type,
         status: updated.status,
         debtId: updated.debtId,
@@ -419,10 +249,10 @@ export async function deleteTransaction(
     if (!current) throw new NotFoundError("Transaction not found");
 
     // 1. Revert balance and side effects.
-    await applyBalanceDelta(
+    await applyBalanceDeltas(
       tx,
-      reverseDeltas(
-        computeBalanceDelta({
+      reverseBalanceDeltas(
+        computeTransactionBalanceDeltas({
           type: current.type,
           status: current.status,
           accountId: current.accountId,
@@ -433,10 +263,10 @@ export async function deleteTransaction(
       ),
     );
 
-    await applySideEffects(
+    await applyLinkedEntityEffects(
       tx,
-      reverseSideEffects(
-        computeSideEffects({
+      reverseLinkedEntityEffects(
+        computeTransactionLinkedEntityEffects({
           type: current.type,
           status: current.status,
           debtId: current.debtId,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
   Loader2,
@@ -60,12 +60,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    void loadReport(months);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [months]);
-
-  async function loadReport(selectedMonths: MonthsOption) {
+  const loadReport = useCallback(async (selectedMonths: MonthsOption) => {
     setIsLoading(true);
     setError(null);
 
@@ -88,7 +83,15 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [householdId]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadReport(months);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadReport, months]);
 
   if (error) {
     return (

@@ -1,7 +1,8 @@
-import { AccountType, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { NotFoundError } from "../api/errors";
 import type { CreateAccountInput, ListAccountsInput, UpdateAccountInput } from "../schemas/accounts";
+import { computeAccountSummary, toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
 
 type AccountRecord = Prisma.AccountGetPayload<Record<string, never>>;
@@ -20,22 +21,6 @@ function serializeAccount(account: AccountRecord) {
     createdAt: account.createdAt.toISOString(),
     updatedAt: account.updatedAt.toISOString(),
   };
-}
-
-function computeNetWorth(accounts: AccountRecord[]) {
-  const active = accounts.filter((a) => !a.isArchived && !a.deletedAt);
-  const assets = active
-    .filter((a) => a.type !== AccountType.CREDIT_CARD)
-    .reduce((sum, a) => sum + toFiniteNumber(a.currentBalance), 0);
-  const liabilities = active
-    .filter((a) => a.type === AccountType.CREDIT_CARD)
-    .reduce((sum, a) => sum + toFiniteNumber(a.currentBalance), 0);
-  return { assets, liabilities, netWorth: assets - liabilities };
-}
-
-function toFiniteNumber(value: Prisma.Decimal | number) {
-  const amount = Number(value);
-  return Number.isFinite(amount) ? amount : 0;
 }
 
 export async function listAccounts(userProfileId: string, input: ListAccountsInput) {
@@ -58,7 +43,7 @@ export async function listAccounts(userProfileId: string, input: ListAccountsInp
 
   return {
     accounts: accounts.map(serializeAccount),
-    ...computeNetWorth(allAccounts),
+    ...computeAccountSummary(allAccounts),
   };
 }
 

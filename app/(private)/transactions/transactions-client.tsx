@@ -102,6 +102,7 @@ const transactionTypeLabels: Record<TransactionType, string> = {
 };
 
 const transactionTypes = Object.keys(transactionTypeLabels) as TransactionType[];
+const supportedFormTransactionTypes = ["INCOME", "EXPENSE", "ADJUSTMENT"] as const;
 const transactionIcons = {
   INCOME: ArrowUpCircle,
   EXPENSE: ArrowDownCircle,
@@ -113,7 +114,7 @@ const transactionIcons = {
 } satisfies Record<TransactionType, typeof ArrowDownCircle>;
 
 const formSchema = z.object({
-  type: z.enum(transactionTypes),
+  type: z.enum(supportedFormTransactionTypes),
   accountId: z.string().min(1, "Seleccioná una cuenta."),
   categoryId: z.string().optional(),
   currency: z.enum(["ARS", "USD"]),
@@ -299,6 +300,13 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   }
 
   function startEditing(transaction: TransactionItem) {
+    if (!isSupportedFormTransactionType(transaction.type)) {
+      setMessage(
+        `${transactionTypeLabels[transaction.type]} requiere campos específicos que todavía no están disponibles en este formulario.`,
+      );
+      return;
+    }
+
     setEditingTransactionId(transaction.id);
     setIsFormOpen(true);
     setErrors({});
@@ -405,7 +413,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                 value={form.type}
                 onChange={(event) => updateForm("type", event.target.value as TransactionType)}
               >
-                {transactionTypes.map((type) => (
+                {supportedFormTransactionTypes.map((type) => (
                   <option key={type} value={type}>
                     {transactionTypeLabels[type]}
                   </option>
@@ -892,6 +900,12 @@ function isCategoryAllowedForType(categoryType: CategoryType, transactionType: T
   }
 
   return categoryType === "TRANSFER" || categoryType === "ADJUSTMENT";
+}
+
+function isSupportedFormTransactionType(type: TransactionType) {
+  return supportedFormTransactionTypes.includes(
+    type as (typeof supportedFormTransactionTypes)[number],
+  );
 }
 
 function formatMoney(value: string | number, currency: CurrencyCode) {

@@ -1,5 +1,6 @@
-import { DebtStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { DebtStatus, GoalStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
+import { computeAvailableMoney, toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
 
 const chartColors = ["#f97316", "#ef4444", "#06b6d4", "#eab308", "#8b5cf6", "#14b8a6"];
@@ -39,7 +40,15 @@ export async function getDashboardSummary(
   const monthStart = new Date(year, month - 1, 1);
   const nextMonthStart = new Date(year, month, 1);
 
-  const [monthTransactions, latestTransactions, budgets, debtAggregate] = await Promise.all([
+  const [
+    monthTransactions,
+    latestTransactions,
+    budgets,
+    debtAggregate,
+    recurringExpenses,
+    activeGoals,
+    upcomingDebts,
+  ] = await Promise.all([
     prisma.transaction.findMany({
       where: {
         householdId,
@@ -54,6 +63,7 @@ export async function getDashboardSummary(
       where: {
         householdId,
         ...activeTransactionWhere,
+        occurredAt: { gte: monthStart, lt: nextMonthStart },
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
       },
       include: dashboardTransactionInclude,
@@ -68,6 +78,33 @@ export async function getDashboardSummary(
       _sum: { outstandingAmount: true },
       where: { householdId, status: DebtStatus.ACTIVE, deletedAt: null },
     }),
+    prisma.recurringExpense.findMany({
+      where: {
+        householdId,
+        isActive: true,
+        deletedAt: null,
+        nextDueDate: { gte: monthStart, lt: nextMonthStart },
+      },
+      select: { amount: true },
+    }),
+    prisma.goal.findMany({
+      where: {
+        householdId,
+        status: GoalStatus.ACTIVE,
+        deletedAt: null,
+        requiredMonthlyAmount: { not: null },
+      },
+      select: { requiredMonthlyAmount: true },
+    }),
+    prisma.debt.findMany({
+      where: {
+        householdId,
+        status: DebtStatus.ACTIVE,
+        deletedAt: null,
+        nextDueDate: { gte: monthStart, lt: nextMonthStart },
+      },
+      select: { minimumPayment: true, outstandingAmount: true },
+    }),
   ]);
 
   const income = sumTransactionsByType(monthTransactions, TransactionType.INCOME);
@@ -78,8 +115,23 @@ export async function getDashboardSummary(
   const expensesByCategory = getExpensesByCategory(monthTransactions);
   const expensesByCategoryId = getExpenseTotalsByCategoryId(monthTransactions);
   const budgetMetrics = getBudgetMetrics(budgets, expensesByCategoryId);
-  const available = balance - budgetMetrics.remainingReserved;
   const totalOutstandingDebt = toFiniteNumber(debtAggregate._sum.outstandingAmount ?? 0);
+  const upcomingRecurringExpenses = sumAmounts(recurringExpenses, "amount");
+  const requiredGoalContributions = sumNullableAmounts(activeGoals, "requiredMonthlyAmount");
+  const upcomingDebtPayments = upcomingDebts.reduce((sum, debt) => {
+    return sum + Math.min(
+      toFiniteNumber(debt.minimumPayment ?? debt.outstandingAmount),
+      toFiniteNumber(debt.outstandingAmount),
+    );
+  }, 0);
+  const availableMetrics = computeAvailableMoney({
+    income,
+    expenses,
+    reservedBudget: budgetMetrics.remainingReserved,
+    recurringExpenses: upcomingRecurringExpenses,
+    requiredGoalContributions,
+    debtPayments: upcomingDebtPayments,
+  });
 
   return {
     period: {
@@ -97,7 +149,11 @@ export async function getDashboardSummary(
       totalBudgeted: budgetMetrics.totalBudgeted,
       budgetedSpent: budgetMetrics.budgetedSpent,
       remainingReservedBudget: budgetMetrics.remainingReserved,
-      realAvailable: available,
+      upcomingRecurringExpenses,
+      requiredGoalContributions,
+      upcomingDebtPayments,
+      upcomingObligations: availableMetrics.upcomingObligations,
+      realAvailable: availableMetrics.realAvailable,
       totalOutstandingDebt,
     },
     expensesByCategory,
@@ -119,9 +175,24 @@ export async function getDashboardSummary(
       transactionCount: monthTransactions.length,
       expensesByCategory,
       remainingReservedBudget: budgetMetrics.remainingReserved,
-      realAvailable: available,
+      upcomingObligations: availableMetrics.upcomingObligations,
+      realAvailable: availableMetrics.realAvailable,
     }),
   };
+}
+
+function sumAmounts<T extends Record<K, Prisma.Decimal | number>, K extends keyof T>(
+  items: T[],
+  key: K,
+) {
+  return items.reduce((sum, item) => sum + toFiniteNumber(item[key]), 0);
+}
+
+function sumNullableAmounts<T extends Record<K, Prisma.Decimal | number | null>, K extends keyof T>(
+  items: T[],
+  key: K,
+) {
+  return items.reduce((sum, item) => sum + toFiniteNumber(item[key] ?? 0), 0);
 }
 
 function getExpenseTotalsByCategoryId(transactions: DashboardTransaction[]) {
@@ -202,6 +273,7 @@ function buildAlerts({
   transactionCount,
   expensesByCategory,
   remainingReservedBudget,
+  upcomingObligations,
   realAvailable,
 }: {
   income: number;
@@ -211,6 +283,7 @@ function buildAlerts({
   transactionCount: number;
   expensesByCategory: Array<{ name: string; value: number }>;
   remainingReservedBudget: number;
+  upcomingObligations: number;
   realAvailable: number;
 }) {
   const alerts: string[] = [];
@@ -235,8 +308,12 @@ function buildAlerts({
     alerts.push("Parte del balance queda reservado para presupuestos pendientes del mes.");
   }
 
+  if (upcomingObligations > 0) {
+    alerts.push("El disponible real descuenta obligaciones próximas del mes.");
+  }
+
   if (realAvailable < 0) {
-    alerts.push("El dinero disponible real queda en negativo al reservar presupuestos pendientes.");
+    alerts.push("El dinero disponible real queda en negativo al reservar presupuestos y obligaciones.");
   }
 
   const topCategory = expensesByCategory[0];
@@ -245,9 +322,4 @@ function buildAlerts({
   }
 
   return alerts.slice(0, 4);
-}
-
-function toFiniteNumber(value: Prisma.Decimal | number) {
-  const amount = Number(value);
-  return Number.isFinite(amount) ? amount : 0;
 }
