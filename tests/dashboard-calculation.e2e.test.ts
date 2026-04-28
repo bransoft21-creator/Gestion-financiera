@@ -75,4 +75,20 @@ describe("dashboard calculation e2e", () => {
       ],
     );
   });
+
+  it("keeps dashboard reservation at zero when a budget is exceeded", () => {
+    const health = computeFinancialHealth({
+      income: 100_000,
+      expenses: 12_500,
+      budgets: [{ plannedAmount: 10_000, spentAmount: 12_500 }],
+      recurringExpenses: [],
+      goals: [],
+      debts: [],
+      totalOutstandingDebt: 0,
+    });
+
+    assert.equal(health.remainingReservedBudget, 0);
+    assert.equal(health.budgetedSpent, 12_500);
+    assert.equal(health.realAvailable, 87_500);
+  });
 });

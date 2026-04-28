@@ -69,6 +69,13 @@ describe("money validation", () => {
 
     assert.equal(transaction.amount, 12.34);
     assert.equal(recurring.amount, 12.34);
+    assert.equal(createBudgetSchema.parse({
+      ...base,
+      categoryId: "category-1",
+      year: 2026,
+      month: 4,
+      plannedAmount: "10000.75",
+    }).plannedAmount, 10000.75);
     assert.equal(parseMoneyInput("12.345").success, false);
   });
 

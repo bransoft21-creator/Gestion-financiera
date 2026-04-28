@@ -80,6 +80,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
 
     return categories.filter((category) => !usedCategoryIds.has(category.id));
   }, [budgets, categories, editingBudgetId]);
+  const canCreateBudget = editingBudgetId !== null || availableCategories.length > 0;
 
   const loadBudgets = useCallback(async () => {
     setIsLoading(true);
@@ -119,7 +120,15 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
     event.preventDefault();
     setMessage(null);
 
-    const parsed = budgetSchema.safeParse(form);
+    const normalizedForm = {
+      ...form,
+      categoryId: editingBudgetId
+        ? form.categoryId
+        : availableCategories.some((category) => category.id === form.categoryId)
+          ? form.categoryId
+          : availableCategories[0]?.id ?? "",
+    };
+    const parsed = budgetSchema.safeParse(normalizedForm);
 
     if (!parsed.success) {
       const nextErrors: FormErrors = {};
@@ -216,8 +225,11 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
   function resetForm() {
     setEditingBudgetId(null);
     setErrors({});
+    const usedCategoryIds = new Set(budgets.map((budget) => budget.categoryId));
+    const nextCategory = categories.find((category) => !usedCategoryIds.has(category.id));
+
     setForm({
-      categoryId: availableCategories[0]?.id ?? categories[0]?.id ?? "",
+      categoryId: nextCategory?.id ?? "",
       plannedAmount: "",
       currency: "ARS",
     });
@@ -229,6 +241,11 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
       [key]: value,
     }));
   }
+
+  const selectedCategoryId =
+    editingBudgetId || availableCategories.some((category) => category.id === form.categoryId)
+      ? form.categoryId
+      : availableCategories[0]?.id ?? "";
 
   return (
     <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
@@ -274,9 +291,13 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
             <Field label="Categoría" error={errors.categoryId}>
               <select
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={form.categoryId}
+                value={selectedCategoryId}
                 onChange={(event) => updateForm("categoryId", event.target.value)}
+                disabled={!canCreateBudget}
               >
+                {availableCategories.length === 0 ? (
+                  <option value="">Sin categorías disponibles</option>
+                ) : null}
                 {availableCategories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
@@ -452,6 +473,7 @@ function BudgetCard({
   const usage = Math.min(budget.usagePercent, 999);
   const alert = getBudgetAlert(budget.usagePercent);
   const remaining = budget.remainingReserved;
+  const exceededAmount = Math.max(budget.spentAmount - budget.plannedAmount, 0);
   const [displayWidth, setDisplayWidth] = useState(0);
   const mounted = useRef(false);
 
@@ -477,6 +499,11 @@ function BudgetCard({
                 {formatMoney(budget.spentAmount, budget.currency)} gastado de{" "}
                 {formatMoney(budget.plannedAmount, budget.currency)}
               </p>
+              {exceededAmount > 0 ? (
+                <p className="mt-1 text-xs font-medium text-destructive">
+                  Excedido por {formatMoney(exceededAmount, budget.currency)}
+                </p>
+              ) : null}
             </div>
           </div>
         </div>
@@ -497,7 +524,10 @@ function BudgetCard({
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <BudgetMetric label="Presupuestado" value={formatMoney(budget.plannedAmount, budget.currency)} />
         <BudgetMetric label="Gastado" value={formatMoney(budget.spentAmount, budget.currency)} />
-        <BudgetMetric label="Reservado" value={formatMoney(remaining, budget.currency)} />
+        <BudgetMetric
+          label={exceededAmount > 0 ? "Excedido" : "Reservado"}
+          value={formatMoney(exceededAmount > 0 ? exceededAmount : remaining, budget.currency)}
+        />
         <BudgetMetric label="Uso" value={`${usage.toFixed(0)}%`} />
       </div>
 
