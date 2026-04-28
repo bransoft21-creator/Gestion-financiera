@@ -11,7 +11,7 @@ export default async function GoalsPage() {
     <>
       <PageHeader
         title="Metas"
-        description="Objetivos de ahorro y progreso acumulado. Todavía no afectan el cálculo de disponible real."
+        description="Objetivos de ahorro y progreso acumulado. Metas activas con aporte mensual definido se incluyen como obligación en el dashboard."
       />
       <GoalsClient householdId={workspace.household.id} />
     </>

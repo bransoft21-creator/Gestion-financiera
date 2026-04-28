@@ -201,6 +201,7 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
       toast.success("Meta eliminada.");
       if (editingGoalId === goalId) {
         resetForm();
+        setIsFormOpen(false);
       }
 
       await loadGoals();
@@ -243,6 +244,7 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
 
   const active = goals.filter((g) => g.status === "ACTIVE").length;
   const completed = goals.filter((g) => g.status === "COMPLETED").length;
+  const paused = goals.filter((g) => g.status === "PAUSED").length;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
@@ -320,7 +322,7 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
                   value={form.status}
                   onChange={(event) => updateForm("status", event.target.value as GoalStatus)}
                 >
-                  {statuses.map((status) => (
+                  {(editingGoalId ? statuses : statuses.filter((s) => s !== "CANCELED")).map((status) => (
                     <option key={status} value={status}>
                       {statusLabels[status]}
                     </option>
@@ -345,7 +347,7 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
                 {editingGoalId ? "Guardar cambios" : "Crear meta"}
               </Button>
               {editingGoalId ? (
-                <Button type="button" variant="outline" className="h-11 w-full" onClick={resetForm}>
+                <Button type="button" variant="outline" className="h-11 w-full" onClick={() => { resetForm(); setIsFormOpen(false); }}>
                   <X className="h-4 w-4" aria-hidden="true" />
                   Cancelar
                 </Button>
@@ -363,6 +365,11 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
               <Sparkles className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
               <span className="text-[13px] font-semibold text-emerald-400">{active} activas</span>
             </div>
+            {paused > 0 && (
+              <div className="flex items-center gap-2 rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3.5 py-2">
+                <span className="text-[13px] font-semibold text-yellow-400">{paused} pausadas</span>
+              </div>
+            )}
             <div className="flex items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/10 px-3.5 py-2">
               <Target className="h-3.5 w-3.5 text-violet-400" aria-hidden="true" />
               <span className="text-[13px] font-semibold text-violet-400">{completed} completadas</span>
@@ -378,7 +385,7 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
                   <CardDescription>{goals.length} metas activas o históricas.</CardDescription>
                 </div>
               <div className="flex items-center gap-2">
-                <Badge>No afecta disponible real</Badge>
+                <Badge title="Solo metas activas con aporte mensual definido se suman como obligación en el dashboard">Activa + aporte → dashboard</Badge>
                 <Button type="button" size="sm" className="hidden xl:inline-flex" onClick={() => { resetForm(); setIsFormOpen(true); }}>
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   Nueva
@@ -491,7 +498,9 @@ function GoalCard({
   onEdit: (goal: GoalItem) => void;
   onDelete: (goalId: string) => void;
 }) {
-  const progress = goal.targetAmount > 0 ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) : 0;
+  const actualPct = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
+  const displayPct = Math.min(actualPct, 100);
+  const impactsDashboard = goal.status === "ACTIVE" && goal.requiredMonthlyAmount != null;
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:border-border/80 animate-fade-up">
@@ -516,16 +525,19 @@ function GoalCard({
               {goal.requiredMonthlyAmount ? (
                 <Badge>{formatMoney(goal.requiredMonthlyAmount, goal.currency)} / mes</Badge>
               ) : null}
+              {impactsDashboard ? (
+                <Badge className="border-emerald-500/30 text-emerald-400">impacta dashboard</Badge>
+              ) : null}
             </div>
           </div>
         </div>
-        <CircularProgress value={progress} size={68} strokeWidth={5} />
+        <CircularProgress value={displayPct} size={68} strokeWidth={5} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <GoalMetric label="Actual" value={formatMoney(goal.currentAmount, goal.currency)} />
         <GoalMetric label="Objetivo" value={formatMoney(goal.targetAmount, goal.currency)} />
-        <GoalMetric label="Progreso" value={`${progress.toFixed(0)}%`} />
+        <GoalMetric label="Progreso" value={`${actualPct.toFixed(0)}%`} />
         <GoalMetric label="Estado" value={statusLabels[goal.status]} />
       </div>
 
@@ -569,7 +581,8 @@ function formatMoney(value: number, currency: CurrencyCode) {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(value);
 }
 
