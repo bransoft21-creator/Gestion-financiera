@@ -296,7 +296,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
       <Card
         className={`${
           isFormOpen
-            ? "fixed inset-x-0 bottom-0 z-50 max-h-[92vh] overflow-y-auto rounded-b-none rounded-t-2xl border-b-0 animate-slide-up"
+            ? "fixed inset-x-0 bottom-0 z-50 max-h-[90dvh] overflow-y-auto rounded-b-none rounded-t-2xl border-b-0 animate-slide-up"
             : "hidden"
         } xl:block`}
       >
@@ -316,7 +316,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className={isFormOpen ? "pb-0 xl:pb-5" : undefined}>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Field label="Nombre" error={errors.name}>
               <Input value={form.name} onChange={(e) => updateForm("name", e.target.value)} placeholder="Ej: Netflix, Alquiler, Gym" />
@@ -369,7 +369,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
 
             {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
 
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+            <div className="sticky bottom-0 -mx-5 grid gap-2 border-t border-border bg-card/95 p-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] backdrop-blur sm:grid-cols-2 xl:static xl:mx-0 xl:border-0 xl:bg-transparent xl:p-0 xl:backdrop-blur-none 2xl:grid-cols-2">
               <Button className="h-11 w-full" disabled={isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                 {editingId ? "Guardar cambios" : "Crear recurrente"}
