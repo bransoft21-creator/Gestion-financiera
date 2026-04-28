@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, WalletCards } from "lucide-react";
+import { WalletCards } from "lucide-react";
+import { LogoutButton } from "./logout-button";
+import { NotificationsButton } from "./notifications-button";
+import { PrivacyToggle } from "./privacy-toggle";
 
 export function MobileHeader() {
   return (
@@ -15,13 +18,11 @@ export function MobileHeader() {
         </span>
         <span className="text-[14px] font-bold text-foreground">Finance Control</span>
       </Link>
-      <button
-        type="button"
-        className="flex h-8 w-8 items-center justify-center text-muted-foreground"
-        aria-label="Notificaciones"
-      >
-        <Bell className="h-[19px] w-[19px]" aria-hidden="true" />
-      </button>
+      <div className="flex items-center gap-1.5">
+        <PrivacyToggle compact />
+        <NotificationsButton compact />
+        <LogoutButton compact />
+      </div>
     </header>
   );
 }

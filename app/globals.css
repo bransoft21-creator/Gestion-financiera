@@ -68,6 +68,11 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes processing-bar {
+  from { transform: translateX(-120%); }
+  to   { transform: translateX(220%); }
+}
+
 .fade-in {
   animation: fade-in-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -76,8 +81,19 @@
   animation: slide-up-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.animate-processing-bar {
+  animation: processing-bar 1.15s ease-in-out infinite;
+}
+
+html[data-hide-amounts="true"] .tabular-nums {
+  color: transparent !important;
+  filter: blur(7px);
+  text-shadow: 0 0 12px hsl(var(--muted-foreground));
+  user-select: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .fade-in, .slide-up { animation: none !important; }
+  .fade-in, .slide-up, .animate-processing-bar { animation: none !important; }
 }
 
 @layer utilities {
