@@ -53,17 +53,19 @@ export function GlobalProcessingIndicator() {
 
   return (
     <div
-      className={`pointer-events-none fixed inset-x-0 top-0 z-[80] transition-opacity duration-200 ${
+      className={`pointer-events-none fixed inset-0 z-[80] flex items-center justify-center bg-background/10 transition-opacity duration-200 ${
         visible ? "opacity-100" : "opacity-0"
       }`}
       aria-hidden={!visible}
     >
-      <div className="h-[3px] overflow-hidden bg-primary/10">
-        <div className="h-full w-1/2 animate-processing-bar rounded-r-full bg-gradient-to-r from-violet-500 via-sky-400 to-emerald-400" />
-      </div>
-      <div className="mx-auto mt-2 flex w-fit items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-lg shadow-black/20 backdrop-blur">
-        <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" aria-hidden="true" />
-        Procesando
+      <div className="flex min-w-[180px] flex-col items-center gap-3 rounded-2xl border border-border/80 bg-card/95 px-5 py-4 text-center shadow-2xl shadow-black/30 backdrop-blur">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/12 text-primary">
+          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Procesando</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Un momento</p>
+        </div>
       </div>
     </div>
   );

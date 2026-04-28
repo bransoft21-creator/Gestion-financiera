@@ -13,18 +13,18 @@ type AppShellProps = {
   userEmail?: string | null;
 };
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children, userName, userEmail }: AppShellProps) {
   return (
     <div className="min-h-screen bg-background">
       <GlobalProcessingIndicator />
-      <MobileHeader />
-      <div className="fixed right-5 top-4 z-30 hidden items-center gap-2 lg:flex">
-        <PrivacyToggle />
-        <NotificationsButton />
-        <LogoutButton />
+      <MobileHeader userName={userName} />
+      <div className="fixed right-5 top-4 z-30 hidden items-center gap-1 rounded-full border border-border/70 bg-card/80 p-1 shadow-lg shadow-black/20 backdrop-blur lg:flex">
+        <PrivacyToggle compact />
+        <NotificationsButton compact />
+        <LogoutButton compact />
       </div>
       <div className="lg:flex">
-        <Sidebar />
+        <Sidebar userName={userName} userEmail={userEmail} />
         <main className="min-w-0 flex-1 overflow-x-hidden">
           <PageTransition>
             <div className="mx-auto w-full max-w-[1200px] px-4 pb-[88px] pt-5 lg:px-8 lg:py-7">

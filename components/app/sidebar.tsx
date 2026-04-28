@@ -7,8 +7,15 @@ import { cn } from "@/lib/utils";
 import { navItems } from "./nav-items";
 import { LogoutButton } from "./logout-button";
 
-export function Sidebar() {
+type SidebarProps = {
+  userName?: string | null;
+  userEmail?: string | null;
+};
+
+export function Sidebar({ userName, userEmail }: SidebarProps) {
   const pathname = usePathname();
+  const displayName = userName ?? "Mi cuenta";
+  const accountLabel = userEmail ?? "Hogar principal";
 
   return (
     <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-card shadow-[1px_0_20px_rgba(0,0,0,0.3)] lg:sticky lg:top-0 lg:flex">
@@ -18,8 +25,8 @@ export function Sidebar() {
           <WalletCards className="h-[17px] w-[17px] text-white" aria-hidden="true" />
         </div>
         <div>
-          <p className="text-[13px] font-bold leading-tight text-foreground">Finance Control</p>
-          <p className="text-[11px] leading-tight text-muted-foreground">Panel financiero</p>
+          <p className="text-[13px] font-bold leading-tight text-foreground">Gestión de gastos</p>
+          <p className="text-[11px] leading-tight text-muted-foreground">Finanzas personales</p>
         </div>
       </div>
 
@@ -62,11 +69,13 @@ export function Sidebar() {
       <div className="shrink-0 border-t border-border px-3.5 py-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-indigo-600">
-            <span className="text-[11px] font-bold text-white">U</span>
+            <span className="text-[11px] font-bold text-white">
+              {displayName.slice(0, 1).toUpperCase()}
+            </span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[12px] font-semibold text-foreground">Mi cuenta</p>
-            <p className="text-[11px] text-muted-foreground">Hogar principal</p>
+            <p className="truncate text-[12px] font-semibold text-foreground">{displayName}</p>
+            <p className="truncate text-[11px] text-muted-foreground">{accountLabel}</p>
           </div>
           <LogoutButton compact />
         </div>

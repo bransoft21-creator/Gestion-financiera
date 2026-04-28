@@ -3,14 +3,16 @@
 import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "finance-control-hide-amounts";
 
 type PrivacyToggleProps = {
   compact?: boolean;
+  className?: string;
 };
 
-export function PrivacyToggle({ compact = false }: PrivacyToggleProps) {
+export function PrivacyToggle({ compact = false, className }: PrivacyToggleProps) {
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
@@ -35,8 +37,13 @@ export function PrivacyToggle({ compact = false }: PrivacyToggleProps) {
   return (
     <Button
       type="button"
-      variant="outline"
+      variant={compact ? "ghost" : "secondary"}
       size={compact ? "icon" : "sm"}
+      className={cn(
+        compact && "h-9 w-9 rounded-full border-0 bg-transparent text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
+        !compact && "rounded-full bg-secondary/70 px-3 text-muted-foreground hover:text-foreground",
+        className,
+      )}
       onClick={toggleHidden}
       aria-pressed={hidden}
       aria-label={hidden ? "Mostrar montos" : "Ocultar montos"}

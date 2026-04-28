@@ -26,6 +26,7 @@ type NotificationItem = {
 
 type NotificationsButtonProps = {
   compact?: boolean;
+  className?: string;
 };
 
 function formatMoney(value: number) {
@@ -36,7 +37,7 @@ function formatMoney(value: number) {
   }).format(value);
 }
 
-export function NotificationsButton({ compact = false }: NotificationsButtonProps) {
+export function NotificationsButton({ compact = false, className }: NotificationsButtonProps) {
   const [open, setOpen] = useState(false);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -105,11 +106,17 @@ export function NotificationsButton({ compact = false }: NotificationsButtonProp
     <div className="relative">
       <Button
         type="button"
-        variant="outline"
+        variant={compact ? "ghost" : "secondary"}
         size={compact ? "icon" : "sm"}
+        className={cn(
+          compact && "relative h-9 w-9 rounded-full border-0 bg-transparent text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
+          !compact && "rounded-full bg-secondary/70 px-3 text-muted-foreground hover:text-foreground",
+          className,
+        )}
         onClick={() => setOpen((value) => !value)}
         aria-label="Notificaciones"
         aria-expanded={open}
+        title="Notificaciones"
       >
         {importantCount > 0 ? (
           <BellRing className="h-4 w-4 text-amber-400" aria-hidden="true" />
@@ -118,7 +125,13 @@ export function NotificationsButton({ compact = false }: NotificationsButtonProp
         )}
         {compact ? null : "Notificaciones"}
         {importantCount > 0 ? (
-          <span className="ml-[-4px] rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-black">
+          <span
+            className={cn(
+              "rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-black",
+              compact && "absolute -right-0.5 -top-0.5 min-w-4 px-1",
+              !compact && "ml-[-4px]",
+            )}
+          >
             {importantCount}
           </span>
         ) : null}
