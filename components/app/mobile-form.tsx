@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -21,18 +22,39 @@ export function AppFormPanel({
   className,
   desktopAlwaysOpen = true,
 }: AppFormPanelProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   useLockBodyScroll(isOpen);
+  const desktopPanel = (
+    <Card className={appFormDesktopPanelClass(isOpen, className, { desktopAlwaysOpen })}>
+      {children}
+    </Card>
+  );
+  const mobilePanel =
+    isMounted && isOpen
+      ? createPortal(
+          <div className="xl:hidden">
+            <MobileFormOverlay isOpen={isOpen} onClose={onClose} />
+            <Card
+              aria-modal
+              className={appFormMobilePanelClass(className)}
+              role="dialog"
+            >
+              {children}
+            </Card>
+          </div>,
+          document.body,
+        )
+      : null;
 
   return (
     <>
-      <MobileFormOverlay isOpen={isOpen} onClose={onClose} />
-      <Card
-        aria-modal={isOpen ? true : undefined}
-        className={appFormPanelClass(isOpen, className, { desktopAlwaysOpen })}
-        role={isOpen ? "dialog" : undefined}
-      >
-        {children}
-      </Card>
+      {desktopPanel}
+      {mobilePanel}
     </>
   );
 }
@@ -79,7 +101,7 @@ function MobileFormOverlay({
   );
 }
 
-function appFormPanelClass(
+function appFormDesktopPanelClass(
   isOpen: boolean,
   className?: string,
   options: { desktopAlwaysOpen?: boolean } = {},
@@ -87,10 +109,15 @@ function appFormPanelClass(
   const { desktopAlwaysOpen = true } = options;
 
   return cn(
-    isOpen
-      ? "fixed inset-0 z-[100] flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden rounded-none border-x-0 border-y-0 bg-card shadow-2xl animate-slide-up xl:static xl:h-auto xl:max-h-[calc(100dvh-8rem)] xl:overflow-hidden xl:rounded-lg xl:border xl:shadow-sm"
-      : "hidden",
-    desktopAlwaysOpen ? "xl:flex xl:min-h-0 xl:flex-col" : undefined,
+    "hidden xl:h-auto xl:max-h-[calc(100dvh-8rem)] xl:min-h-0 xl:overflow-hidden xl:rounded-lg xl:border xl:shadow-sm",
+    isOpen || desktopAlwaysOpen ? "xl:flex xl:flex-col" : undefined,
+    className,
+  );
+}
+
+function appFormMobilePanelClass(className?: string) {
+  return cn(
+    "fixed inset-0 z-[100] flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden rounded-none border-x-0 border-y-0 bg-card shadow-2xl animate-slide-up",
     className,
   );
 }
