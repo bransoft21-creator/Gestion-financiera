@@ -117,7 +117,7 @@ function appFormDesktopPanelClass(
 
 function appFormMobilePanelClass(className?: string) {
   return cn(
-    "fixed inset-0 z-[100] flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden rounded-none border-x-0 border-y-0 bg-card shadow-2xl animate-slide-up",
+    "fixed inset-0 z-[100] flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden rounded-none border-x-0 border-y-0 bg-card pt-[env(safe-area-inset-top)] shadow-2xl animate-slide-up",
     className,
   );
 }

@@ -358,7 +358,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
                 {editingId ? "Modificá los datos." : "Suscripción, servicio o pago periódico."}
               </CardDescription>
             </div>
-            <Button type="button" variant="ghost" size="icon" className="ml-auto xl:hidden" onClick={() => setIsFormOpen(false)}>
+            <Button type="button" variant="ghost" size="icon" aria-label="Cerrar formulario" className="ml-auto xl:hidden" onClick={() => setIsFormOpen(false)}>
               <X className="h-5 w-5" aria-hidden="true" />
             </Button>
           </div>

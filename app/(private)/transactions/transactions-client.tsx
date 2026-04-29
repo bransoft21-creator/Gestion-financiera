@@ -428,6 +428,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               type="button"
               variant="ghost"
               size="icon"
+              aria-label="Cerrar formulario"
               className="ml-auto xl:hidden"
               onClick={() => setIsFormOpen(false)}
             >
