@@ -84,6 +84,7 @@ export async function getDashboardSummary(
         isActive: true,
         deletedAt: null,
         nextDueDate: { gte: monthStart, lt: nextMonthStart },
+        OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
       },
       select: { amount: true },
     }),

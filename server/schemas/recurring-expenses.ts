@@ -24,6 +24,14 @@ export const createRecurringExpenseSchema = z.object({
   nextDueDate: z.coerce.date(),
   endDate: z.coerce.date().optional(),
   notes: z.string().trim().max(1000).optional(),
+}).superRefine((data, ctx) => {
+  if (data.endDate && data.endDate <= data.nextDueDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "La fecha de fin debe ser posterior al próximo vencimiento.",
+      path: ["endDate"],
+    });
+  }
 });
 
 export const updateRecurringExpenseSchema = createRecurringExpenseSchema.partial().extend({

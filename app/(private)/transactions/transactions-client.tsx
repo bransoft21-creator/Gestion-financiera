@@ -819,6 +819,8 @@ function TransactionCard({
   const Icon = transactionIcons[transaction.type];
   const tone = getTransactionTone(transaction.type);
   const signedAmount = getSignedAmount(transaction);
+  const displayAmount = getDisplayAmount(transaction);
+  const isTransfer = transaction.type === "TRANSFER";
 
   return (
     <article
@@ -844,13 +846,15 @@ function TransactionCard({
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{transaction.description ?? "Sin descripción"}</p>
               <p className="mt-1 truncate text-xs text-muted-foreground">
-                {transaction.category?.name ?? "Sin categoría"} · {transaction.account.name}
+                {transaction.type === "TRANSFER"
+                  ? `${transaction.account.name}${transaction.transferAccount ? ` → ${transaction.transferAccount.name}` : ""}`
+                  : `${transaction.category?.name ?? "Sin categoría"} · ${transaction.account.name}`}
               </p>
             </div>
             <div className="shrink-0 text-right">
               <p className={`text-base font-bold leading-none ${tone.amount}`}>
-                {signedAmount > 0 ? "+" : signedAmount < 0 ? "-" : ""}
-                {formatMoney(Math.abs(signedAmount), transaction.currency)}
+                {isTransfer ? "" : signedAmount > 0 ? "+" : signedAmount < 0 ? "-" : ""}
+                {formatMoney(isTransfer ? displayAmount : Math.abs(signedAmount), transaction.currency)}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">{transaction.currency}</p>
             </div>
@@ -972,6 +976,12 @@ function getSignedAmount(transaction: TransactionItem) {
   if (transaction.type === "INCOME") return amount;
   if (transaction.type === "TRANSFER") return 0;
   return -amount;
+}
+
+function getDisplayAmount(transaction: TransactionItem) {
+  const amount = Number(transaction.amount);
+  if (!Number.isFinite(amount)) return 0;
+  return amount;
 }
 
 function isCategoryAllowedForType(categoryType: CategoryType, transactionType: TransactionType) {

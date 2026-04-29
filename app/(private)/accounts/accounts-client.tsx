@@ -474,7 +474,7 @@ function AccountRow({
       </div>
       <div className="flex items-center gap-4">
         <div className="text-right">
-          <p className={`text-sm font-bold ${isCredit ? "text-rose-400" : "text-emerald-400"}`}>
+          <p className={`text-sm font-bold ${account.currentBalance < 0 ? "text-rose-400" : "text-emerald-400"}`}>
             {formatMoney(account.currentBalance, account.currency)}
           </p>
           <p className="text-xs text-muted-foreground">saldo actual</p>
@@ -547,6 +547,6 @@ function formatMoney(value: number, currency: CurrencyCode) {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency,
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(value);
 }

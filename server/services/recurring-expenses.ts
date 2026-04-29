@@ -32,7 +32,7 @@ function serializeRecurring(item: RecurringRecord) {
     isActive: item.isActive,
     notes: item.notes,
     daysUntilDue,
-    isDueSoon: daysUntilDue >= 0 && daysUntilDue <= 30,
+    isDueSoon: daysUntilDue <= 30,
     account: item.account,
     category: item.category,
     createdAt: item.createdAt.toISOString(),

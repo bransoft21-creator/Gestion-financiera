@@ -73,7 +73,7 @@ const MONTH_NAMES = [
 
 function formatMoney(value: number, currency: "ARS" | "USD" = "ARS") {
   return new Intl.NumberFormat("es-AR", {
-    style: "currency", currency, maximumFractionDigits: 0,
+    style: "currency", currency, maximumFractionDigits: 2,
   }).format(value);
 }
 

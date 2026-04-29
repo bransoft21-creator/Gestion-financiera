@@ -88,11 +88,19 @@ const formSchema = z.object({
   currency: z.enum(["ARS", "USD"]),
   amount: moneySchema(),
   frequency: z.enum(frequencies as [Frequency, ...Frequency[]]),
-  nextDueDate: z.string().min(1, "Seleccioná la próxima fecha."),
-  endDate: z.string().optional(),
+  nextDueDate: z.string().min(1, "Seleccioná la próxima fecha.").regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida."),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida.").optional().or(z.literal("")),
   accountId: z.string().optional(),
   categoryId: z.string().optional(),
   notes: z.string().trim().max(1000).optional(),
+}).superRefine((data, ctx) => {
+  if (data.endDate && data.endDate !== "" && data.nextDueDate && data.endDate <= data.nextDueDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "La fecha de fin debe ser posterior al próximo vencimiento.",
+      path: ["endDate"],
+    });
+  }
 });
 
 const defaultForm: FormState = {
@@ -285,7 +293,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
         body: JSON.stringify({
           householdId,
           type: "EXPENSE",
-          status: "COMPLETED",
+          status: "CONFIRMED",
           accountId: item.account.id,
           categoryId: item.category?.id ?? undefined,
           amount: item.amount,
@@ -555,8 +563,12 @@ function RecurringRow({
             <p className="truncate text-sm font-medium">{item.name}</p>
             <Badge>{frequencyLabels[item.frequency]}</Badge>
             {item.isDueSoon && item.isActive && (
-              <Badge className="border-amber-300 bg-amber-50 text-amber-700">
-                {item.daysUntilDue === 0 ? "Hoy" : `${item.daysUntilDue}d`}
+              <Badge className={item.daysUntilDue < 0 ? "border-rose-300 bg-rose-50 text-rose-700" : "border-amber-300 bg-amber-50 text-amber-700"}>
+                {item.daysUntilDue < 0
+                  ? `Vencido hace ${Math.abs(item.daysUntilDue)}d`
+                  : item.daysUntilDue === 0
+                  ? "Hoy"
+                  : `${item.daysUntilDue}d`}
               </Badge>
             )}
           </div>
@@ -570,7 +582,7 @@ function RecurringRow({
             const d = item.daysUntilDue;
             const urgColor = d <= 5 ? "#f87171" : d <= 14 ? "#fbbf24" : "hsl(var(--border))";
             const barW = Math.max(5, 100 - (d / 35) * 100);
-            const label = d === 0 ? "Hoy" : d === 1 ? "Mañana" : `en ${d}d`;
+            const label = d < 0 ? `Vencido hace ${Math.abs(d)}d` : d === 0 ? "Hoy" : d === 1 ? "Mañana" : `en ${d}d`;
             return (
               <div className="mt-2 flex items-center gap-2">
                 <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-secondary">
@@ -627,7 +639,7 @@ function RecurringRow({
 }
 
 function formatMoney(value: number, currency: CurrencyCode) {
-  return new Intl.NumberFormat("es-AR", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency, maximumFractionDigits: 2 }).format(value);
 }
 
 function formatDate(value: string) {
