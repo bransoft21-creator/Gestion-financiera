@@ -141,7 +141,7 @@ export function appFormContentClass(isOpen: boolean, className?: string) {
   return cn(
     "xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overflow-x-hidden xl:overscroll-contain xl:pb-5",
     isOpen
-      ? "min-h-0 flex-1 touch-pan-y overflow-y-auto overflow-x-hidden overscroll-y-contain pb-[calc(2rem+env(safe-area-inset-bottom))] pt-0 xl:pb-5"
+      ? "min-h-0 flex-1 touch-pan-y overflow-y-auto overflow-x-hidden overscroll-y-contain pb-5 pt-0 xl:pb-5"
       : undefined,
     className,
   );
@@ -149,7 +149,7 @@ export function appFormContentClass(isOpen: boolean, className?: string) {
 
 export function appFormActionsClass(className?: string) {
   return cn(
-    "-mx-5 mt-6 grid scroll-mb-[calc(2rem+env(safe-area-inset-bottom))] scroll-mt-6 gap-2 border-t border-border bg-card p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:grid-cols-2 xl:mx-0 xl:mt-0 xl:scroll-mb-0 xl:border-0 xl:bg-transparent xl:p-0 2xl:grid-cols-2",
+    "mt-6 grid scroll-mt-6 gap-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:grid-cols-2 xl:mt-0 xl:pb-0 2xl:grid-cols-2",
     className,
   );
 }
