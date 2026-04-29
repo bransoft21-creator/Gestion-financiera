@@ -19,11 +19,10 @@ import {
 import { toast } from "sonner";
 import { z } from "zod";
 import {
+  AppFormPanel,
   MobileCreateFab,
-  MobileFormOverlay,
-  mobileFormActionsClass,
-  mobileFormCardClass,
-  mobileFormContentClass,
+  appFormActionsClass,
+  appFormContentClass,
 } from "@/components/app/mobile-form";
 import { formatArgentinaDateInput } from "@/lib/dates";
 import { moneySchema } from "@/lib/money";
@@ -413,11 +412,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
   return (
     <div className={`grid gap-6 ${isFormOpen ? "xl:grid-cols-[360px_1fr]" : ""}`}>
-      <MobileFormOverlay isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} />
-
-      <Card
-        className={mobileFormCardClass(isFormOpen, undefined, { desktopAlwaysOpen: false })}
-      >
+      <AppFormPanel isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} desktopAlwaysOpen={false}>
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -440,7 +435,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             </Button>
           </div>
         </CardHeader>
-        <CardContent className={mobileFormContentClass(isFormOpen)}>
+        <CardContent className={appFormContentClass(isFormOpen)}>
           {accounts.length === 0 ? (
             <div className="space-y-4">
               <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4">
@@ -577,7 +572,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
             {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
 
-            <div className={mobileFormActionsClass()}>
+            <div className={appFormActionsClass()}>
               <Button className="h-11 w-full" disabled={isSaving || accounts.length === 0}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                 {editingTransactionId ? "Guardar cambios" : "Guardar transacción"}
@@ -600,7 +595,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
           </form>
           )}
         </CardContent>
-      </Card>
+      </AppFormPanel>
 
       <div className="space-y-6">
         <Card>

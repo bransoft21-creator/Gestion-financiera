@@ -15,11 +15,10 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
 import {
+  AppFormPanel,
   MobileCreateFab,
-  MobileFormOverlay,
-  mobileFormActionsClass,
-  mobileFormCardClass,
-  mobileFormContentClass,
+  appFormActionsClass,
+  appFormContentClass,
 } from "@/components/app/mobile-form";
 import { moneySchema, optionalMoneySchema } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
@@ -239,9 +238,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
 
   return (
     <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-      <MobileFormOverlay isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} />
-
-      <Card className={mobileFormCardClass(isFormOpen)}>
+      <AppFormPanel isOpen={isFormOpen} onClose={() => setIsFormOpen(false)}>
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -264,7 +261,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className={mobileFormContentClass(isFormOpen)}>
+        <CardContent className={appFormContentClass(isFormOpen)}>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Field label="Nombre" error={errors.name}>
               <Input
@@ -325,7 +322,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
               <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p>
             ) : null}
 
-            <div className={mobileFormActionsClass()}>
+            <div className={appFormActionsClass()}>
               <Button className="h-11 w-full" disabled={isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                 {editingAccountId ? "Guardar cambios" : "Crear cuenta"}
@@ -339,7 +336,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
             </div>
           </form>
         </CardContent>
-      </Card>
+      </AppFormPanel>
 
       <div className="space-y-6">
         <div className="grid gap-3 sm:grid-cols-3">

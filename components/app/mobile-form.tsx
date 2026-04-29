@@ -1,8 +1,66 @@
+"use client";
+
+import { useEffect, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
 
-export function MobileFormOverlay({
+type AppFormPanelProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  children: ReactNode;
+  className?: string;
+  desktopAlwaysOpen?: boolean;
+};
+
+export function AppFormPanel({
+  isOpen,
+  onClose,
+  children,
+  className,
+  desktopAlwaysOpen = true,
+}: AppFormPanelProps) {
+  useLockBodyScroll(isOpen);
+
+  return (
+    <>
+      <MobileFormOverlay isOpen={isOpen} onClose={onClose} />
+      <Card
+        aria-modal={isOpen ? true : undefined}
+        className={appFormPanelClass(isOpen, className, { desktopAlwaysOpen })}
+        role={isOpen ? "dialog" : undefined}
+      >
+        {children}
+      </Card>
+    </>
+  );
+}
+
+function useLockBodyScroll(isOpen: boolean) {
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") {
+      return;
+    }
+
+    const media = window.matchMedia("(max-width: 1279px)");
+    if (!media.matches) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscroll = document.body.style.overscrollBehavior;
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "contain";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousOverscroll;
+    };
+  }, [isOpen]);
+}
+
+function MobileFormOverlay({
   isOpen,
   onClose,
 }: {
@@ -21,7 +79,7 @@ export function MobileFormOverlay({
   );
 }
 
-export function mobileFormCardClass(
+function appFormPanelClass(
   isOpen: boolean,
   className?: string,
   options: { desktopAlwaysOpen?: boolean } = {},
@@ -30,25 +88,26 @@ export function mobileFormCardClass(
 
   return cn(
     isOpen
-      ? "fixed inset-0 z-50 flex h-dvh max-h-dvh flex-col overflow-hidden rounded-none border-x-0 border-y-0 animate-slide-up sm:inset-x-4 sm:bottom-4 sm:top-auto sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl sm:border xl:static xl:h-auto xl:max-h-none xl:overflow-visible xl:rounded-lg xl:border"
+      ? "fixed inset-0 z-50 flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden rounded-none border-x-0 border-y-0 bg-card shadow-2xl animate-slide-up xl:static xl:h-auto xl:max-h-[calc(100dvh-8rem)] xl:overflow-hidden xl:rounded-lg xl:border xl:shadow-sm"
       : "hidden",
-    desktopAlwaysOpen ? "xl:flex xl:flex-col" : undefined,
+    desktopAlwaysOpen ? "xl:flex xl:min-h-0 xl:flex-col" : undefined,
     className,
   );
 }
 
-export function mobileFormContentClass(isOpen: boolean, className?: string) {
+export function appFormContentClass(isOpen: boolean, className?: string) {
   return cn(
+    "xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-contain xl:pb-5",
     isOpen
-      ? "flex-1 overflow-y-auto pb-0 pt-0 xl:overflow-visible xl:pb-5"
+      ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pb-0 pt-0 xl:pb-5"
       : undefined,
     className,
   );
 }
 
-export function mobileFormActionsClass(className?: string) {
+export function appFormActionsClass(className?: string) {
   return cn(
-    "sticky bottom-0 -mx-5 mt-auto grid gap-2 border-t border-border bg-card/95 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] backdrop-blur sm:grid-cols-2 xl:static xl:mx-0 xl:mt-0 xl:border-0 xl:bg-transparent xl:p-0 xl:backdrop-blur-none 2xl:grid-cols-2",
+    "sticky bottom-0 z-10 -mx-5 mt-auto grid gap-2 border-t border-border bg-card p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:grid-cols-2 xl:static xl:mx-0 xl:mt-0 xl:border-0 xl:bg-transparent xl:p-0 2xl:grid-cols-2",
     className,
   );
 }
