@@ -73,7 +73,7 @@ function MobileFormOverlay({
 
   return (
     <div
-      className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 xl:hidden"
+      className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 xl:hidden"
       onClick={onClose}
     />
   );
@@ -88,7 +88,7 @@ function appFormPanelClass(
 
   return cn(
     isOpen
-      ? "fixed inset-0 z-50 flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden rounded-none border-x-0 border-y-0 bg-card shadow-2xl animate-slide-up xl:static xl:h-auto xl:max-h-[calc(100dvh-8rem)] xl:overflow-hidden xl:rounded-lg xl:border xl:shadow-sm"
+      ? "fixed inset-0 z-[100] flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden rounded-none border-x-0 border-y-0 bg-card shadow-2xl animate-slide-up xl:static xl:h-auto xl:max-h-[calc(100dvh-8rem)] xl:overflow-hidden xl:rounded-lg xl:border xl:shadow-sm"
       : "hidden",
     desktopAlwaysOpen ? "xl:flex xl:min-h-0 xl:flex-col" : undefined,
     className,
