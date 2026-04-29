@@ -72,12 +72,27 @@ function useLockBodyScroll(isOpen: boolean) {
 
     const previousOverflow = document.body.style.overflow;
     const previousOverscroll = document.body.style.overscrollBehavior;
+    const previousPosition = document.body.style.position;
+    const previousTop = document.body.style.top;
+    const previousWidth = document.body.style.width;
+    const previousHtmlOverscroll = document.documentElement.style.overscrollBehavior;
+    const scrollY = window.scrollY;
+
     document.body.style.overflow = "hidden";
-    document.body.style.overscrollBehavior = "contain";
+    document.body.style.overscrollBehavior = "none";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    document.documentElement.style.overscrollBehavior = "none";
 
     return () => {
       document.body.style.overflow = previousOverflow;
       document.body.style.overscrollBehavior = previousOverscroll;
+      document.body.style.position = previousPosition;
+      document.body.style.top = previousTop;
+      document.body.style.width = previousWidth;
+      document.documentElement.style.overscrollBehavior = previousHtmlOverscroll;
+      window.scrollTo(0, scrollY);
     };
   }, [isOpen]);
 }
@@ -117,16 +132,16 @@ function appFormDesktopPanelClass(
 
 function appFormMobilePanelClass(className?: string) {
   return cn(
-    "fixed inset-0 z-[100] flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden rounded-none border-x-0 border-y-0 bg-card pt-[env(safe-area-inset-top)] shadow-2xl animate-slide-up",
+    "fixed inset-0 z-[100] flex h-dvh max-h-dvh w-screen max-w-[100vw] touch-pan-y flex-col overflow-hidden overflow-x-hidden overscroll-none rounded-none border-x-0 border-y-0 bg-card pt-[env(safe-area-inset-top)] shadow-2xl animate-slide-up",
     className,
   );
 }
 
 export function appFormContentClass(isOpen: boolean, className?: string) {
   return cn(
-    "xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-contain xl:pb-5",
+    "xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overflow-x-hidden xl:overscroll-contain xl:pb-5",
     isOpen
-      ? "min-h-0 flex-1 overflow-y-auto overscroll-contain pb-0 pt-0 xl:pb-5"
+      ? "min-h-0 flex-1 touch-pan-y overflow-y-auto overflow-x-hidden overscroll-y-contain pb-0 pt-0 xl:pb-5"
       : undefined,
     className,
   );
@@ -134,7 +149,7 @@ export function appFormContentClass(isOpen: boolean, className?: string) {
 
 export function appFormActionsClass(className?: string) {
   return cn(
-    "sticky bottom-0 z-10 -mx-5 mt-auto grid gap-2 border-t border-border bg-card p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:grid-cols-2 xl:static xl:mx-0 xl:mt-0 xl:border-0 xl:bg-transparent xl:p-0 2xl:grid-cols-2",
+    "-mx-5 mt-6 grid gap-2 border-t border-border bg-card p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:grid-cols-2 xl:mx-0 xl:mt-0 xl:border-0 xl:bg-transparent xl:p-0 2xl:grid-cols-2",
     className,
   );
 }
