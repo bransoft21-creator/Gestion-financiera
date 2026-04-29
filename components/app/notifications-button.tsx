@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   AlertTriangle,
   Bell,
@@ -51,6 +52,7 @@ type NotificationPreferences = {
 type NotificationsButtonProps = {
   compact?: boolean;
   className?: string;
+  panelClassName?: string;
 };
 
 const READ_STORAGE_KEY = "finance-control-read-notifications";
@@ -77,8 +79,9 @@ function formatMoney(value: number) {
   }).format(value);
 }
 
-export function NotificationsButton({ compact = false, className }: NotificationsButtonProps) {
+export function NotificationsButton({ compact = false, className, panelClassName }: NotificationsButtonProps) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   const [tab, setTab] = useState<"alerts" | "settings">("alerts");
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -130,6 +133,21 @@ export function NotificationsButton({ compact = false, className }: Notification
       window.clearInterval(intervalId);
     };
   }, [loadSummary]);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!preferences.browserPush || permission !== "granted") return;
@@ -248,7 +266,7 @@ export function NotificationsButton({ compact = false, className }: Notification
       </Button>
 
       {open ? (
-        <div className="absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-xl border border-border bg-card shadow-2xl shadow-black/35">
+        <div className={cn("absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-xl border border-border bg-card shadow-2xl shadow-black/35", panelClassName)}>
           <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
             <div>
               <p className="text-sm font-semibold">Centro financiero</p>

@@ -33,7 +33,7 @@ export function MobileHeader({ userName }: MobileHeaderProps) {
       </Link>
       <div className="flex shrink-0 items-center gap-0.5">
         <PrivacyToggle compact />
-        <NotificationsButton compact />
+        <NotificationsButton compact panelClassName="right-[-38px]" />
         <LogoutButton compact />
       </div>
     </header>

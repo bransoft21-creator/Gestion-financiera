@@ -21,7 +21,7 @@ export function AppShell({ children, userName, userEmail }: AppShellProps) {
       <MobileHeader userName={userName} />
       <div className="fixed right-5 top-4 z-30 hidden items-center gap-1 rounded-full border border-border/70 bg-card/80 p-1 shadow-lg shadow-black/20 backdrop-blur lg:flex">
         <PrivacyToggle compact />
-        <NotificationsButton compact />
+        <NotificationsButton compact panelClassName="right-[-44px]" />
         <LogoutButton compact />
       </div>
       <div className="lg:flex">
