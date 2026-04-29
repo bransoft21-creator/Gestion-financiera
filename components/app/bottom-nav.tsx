@@ -120,7 +120,7 @@ export function BottomNav() {
                     : "text-muted-foreground",
                 )}
               >
-                <Icon className="h-5 w-5" aria-hidden="true" />
+                <Icon className="h-6 w-6" aria-hidden="true" />
                 <span className="text-[10px] font-medium">{item.label}</span>
               </Link>
             );
@@ -135,7 +135,7 @@ export function BottomNav() {
               isMoreActive || moreOpen ? "text-primary" : "text-muted-foreground",
             )}
           >
-            <Menu className="h-5 w-5" aria-hidden="true" />
+            <Menu className="h-6 w-6" aria-hidden="true" />
             <span className="text-[10px] font-medium">Más</span>
           </button>
         </div>
