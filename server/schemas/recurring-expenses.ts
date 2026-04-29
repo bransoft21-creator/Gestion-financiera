@@ -13,7 +13,7 @@ export const listRecurringExpensesSchema = z.object({
   isActive: z.coerce.boolean().optional(),
 });
 
-export const createRecurringExpenseSchema = z.object({
+const createRecurringExpenseBaseSchema = z.object({
   householdId: z.string().min(1),
   accountId: z.string().min(1).optional(),
   categoryId: z.string().min(1).optional(),
@@ -24,7 +24,9 @@ export const createRecurringExpenseSchema = z.object({
   nextDueDate: z.coerce.date(),
   endDate: z.coerce.date().optional(),
   notes: z.string().trim().max(1000).optional(),
-}).superRefine((data, ctx) => {
+});
+
+export const createRecurringExpenseSchema = createRecurringExpenseBaseSchema.superRefine((data, ctx) => {
   if (data.endDate && data.endDate <= data.nextDueDate) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -34,7 +36,7 @@ export const createRecurringExpenseSchema = z.object({
   }
 });
 
-export const updateRecurringExpenseSchema = createRecurringExpenseSchema.partial().extend({
+export const updateRecurringExpenseSchema = createRecurringExpenseBaseSchema.partial().extend({
   householdId: z.string().min(1),
   accountId: z.string().min(1).nullable().optional(),
   categoryId: z.string().min(1).nullable().optional(),
