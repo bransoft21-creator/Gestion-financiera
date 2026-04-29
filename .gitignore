@@ -10,4 +10,8 @@ coverage
 
 *.tsbuildinfo
 
+# PWA - Service Worker generado por next-pwa
+public/sw.js
+public/workbox-*.js
+
 .claude

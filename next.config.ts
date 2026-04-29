@@ -1,30 +1,23 @@
 import type { NextConfig } from "next";
+import withPWA from "@ducanh2912/next-pwa";
 
 const securityHeaders = [
-  // Prevent the app from being embedded in iframes (clickjacking)
   { key: "X-Frame-Options", value: "DENY" },
-  // Prevent MIME-type sniffing
   { key: "X-Content-Type-Options", value: "nosniff" },
-  // Limit referrer info sent to third parties
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  // Disable unnecessary browser features
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-  // Legacy XSS filter (still respected by some older browsers)
   { key: "X-XSS-Protection", value: "1; mode=block" },
-  // DNS prefetch control
   { key: "X-DNS-Prefetch-Control", value: "on" },
 ];
 
 const nextConfig: NextConfig = {
-  // Only allow non-localhost origins in development
-  ...(process.env.NODE_ENV === "development" && {
+...(process.env.NODE_ENV === "development" && {
     allowedDevOrigins: ["192.168.0.9"],
   }),
 
   async headers() {
     return [
       {
-        // Apply security headers to all routes
         source: "/(.*)",
         headers: securityHeaders,
       },
@@ -32,4 +25,10 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withPWA({
+  dest: "public",
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  disable: process.env.NODE_ENV === "development",
+})(nextConfig);
