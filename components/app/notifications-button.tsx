@@ -139,17 +139,6 @@ export function NotificationsButton({ compact = false, className, panelClassName
   }, [pathname]);
 
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
-
-  useEffect(() => {
     if (!preferences.browserPush || permission !== "granted") return;
 
     notifications
@@ -266,7 +255,15 @@ export function NotificationsButton({ compact = false, className, panelClassName
       </Button>
 
       {open ? (
-        <div className={cn("absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-xl border border-border bg-card shadow-2xl shadow-black/35", panelClassName)}>
+        <>
+          {/* Backdrop mobile: cierra al tocar fuera, bloquea scroll sin tocar body */}
+          <div
+            className="fixed inset-0 z-[69] lg:hidden"
+            aria-hidden="true"
+            onClick={() => setOpen(false)}
+            style={{ touchAction: "none" }}
+          />
+          <div className={cn("absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-xl border border-border bg-card shadow-2xl shadow-black/35", panelClassName)}>
           <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
             <div>
               <p className="text-sm font-semibold">Centro financiero</p>
@@ -354,7 +351,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
               </div>
             </>
           ) : (
-            <div className="space-y-3 p-3">
+            <div className="max-h-[360px] space-y-3 overflow-y-auto p-3">
               <PushStatus
                 permission={permission}
                 browserPush={preferences.browserPush}
@@ -410,6 +407,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
             </div>
           )}
         </div>
+        </>
       ) : null}
     </div>
   );

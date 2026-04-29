@@ -34,7 +34,7 @@ export function MobileHeader({ userName }: MobileHeaderProps) {
         </Link>
         <div className="flex shrink-0 items-center gap-0.5">
           <PrivacyToggle compact />
-          <NotificationsButton compact panelClassName="right-[-38px]" />
+          <NotificationsButton compact panelClassName="fixed left-3 right-3 w-auto top-[calc(env(safe-area-inset-top)+3.5rem+8px)]" />
           <LogoutButton compact />
         </div>
       </div>
