@@ -110,7 +110,7 @@ function MobileFormOverlay({
 
   return (
     <div
-      className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 xl:hidden"
+      className="fixed inset-x-0 top-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-[90] bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 xl:hidden"
       onClick={onClose}
     />
   );
@@ -132,7 +132,7 @@ function appFormDesktopPanelClass(
 
 function appFormMobilePanelClass(className?: string) {
   return cn(
-    "fixed inset-0 z-[100] flex h-dvh max-h-dvh w-screen max-w-[100vw] touch-pan-y flex-col overflow-hidden overflow-x-hidden overscroll-none rounded-none border-x-0 border-y-0 bg-card pt-[env(safe-area-inset-top)] shadow-2xl animate-slide-up",
+    "fixed inset-x-0 top-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-[100] flex w-screen max-w-[100vw] touch-pan-y flex-col overflow-hidden overflow-x-hidden overscroll-none rounded-none border-x-0 border-y-0 bg-card pt-[env(safe-area-inset-top)] shadow-2xl animate-slide-up",
     className,
   );
 }
@@ -149,7 +149,7 @@ export function appFormContentClass(isOpen: boolean, className?: string) {
 
 export function appFormActionsClass(className?: string) {
   return cn(
-    "mt-6 grid scroll-mt-6 gap-2 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:grid-cols-2 xl:mt-0 xl:pb-0 2xl:grid-cols-2",
+    "mt-6 grid scroll-mt-6 gap-2 pb-3 sm:grid-cols-2 xl:mt-0 xl:pb-0 2xl:grid-cols-2",
     className,
   );
 }
