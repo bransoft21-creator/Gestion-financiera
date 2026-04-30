@@ -98,14 +98,14 @@ export function BottomNav() {
 
       {/* Bottom nav bar */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-[120] h-[calc(3.5rem+env(safe-area-inset-bottom))] border-t border-border lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-[120] border-t border-border lg:hidden"
         style={{
           background: "rgba(9,11,20,.88)",
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
         }}
       >
-        <div className="grid h-full grid-cols-5 px-1.5 pb-[env(safe-area-inset-bottom)] pt-1">
+        <div className="grid grid-cols-5 px-1.5 pb-[max(env(safe-area-inset-bottom),6px)] pt-1">
           {bottomNavItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
