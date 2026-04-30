@@ -44,7 +44,7 @@ export function BottomNav() {
       {/* Overlay */}
       {moreOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/60"
+          className="fixed inset-0 z-[125] bg-black/60"
           onClick={() => setMoreOpen(false)}
         />
       )}
@@ -52,7 +52,7 @@ export function BottomNav() {
       {/* More drawer */}
       <div
         className={cn(
-          "fixed inset-x-0 z-50 rounded-t-2xl border-t border-border transition-transform duration-300 ease-out lg:hidden",
+          "fixed inset-x-0 z-[130] rounded-t-2xl border-t border-border transition-transform duration-300 ease-out lg:hidden",
           moreOpen ? "translate-y-0" : "translate-y-full",
         )}
         style={{
@@ -98,7 +98,7 @@ export function BottomNav() {
 
       {/* Bottom nav bar */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-border lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-[120] border-t border-border lg:hidden"
         style={{
           background: "rgba(9,11,20,.88)",
           backdropFilter: "blur(16px)",

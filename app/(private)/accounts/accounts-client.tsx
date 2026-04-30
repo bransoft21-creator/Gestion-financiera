@@ -19,6 +19,7 @@ import {
   MobileCreateFab,
   appFormActionsClass,
   appFormContentClass,
+  appFormHeaderClass,
 } from "@/components/app/mobile-form";
 import { moneySchema, optionalMoneySchema } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
@@ -239,7 +240,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
   return (
     <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
       <AppFormPanel isOpen={isFormOpen} onClose={() => setIsFormOpen(false)}>
-        <CardHeader>
+        <CardHeader className={appFormHeaderClass()}>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <Plus className="h-5 w-5" aria-hidden="true" />

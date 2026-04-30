@@ -23,6 +23,7 @@ import {
   MobileCreateFab,
   appFormActionsClass,
   appFormContentClass,
+  appFormHeaderClass,
 } from "@/components/app/mobile-form";
 import { formatArgentinaDateInput } from "@/lib/dates";
 import { moneySchema } from "@/lib/money";
@@ -413,7 +414,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   return (
     <div className={`grid gap-6 ${isFormOpen ? "xl:grid-cols-[360px_1fr]" : ""}`}>
       <AppFormPanel isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} desktopAlwaysOpen={false}>
-        <CardHeader>
+        <CardHeader className={appFormHeaderClass()}>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <Plus className="h-5 w-5" aria-hidden="true" />

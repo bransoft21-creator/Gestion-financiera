@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,12 +23,22 @@ export function AppFormPanel({
   desktopAlwaysOpen = true,
 }: AppFormPanelProps) {
   const [isMounted, setIsMounted] = useState(false);
+  const mobilePanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useLockBodyScroll(isOpen);
+
+  useEffect(() => {
+    if (isOpen) {
+      mobilePanelRef.current
+        ?.querySelector(".app-form-content-scroll")
+        ?.scrollTo({ top: 0, left: 0 });
+    }
+  }, [isOpen]);
+
   const desktopPanel = (
     <Card className={appFormDesktopPanelClass(isOpen, className, { desktopAlwaysOpen })}>
       {children}
@@ -37,7 +47,7 @@ export function AppFormPanel({
   const mobilePanel =
     isMounted && isOpen
       ? createPortal(
-          <div className="xl:hidden">
+          <div className="xl:hidden" ref={mobilePanelRef}>
             <MobileFormOverlay isOpen={isOpen} onClose={onClose} />
             <Card
               aria-modal
@@ -110,7 +120,7 @@ function MobileFormOverlay({
 
   return (
     <div
-      className="fixed inset-x-0 top-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-[90] bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 xl:hidden"
+      className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 xl:hidden"
       onClick={onClose}
     />
   );
@@ -132,17 +142,24 @@ function appFormDesktopPanelClass(
 
 function appFormMobilePanelClass(className?: string) {
   return cn(
-    "fixed inset-x-0 top-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-[100] flex w-screen max-w-[100vw] touch-pan-y flex-col overflow-hidden overflow-x-hidden overscroll-none rounded-none border-x-0 border-y-0 bg-card pt-[env(safe-area-inset-top)] shadow-2xl animate-slide-up",
+    "fixed inset-0 z-[100] flex h-dvh max-h-dvh w-screen max-w-[100vw] touch-pan-y flex-col overflow-hidden overflow-x-hidden overscroll-none rounded-none border-x-0 border-y-0 bg-card pt-[env(safe-area-inset-top)] shadow-2xl animate-slide-up",
     className,
   );
 }
 
 export function appFormContentClass(isOpen: boolean, className?: string) {
   return cn(
-    "xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overflow-x-hidden xl:overscroll-contain xl:pb-5",
+    "app-form-content-scroll xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overflow-x-hidden xl:overscroll-contain xl:pb-5",
     isOpen
-      ? "min-h-0 flex-1 touch-pan-y overflow-y-auto overflow-x-hidden overscroll-y-contain pb-5 pt-0 xl:pb-5"
+      ? "min-h-0 flex-1 touch-pan-y overflow-y-auto overflow-x-hidden overscroll-y-contain pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-0 xl:pb-5"
       : undefined,
+    className,
+  );
+}
+
+export function appFormHeaderClass(className?: string) {
+  return cn(
+    "sticky top-0 z-20 shrink-0 border-b border-border bg-card/98 backdrop-blur supports-[backdrop-filter]:bg-card/90 xl:static xl:border-b-0 xl:bg-transparent xl:backdrop-blur-none",
     className,
   );
 }

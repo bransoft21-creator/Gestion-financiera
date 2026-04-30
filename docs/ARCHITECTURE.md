@@ -77,7 +77,7 @@ Documentacion viva del proyecto: vision, arquitectura, roadmap, decisiones tecni
 - Mantener componentes reutilizables y tipados.
 - Separar logica de negocio, UI y acceso a datos.
 - Pensar mobile first desde el inicio.
-- Los formularios que se abren como modal, sheet, drawer o panel flotante deben usar `AppFormPanel` desde `components/app/mobile-form.tsx`, junto con `appFormContentClass` y `appFormActionsClass`. Ese componente centraliza overlay, portal mobile al `body`, scroll interno vertical, bloqueo rigido del body, acciones al final real del formulario, safe-area superior y reserva de espacio para mantener visible la navegacion inferior en PWA.
+- Los formularios que se abren como modal, sheet, drawer o panel flotante deben usar `AppFormPanel` desde `components/app/mobile-form.tsx`, junto con `appFormContentClass` y `appFormActionsClass`. Ese componente centraliza overlay, portal mobile al `body`, scroll interno vertical, bloqueo rigido del body, acciones al final real del formulario y safe-area PWA; la navegacion inferior se mantiene por encima del panel y el contenido reserva espacio para no quedar tapado.
 
 ## Modelo de Dominio Inicial
 
