@@ -151,7 +151,7 @@ export function appFormContentClass(isOpen: boolean, className?: string) {
   return cn(
     "app-form-content-scroll xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overflow-x-hidden xl:overscroll-contain xl:pb-5",
     isOpen
-      ? "min-h-0 flex-1 touch-pan-y overflow-y-auto overflow-x-hidden overscroll-y-contain pb-[calc(5.25rem+env(safe-area-inset-bottom))] pt-0 xl:pb-5"
+      ? "min-h-0 flex-1 touch-pan-y overflow-y-auto overflow-x-hidden overscroll-y-contain pb-[calc(4rem+env(safe-area-inset-bottom))] pt-0 xl:pb-5"
       : undefined,
     className,
   );

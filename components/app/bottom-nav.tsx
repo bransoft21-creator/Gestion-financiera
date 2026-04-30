@@ -98,7 +98,7 @@ export function BottomNav() {
 
       {/* Bottom nav bar */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-[120] h-[calc(4.75rem+env(safe-area-inset-bottom))] border-t border-border lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-[120] h-[calc(3.5rem+env(safe-area-inset-bottom))] border-t border-border lg:hidden"
         style={{
           background: "rgba(9,11,20,.88)",
           backdropFilter: "blur(16px)",
