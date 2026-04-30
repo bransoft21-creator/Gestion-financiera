@@ -82,27 +82,16 @@ function useLockBodyScroll(isOpen: boolean) {
 
     const previousOverflow = document.body.style.overflow;
     const previousOverscroll = document.body.style.overscrollBehavior;
-    const previousPosition = document.body.style.position;
-    const previousTop = document.body.style.top;
-    const previousWidth = document.body.style.width;
     const previousHtmlOverscroll = document.documentElement.style.overscrollBehavior;
-    const scrollY = window.scrollY;
 
     document.body.style.overflow = "hidden";
     document.body.style.overscrollBehavior = "none";
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
     document.documentElement.style.overscrollBehavior = "none";
 
     return () => {
       document.body.style.overflow = previousOverflow;
       document.body.style.overscrollBehavior = previousOverscroll;
-      document.body.style.position = previousPosition;
-      document.body.style.top = previousTop;
-      document.body.style.width = previousWidth;
       document.documentElement.style.overscrollBehavior = previousHtmlOverscroll;
-      window.scrollTo(0, scrollY);
     };
   }, [isOpen]);
 }
