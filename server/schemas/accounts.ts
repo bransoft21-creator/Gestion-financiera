@@ -16,7 +16,7 @@ export const createAccountSchema = z.object({
   type: z.enum(accountTypeValues),
   currency: z.enum(currencyValues).default(CurrencyCode.ARS),
   openingBalance: moneySchema({ allowNegative: true, allowZero: true }).default(0),
-  creditLimit: moneySchema().optional(),
+  creditLimit: nullableMoneySchema(),
 });
 
 export const updateAccountSchema = createAccountSchema.partial().extend({
