@@ -55,6 +55,7 @@ type ReportsClientProps = {
 };
 
 const PERIODS = [
+  { value: 1, label: "Mensual" },
   { value: 3, label: "3 meses" },
   { value: 6, label: "6 meses" },
   { value: 12, label: "Último año" },
@@ -64,7 +65,7 @@ type MonthsOption = (typeof PERIODS)[number]["value"];
 
 export function ReportsClient({ householdId }: ReportsClientProps) {
   const [report, setReport] = useState<MonthlyReport | null>(null);
-  const [months, setMonths] = useState<MonthsOption>(6);
+  const [months, setMonths] = useState<MonthsOption>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -134,7 +135,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
     <div className="space-y-6">
       {/* Period selector */}
       <div
-        className="flex w-fit rounded-[10px] border border-border p-1"
+        className="flex w-full overflow-x-auto rounded-[10px] border border-border p-1 sm:w-fit"
         style={{ background: "var(--surface)" }}
       >
         {PERIODS.map(({ value, label }) => (
@@ -143,7 +144,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
             type="button"
             disabled={isLoading}
             onClick={() => setMonths(value)}
-            className="rounded-[7px] px-4 py-2 text-xs font-semibold transition-all duration-150 disabled:opacity-50"
+            className="shrink-0 rounded-[7px] px-4 py-2 text-xs font-semibold transition-all duration-150 disabled:opacity-50"
             style={
               months === value
                 ? { background: "hsl(var(--primary))", color: "#fff", boxShadow: "0 2px 8px rgba(124,58,237,.35)" }
