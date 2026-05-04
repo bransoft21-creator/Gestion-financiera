@@ -71,6 +71,7 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
   const [errors, setErrors] = useState<FormErrors>({});
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -138,12 +139,13 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
 
     setIsLoading(false);
 
-    if (!response.ok) {
+  if (!response.ok) {
       setMessage(payload.error ?? "No se pudo guardar la categoría.");
       return;
     }
 
     resetForm();
+    setIsFormOpen(false);
     await loadCategories();
   }
 
@@ -179,6 +181,7 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
 
   function startEditing(category: CategoryItem) {
     setEditingCategoryId(category.id);
+    setIsFormOpen(true);
     setErrors({});
     setMessage(null);
     setForm({
@@ -194,6 +197,7 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
     setEditingCategoryId(null);
     setErrors({});
     setForm(defaultForm);
+    setMessage(null);
   }
 
   function updateForm<Key extends keyof FormState>(key: Key, value: FormState[Key]) {
@@ -204,20 +208,34 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Plus className="h-5 w-5" aria-hidden="true" />
+    <div className={`grid min-w-0 gap-6 ${isFormOpen ? "xl:grid-cols-[360px_1fr]" : ""}`}>
+      {isFormOpen ? (
+        <Card>
+          <CardHeader className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <Plus className="h-4 w-4" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <CardTitle>{editingCategoryId ? "Editar categoría" : "Nueva categoría"}</CardTitle>
+                <CardDescription>Clasificación financiera reusable.</CardDescription>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="ml-auto h-9 w-9"
+                onClick={() => {
+                  resetForm();
+                  setIsFormOpen(false);
+                }}
+                aria-label="Cerrar formulario"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </Button>
             </div>
-            <div>
-              <CardTitle>{editingCategoryId ? "Editar categoría" : "Nueva categoría"}</CardTitle>
-              <CardDescription>Clasificación financiera reusable.</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Field label="Nombre" error={errors.name}>
               <Input value={form.name} onChange={(event) => updateForm("name", event.target.value)} />
@@ -278,15 +296,24 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
                 {editingCategoryId ? "Guardar cambios" : "Crear categoría"}
               </Button>
               {editingCategoryId ? (
-                <Button type="button" variant="outline" className="h-11 w-full" onClick={resetForm}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full"
+                  onClick={() => {
+                    resetForm();
+                    setIsFormOpen(false);
+                  }}
+                >
                   <X className="h-4 w-4" aria-hidden="true" />
                   Cancelar
                 </Button>
               ) : null}
             </div>
           </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -295,7 +322,18 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
               <CardTitle>Listado</CardTitle>
               <CardDescription>{categories.length} categorías activas.</CardDescription>
             </div>
-            <Badge>Conectado a API</Badge>
+            <Button
+              type="button"
+              size="sm"
+              className="w-full sm:w-auto"
+              onClick={() => {
+                resetForm();
+                setIsFormOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Nueva categoría
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -306,7 +344,7 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
               description="Creá categorías para clasificar ingresos, gastos, deudas, metas e inversiones."
             />
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-1.5 md:grid-cols-2">
               {categories.map((category) => (
                 <CategoryCard
                   key={category.id}
@@ -357,43 +395,53 @@ function CategoryCard({
   onDelete: (categoryId: string) => void;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:border-border/80">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 gap-3">
+    <div className="rounded-lg border border-border bg-card px-2.5 py-2 transition-all duration-200 hover:border-border/80">
+      <div className="flex min-w-0 items-center gap-2">
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          onClick={() => onEdit(category)}
+        >
           <span
-            className="mt-1 h-4 w-4 shrink-0 rounded-sm"
+            className="h-3 w-3 shrink-0 rounded-sm"
             style={{ backgroundColor: category.color ?? "#64748b" }}
           />
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{category.name}</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Badge>{categoryTypeLabels[category.type]}</Badge>
-              <Badge>{category.isSystem ? "Base" : "Personalizada"}</Badge>
-              {category.icon ? <Badge>{category.icon}</Badge> : null}
+            <div className="flex min-w-0 items-center gap-1.5">
+              <p className="truncate text-xs font-semibold sm:text-sm">{category.name}</p>
+              {parentName ? <span className="truncate text-[11px] text-muted-foreground">· {parentName}</span> : null}
             </div>
-            {parentName ? <p className="mt-2 text-xs text-muted-foreground">Padre: {parentName}</p> : null}
+            <div className="mt-1 flex min-w-0 items-center gap-1.5 overflow-hidden">
+              <Badge className="h-5 shrink-0 px-1.5 py-0 text-[10px]">{categoryTypeLabels[category.type]}</Badge>
+              <Badge className="h-5 shrink-0 px-1.5 py-0 text-[10px]">{category.isSystem ? "Base" : "Personal"}</Badge>
+              {category.icon ? <Badge className="h-5 shrink-0 px-1.5 py-0 text-[10px]">{category.icon}</Badge> : null}
+            </div>
           </div>
-        </div>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:flex">
-        <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => onEdit(category)}>
+        </button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 text-muted-foreground"
+          onClick={() => onEdit(category)}
+          aria-label="Editar categoría"
+        >
           <Pencil className="h-4 w-4" aria-hidden="true" />
-          Editar
         </Button>
         <Button
           type="button"
-          variant="destructive"
-          size="sm"
-          className="h-10"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
           disabled={isDeleting}
           onClick={() => onDelete(category.id)}
+          aria-label="Eliminar categoría"
         >
           {isDeleting ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
             <Trash2 className="h-4 w-4" aria-hidden="true" />
           )}
-          Eliminar
         </Button>
       </div>
     </div>
