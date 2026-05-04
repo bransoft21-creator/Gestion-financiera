@@ -11,7 +11,6 @@ import {
   Loader2,
   RefreshCw,
   Settings2,
-  Volume2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -207,17 +206,6 @@ export function NotificationsButton({ compact = false, className, panelClassName
     updatePreferences({ ...preferences, browserPush: false });
   }
 
-  function testBrowserPush() {
-    if (permission !== "granted") return;
-    showBrowserNotification({
-      id: "test",
-      title: "Push de prueba",
-      body: "Las notificaciones del navegador están funcionando.",
-      tone: "success",
-      rule: "system",
-    });
-  }
-
   return (
     <div className="relative">
       <Button
@@ -269,7 +257,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
               <p className="text-sm font-semibold">Centro financiero</p>
               <p className="text-xs text-muted-foreground">
                 {permission === "granted" && preferences.browserPush
-                  ? "Push activo"
+                  ? "Avisos del navegador activos"
                   : "Alertas en la app"}
               </p>
             </div>
@@ -314,7 +302,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
                 )}
                 onClick={() => setTab(item)}
               >
-                {item === "alerts" ? "Alertas" : "Reglas"}
+                {item === "alerts" ? "Alertas" : "Configuración"}
               </button>
             ))}
           </div>
@@ -322,30 +310,35 @@ export function NotificationsButton({ compact = false, className, panelClassName
           {tab === "alerts" ? (
             <>
               <div className="max-h-[360px] space-y-2 overflow-y-auto p-3">
-                {notifications.map((item) => (
-                  <NotificationCard
-                    key={item.id}
-                    item={item}
-                    isRead={readIds.has(item.id)}
-                    onRead={() => markOneRead(item.id)}
-                  />
-                ))}
+                {notifications.length === 1 && notifications[0].id === "all-good" ? (
+                  <EmptyNotifications />
+                ) : (
+                  notifications.map((item) => (
+                    <NotificationCard
+                      key={item.id}
+                      item={item}
+                      isRead={readIds.has(item.id)}
+                      onRead={() => markOneRead(item.id)}
+                    />
+                  ))
+                )}
               </div>
 
               <div className="grid gap-2 border-t border-border p-3 sm:grid-cols-2">
-                <Button type="button" variant="outline" size="sm" onClick={markAllRead}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className={permission === "granted" && preferences.browserPush ? "sm:col-span-2" : undefined}
+                  onClick={markAllRead}
+                >
                   <Check className="h-4 w-4" aria-hidden="true" />
                   Marcar leídas
                 </Button>
-                {permission === "granted" && preferences.browserPush ? (
-                  <Button type="button" variant="outline" size="sm" onClick={testBrowserPush}>
-                    <Volume2 className="h-4 w-4" aria-hidden="true" />
-                    Probar push
-                  </Button>
-                ) : (
+                {permission === "granted" && preferences.browserPush ? null : (
                   <Button type="button" size="sm" onClick={enableBrowserPush}>
                     <BellRing className="h-4 w-4" aria-hidden="true" />
-                    Activar push
+                    Activar avisos
                   </Button>
                 )}
               </div>
@@ -357,7 +350,6 @@ export function NotificationsButton({ compact = false, className, panelClassName
                 browserPush={preferences.browserPush}
                 onEnable={enableBrowserPush}
                 onDisable={disableBrowserPush}
-                onTest={testBrowserPush}
               />
               <RuleToggle
                 label="Disponible real negativo"
@@ -373,7 +365,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
               />
               <div className="rounded-lg border border-border p-3">
                 <label className="text-xs font-semibold text-muted-foreground" htmlFor="expense-limit">
-                  Límite de gastos
+                  Avisar cuando gastos superen
                 </label>
                 <input
                   id="expense-limit"
@@ -466,18 +458,30 @@ function NotificationCard({
   );
 }
 
+function EmptyNotifications() {
+  return (
+    <div className="rounded-lg border border-border p-5 text-center">
+      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+        <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+      </div>
+      <p className="mt-3 text-sm font-semibold">Todo bajo control</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+        No hay alertas financieras importantes para este mes.
+      </p>
+    </div>
+  );
+}
+
 function PushStatus({
   permission,
   browserPush,
   onEnable,
   onDisable,
-  onTest,
 }: {
   permission: NotificationPermission | "unsupported";
   browserPush: boolean;
   onEnable: () => void;
   onDisable: () => void;
-  onTest: () => void;
 }) {
   if (permission === "unsupported") {
     return (
@@ -500,25 +504,20 @@ function PushStatus({
     <div className="grid gap-2 rounded-lg border border-border p-3">
       <div>
         <p className="text-sm font-semibold">
-          {permission === "granted" && browserPush ? "Push del navegador activo" : "Push del navegador"}
+          {permission === "granted" && browserPush ? "Avisos del navegador activos" : "Avisos del navegador"}
         </p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Recibís avisos cuando la app está abierta y aparece una alerta nueva.
+          Aparecen si la app está abierta en el navegador y surge una alerta nueva.
         </p>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2">
         {permission === "granted" && browserPush ? (
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={onDisable}>
-              Pausar push
-            </Button>
-            <Button type="button" size="sm" onClick={onTest}>
-              Probar push
-            </Button>
-          </>
+          <Button type="button" variant="outline" size="sm" onClick={onDisable}>
+            Pausar avisos
+          </Button>
         ) : (
-          <Button type="button" size="sm" onClick={onEnable} className="sm:col-span-2">
-            Activar push
+          <Button type="button" size="sm" onClick={onEnable}>
+            Activar avisos
           </Button>
         )}
       </div>
