@@ -157,7 +157,7 @@ export async function getRecurringExpenseWorkspace(userProfileId: string) {
     prisma.account.findMany({
       where: { householdId: household.id, deletedAt: null, isArchived: false },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, type: true, currency: true },
     }),
     prisma.category.findMany({
       where: { householdId: household.id, deletedAt: null, isArchived: false },
@@ -173,7 +173,7 @@ export async function getDebtWorkspace(userProfileId: string) {
   const household = await getPrimaryHousehold(userProfileId);
   const accounts = await prisma.account.findMany({
     where: { householdId: household.id, deletedAt: null, isArchived: false },
-    select: { id: true, name: true },
+    select: { id: true, name: true, type: true, currency: true },
     orderBy: { name: "asc" },
   });
   return { household, accounts };

@@ -77,7 +77,7 @@ const formSchema = z.object({
 });
 
 const defaultForm: FormState = {
-  name: "",
+  name: "Cuenta bancaria",
   type: "BANK",
   currency: "ARS",
   openingBalance: "0",

@@ -34,7 +34,7 @@ import { Label } from "@/components/ui/label";
 type Frequency = "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
 type CurrencyCode = "ARS" | "USD";
 
-type AccountOption = { id: string; name: string };
+type AccountOption = { id: string; name: string; type: string; currency: CurrencyCode };
 type CategoryOption = { id: string; name: string; type: string };
 
 type RecurringItem = {
@@ -116,6 +116,12 @@ const defaultForm: FormState = {
 };
 
 export function RecurringExpensesClient({ householdId, accounts, categories }: RecurringClientProps) {
+  const defaultAccount = getPreferredArsBankAccount(accounts);
+  const getDefaultForm = (): FormState => ({
+    ...defaultForm,
+    currency: defaultAccount?.currency ?? "ARS",
+    accountId: defaultAccount?.id ?? "",
+  });
   const [items, setItems] = useState<RecurringItem[]>([]);
   const [upcomingCount, setUpcomingCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -125,7 +131,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
   const [payingId, setPayingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [form, setForm] = useState<FormState>(defaultForm);
+  const [form, setForm] = useState<FormState>(getDefaultForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const [message, setMessage] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
@@ -338,7 +344,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
   function resetForm() {
     setEditingId(null);
     setErrors({});
-    setForm(defaultForm);
+    setForm(getDefaultForm());
   }
 
   function updateForm<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -642,6 +648,15 @@ function formatMoney(value: number, currency: CurrencyCode) {
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(value));
+}
+
+function getPreferredArsBankAccount(accounts: AccountOption[]) {
+  return (
+    accounts.find((account) => account.currency === "ARS" && account.type === "BANK" && account.name.toLowerCase() === "cuenta bancaria") ??
+    accounts.find((account) => account.currency === "ARS" && account.type === "BANK") ??
+    accounts.find((account) => account.currency === "ARS") ??
+    accounts[0]
+  );
 }
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {

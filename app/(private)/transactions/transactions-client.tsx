@@ -158,6 +158,7 @@ const formSchema = z.object({
 
 export function TransactionsClient({ householdId, accounts, categories }: TransactionsClientProps) {
   const searchParams = useSearchParams();
+  const defaultAccount = getPreferredArsBankAccount(accounts);
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Filters>({
@@ -168,10 +169,10 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   });
   const [form, setForm] = useState<FormState>({
     type: "EXPENSE",
-    accountId: accounts[0]?.id ?? "",
+    accountId: defaultAccount?.id ?? "",
     transferAccountId: "",
     categoryId: "",
-    currency: accounts[0]?.currency ?? "ARS",
+    currency: defaultAccount?.currency ?? "ARS",
     amount: "",
     occurredAt: formatArgentinaDateInput(),
     description: "",
@@ -388,10 +389,10 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
     setErrors({});
     setForm({
       type: "EXPENSE",
-      accountId: accounts[0]?.id ?? "",
+      accountId: defaultAccount?.id ?? "",
       transferAccountId: "",
       categoryId: "",
-      currency: accounts[0]?.currency ?? "ARS",
+      currency: defaultAccount?.currency ?? "ARS",
       amount: "",
       occurredAt: formatArgentinaDateInput(),
       description: "",
@@ -875,6 +876,15 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
         }}
       />
     </div>
+  );
+}
+
+function getPreferredArsBankAccount(accounts: AccountOption[]) {
+  return (
+    accounts.find((account) => account.currency === "ARS" && account.type === "BANK" && account.name.toLowerCase() === "cuenta bancaria") ??
+    accounts.find((account) => account.currency === "ARS" && account.type === "BANK") ??
+    accounts.find((account) => account.currency === "ARS") ??
+    accounts[0]
   );
 }
 

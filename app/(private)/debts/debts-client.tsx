@@ -25,7 +25,7 @@ type DebtType = "LOAN" | "CREDIT_CARD" | "PERSONAL" | "INSTALLMENT" | "OTHER";
 type DebtStatus = "ACTIVE" | "PAID" | "PAUSED" | "DEFAULTED" | "CANCELED";
 type CurrencyCode = "ARS" | "USD";
 
-type AccountOption = { id: string; name: string };
+type AccountOption = { id: string; name: string; type: string; currency: CurrencyCode };
 
 type DebtItem = {
   id: string;
@@ -113,6 +113,7 @@ const defaultForm: FormState = {
 };
 
 export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
+  const defaultAccount = getPreferredArsBankAccount(accounts);
   const [todayMs] = useState(() => Date.now());
   const [debts, setDebts] = useState<DebtItem[]>([]);
   const [totalOutstanding, setTotalOutstanding] = useState(0);
@@ -253,7 +254,7 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
 
   function openQuickPay(debt: DebtItem) {
     setQuickPayDebtId(debt.id);
-    setQuickPayAccountId(accounts[0]?.id ?? "");
+    setQuickPayAccountId(defaultAccount?.id ?? "");
     setQuickPayAmount(
       String(debt.minimumPayment ?? debt.outstandingAmount),
     );
@@ -716,6 +717,15 @@ function DebtCard({
 
 function formatMoney(value: number, currency: CurrencyCode) {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency, maximumFractionDigits: 0 }).format(value);
+}
+
+function getPreferredArsBankAccount(accounts: AccountOption[]) {
+  return (
+    accounts.find((account) => account.currency === "ARS" && account.type === "BANK" && account.name.toLowerCase() === "cuenta bancaria") ??
+    accounts.find((account) => account.currency === "ARS" && account.type === "BANK") ??
+    accounts.find((account) => account.currency === "ARS") ??
+    accounts[0]
+  );
 }
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
