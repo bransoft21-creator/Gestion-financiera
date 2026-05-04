@@ -7,11 +7,12 @@ const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLI
       ref={ref}
       type={type}
       className={cn(
-        "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none",
+        "flex h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none",
         "transition-[border-color,box-shadow] duration-150",
         "placeholder:text-muted-foreground",
         "focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/60",
         "disabled:cursor-not-allowed disabled:opacity-50",
+        type === "date" && "block appearance-none",
         className,
       )}
       {...props}

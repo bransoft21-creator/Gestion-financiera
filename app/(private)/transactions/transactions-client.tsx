@@ -502,7 +502,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             ) : (
               <Field label="Tipo" error={errors.type}>
                 <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   value={form.type}
                   onChange={(event) => updateForm("type", event.target.value as TransactionType)}
                 >
@@ -517,7 +517,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
             <Field label={form.type === "TRANSFER" ? "Cuenta origen" : "Cuenta"} error={errors.accountId}>
               <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={form.accountId}
                 onChange={(event) => updateForm("accountId", event.target.value)}
               >
@@ -532,7 +532,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             {form.type === "TRANSFER" && !editingTransactionId ? (
               <Field label="Cuenta destino" error={errors.transferAccountId}>
                 <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   value={form.transferAccountId}
                   onChange={(event) => updateForm("transferAccountId", event.target.value)}
                 >
@@ -549,7 +549,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             {form.type !== "TRANSFER" ? (
               <Field label="Categoría" error={errors.categoryId}>
                 <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   value={form.categoryId}
                   onChange={(event) => updateForm("categoryId", event.target.value)}
                 >
@@ -566,7 +566,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Moneda" error={errors.currency}>
                 <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   value={form.currency}
                   onChange={(event) => updateForm("currency", event.target.value as CurrencyCode)}
                 >
