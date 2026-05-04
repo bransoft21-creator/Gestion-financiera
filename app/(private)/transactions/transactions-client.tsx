@@ -412,7 +412,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   }
 
   return (
-    <div className={`grid gap-6 ${isFormOpen ? "xl:grid-cols-[360px_1fr]" : ""}`}>
+    <div className={`grid min-w-0 gap-6 ${isFormOpen ? "xl:grid-cols-[360px_1fr]" : ""}`}>
       <AppFormPanel isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} desktopAlwaysOpen={false}>
         <CardHeader className={appFormHeaderClass()}>
           <div className="flex items-center gap-3">
@@ -599,7 +599,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
         </CardContent>
       </AppFormPanel>
 
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -624,9 +624,9 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                 />
               </div>
             </div>
-            <form className="grid gap-3 md:grid-cols-5" onSubmit={handleFilterSubmit}>
+            <form className="grid min-w-0 gap-3 md:grid-cols-5" onSubmit={handleFilterSubmit}>
               <select
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={filters.type}
                 onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}
               >
@@ -639,7 +639,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               </select>
 
               <select
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={filters.categoryId}
                 onChange={(event) => setFilters((current) => ({ ...current, categoryId: event.target.value }))}
               >
@@ -671,8 +671,8 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
         <Card>
           <CardHeader>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
+            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <CardTitle>Listado</CardTitle>
                 <CardDescription>
                   {displayedTransactions.length} movimiento{displayedTransactions.length !== 1 ? "s" : ""} ·{" "}
@@ -685,6 +685,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                 type="button"
                 variant="outline"
                 size="sm"
+                className="w-full sm:w-auto"
                 onClick={exportCsv}
                 disabled={displayedTransactions.length === 0}
               >
@@ -821,7 +822,7 @@ function TransactionCard({
 
   return (
     <article
-      className="group cursor-pointer rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md active:scale-[0.99]"
+      className="group min-w-0 cursor-pointer overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md active:scale-[0.99]"
       role="button"
       tabIndex={0}
       onClick={() => onEdit(transaction)}
@@ -832,14 +833,14 @@ function TransactionCard({
         }
       }}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex min-w-0 items-start gap-3">
         <div
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${tone.icon}`}
         >
           <Icon className="h-5 w-5" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{transaction.description ?? "Sin descripción"}</p>
               <p className="mt-1 truncate text-xs text-muted-foreground">
@@ -848,8 +849,8 @@ function TransactionCard({
                   : `${transaction.category?.name ?? "Sin categoría"} · ${transaction.account.name}`}
               </p>
             </div>
-            <div className="shrink-0 text-right">
-              <p className={`text-base font-bold leading-none ${tone.amount}`}>
+            <div className="max-w-full text-left sm:shrink-0 sm:text-right">
+              <p className={`max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold leading-none sm:text-base ${tone.amount}`}>
                 {isTransfer ? "" : signedAmount > 0 ? "+" : signedAmount < 0 ? "-" : ""}
                 {formatMoney(isTransfer ? displayAmount : Math.abs(signedAmount), transaction.currency)}
               </p>
