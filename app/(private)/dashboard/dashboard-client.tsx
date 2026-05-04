@@ -249,57 +249,44 @@ function FinancialInsights({ insights }: { insights: DashboardSummary["insights"
   const primaryTone = insightToneConfig[primary.tone];
 
   return (
-    <section className="mb-6 grid gap-3 lg:grid-cols-[1.15fr_0.85fr]">
-      <Card className={`overflow-hidden ${primaryTone.shell}`}>
-        <CardContent className="p-5">
-          <div className="flex items-start gap-3">
-            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${primaryTone.icon}`}>
-              <Lightbulb className="h-5 w-5" aria-hidden="true" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className={`text-[11px] font-semibold uppercase tracking-wider ${primaryTone.label}`}>
-                Consejo del momento
-              </p>
-              <h3 className="mt-1 text-lg font-bold tracking-tight">{primary.title}</h3>
-              <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{primary.message}</p>
-              <Button asChild size="sm" variant="secondary" className="mt-4 h-8">
-                <Link href={primary.href}>{primary.actionLabel}</Link>
-              </Button>
-            </div>
+    <section className={`mb-6 rounded-xl border px-4 py-3 ${primaryTone.shell}`}>
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${primaryTone.icon}`}>
+            <Lightbulb className="h-4 w-4" aria-hidden="true" />
           </div>
-        </CardContent>
-      </Card>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p className={`text-[11px] font-semibold uppercase tracking-wider ${primaryTone.label}`}>
+                Consejo
+              </p>
+              <h3 className="text-sm font-bold tracking-tight">{primary.title}</h3>
+            </div>
+            <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground sm:text-sm">
+              {primary.message}
+            </p>
+          </div>
+        </div>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Más señales</CardTitle>
-          <CardDescription>Lecturas rápidas de tu mes.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {secondary.length > 0 ? secondary.map((insight) => {
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+          {secondary.map((insight) => {
             const tone = insightToneConfig[insight.tone];
             return (
               <Link
                 key={`${insight.title}-${insight.href}`}
                 href={insight.href}
-                className="block rounded-lg border border-border p-3 transition hover:border-primary/35 hover:bg-secondary/50"
+                className="inline-flex h-8 max-w-full items-center gap-1.5 rounded-full border border-border bg-background/35 px-3 text-xs font-medium text-muted-foreground transition hover:border-primary/35 hover:bg-secondary"
               >
-                <div className="flex gap-2.5">
-                  <Sparkles className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${tone.label}`} aria-hidden="true" />
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-semibold">{insight.title}</p>
-                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{insight.message}</p>
-                  </div>
-                </div>
+                <Sparkles className={`h-3.5 w-3.5 shrink-0 ${tone.label}`} aria-hidden="true" />
+                <span className="truncate">{insight.title}</span>
               </Link>
             );
-          }) : (
-            <p className="rounded-lg border border-border bg-secondary/35 p-3 text-xs leading-5 text-muted-foreground">
-              Registrá algunos movimientos más para sumar recomendaciones personalizadas.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+          })}
+          <Button asChild size="sm" variant="secondary" className="h-8 shrink-0">
+            <Link href={primary.href}>{primary.actionLabel}</Link>
+          </Button>
+        </div>
+      </div>
     </section>
   );
 }
