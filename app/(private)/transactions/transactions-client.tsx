@@ -8,7 +8,9 @@ import {
   ArrowRightLeft,
   ArrowUpCircle,
   CalendarDays,
+  ChevronDown,
   Download,
+  Filter,
   Loader2,
   Plus,
   ReceiptText,
@@ -180,6 +182,9 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => (
+    Boolean(searchParams.get("type") ?? searchParams.get("categoryId") ?? searchParams.get("from") ?? searchParams.get("to"))
+  ));
   const [message, setMessage] = useState<string | null>(null);
 
   const filteredCategories = useMemo(() => {
@@ -199,6 +204,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   const totalAmount = useMemo(() => {
     return displayedTransactions.reduce((sum, transaction) => sum + getSignedAmount(transaction), 0);
   }, [displayedTransactions]);
+  const activeFilterCount = [filters.type, filters.categoryId, filters.from, filters.to].filter(Boolean).length;
 
   useEffect(() => {
     void loadTransactions();
@@ -602,72 +608,104 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
       <div className="min-w-0 space-y-6">
         <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-muted-foreground">
-                <Search className="h-5 w-5" aria-hidden="true" />
-              </div>
-              <div>
-                <CardTitle>Filtros</CardTitle>
-                <CardDescription>Tipo, categoría y rango de fechas.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <CardHeader className="p-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="relative min-w-0 flex-1">
+                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                 <Input
-                  className="pl-9"
-                  placeholder="Buscar por descripción…"
+                  className="h-9 min-w-0 pl-8 text-xs"
+                  placeholder="Buscar movimiento..."
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                 />
               </div>
-            </div>
-            <form className="grid min-w-0 gap-3 md:grid-cols-5" onSubmit={handleFilterSubmit}>
-              <select
-                className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={filters.type}
-                onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}
+              <Button
+                type="button"
+                variant={activeFilterCount > 0 ? "secondary" : "outline"}
+                size="sm"
+                className="h-9 shrink-0 px-2.5 text-xs"
+                onClick={() => setIsFiltersOpen((current) => !current)}
+                aria-expanded={isFiltersOpen}
               >
-                <option value="">Todos los tipos</option>
-                {transactionTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {transactionTypeLabels[type]}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={filters.categoryId}
-                onChange={(event) => setFilters((current) => ({ ...current, categoryId: event.target.value }))}
-              >
-                <option value="">Todas las categorías</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-
-              <Input
-                type="date"
-                value={filters.from}
-                onChange={(event) => setFilters((current) => ({ ...current, from: event.target.value }))}
-              />
-              <Input
-                type="date"
-                value={filters.to}
-                onChange={(event) => setFilters((current) => ({ ...current, to: event.target.value }))}
-              />
-              <Button disabled={isLoading}>
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-                Aplicar
+                <Filter className="h-3.5 w-3.5" aria-hidden="true" />
+                {activeFilterCount > 0 ? activeFilterCount : "Filtros"}
+                <ChevronDown className={`h-3.5 w-3.5 transition ${isFiltersOpen ? "rotate-180" : ""}`} aria-hidden="true" />
               </Button>
-            </form>
-          </CardContent>
+            </div>
+          </CardHeader>
+          {isFiltersOpen ? (
+            <CardContent className="px-3 pb-3 pt-0">
+              <form className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-5" onSubmit={handleFilterSubmit}>
+                <Field label="Tipo">
+                  <select
+                    className="h-9 w-full min-w-0 rounded-md border border-input bg-background px-2.5 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={filters.type}
+                    onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}
+                  >
+                    <option value="">Todos</option>
+                    {transactionTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {transactionTypeLabels[type]}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Categoría">
+                  <select
+                    className="h-9 w-full min-w-0 rounded-md border border-input bg-background px-2.5 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={filters.categoryId}
+                    onChange={(event) => setFilters((current) => ({ ...current, categoryId: event.target.value }))}
+                  >
+                    <option value="">Todas</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+
+                <Field label="Desde">
+                  <Input
+                    className="h-9 text-xs"
+                    type="date"
+                    value={filters.from}
+                    onChange={(event) => setFilters((current) => ({ ...current, from: event.target.value }))}
+                  />
+                </Field>
+                <Field label="Hasta">
+                  <Input
+                    className="h-9 text-xs"
+                    type="date"
+                    value={filters.to}
+                    onChange={(event) => setFilters((current) => ({ ...current, to: event.target.value }))}
+                  />
+                </Field>
+                <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-1">
+                  <Button className="h-9 flex-1 text-xs" disabled={isLoading}>
+                    {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
+                    Aplicar
+                  </Button>
+                  {activeFilterCount > 0 ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 px-2 text-xs text-muted-foreground"
+                      onClick={() => {
+                        const nextFilters = { type: "", categoryId: "", from: "", to: "" };
+                        setFilters(nextFilters);
+                        void loadTransactions(nextFilters);
+                      }}
+                    >
+                      Limpiar
+                    </Button>
+                  ) : null}
+                </div>
+              </form>
+            </CardContent>
+          ) : null}
         </Card>
 
         <Card>

@@ -54,6 +54,19 @@ type DashboardSummary = {
     totalOutstandingDebt: number;
   };
   expensesByCategory: ExpenseCategoryChartItem[];
+  expenseCategoryDetails: Array<{
+    id: string;
+    name: string;
+    total: number;
+    items: Array<{
+      id: string;
+      description: string | null;
+      amount: number;
+      currency: "ARS" | "USD" | string;
+      occurredAt: string;
+      account: { id: string; name: string };
+    }>;
+  }>;
   latestTransactions: Array<{
     id: string;
     type: "INCOME" | "EXPENSE" | string;
@@ -295,6 +308,7 @@ export function DashboardClient() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [selectedExpenseCategoryId, setSelectedExpenseCategoryId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -318,6 +332,19 @@ export function DashboardClient() {
     }
     void loadSummary();
   }, [year, month]);
+
+  useEffect(() => {
+    if (!summary?.expensesByCategory.length) {
+      setSelectedExpenseCategoryId(null);
+      return;
+    }
+
+    setSelectedExpenseCategoryId((current) => (
+      current && summary.expensesByCategory.some((category) => category.id === current)
+        ? current
+        : summary.expensesByCategory[0].id
+    ));
+  }, [summary]);
 
   function navigatePrev() {
     if (month === 1) { setYear((y) => y - 1); setMonth(12); }
@@ -386,7 +413,9 @@ export function DashboardClient() {
     );
   }
 
-  const { metrics, expensesByCategory, latestTransactions, alerts } = summary;
+  const { metrics, expensesByCategory, expenseCategoryDetails, latestTransactions, alerts } = summary;
+  const selectedExpenseCategory = expenseCategoryDetails.find((category) => category.id === selectedExpenseCategoryId)
+    ?? expenseCategoryDetails[0];
 
   /* Trend data from category chart — we don't have historical yet, show last point */
   const trendData: TrendPoint[] = [
@@ -433,20 +462,57 @@ export function DashboardClient() {
               <EmptyState icon={ReceiptText} title="Sin gastos este mes"
                 description="Los gastos agrupados aparecerán al registrar transacciones." />
             ) : (
-              <div className="grid gap-4 md:grid-cols-[1fr_200px] md:items-center">
-                <ExpenseCategoryChart data={expensesByCategory} />
-                <div className="space-y-2.5">
-                  {expensesByCategory.map((item) => (
-                    <div key={item.name} className="flex items-center justify-between gap-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: item.color }} />
-                        <span className="text-muted-foreground">{item.name}</span>
-                      </div>
-                      <span className="font-semibold tabular-nums">{formatMoney(item.value)}</span>
-                    </div>
-                  ))}
+              <>
+                <div className="grid gap-4 md:grid-cols-[1fr_220px] md:items-center">
+                  <ExpenseCategoryChart
+                    data={expensesByCategory}
+                    activeCategoryId={selectedExpenseCategoryId ?? undefined}
+                    onSelectCategory={setSelectedExpenseCategoryId}
+                  />
+                  <div className="space-y-2">
+                    {expensesByCategory.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm transition hover:bg-secondary ${selectedExpenseCategoryId === item.id ? "bg-secondary" : ""}`}
+                        onClick={() => setSelectedExpenseCategoryId(item.id)}
+                      >
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: item.color }} />
+                          <span className="truncate text-muted-foreground">{item.name}</span>
+                        </span>
+                        <span className="shrink-0 font-semibold tabular-nums">{formatMoney(item.value)}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+                {selectedExpenseCategory ? (
+                  <div className="mt-4 rounded-lg border border-border bg-background/35 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{selectedExpenseCategory.name}</p>
+                        <p className="text-xs text-muted-foreground">{selectedExpenseCategory.items.length} movimiento{selectedExpenseCategory.items.length !== 1 ? "s" : ""}</p>
+                      </div>
+                      <p className="shrink-0 text-sm font-bold tabular-nums">{formatMoney(selectedExpenseCategory.total)}</p>
+                    </div>
+                    <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+                      {selectedExpenseCategory.items.map((item) => (
+                        <Link
+                          key={item.id}
+                          href={`/transactions?categoryId=${selectedExpenseCategory.id}`}
+                          className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 transition hover:bg-secondary"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate text-xs font-medium">{item.description ?? "Sin descripción"}</span>
+                            <span className="block truncate text-[11px] text-muted-foreground">{item.account.name} · {formatDate(item.occurredAt)}</span>
+                          </span>
+                          <span className="shrink-0 text-xs font-semibold tabular-nums text-rose-400">-{formatMoney(item.amount, item.currency as "ARS" | "USD")}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </>
             )}
           </CardContent>
         </Card>

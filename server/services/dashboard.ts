@@ -111,6 +111,7 @@ export async function getDashboardSummary(
   const income = sumTransactionsByType(monthTransactions, TransactionType.INCOME);
   const expenses = sumTransactionsByType(monthTransactions, TransactionType.EXPENSE);
   const expensesByCategory = getExpensesByCategory(monthTransactions);
+  const expenseCategoryDetails = getExpenseCategoryDetails(monthTransactions);
   const expensesByCategoryId = getExpenseTotalsByCategoryId(monthTransactions);
   const health = computeFinancialHealth({
     income,
@@ -134,6 +135,7 @@ export async function getDashboardSummary(
     },
     metrics: health,
     expensesByCategory,
+    expenseCategoryDetails,
     latestTransactions: latestTransactions.map((transaction) => ({
       id: transaction.id,
       type: transaction.type,
@@ -184,7 +186,7 @@ function sumTransactionsByType(transactions: DashboardTransaction[], type: Trans
 }
 
 function getExpensesByCategory(transactions: DashboardTransaction[]) {
-  const totals = new Map<string, { name: string; value: number; color: string }>();
+  const totals = new Map<string, { id: string; name: string; value: number; color: string }>();
 
   transactions.forEach((transaction) => {
     if (transaction.type !== TransactionType.EXPENSE) {
@@ -196,6 +198,7 @@ function getExpensesByCategory(transactions: DashboardTransaction[]) {
     const nextValue = (existing?.value ?? 0) + toFiniteNumber(transaction.amount);
 
     totals.set(key, {
+      id: key,
       name: transaction.category?.name ?? "Sin categoría",
       value: nextValue,
       color: transaction.category?.color ?? chartColors[totals.size % chartColors.length],
@@ -203,6 +206,51 @@ function getExpensesByCategory(transactions: DashboardTransaction[]) {
   });
 
   return Array.from(totals.values()).sort((a, b) => b.value - a.value);
+}
+
+function getExpenseCategoryDetails(transactions: DashboardTransaction[]) {
+  const details = new Map<string, {
+    id: string;
+    name: string;
+    total: number;
+    items: Array<{
+      id: string;
+      description: string | null;
+      amount: number;
+      currency: string;
+      occurredAt: string;
+      account: { id: string; name: string };
+    }>;
+  }>();
+
+  transactions.forEach((transaction) => {
+    if (transaction.type !== TransactionType.EXPENSE) {
+      return;
+    }
+
+    const key = transaction.category?.id ?? "uncategorized";
+    const amount = toFiniteNumber(transaction.amount);
+    const existing = details.get(key);
+
+    details.set(key, {
+      id: key,
+      name: transaction.category?.name ?? "Sin categoría",
+      total: (existing?.total ?? 0) + amount,
+      items: [
+        ...(existing?.items ?? []),
+        {
+          id: transaction.id,
+          description: transaction.description,
+          amount,
+          currency: transaction.currency,
+          occurredAt: transaction.occurredAt.toISOString(),
+          account: transaction.account,
+        },
+      ],
+    });
+  });
+
+  return Array.from(details.values()).sort((a, b) => b.total - a.total);
 }
 
 function buildAlerts({
