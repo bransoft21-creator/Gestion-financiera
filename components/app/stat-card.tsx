@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -15,6 +16,7 @@ type StatCardProps = {
   rawValue?: number;
   formatter?: (n: number) => string;
   animationDelay?: number;
+  href?: string;
 };
 
 const toneConfig = {
@@ -64,19 +66,19 @@ export function StatCard({
   rawValue,
   formatter,
   animationDelay,
+  href,
 }: StatCardProps) {
   const hasAnimation = rawValue !== undefined && formatter !== undefined;
   const config = toneConfig[tone];
-
-  return (
+  const content = (
     <Card
       className={cn(
         "relative overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-500",
+        href && "cursor-pointer transition hover:-translate-y-0.5 hover:border-primary/35",
         highlight && "border-primary/30 bg-gradient-to-br from-primary/10 to-card",
       )}
       style={animationDelay !== undefined ? { animationDelay: `${animationDelay}ms` } : undefined}
     >
-      {/* Top accent line — color-coded by tone */}
       <div
         className={cn(
           "absolute inset-x-0 top-0 h-px bg-gradient-to-r",
@@ -110,5 +112,13 @@ export function StatCard({
         </div>
       </CardContent>
     </Card>
+  );
+
+  if (!href) return content;
+
+  return (
+    <Link href={href} aria-label={label} className="block min-w-0">
+      {content}
+    </Link>
   );
 }

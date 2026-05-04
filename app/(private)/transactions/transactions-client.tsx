@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowDownCircle,
   ArrowRightLeft,
   ArrowUpCircle,
   CalendarDays,
   Download,
-  Pencil,
   Loader2,
   Plus,
   ReceiptText,
@@ -154,13 +154,14 @@ const formSchema = z.object({
 });
 
 export function TransactionsClient({ householdId, accounts, categories }: TransactionsClientProps) {
+  const searchParams = useSearchParams();
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Filters>({
-    type: "",
-    categoryId: "",
-    from: "",
-    to: "",
+    type: searchParams.get("type") ?? "",
+    categoryId: searchParams.get("categoryId") ?? "",
+    from: searchParams.get("from") ?? "",
+    to: searchParams.get("to") ?? "",
   });
   const [form, setForm] = useState<FormState>({
     type: "EXPENSE",
@@ -756,7 +757,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                       <span>{group.label}</span>
                       <span>{group.transactions.length}</span>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-1.5">
                       {group.transactions.map((transaction) => (
                         <TransactionCard
                           key={transaction.id}
@@ -822,7 +823,7 @@ function TransactionCard({
 
   return (
     <article
-      className="group min-w-0 cursor-pointer overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md active:scale-[0.99]"
+      className="group min-w-0 cursor-pointer overflow-hidden rounded-lg border border-border bg-card px-2.5 py-2 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md active:scale-[0.99]"
       role="button"
       tabIndex={0}
       onClick={() => onEdit(transaction)}
@@ -833,66 +834,50 @@ function TransactionCard({
         }
       }}
     >
-      <div className="flex min-w-0 items-start gap-3">
+      <div className="flex min-w-0 items-center gap-2.5">
         <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${tone.icon}`}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tone.icon}`}
         >
-          <Icon className="h-5 w-5" aria-hidden="true" />
+          <Icon className="h-4 w-4" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+          <div className="flex min-w-0 items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{transaction.description ?? "Sin descripción"}</p>
-              <p className="mt-1 truncate text-xs text-muted-foreground">
+              <p className="truncate text-xs font-semibold sm:text-sm">{transaction.description ?? "Sin descripción"}</p>
+              <p className="truncate text-[11px] text-muted-foreground">
                 {transaction.type === "TRANSFER"
                   ? `${transaction.account.name}${transaction.transferAccount ? ` → ${transaction.transferAccount.name}` : ""}`
                   : `${transaction.category?.name ?? "Sin categoría"} · ${transaction.account.name}`}
               </p>
             </div>
-            <div className="max-w-full text-left sm:shrink-0 sm:text-right">
-              <p className={`max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold leading-none sm:text-base ${tone.amount}`}>
+            <div className="max-w-[42%] shrink-0 text-right">
+              <p className={`max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs font-bold leading-none sm:text-sm ${tone.amount}`}>
                 {isTransfer ? "" : signedAmount > 0 ? "+" : signedAmount < 0 ? "-" : ""}
                 {formatMoney(isTransfer ? displayAmount : Math.abs(signedAmount), transaction.currency)}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">{transaction.currency}</p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">{transaction.currency}</p>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Badge className={`border-0 ${tone.badge}`}>{transactionTypeLabels[transaction.type]}</Badge>
+          <div className="mt-1.5 flex min-w-0 items-center gap-1.5 overflow-hidden">
+            <Badge className={`h-5 shrink-0 border-0 px-2 text-[11px] ${tone.badge}`}>{transactionTypeLabels[transaction.type]}</Badge>
             {transaction.status === "PENDING" && (
-              <Badge className="border-amber-500/30 bg-amber-500/10 text-amber-400">Pendiente</Badge>
+              <Badge className="h-5 shrink-0 border-amber-500/30 bg-amber-500/10 px-2 text-[11px] text-amber-400">Pendiente</Badge>
             )}
             {transaction.status === "CANCELED" && (
-              <Badge className="border-border bg-secondary text-muted-foreground line-through">Cancelada</Badge>
+              <Badge className="h-5 shrink-0 border-border bg-secondary px-2 text-[11px] text-muted-foreground line-through">Cancelada</Badge>
             )}
-            <span className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-xs text-muted-foreground">
+            <span className="inline-flex min-w-0 items-center gap-1 truncate rounded-md bg-secondary px-2 py-1 text-[11px] leading-none text-muted-foreground">
               <CalendarDays className="h-3 w-3" aria-hidden="true" />
               {formatDate(transaction.occurredAt)}
             </span>
           </div>
         </div>
-      </div>
-
-      <div className="mt-4 grid grid-cols-[1fr_auto] gap-2 border-t border-border pt-3">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="justify-start text-muted-foreground"
-          onClick={(event) => {
-            event.stopPropagation();
-            onEdit(transaction);
-          }}
-        >
-          <Pencil className="h-4 w-4" aria-hidden="true" />
-          Ver / editar
-        </Button>
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
           onClick={(event) => {
             event.stopPropagation();
             onDelete(transaction.id);

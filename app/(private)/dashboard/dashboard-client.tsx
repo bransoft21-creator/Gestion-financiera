@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
   ArrowDownCircle,
@@ -136,10 +137,10 @@ function HeroCard({ metrics }: { metrics: DashboardSummary["metrics"] }) {
             {formatMoney(animated)}
           </p>
           <div className="flex flex-wrap gap-5">
-            <MiniStat label="Ingresos" value={metrics.income} color="#34d399" icon={<ArrowUpCircle className="h-3.5 w-3.5" />} />
-            <MiniStat label="Gastos" value={metrics.expenses} color="#f87171" icon={<ArrowDownCircle className="h-3.5 w-3.5" />} />
-            <MiniStat label="Reservado" value={metrics.remainingReservedBudget} color="#fbbf24" icon={<Lock className="h-3.5 w-3.5" />} />
-            <MiniStat label="Obligaciones" value={metrics.upcomingObligations} color="#60a5fa" icon={<CreditCard className="h-3.5 w-3.5" />} />
+            <MiniStat label="Ingresos" value={metrics.income} color="#34d399" icon={<ArrowUpCircle className="h-3.5 w-3.5" />} href="/transactions?type=INCOME" />
+            <MiniStat label="Gastos" value={metrics.expenses} color="#f87171" icon={<ArrowDownCircle className="h-3.5 w-3.5" />} href="/transactions?type=EXPENSE" />
+            <MiniStat label="Reservado" value={metrics.remainingReservedBudget} color="#fbbf24" icon={<Lock className="h-3.5 w-3.5" />} href="/budgets" />
+            <MiniStat label="Obligaciones" value={metrics.upcomingObligations} color="#60a5fa" icon={<CreditCard className="h-3.5 w-3.5" />} href="/recurring" />
           </div>
         </div>
         <div className="text-right">
@@ -151,13 +152,29 @@ function HeroCard({ metrics }: { metrics: DashboardSummary["metrics"] }) {
   );
 }
 
-function MiniStat({ label, value, color, icon }: { label: string; value: number; color: string; icon: React.ReactNode }) {
+function MiniStat({
+  label,
+  value,
+  color,
+  icon,
+  href,
+}: {
+  label: string;
+  value: number;
+  color: string;
+  icon: React.ReactNode;
+  href: string;
+}) {
   return (
-    <div className="flex items-center gap-1.5">
+    <Link
+      href={href}
+      className="flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 transition hover:bg-white/5"
+      aria-label={label}
+    >
       <span style={{ color }}>{icon}</span>
       <span className="text-xs text-white/50">{label}</span>
       <span className="text-[13px] font-semibold tabular-nums" style={{ color }}>{formatMoney(value)}</span>
-    </div>
+    </Link>
   );
 }
 
@@ -390,17 +407,17 @@ export function DashboardClient() {
       <section className="stagger-in mb-6 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Ingresos del mes" value={formatMoney(metrics.income)}
           detail="↑ transacciones de ingreso" icon={ArrowUpCircle} tone="positive"
-          rawValue={metrics.income} formatter={formatMoney} />
+          rawValue={metrics.income} formatter={formatMoney} href="/transactions?type=INCOME" />
         <StatCard label="Gastos del mes" value={formatMoney(metrics.expenses)}
           detail="transacciones tipo gasto" icon={ArrowDownCircle} tone="danger"
-          rawValue={metrics.expenses} formatter={formatMoney} />
+          rawValue={metrics.expenses} formatter={formatMoney} href="/transactions?type=EXPENSE" />
         <StatCard label="Presupuesto reservado" value={formatMoney(metrics.remainingReservedBudget)}
           detail="pendiente de gastar" icon={Lock} tone="warning"
-          rawValue={metrics.remainingReservedBudget} formatter={formatMoney} />
+          rawValue={metrics.remainingReservedBudget} formatter={formatMoney} href="/budgets" />
         <StatCard label="Obligaciones del mes" value={formatMoney(metrics.upcomingObligations)}
           detail="recurrentes, metas y deuda" icon={CreditCard}
           tone={metrics.upcomingObligations === 0 ? "positive" : "warning"}
-          rawValue={metrics.upcomingObligations} formatter={formatMoney} />
+          rawValue={metrics.upcomingObligations} formatter={formatMoney} href="/recurring" />
       </section>
 
       {/* Charts row */}
@@ -457,7 +474,7 @@ export function DashboardClient() {
 
           {/* Savings & metas summary */}
           <div className="grid grid-cols-2 gap-3.5">
-            <div className="rounded-xl border border-border bg-card p-4">
+            <Link href="/goals" className="rounded-xl border border-border bg-card p-4 transition hover:-translate-y-0.5 hover:border-primary/35">
               <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
                 <Wallet className="h-4 w-4" aria-hidden="true" />
               </div>
@@ -465,8 +482,8 @@ export function DashboardClient() {
               <p className="mt-1 text-base font-bold text-emerald-400 tabular-nums">
                 {formatMoney(metrics.estimatedSavings)}
               </p>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-4">
+            </Link>
+            <Link href="/debts" className="rounded-xl border border-border bg-card p-4 transition hover:-translate-y-0.5 hover:border-primary/35">
               <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/15 text-violet-400">
                 <Sparkles className="h-4 w-4" aria-hidden="true" />
               </div>
@@ -474,7 +491,7 @@ export function DashboardClient() {
               <p className="mt-1 text-base font-bold text-muted-foreground tabular-nums">
                 {formatMoney(metrics.totalOutstandingDebt)}
               </p>
-            </div>
+            </Link>
           </div>
         </div>
       </section>
