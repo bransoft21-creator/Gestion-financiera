@@ -17,18 +17,6 @@ import {
   Sparkles,
   Wallet,
 } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { EmptyState } from "@/components/app/empty-state";
 import { StatCard } from "@/components/app/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -132,7 +120,15 @@ function useCountUp(target: number, ms = 850) {
 
 /* ── Hero card ──────────────────────────────────────────────────────────── */
 
-function HeroCard({ metrics }: { metrics: DashboardSummary["metrics"] }) {
+function HeroCard({
+  metrics,
+  year,
+  month,
+}: {
+  metrics: DashboardSummary["metrics"];
+  year: number;
+  month: number;
+}) {
   const animated = useCountUp(metrics.realAvailable);
 
   return (
@@ -152,17 +148,20 @@ function HeroCard({ metrics }: { metrics: DashboardSummary["metrics"] }) {
               Dinero disponible real
             </span>
             <span className="rounded-full border border-violet-500/20 bg-violet-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-violet-300">
-              {MONTH_NAMES[new Date().getMonth()]} {new Date().getFullYear()}
+              {MONTH_NAMES[month - 1]} {year}
             </span>
           </div>
           <p className="mb-5 text-[40px] font-extrabold leading-none tracking-tight tabular-nums text-foreground">
             {formatMoney(animated)}
           </p>
-          <div className="flex flex-wrap gap-5">
-            <MiniStat label="Ingresos" value={metrics.income} color="#34d399" icon={<ArrowUpCircle className="h-3.5 w-3.5" />} href="/transactions?type=INCOME" />
-            <MiniStat label="Gastos" value={metrics.expenses} color="#f87171" icon={<ArrowDownCircle className="h-3.5 w-3.5" />} href="/transactions?type=EXPENSE" />
-            <MiniStat label="Reservado" value={metrics.remainingReservedBudget} color="#fbbf24" icon={<Lock className="h-3.5 w-3.5" />} href="/budgets" />
-            <MiniStat label="Obligaciones" value={metrics.upcomingObligations} color="#60a5fa" icon={<CreditCard className="h-3.5 w-3.5" />} href="/recurring" />
+          <div className="flex flex-wrap items-center gap-2 text-xs text-white/50">
+            <FormulaPill label="Ingresos" value={metrics.income} color="#34d399" href="/transactions?type=INCOME" />
+            <span aria-hidden="true">−</span>
+            <FormulaPill label="Gastos" value={metrics.expenses} color="#f87171" href="/transactions?type=EXPENSE" />
+            <span aria-hidden="true">−</span>
+            <FormulaPill label="Reservado" value={metrics.remainingReservedBudget} color="#fbbf24" href="/budgets" />
+            <span aria-hidden="true">−</span>
+            <FormulaPill label="Obligaciones" value={metrics.upcomingObligations} color="#60a5fa" href="/recurring" />
           </div>
         </div>
         <div className="text-right">
@@ -174,50 +173,30 @@ function HeroCard({ metrics }: { metrics: DashboardSummary["metrics"] }) {
   );
 }
 
-function MiniStat({
+function FormulaPill({
   label,
   value,
   color,
-  icon,
   href,
 }: {
   label: string;
   value: number;
   color: string;
-  icon: React.ReactNode;
   href: string;
 }) {
   return (
     <Link
       href={href}
-      className="flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 transition hover:bg-white/5"
+      className="flex min-w-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 transition hover:bg-white/5"
       aria-label={label}
     >
-      <span style={{ color }}>{icon}</span>
       <span className="text-xs text-white/50">{label}</span>
       <span className="text-[13px] font-semibold tabular-nums" style={{ color }}>{formatMoney(value)}</span>
     </Link>
   );
 }
 
-/* ── Alerts strip ───────────────────────────────────────────────────────── */
-
-function AlertsStrip({ alerts }: { alerts: string[] }) {
-  if (!alerts.length) return null;
-  return (
-    <div className="mb-6 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
-      {alerts.map((alert) => (
-        <div key={alert}
-          className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-[12px] font-medium text-amber-400">
-          <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" />
-          {alert}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ── Financial insights ────────────────────────────────────────────────── */
+/* ── Monthly signals ───────────────────────────────────────────────────── */
 
 const insightToneConfig = {
   default: {
@@ -242,105 +221,76 @@ const insightToneConfig = {
   },
 };
 
-function FinancialInsights({ insights }: { insights: DashboardSummary["insights"] }) {
-  if (!insights.length) return null;
+function MonthlySignals({
+  insights,
+  alerts,
+}: {
+  insights: DashboardSummary["insights"];
+  alerts: string[];
+}) {
+  if (!insights.length && !alerts.length) return null;
 
   const [primary, ...secondary] = insights;
-  const primaryTone = insightToneConfig[primary.tone];
+  const fallback = alerts[0]
+    ? {
+        title: "Revisá el mes",
+        message: alerts[0],
+        tone: "warning" as const,
+        actionLabel: "Ver transacciones",
+        href: "/transactions",
+      }
+    : null;
+  const signal = primary ?? fallback;
+
+  if (!signal) return null;
+
+  const primaryTone = insightToneConfig[signal.tone];
 
   return (
-    <section className={`mb-6 rounded-xl border px-4 py-3 ${primaryTone.shell}`}>
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${primaryTone.icon}`}>
-            <Lightbulb className="h-4 w-4" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Señales del mes</CardTitle>
+        <CardDescription>Prioridades y próximos pasos.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className={`rounded-xl border p-3 ${primaryTone.shell}`}>
+          <div className="flex items-start gap-2.5">
+            <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${primaryTone.icon}`}>
+              <Lightbulb className="h-4 w-4" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
               <p className={`text-[11px] font-semibold uppercase tracking-wider ${primaryTone.label}`}>
                 Consejo
               </p>
-              <h3 className="text-sm font-bold tracking-tight">{primary.title}</h3>
+              <h3 className="mt-0.5 text-sm font-bold tracking-tight">{signal.title}</h3>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">{signal.message}</p>
+              <Button asChild size="sm" variant="secondary" className="mt-3 h-8">
+                <Link href={signal.href}>{signal.actionLabel}</Link>
+              </Button>
             </div>
-            <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground sm:text-sm">
-              {primary.message}
-            </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-          {secondary.map((insight) => {
+        <div className="space-y-2">
+          {secondary.slice(0, 2).map((insight) => {
             const tone = insightToneConfig[insight.tone];
             return (
               <Link
                 key={`${insight.title}-${insight.href}`}
                 href={insight.href}
-                className="inline-flex h-8 max-w-full items-center gap-1.5 rounded-full border border-border bg-background/35 px-3 text-xs font-medium text-muted-foreground transition hover:border-primary/35 hover:bg-secondary"
+                className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground transition hover:border-primary/35 hover:bg-secondary/50"
               >
                 <Sparkles className={`h-3.5 w-3.5 shrink-0 ${tone.label}`} aria-hidden="true" />
-                <span className="truncate">{insight.title}</span>
+                <span className="truncate font-medium">{insight.title}</span>
               </Link>
             );
           })}
-          <Button asChild size="sm" variant="secondary" className="h-8 shrink-0">
-            <Link href={primary.href}>{primary.actionLabel}</Link>
-          </Button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ── Trend chart ────────────────────────────────────────────────────────── */
-
-type TrendPoint = { label: string; income: number; expenses: number };
-
-function TrendChart({ data }: { data: TrendPoint[] }) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">Tendencia mensual</CardTitle>
-        <CardDescription>Últimos meses</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={data} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
-            <defs>
-              <linearGradient id="gIncome" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#34d399" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="gExpense" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#f87171" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#f87171" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.05)" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-            <YAxis width={56} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}
-              tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
-            <Tooltip
-              contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "10px", fontSize: 12 }}
-              formatter={(value, name) => [
-                formatMoney(Number(value ?? 0)),
-                name === "income" ? "Ingresos" : "Gastos",
-              ]}
-            />
-            <Area type="monotone" dataKey="income" stroke="#34d399" strokeWidth={2} fill="url(#gIncome)"
-              dot={false} activeDot={{ r: 4, fill: "#34d399" }} />
-            <Area type="monotone" dataKey="expenses" stroke="#f87171" strokeWidth={2} fill="url(#gExpense)"
-              dot={false} activeDot={{ r: 4, fill: "#f87171" }} />
-          </AreaChart>
-        </ResponsiveContainer>
-        <div className="mt-3 flex gap-5">
-          <div className="flex items-center gap-2">
-            <span className="h-0.5 w-6 rounded bg-emerald-400" />
-            <span className="text-xs text-muted-foreground">Ingresos</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="h-0.5 w-6 rounded bg-rose-400" />
-            <span className="text-xs text-muted-foreground">Gastos</span>
-          </div>
+          {alerts.slice(0, 2).map((alert) => (
+            <div key={alert} className="flex gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
+              <p className="text-xs leading-5 text-muted-foreground">{alert}</p>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
@@ -499,23 +449,12 @@ export function DashboardClient() {
   const selectedExpenseCategory = expenseCategoryDetails.find((category) => category.id === selectedExpenseCategoryId)
     ?? expenseCategoryDetails[0];
 
-  /* Trend data from category chart — we don't have historical yet, show last point */
-  const trendData: TrendPoint[] = [
-    { label: MONTH_NAMES[month - 1].slice(0, 3), income: metrics.income, expenses: metrics.expenses },
-  ];
-
   return (
     <div className="fade-in">
       {monthNav}
 
-      {/* Alerts strip */}
-      <AlertsStrip alerts={alerts} />
-
       {/* Hero card */}
-      <HeroCard metrics={metrics} />
-
-      {/* Financial insights */}
-      <FinancialInsights insights={insights} />
+      <HeroCard metrics={metrics} year={year} month={month} />
 
       {/* Stat cards */}
       <section className="stagger-in mb-6 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
@@ -566,7 +505,12 @@ export function DashboardClient() {
                           <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: item.color }} />
                           <span className="truncate text-muted-foreground">{item.name}</span>
                         </span>
-                        <span className="shrink-0 font-semibold tabular-nums">{formatMoney(item.value)}</span>
+                        <span className="shrink-0 text-right">
+                          <span className="block font-semibold tabular-nums">{formatMoney(item.value)}</span>
+                          <span className="block text-[10px] text-muted-foreground">
+                            {metrics.expenses > 0 ? Math.round((item.value / metrics.expenses) * 100) : 0}%
+                          </span>
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -602,26 +546,9 @@ export function DashboardClient() {
           </CardContent>
         </Card>
 
-        {/* Alerts card (desktop) + trend chart */}
+        {/* Signals + financial summary */}
         <div className="flex flex-col gap-5">
-          {alerts.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Alertas</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {alerts.map((alert) => (
-                  <div key={alert}
-                    className="flex gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 p-2.5">
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
-                    <p className="text-xs text-muted-foreground">{alert}</p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          <TrendChart data={trendData} />
+          <MonthlySignals insights={insights} alerts={alerts} />
 
           {/* Savings & metas summary */}
           <div className="grid grid-cols-2 gap-3.5">
@@ -655,6 +582,9 @@ export function DashboardClient() {
               <CardTitle>Últimas transacciones</CardTitle>
               <CardDescription>Movimientos recientes del mes.</CardDescription>
             </div>
+            <Button asChild size="sm" variant="secondary" className="h-8 shrink-0">
+              <Link href="/transactions">Ver todas</Link>
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
