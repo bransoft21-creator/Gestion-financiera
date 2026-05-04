@@ -157,6 +157,18 @@ export async function getDashboardSummary(
       upcomingObligations: health.upcomingObligations,
       realAvailable: health.realAvailable,
     }),
+    insights: buildFinancialInsights({
+      income,
+      expenses,
+      savingsRate: health.savingsRate,
+      estimatedSavings: health.estimatedSavings,
+      transactionCount: monthTransactions.length,
+      expensesByCategory,
+      remainingReservedBudget: health.remainingReservedBudget,
+      upcomingObligations: health.upcomingObligations,
+      realAvailable: health.realAvailable,
+      totalOutstandingDebt: health.totalOutstandingDebt,
+    }),
   };
 }
 
@@ -269,7 +281,7 @@ function buildAlerts({
   balance: number;
   estimatedSavings: number;
   transactionCount: number;
-  expensesByCategory: Array<{ name: string; value: number }>;
+  expensesByCategory: Array<{ id: string; name: string; value: number }>;
   remainingReservedBudget: number;
   upcomingObligations: number;
   realAvailable: number;
@@ -310,4 +322,136 @@ function buildAlerts({
   }
 
   return alerts.slice(0, 4);
+}
+
+function buildFinancialInsights({
+  income,
+  expenses,
+  savingsRate,
+  estimatedSavings,
+  transactionCount,
+  expensesByCategory,
+  remainingReservedBudget,
+  upcomingObligations,
+  realAvailable,
+  totalOutstandingDebt,
+}: {
+  income: number;
+  expenses: number;
+  savingsRate: number;
+  estimatedSavings: number;
+  transactionCount: number;
+  expensesByCategory: Array<{ id: string; name: string; value: number }>;
+  remainingReservedBudget: number;
+  upcomingObligations: number;
+  realAvailable: number;
+  totalOutstandingDebt: number;
+}) {
+  const insights: Array<{
+    title: string;
+    message: string;
+    tone: "positive" | "warning" | "danger" | "default";
+    actionLabel: string;
+    href: string;
+  }> = [];
+  const topCategory = expensesByCategory[0];
+  const spendingRatio = income > 0 ? expenses / income : 0;
+
+  if (transactionCount === 0) {
+    insights.push({
+      title: "Empezá con el primer movimiento",
+      message: "Registrá ingresos y gastos del mes para que el dashboard pueda darte consejos más precisos.",
+      tone: "default",
+      actionLabel: "Nueva transacción",
+      href: "/transactions?new=1",
+    });
+  }
+
+  if (realAvailable < 0) {
+    insights.push({
+      title: "Cuidá el disponible real",
+      message: "Al descontar presupuestos pendientes y obligaciones próximas, el mes queda por debajo de cero.",
+      tone: "danger",
+      actionLabel: "Ver presupuestos",
+      href: "/budgets",
+    });
+  } else if (realAvailable > 0 && upcomingObligations > 0) {
+    insights.push({
+      title: "Tenés margen después de obligaciones",
+      message: "El disponible real ya contempla gastos recurrentes, metas, deuda y presupuestos pendientes.",
+      tone: "positive",
+      actionLabel: "Ver metas",
+      href: "/goals",
+    });
+  }
+
+  if (income > 0 && spendingRatio >= 0.8) {
+    insights.push({
+      title: "Los gastos están cerca del límite",
+      message: "Conviene revisar compras variables antes de comprometer el cierre del mes.",
+      tone: "warning",
+      actionLabel: "Ver gastos",
+      href: "/transactions?type=EXPENSE",
+    });
+  }
+
+  if (income > 0 && savingsRate >= 20) {
+    insights.push({
+      title: "Buen ritmo de ahorro",
+      message: "El balance mensual está dejando una proporción saludable para ahorro o reservas.",
+      tone: "positive",
+      actionLabel: "Planificar ahorro",
+      href: "/goals",
+    });
+  } else if (estimatedSavings > 0) {
+    insights.push({
+      title: "Aprovechá el balance positivo",
+      message: "Podés separar una parte del excedente para una meta antes de que se diluya en gastos chicos.",
+      tone: "positive",
+      actionLabel: "Crear meta",
+      href: "/goals?new=1",
+    });
+  }
+
+  if (topCategory && expenses > 0 && topCategory.value / expenses >= 0.4) {
+    insights.push({
+      title: `${topCategory.name} pesa fuerte este mes`,
+      message: "Una sola categoría concentra gran parte de los gastos. Revisarla puede liberar margen rápido.",
+      tone: "warning",
+      actionLabel: "Analizar categoría",
+      href: `/transactions?categoryId=${topCategory.id}`,
+    });
+  }
+
+  if (remainingReservedBudget > 0) {
+    insights.push({
+      title: "Reservas todavía activas",
+      message: "Hay presupuesto pendiente de usar; mantenerlo separado ayuda a no confundirlo con dinero libre.",
+      tone: "default",
+      actionLabel: "Ver presupuestos",
+      href: "/budgets",
+    });
+  }
+
+  if (totalOutstandingDebt > 0) {
+    insights.push({
+      title: "Seguimiento de deuda",
+      message: "Revisar pagos mínimos y próximos vencimientos evita que la deuda compita con tus metas.",
+      tone: "warning",
+      actionLabel: "Ver deudas",
+      href: "/debts",
+    });
+  }
+
+  if (insights.length === 0) {
+    insights.push({
+      title: "Mes bajo control",
+      message: "No hay señales urgentes. Seguí registrando movimientos para mantener una lectura clara.",
+      tone: "positive",
+      actionLabel: "Ver transacciones",
+      href: "/transactions",
+    });
+  }
+
+  return insights.slice(0, 3);
 }

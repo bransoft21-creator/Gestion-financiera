@@ -9,12 +9,12 @@ import {
   ArrowRightCircle,
   ArrowUpCircle,
   CreditCard,
+  Lightbulb,
   Loader2,
   Lock,
   Plus,
   ReceiptText,
   Sparkles,
-  Target,
   Wallet,
 } from "lucide-react";
 import {
@@ -80,6 +80,13 @@ type DashboardSummary = {
     category: { name: string } | null;
   }>;
   alerts: string[];
+  insights: Array<{
+    title: string;
+    message: string;
+    tone: "positive" | "warning" | "danger" | "default";
+    actionLabel: string;
+    href: string;
+  }>;
 };
 
 const MONTH_NAMES = [
@@ -210,6 +217,93 @@ function AlertsStrip({ alerts }: { alerts: string[] }) {
   );
 }
 
+/* ── Financial insights ────────────────────────────────────────────────── */
+
+const insightToneConfig = {
+  default: {
+    shell: "border-sky-500/20 bg-sky-500/10",
+    icon: "bg-sky-500/15 text-sky-400",
+    label: "text-sky-400",
+  },
+  positive: {
+    shell: "border-emerald-500/20 bg-emerald-500/10",
+    icon: "bg-emerald-500/15 text-emerald-400",
+    label: "text-emerald-400",
+  },
+  warning: {
+    shell: "border-amber-500/20 bg-amber-500/10",
+    icon: "bg-amber-500/15 text-amber-400",
+    label: "text-amber-400",
+  },
+  danger: {
+    shell: "border-rose-500/20 bg-rose-500/10",
+    icon: "bg-rose-500/15 text-rose-400",
+    label: "text-rose-400",
+  },
+};
+
+function FinancialInsights({ insights }: { insights: DashboardSummary["insights"] }) {
+  if (!insights.length) return null;
+
+  const [primary, ...secondary] = insights;
+  const primaryTone = insightToneConfig[primary.tone];
+
+  return (
+    <section className="mb-6 grid gap-3 lg:grid-cols-[1.15fr_0.85fr]">
+      <Card className={`overflow-hidden ${primaryTone.shell}`}>
+        <CardContent className="p-5">
+          <div className="flex items-start gap-3">
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${primaryTone.icon}`}>
+              <Lightbulb className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className={`text-[11px] font-semibold uppercase tracking-wider ${primaryTone.label}`}>
+                Consejo del momento
+              </p>
+              <h3 className="mt-1 text-lg font-bold tracking-tight">{primary.title}</h3>
+              <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{primary.message}</p>
+              <Button asChild size="sm" variant="secondary" className="mt-4 h-8">
+                <Link href={primary.href}>{primary.actionLabel}</Link>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Más señales</CardTitle>
+          <CardDescription>Lecturas rápidas de tu mes.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {secondary.length > 0 ? secondary.map((insight) => {
+            const tone = insightToneConfig[insight.tone];
+            return (
+              <Link
+                key={`${insight.title}-${insight.href}`}
+                href={insight.href}
+                className="block rounded-lg border border-border p-3 transition hover:border-primary/35 hover:bg-secondary/50"
+              >
+                <div className="flex gap-2.5">
+                  <Sparkles className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${tone.label}`} aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold">{insight.title}</p>
+                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{insight.message}</p>
+                  </div>
+                </div>
+              </Link>
+            );
+          }) : (
+            <p className="rounded-lg border border-border bg-secondary/35 p-3 text-xs leading-5 text-muted-foreground">
+              Registrá algunos movimientos más para sumar recomendaciones personalizadas.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
 /* ── Trend chart ────────────────────────────────────────────────────────── */
 
 type TrendPoint = { label: string; income: number; expenses: number };
@@ -310,7 +404,7 @@ export function DashboardClient() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [selectedExpenseCategoryId, setSelectedExpenseCategoryId] = useState<string | null>(null);
+  const [selectedExpenseCategoryPreference, setSelectedExpenseCategoryPreference] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -334,19 +428,6 @@ export function DashboardClient() {
     }
     void loadSummary();
   }, [year, month]);
-
-  useEffect(() => {
-    if (!summary?.expensesByCategory.length) {
-      setSelectedExpenseCategoryId(null);
-      return;
-    }
-
-    setSelectedExpenseCategoryId((current) => (
-      current && summary.expensesByCategory.some((category) => category.id === current)
-        ? current
-        : summary.expensesByCategory[0].id
-    ));
-  }, [summary]);
 
   function navigatePrev() {
     if (month === 1) { setYear((y) => y - 1); setMonth(12); }
@@ -423,7 +504,11 @@ export function DashboardClient() {
     );
   }
 
-  const { metrics, expensesByCategory, expenseCategoryDetails, latestTransactions, alerts } = summary;
+  const { metrics, expensesByCategory, expenseCategoryDetails, latestTransactions, alerts, insights } = summary;
+  const selectedExpenseCategoryId = selectedExpenseCategoryPreference
+    && expensesByCategory.some((category) => category.id === selectedExpenseCategoryPreference)
+    ? selectedExpenseCategoryPreference
+    : expensesByCategory[0]?.id ?? null;
   const selectedExpenseCategory = expenseCategoryDetails.find((category) => category.id === selectedExpenseCategoryId)
     ?? expenseCategoryDetails[0];
 
@@ -441,6 +526,9 @@ export function DashboardClient() {
 
       {/* Hero card */}
       <HeroCard metrics={metrics} />
+
+      {/* Financial insights */}
+      <FinancialInsights insights={insights} />
 
       {/* Stat cards */}
       <section className="stagger-in mb-6 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
@@ -477,7 +565,7 @@ export function DashboardClient() {
                   <ExpenseCategoryChart
                     data={expensesByCategory}
                     activeCategoryId={selectedExpenseCategoryId ?? undefined}
-                    onSelectCategory={setSelectedExpenseCategoryId}
+                    onSelectCategory={setSelectedExpenseCategoryPreference}
                   />
                   <div className="space-y-2">
                     {expensesByCategory.map((item) => (
@@ -485,7 +573,7 @@ export function DashboardClient() {
                         key={item.id}
                         type="button"
                         className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm transition hover:bg-secondary ${selectedExpenseCategoryId === item.id ? "bg-secondary" : ""}`}
-                        onClick={() => setSelectedExpenseCategoryId(item.id)}
+                        onClick={() => setSelectedExpenseCategoryPreference(item.id)}
                       >
                         <span className="flex min-w-0 items-center gap-2">
                           <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: item.color }} />
