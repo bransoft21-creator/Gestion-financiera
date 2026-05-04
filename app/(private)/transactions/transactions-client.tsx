@@ -9,6 +9,7 @@ import {
   ArrowUpCircle,
   CalendarDays,
   ChevronDown,
+  ChevronRight,
   Download,
   Filter,
   Loader2,
@@ -185,6 +186,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   const [isFiltersOpen, setIsFiltersOpen] = useState(() => (
     Boolean(searchParams.get("type") ?? searchParams.get("categoryId") ?? searchParams.get("from") ?? searchParams.get("to"))
   ));
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
   const [message, setMessage] = useState<string | null>(null);
 
   const filteredCategories = useMemo(() => {
@@ -210,6 +212,14 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
     void loadTransactions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      resetForm();
+      setIsFormOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   async function loadTransactions(nextFilters = filters) {
     setIsLoading(true);
@@ -395,6 +405,26 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       [key]: value,
       ...(key === "type" ? { categoryId: "" } : {}),
     }));
+  }
+
+  function toggleGroup(label: string) {
+    setCollapsedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(label)) {
+        next.delete(label);
+      } else {
+        next.add(label);
+      }
+      return next;
+    });
+  }
+
+  function collapseAllGroups() {
+    setCollapsedGroups(new Set(groupedTransactions.map((group) => group.label)));
+  }
+
+  function expandAllGroups() {
+    setCollapsedGroups(new Set());
   }
 
   function exportCsv() {
@@ -623,13 +653,25 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                 type="button"
                 variant={activeFilterCount > 0 ? "secondary" : "outline"}
                 size="sm"
-                className="h-9 shrink-0 px-2.5 text-xs"
+                className="h-9 shrink-0 px-2 text-xs sm:px-2.5"
                 onClick={() => setIsFiltersOpen((current) => !current)}
                 aria-expanded={isFiltersOpen}
               >
                 <Filter className="h-3.5 w-3.5" aria-hidden="true" />
                 {activeFilterCount > 0 ? activeFilterCount : "Filtros"}
                 <ChevronDown className={`h-3.5 w-3.5 transition ${isFiltersOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="h-9 shrink-0 px-2 text-xs sm:px-2.5"
+                onClick={() => {
+                  resetForm();
+                  setIsFormOpen(true);
+                }}
+              >
+                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                Nueva
               </Button>
             </div>
           </CardHeader>
@@ -729,12 +771,12 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                 disabled={displayedTransactions.length === 0}
               >
                 <Download className="h-4 w-4" aria-hidden="true" />
-                Exportar CSV
+                CSV
               </Button>
               <Button
                 type="button"
                 size="sm"
-                className="hidden xl:inline-flex"
+                className="w-full sm:w-auto"
                 onClick={() => {
                   resetForm();
                   setIsFormOpen(true);
@@ -789,24 +831,36 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               </div>
             ) : (
               <div className="space-y-6">
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs text-muted-foreground"
+                    onClick={collapseAllGroups}
+                  >
+                    Colapsar días
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs text-muted-foreground"
+                    onClick={expandAllGroups}
+                  >
+                    Ver todos
+                  </Button>
+                </div>
                 {groupedTransactions.map((group) => (
-                  <section key={group.label} className="space-y-3">
-                    <div className="sticky top-2 z-10 flex items-center justify-between rounded-full border border-border bg-background/90 px-3 py-2 text-xs font-semibold uppercase tracking-normal text-muted-foreground shadow-sm backdrop-blur">
-                      <span>{group.label}</span>
-                      <span>{group.transactions.length}</span>
-                    </div>
-                    <div className="space-y-1.5">
-                      {group.transactions.map((transaction) => (
-                        <TransactionCard
-                          key={transaction.id}
-                          transaction={transaction}
-                          isDeleting={deletingTransactionId === transaction.id}
-                          onEdit={startEditing}
-                          onDelete={handleDelete}
-                        />
-                      ))}
-                    </div>
-                  </section>
+                  <TransactionGroup
+                    key={group.label}
+                    group={group}
+                    isCollapsed={collapsedGroups.has(group.label)}
+                    deletingTransactionId={deletingTransactionId}
+                    onToggle={() => toggleGroup(group.label)}
+                    onEdit={startEditing}
+                    onDelete={handleDelete}
+                  />
                 ))}
               </div>
             )}
@@ -839,6 +893,52 @@ function Field({
       {children}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
+  );
+}
+
+function TransactionGroup({
+  group,
+  isCollapsed,
+  deletingTransactionId,
+  onToggle,
+  onEdit,
+  onDelete,
+}: {
+  group: ReturnType<typeof groupTransactionsByDate>[number];
+  isCollapsed: boolean;
+  deletingTransactionId: string | null;
+  onToggle: () => void;
+  onEdit: (transaction: TransactionItem) => void;
+  onDelete: (transactionId: string) => void;
+}) {
+  return (
+    <section className="space-y-1.5">
+      <button
+        type="button"
+        className="sticky top-2 z-10 flex w-full items-center justify-between rounded-full border border-border bg-background/90 px-3 py-2 text-xs font-semibold uppercase tracking-normal text-muted-foreground shadow-sm backdrop-blur transition hover:bg-secondary"
+        onClick={onToggle}
+        aria-expanded={!isCollapsed}
+      >
+        <span className="flex items-center gap-2">
+          <ChevronRight className={`h-3.5 w-3.5 transition ${isCollapsed ? "" : "rotate-90"}`} aria-hidden="true" />
+          {group.label}
+        </span>
+        <span>{group.transactions.length}</span>
+      </button>
+      {!isCollapsed ? (
+        <div className="space-y-1.5">
+          {group.transactions.map((transaction) => (
+            <TransactionCard
+              key={transaction.id}
+              transaction={transaction}
+              isDeleting={deletingTransactionId === transaction.id}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      ) : null}
+    </section>
   );
 }
 

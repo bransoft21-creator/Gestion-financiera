@@ -11,6 +11,7 @@ import {
   CreditCard,
   Loader2,
   Lock,
+  Plus,
   ReceiptText,
   Sparkles,
   Target,
@@ -31,6 +32,7 @@ import {
 import { EmptyState } from "@/components/app/empty-state";
 import { StatCard } from "@/components/app/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   ExpenseCategoryChart,
   type ExpenseCategoryChartItem,
@@ -221,7 +223,7 @@ function TrendChart({ data }: { data: TrendPoint[] }) {
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+          <AreaChart data={data} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
             <defs>
               <linearGradient id="gIncome" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%"  stopColor="#34d399" stopOpacity={0.25} />
@@ -234,7 +236,7 @@ function TrendChart({ data }: { data: TrendPoint[] }) {
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.05)" vertical={false} />
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}
+            <YAxis width={56} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false}
               tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
             <Tooltip
               contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "10px", fontSize: 12 }}
@@ -358,20 +360,28 @@ export function DashboardClient() {
   }
 
   const monthNav = (
-    <div className="mb-6 flex items-center gap-3">
-      <button type="button" onClick={navigatePrev}
-        className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-border bg-secondary text-muted-foreground transition-colors hover:bg-border hover:text-foreground"
-        aria-label="Mes anterior">
-        <ArrowLeftCircle className="h-4 w-4" aria-hidden="true" />
-      </button>
-      <h2 className="flex-1 text-center text-[17px] font-bold text-foreground">
-        {MONTH_NAMES[month - 1]} {year}
-      </h2>
-      <button type="button" onClick={navigateNext} disabled={isCurrentMonth}
-        className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-border bg-secondary text-muted-foreground transition-colors hover:bg-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
-        aria-label="Mes siguiente">
-        <ArrowRightCircle className="h-4 w-4" aria-hidden="true" />
-      </button>
+    <div className="mb-6 grid gap-3 sm:flex sm:items-center">
+      <div className="flex items-center gap-3 sm:flex-1">
+        <button type="button" onClick={navigatePrev}
+          className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-border bg-secondary text-muted-foreground transition-colors hover:bg-border hover:text-foreground"
+          aria-label="Mes anterior">
+          <ArrowLeftCircle className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <h2 className="flex-1 text-center text-[17px] font-bold text-foreground">
+          {MONTH_NAMES[month - 1]} {year}
+        </h2>
+        <button type="button" onClick={navigateNext} disabled={isCurrentMonth}
+          className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-border bg-secondary text-muted-foreground transition-colors hover:bg-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
+          aria-label="Mes siguiente">
+          <ArrowRightCircle className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+      <Button asChild size="sm" className="h-9 w-full sm:w-auto">
+        <Link href="/transactions?new=1">
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          Nueva transacción
+        </Link>
+      </Button>
     </div>
   );
 
