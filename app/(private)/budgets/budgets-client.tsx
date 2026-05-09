@@ -2,15 +2,34 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, BarChart3, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  BarChart3,
+  CalendarDays,
+  CheckCircle2,
+  Loader2,
+  Pencil,
+  Plus,
+  ShieldAlert,
+  Sparkles,
+  Target,
+  Trash2,
+  WalletCards,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { EmptyState } from "@/components/app/empty-state";
+import { ActionButton } from "@/components/ui-v2/action-button";
+import {
+  PremiumCard,
+  PremiumCardContent,
+  PremiumCardDescription,
+  PremiumCardHeader,
+  PremiumCardTitle,
+} from "@/components/ui-v2/premium-card";
 import { moneySchema } from "@/lib/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -47,11 +66,27 @@ type FormState = {
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
+type PlanSummary = {
+  totalPlanned: number;
+  totalSpent: number;
+  totalReserved: number;
+  globalPct: number;
+  overLimitCount: number;
+  watchCount: number;
+};
+
 const budgetSchema = z.object({
   categoryId: z.string().min(1, "Seleccioná una categoría."),
   plannedAmount: moneySchema(),
   currency: z.enum(["ARS", "USD"]),
 });
+
+const cardMotion = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: 12 },
+  transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
+} as const;
 
 export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
   const now = new Date();
@@ -67,6 +102,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
   const [errors, setErrors] = useState<FormErrors>({});
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
   const [deletingBudgetId, setDeletingBudgetId] = useState<string | null>(null);
+  const [pendingDeleteBudget, setPendingDeleteBudget] = useState<BudgetItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -81,6 +117,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
     return categories.filter((category) => !usedCategoryIds.has(category.id));
   }, [budgets, categories, editingBudgetId]);
   const canCreateBudget = editingBudgetId !== null || availableCategories.length > 0;
+  const planSummary = useMemo(() => buildPlanSummary(budgets), [budgets]);
 
   const loadBudgets = useCallback(async () => {
     setIsLoading(true);
@@ -176,13 +213,14 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
     }
   }
 
-  async function handleDelete(budgetId: string) {
-    const shouldDelete = window.confirm("¿Eliminar este presupuesto mensual? Se aplicará soft delete.");
+  function requestDelete(budget: BudgetItem) {
+    setPendingDeleteBudget(budget);
+  }
 
-    if (!shouldDelete) {
-      return;
-    }
+  async function confirmDelete() {
+    if (!pendingDeleteBudget) return;
 
+    const budgetId = pendingDeleteBudget.id;
     setDeletingBudgetId(budgetId);
     setMessage(null);
 
@@ -199,6 +237,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
       }
 
       toast.success("Presupuesto eliminado.");
+      setPendingDeleteBudget(null);
       if (editingBudgetId === budgetId) {
         resetForm();
       }
@@ -248,195 +287,249 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
       : availableCategories[0]?.id ?? "";
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Plus className="h-5 w-5" aria-hidden="true" />
-            </div>
-            <div>
-              <CardTitle>{editingBudgetId ? "Editar presupuesto" : "Nuevo presupuesto"}</CardTitle>
-              <CardDescription>{formatMonth(currentYear, currentMonth)}</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {categories.length === 0 ? (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4">
-                <p className="text-sm font-semibold text-foreground">Necesitás categorías de gasto</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Creá al menos una categoría de tipo <strong>Gasto</strong> para poder asignarle un presupuesto mensual.
-                </p>
-              </div>
-              <Button asChild className="h-11 w-full">
-                <Link href="/categories">
-                  <Plus className="h-4 w-4" aria-hidden="true" />
-                  Crear categoría de gasto
-                </Link>
-              </Button>
-            </div>
-          ) : (
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            {!editingBudgetId && availableCategories.length === 0 ? (
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-                <p className="text-sm font-semibold text-foreground">Todas las categorías ya tienen presupuesto</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Editá uno existente o eliminalo para crear uno nuevo en esa categoría.
-                </p>
-              </div>
-            ) : null}
-
-            <Field label="Categoría" error={errors.categoryId}>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={selectedCategoryId}
-                onChange={(event) => updateForm("categoryId", event.target.value)}
-                disabled={!canCreateBudget}
-              >
-                {availableCategories.length === 0 ? (
-                  <option value="">Sin categorías disponibles</option>
-                ) : null}
-                {availableCategories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <div className="grid gap-3 sm:grid-cols-[96px_1fr]">
-              <Field label="Moneda" error={errors.currency}>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={form.currency}
-                  onChange={(event) => updateForm("currency", event.target.value as "ARS" | "USD")}
-                >
-                  <option value="ARS">ARS</option>
-                  <option value="USD">USD</option>
-                </select>
-              </Field>
-              <Field label="Monto" error={errors.plannedAmount}>
-                <Input
-                  inputMode="decimal"
-                  value={form.plannedAmount}
-                  onChange={(event) => updateForm("plannedAmount", event.target.value)}
-                  placeholder="0"
-                />
-              </Field>
-            </div>
-
-            {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
-
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-              <Button className="h-11 w-full" disabled={isSaving || (!editingBudgetId && availableCategories.length === 0)}>
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-                {editingBudgetId ? "Guardar cambios" : "Crear presupuesto"}
-              </Button>
-              {editingBudgetId ? (
-                <Button type="button" variant="outline" className="h-11 w-full" onClick={resetForm}>
-                  <X className="h-4 w-4" aria-hidden="true" />
-                  Cancelar
-                </Button>
-              ) : null}
-            </div>
-          </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="space-y-6">
-        {/* Global summary card */}
-        {!isLoading && budgets.length > 0 && (() => {
-          const totalPlanned = budgets.reduce((s, b) => s + b.plannedAmount, 0);
-          const totalSpent = budgets.reduce((s, b) => s + b.spentAmount, 0);
-          const totalReserved = budgets.reduce((s, b) => s + b.remainingReserved, 0);
-          const globalPct = totalPlanned > 0 ? Math.round((totalSpent / totalPlanned) * 100) : 0;
-          const barColor = globalPct >= 100 ? "#f87171" : globalPct >= 80 ? "#fbbf24" : "#34d399";
-          return (
-            <div className="rounded-2xl border border-border bg-card p-5">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+    <>
+      <div className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
+        <motion.div {...cardMotion}>
+          <PremiumCard variant="raised" className="overflow-hidden">
+            <PremiumCardHeader>
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Progreso global del mes</p>
-                  <p className="mt-1 text-2xl font-extrabold tabular-nums text-foreground">
-                    {globalPct}%{" "}
-                    <span className="text-sm font-normal text-muted-foreground">usado</span>
-                  </p>
+                  <PremiumCardTitle>{editingBudgetId ? "Ajustar intención" : "Nueva intención"}</PremiumCardTitle>
+                  <PremiumCardDescription>{formatMonth(currentYear, currentMonth)}</PremiumCardDescription>
                 </div>
-                <div className="flex flex-wrap gap-4">
-                  {[
-                    { label: "Presupuestado", val: totalPlanned, color: "text-foreground" },
-                    { label: "Gastado", val: totalSpent, color: globalPct > 80 ? "text-amber-400" : "text-emerald-400" },
-                    { label: "Reservado", val: totalReserved, color: "text-foreground" },
-                  ].map(({ label, val, color }) => (
-                    <div key={label} className="text-right">
-                      <p className="text-[11px] text-muted-foreground">{label}</p>
-                      <p className={`text-[15px] font-bold tabular-nums ${color}`}>{formatMoney(val, "ARS")}</p>
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white shadow-[0_18px_45px_rgba(0,0,0,0.22)]">
+                  <Plus className="h-5 w-5" aria-hidden="true" />
+                </div>
+              </div>
+            </PremiumCardHeader>
+            <PremiumCardContent>
+              {categories.length === 0 ? (
+                <div className="space-y-4">
+                  <div className="rounded-3xl border border-amber-300/20 bg-amber-300/10 p-4">
+                    <p className="text-sm font-semibold text-white">Primero necesitás categorías de gasto</p>
+                    <p className="mt-1 text-xs leading-5 text-zinc-400">
+                      Creá una categoría de gasto para asignarle intención mensual.
+                    </p>
+                  </div>
+                  <ActionButton asChild className="w-full">
+                    <Link href="/categories">
+                      <Plus className="h-4 w-4" aria-hidden="true" />
+                      Crear categoría
+                    </Link>
+                  </ActionButton>
+                </div>
+              ) : (
+                <form className="space-y-4" onSubmit={handleSubmit}>
+                  {!editingBudgetId && availableCategories.length === 0 ? (
+                    <div className="rounded-3xl border border-emerald-300/20 bg-emerald-300/10 p-4">
+                      <p className="text-sm font-semibold text-white">Todas las categorías ya tienen plan</p>
+                      <p className="mt-1 text-xs leading-5 text-zinc-400">
+                        Editá una intención existente o liberá una categoría.
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-secondary">
-                <div className="h-full rounded-full transition-[width] duration-700 ease-out"
-                  style={{ width: `${Math.min(globalPct, 100)}%`, background: `linear-gradient(90deg,${barColor}99,${barColor})` }} />
-              </div>
-            </div>
-          );
-        })()}
+                  ) : null}
 
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle>Presupuestos del mes</CardTitle>
-                <CardDescription>{formatMonth(currentYear, currentMonth)}</CardDescription>
-              </div>
-              <Badge>{budgets.length} activos</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-          {isLoading ? (
-            <div className="grid gap-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="rounded-xl border border-border p-4 space-y-3">
-                  <div className="flex gap-3">
-                    <Skeleton className="h-4 w-4 rounded-sm mt-1 shrink-0" />
-                    <div className="space-y-1.5 flex-1">
-                      <Skeleton className="h-4 w-28" />
-                      <Skeleton className="h-3 w-40" />
-                    </div>
-                    <Skeleton className="h-5 w-16 rounded-full" />
+                  <Field label="Categoría" error={errors.categoryId}>
+                    <select
+                      className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                      value={selectedCategoryId}
+                      onChange={(event) => updateForm("categoryId", event.target.value)}
+                      disabled={!canCreateBudget}
+                    >
+                      {availableCategories.length === 0 ? <option value="">Sin categorías disponibles</option> : null}
+                      {availableCategories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+
+                  <div className="grid gap-3 sm:grid-cols-[104px_1fr]">
+                    <Field label="Moneda" error={errors.currency}>
+                      <select
+                        className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                        value={form.currency}
+                        onChange={(event) => updateForm("currency", event.target.value as "ARS" | "USD")}
+                      >
+                        <option value="ARS">ARS</option>
+                        <option value="USD">USD</option>
+                      </select>
+                    </Field>
+                    <Field label="Monto" error={errors.plannedAmount}>
+                      <Input
+                        inputMode="decimal"
+                        value={form.plannedAmount}
+                        onChange={(event) => updateForm("plannedAmount", event.target.value)}
+                        placeholder="0"
+                        className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-zinc-600"
+                      />
+                    </Field>
                   </div>
-                  <Skeleton className="h-1.5 w-full rounded-full" />
-                  <div className="grid grid-cols-4 gap-2">
-                    {[1,2,3,4].map((j) => <Skeleton key={j} className="h-14 rounded-xl" />)}
+
+                  {message ? (
+                    <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">
+                      {message}
+                    </p>
+                  ) : null}
+
+                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+                    <ActionButton
+                      className="w-full"
+                      disabled={isSaving || (!editingBudgetId && availableCategories.length === 0)}
+                    >
+                      {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+                      {editingBudgetId ? "Guardar cambios" : "Crear plan"}
+                    </ActionButton>
+                    {editingBudgetId ? (
+                      <ActionButton type="button" variant="glass" className="w-full" onClick={resetForm}>
+                        <X className="h-4 w-4" aria-hidden="true" />
+                        Cancelar
+                      </ActionButton>
+                    ) : null}
+                  </div>
+                </form>
+              )}
+            </PremiumCardContent>
+          </PremiumCard>
+        </motion.div>
+
+        <div className="space-y-5">
+          <PlanBriefing summary={planSummary} budgetCount={budgets.length} isLoading={isLoading} />
+
+          <PremiumCard variant="default" className="overflow-hidden">
+            <PremiumCardHeader className="pb-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <PremiumCardTitle>Intenciones activas</PremiumCardTitle>
+                  <PremiumCardDescription>{formatMonth(currentYear, currentMonth)}</PremiumCardDescription>
+                </div>
+                <Badge className="w-fit border-white/10 bg-white/[0.06] text-zinc-200">
+                  {budgets.length} activas
+                </Badge>
+              </div>
+            </PremiumCardHeader>
+            <PremiumCardContent>
+              {isLoading ? (
+                <BudgetSkeletonList />
+              ) : budgets.length === 0 ? (
+                <PlanEmptyState />
+              ) : (
+                <div className="grid gap-3">
+                  <AnimatePresence initial={false}>
+                    {budgets.map((budget) => (
+                      <BudgetCard
+                        key={budget.id}
+                        budget={budget}
+                        isDeleting={deletingBudgetId === budget.id}
+                        onEdit={startEditing}
+                        onDelete={requestDelete}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+            </PremiumCardContent>
+          </PremiumCard>
+        </div>
+      </div>
+
+      <DeleteBudgetDialog
+        budget={pendingDeleteBudget}
+        isDeleting={deletingBudgetId === pendingDeleteBudget?.id}
+        onCancel={() => setPendingDeleteBudget(null)}
+        onConfirm={confirmDelete}
+      />
+    </>
+  );
+}
+
+function PlanBriefing({
+  summary,
+  budgetCount,
+  isLoading,
+}: {
+  summary: PlanSummary;
+  budgetCount: number;
+  isLoading: boolean;
+}) {
+  const state = getPlanState(summary, budgetCount);
+  const progressWidth = Math.min(summary.globalPct, 100);
+
+  return (
+    <motion.div {...cardMotion} transition={{ ...cardMotion.transition, delay: 0.05 }}>
+      <PremiumCard variant="raised" className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_22%_0%,rgba(45,212,191,0.18),transparent_38%),radial-gradient(circle_at_78%_0%,rgba(244,114,182,0.13),transparent_34%)]" />
+        <PremiumCardContent className="relative p-5 sm:p-6">
+          {isLoading ? (
+            <div className="space-y-5">
+              <Skeleton className="h-5 w-36 rounded-full bg-white/10" />
+              <Skeleton className="h-8 w-72 max-w-full rounded-full bg-white/10" />
+              <Skeleton className="h-3 w-full rounded-full bg-white/10" />
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[1, 2, 3].map((item) => (
+                  <Skeleton key={item} className="h-20 rounded-3xl bg-white/10" />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-2xl">
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-zinc-300">
+                    <Sparkles className="h-3.5 w-3.5 text-teal-200" aria-hidden="true" />
+                    Plan inteligente
+                  </div>
+                  <h2 className="text-balance text-2xl font-semibold leading-tight text-white sm:text-3xl">
+                    {state.title}
+                  </h2>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">{state.description}</p>
+                </div>
+
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[2rem] border border-white/10 bg-white/[0.055] shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+                  <div className="text-center">
+                    <p className="text-3xl font-semibold tabular-nums text-white">{summary.globalPct}%</p>
+                    <p className="text-[10px] font-semibold uppercase text-zinc-500">usado</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : budgets.length === 0 ? (
-            <EmptyState
-              icon={BarChart3}
-              title="Sin presupuestos este mes"
-              description="Creá un presupuesto por categoría para comparar el gasto real contra lo planificado."
-            />
-          ) : (
-            <div className="grid gap-3">
-              {budgets.map((budget) => (
-                <BudgetCard
-                  key={budget.id}
-                  budget={budget}
-                  isDeleting={deletingBudgetId === budget.id}
-                  onEdit={startEditing}
-                  onDelete={handleDelete}
+              </div>
+
+              <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/[0.08]">
+                <motion.div
+                  className={`h-full rounded-full ${state.progressClass}`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressWidth}%` }}
+                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
                 />
-              ))}
-            </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <PlanMetric icon={Target} label="Planificado" value={formatMoney(summary.totalPlanned, "ARS")} />
+                <PlanMetric icon={WalletCards} label="Gastado" value={formatMoney(summary.totalSpent, "ARS")} />
+                <PlanMetric icon={CheckCircle2} label="A salvo" value={formatMoney(summary.totalReserved, "ARS")} />
+              </div>
+            </>
           )}
-        </CardContent>
-      </Card>
-      </div>
+        </PremiumCardContent>
+      </PremiumCard>
+    </motion.div>
+  );
+}
+
+function PlanMetric({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
+      <Icon className="h-4 w-4 text-zinc-400" aria-hidden />
+      <p className="mt-3 text-[11px] font-medium uppercase text-zinc-500">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-white">{value}</p>
     </div>
   );
 }
@@ -452,9 +545,9 @@ function Field({
 }) {
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label className="text-xs font-semibold uppercase text-zinc-500">{label}</Label>
       {children}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="text-xs text-rose-300">{error}</p> : null}
     </div>
   );
 }
@@ -468,7 +561,7 @@ function BudgetCard({
   budget: BudgetItem;
   isDeleting: boolean;
   onEdit: (budget: BudgetItem) => void;
-  onDelete: (budgetId: string) => void;
+  onDelete: (budget: BudgetItem) => void;
 }) {
   const usage = Math.min(budget.usagePercent, 999);
   const alert = getBudgetAlert(budget.usagePercent);
@@ -485,22 +578,26 @@ function BudgetCard({
   }, [budget.usagePercent]);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:border-border/80 animate-fade-up">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <motion.article
+      layout
+      {...cardMotion}
+      className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.035] p-4 transition duration-200 hover:border-white/[0.16] hover:bg-white/[0.055] sm:p-5"
+    >
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex items-start gap-3">
             <span
-              className="mt-1 h-4 w-4 shrink-0 rounded-sm"
-              style={{ backgroundColor: budget.category.color ?? "#64748b" }}
+              className="mt-1 h-4 w-4 shrink-0 rounded-full shadow-[0_0_18px_rgba(255,255,255,0.16)]"
+              style={{ backgroundColor: budget.category.color ?? "#14b8a6" }}
             />
-            <div>
-              <p className="text-sm font-semibold">{budget.category.name}</p>
-              <p className="text-xs text-muted-foreground">
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold text-white">{budget.category.name}</p>
+              <p className="mt-1 text-sm leading-5 text-zinc-400">
                 {formatMoney(budget.spentAmount, budget.currency)} gastado de{" "}
                 {formatMoney(budget.plannedAmount, budget.currency)}
               </p>
               {exceededAmount > 0 ? (
-                <p className="mt-1 text-xs font-medium text-destructive">
+                <p className="mt-2 inline-flex rounded-full border border-rose-300/20 bg-rose-400/10 px-2.5 py-1 text-xs font-semibold text-rose-100">
                   Excedido por {formatMoney(exceededAmount, budget.currency)}
                 </p>
               ) : null}
@@ -509,12 +606,12 @@ function BudgetCard({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Badge>{usage.toFixed(0)}% usado</Badge>
-          {alert ? <Badge className={alert.className}>{alert.label}</Badge> : null}
+          <Badge className="border-white/10 bg-white/[0.06] text-zinc-200">{usage.toFixed(0)}% usado</Badge>
+          <Badge className={alert.className}>{alert.label}</Badge>
         </div>
       </div>
 
-      <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-secondary">
+      <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.08]">
         <div
           className={`h-full rounded-full transition-[width] duration-700 ease-out ${getProgressClass(budget.usagePercent)}`}
           style={{ width: `${displayWidth}%` }}
@@ -522,7 +619,7 @@ function BudgetCard({
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <BudgetMetric label="Presupuestado" value={formatMoney(budget.plannedAmount, budget.currency)} />
+        <BudgetMetric label="Plan" value={formatMoney(budget.plannedAmount, budget.currency)} />
         <BudgetMetric label="Gastado" value={formatMoney(budget.spentAmount, budget.currency)} />
         <BudgetMetric
           label={exceededAmount > 0 ? "Excedido" : "Reservado"}
@@ -532,17 +629,16 @@ function BudgetCard({
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:flex">
-        <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => onEdit(budget)}>
+        <ActionButton type="button" variant="glass" size="sm" onClick={() => onEdit(budget)}>
           <Pencil className="h-4 w-4" aria-hidden="true" />
           Editar
-        </Button>
-        <Button
+        </ActionButton>
+        <ActionButton
           type="button"
-          variant="destructive"
+          variant="danger"
           size="sm"
-          className="h-10"
           disabled={isDeleting}
-          onClick={() => onDelete(budget.id)}
+          onClick={() => onDelete(budget)}
         >
           {isDeleting ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -550,49 +646,209 @@ function BudgetCard({
             <Trash2 className="h-4 w-4" aria-hidden="true" />
           )}
           Eliminar
-        </Button>
+        </ActionButton>
       </div>
-    </div>
+    </motion.article>
   );
 }
 
 function BudgetMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-border bg-secondary/50 p-3">
-      <p className="text-[11px] text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-semibold">{value}</p>
+    <div className="min-w-0 rounded-2xl border border-white/[0.08] bg-black/15 p-3">
+      <p className="text-[10px] font-medium uppercase text-zinc-500">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-white">{value}</p>
     </div>
   );
+}
+
+function BudgetSkeletonList() {
+  return (
+    <div className="grid gap-3">
+      {[1, 2, 3].map((item) => (
+        <div key={item} className="space-y-4 rounded-[1.75rem] border border-white/[0.08] bg-white/[0.035] p-4">
+          <div className="flex gap-3">
+            <Skeleton className="mt-1 h-4 w-4 shrink-0 rounded-full bg-white/10" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-32 bg-white/10" />
+              <Skeleton className="h-3 w-48 max-w-full bg-white/10" />
+            </div>
+            <Skeleton className="h-6 w-20 rounded-full bg-white/10" />
+          </div>
+          <Skeleton className="h-2 w-full rounded-full bg-white/10" />
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[1, 2, 3, 4].map((metric) => (
+              <Skeleton key={metric} className="h-16 rounded-2xl bg-white/10" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PlanEmptyState() {
+  return (
+    <div className="rounded-[1.75rem] border border-dashed border-white/10 bg-white/[0.025] p-6 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-zinc-300">
+        <BarChart3 className="h-5 w-5" aria-hidden="true" />
+      </div>
+      <h3 className="mt-4 text-base font-semibold text-white">Todavía no hay plan para este mes</h3>
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-zinc-400">
+        Empezá por una categoría importante. La app va a comparar tu intención contra el ritmo real.
+      </p>
+    </div>
+  );
+}
+
+function DeleteBudgetDialog({
+  budget,
+  isDeleting,
+  onCancel,
+  onConfirm,
+}: {
+  budget: BudgetItem | null;
+  isDeleting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {budget ? (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-xl sm:items-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <motion.div
+            className="w-full max-w-md"
+            initial={{ opacity: 0, y: 24, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <PremiumCard variant="raised">
+              <PremiumCardHeader>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-rose-300/20 bg-rose-400/10 text-rose-100">
+                    <ShieldAlert className="h-5 w-5" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <PremiumCardTitle>Eliminar plan de {budget.category.name}</PremiumCardTitle>
+                    <PremiumCardDescription>
+                      Se va a quitar esta intención mensual. El historial de gastos no se modifica.
+                    </PremiumCardDescription>
+                  </div>
+                </div>
+              </PremiumCardHeader>
+              <PremiumCardContent>
+                <div className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
+                  <div className="flex items-center gap-2 text-sm text-zinc-300">
+                    <CalendarDays className="h-4 w-4 text-zinc-500" aria-hidden="true" />
+                    Plan actual
+                  </div>
+                  <p className="mt-2 text-xl font-semibold tabular-nums text-white">
+                    {formatMoney(budget.plannedAmount, budget.currency)}
+                  </p>
+                </div>
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                  <ActionButton type="button" variant="glass" onClick={onCancel} disabled={isDeleting}>
+                    Cancelar
+                  </ActionButton>
+                  <ActionButton type="button" variant="danger" onClick={onConfirm} disabled={isDeleting}>
+                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+                    Eliminar
+                  </ActionButton>
+                </div>
+              </PremiumCardContent>
+            </PremiumCard>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
+function buildPlanSummary(budgets: BudgetItem[]): PlanSummary {
+  const totalPlanned = budgets.reduce((sum, budget) => sum + budget.plannedAmount, 0);
+  const totalSpent = budgets.reduce((sum, budget) => sum + budget.spentAmount, 0);
+  const totalReserved = budgets.reduce((sum, budget) => sum + budget.remainingReserved, 0);
+
+  return {
+    totalPlanned,
+    totalSpent,
+    totalReserved,
+    globalPct: totalPlanned > 0 ? Math.round((totalSpent / totalPlanned) * 100) : 0,
+    overLimitCount: budgets.filter((budget) => budget.usagePercent >= 100).length,
+    watchCount: budgets.filter((budget) => budget.usagePercent >= 80 && budget.usagePercent < 100).length,
+  };
+}
+
+function getPlanState(summary: PlanSummary, budgetCount: number) {
+  if (budgetCount === 0) {
+    return {
+      title: "Tu mes todavía no tiene intención.",
+      description: "Creá el primer plan y convertí tus categorías en decisiones visibles antes de que el gasto ocurra.",
+      progressClass: "bg-gradient-to-r from-zinc-500 to-zinc-300",
+    };
+  }
+
+  if (summary.overLimitCount > 0 || summary.globalPct >= 100) {
+    return {
+      title: "Hay categorías que ya pidieron atención.",
+      description: `${summary.overLimitCount} ${
+        summary.overLimitCount === 1 ? "categoría está" : "categorías están"
+      } por encima del plan. Conviene ajustar intención o ritmo hoy.`,
+      progressClass: "bg-gradient-to-r from-rose-400 via-orange-300 to-rose-300",
+    };
+  }
+
+  if (summary.watchCount > 0 || summary.globalPct >= 80) {
+    return {
+      title: "Tu plan sigue vivo, pero está cerca del borde.",
+      description: "Algunas categorías avanzan más rápido que el mes. Un ajuste chico ahora evita una corrección grande después.",
+      progressClass: "bg-gradient-to-r from-amber-300 via-orange-300 to-rose-300",
+    };
+  }
+
+  return {
+    title: "Tu plan viene en buen ritmo.",
+    description: "El gasto todavía respeta la intención del mes. Lo importante está reservado y el margen sigue claro.",
+    progressClass: "bg-gradient-to-r from-teal-300 via-emerald-300 to-lime-200",
+  };
 }
 
 function getBudgetAlert(usagePercent: number) {
   if (usagePercent >= 100) {
     return {
-      label: "Superado",
-      className: "border-destructive/30 bg-destructive/10 text-destructive",
+      label: "Excedido",
+      className: "border-rose-300/20 bg-rose-400/10 text-rose-100",
     };
   }
 
   if (usagePercent >= 80) {
     return {
-      label: "Atención",
-      className: "border-amber-300 bg-amber-50 text-amber-700",
+      label: "Cerca del límite",
+      className: "border-amber-300/20 bg-amber-300/10 text-amber-100",
     };
   }
 
-  return null;
+  return {
+    label: "En ritmo",
+    className: "border-emerald-300/20 bg-emerald-300/10 text-emerald-100",
+  };
 }
 
 function getProgressClass(usagePercent: number) {
   if (usagePercent >= 100) {
-    return "bg-gradient-to-r from-rose-600 to-rose-500";
+    return "bg-gradient-to-r from-rose-500 via-orange-400 to-rose-300";
   }
 
   if (usagePercent >= 80) {
-    return "bg-gradient-to-r from-amber-600 to-amber-400";
+    return "bg-gradient-to-r from-amber-400 via-orange-300 to-rose-300";
   }
 
-  return "bg-gradient-to-r from-violet-600 to-indigo-500";
+  return "bg-gradient-to-r from-teal-300 via-emerald-300 to-lime-200";
 }
 
 function formatMoney(value: number, currency: "ARS" | "USD") {
