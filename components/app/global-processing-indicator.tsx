@@ -7,24 +7,6 @@ import { Loader2 } from "lucide-react";
 export function GlobalProcessingIndicator() {
   const pathname = usePathname();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [fetchCount, setFetchCount] = useState(0);
-
-  useEffect(() => {
-    const originalFetch = window.fetch;
-
-    window.fetch = async (...args) => {
-      setFetchCount((count) => count + 1);
-      try {
-        return await originalFetch(...args);
-      } finally {
-        setFetchCount((count) => Math.max(0, count - 1));
-      }
-    };
-
-    return () => {
-      window.fetch = originalFetch;
-    };
-  }, []);
 
   useEffect(() => {
     function handleDocumentClick(event: MouseEvent) {
@@ -49,7 +31,14 @@ export function GlobalProcessingIndicator() {
     return () => window.clearTimeout(timeoutId);
   }, [pathname]);
 
-  const visible = isProcessing || fetchCount > 0;
+  useEffect(() => {
+    if (!isProcessing) return;
+
+    const timeoutId = window.setTimeout(() => setIsProcessing(false), 8000);
+    return () => window.clearTimeout(timeoutId);
+  }, [isProcessing]);
+
+  const visible = isProcessing;
 
   return (
     <div

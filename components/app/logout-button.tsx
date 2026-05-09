@@ -15,6 +15,12 @@ export function LogoutButton({ compact = false, className }: LogoutButtonProps) 
   const router = useRouter();
 
   async function handleLogout() {
+    const shouldLogout = window.confirm("¿Estás seguro de que querés cerrar sesión?");
+
+    if (!shouldLogout) {
+      return;
+    }
+
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
     router.replace("/login");

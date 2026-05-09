@@ -6,10 +6,15 @@ import {
   BadgeCheck,
   Brain,
   CheckCircle2,
+  Car,
+  ChevronDown,
+  CreditCard,
   Loader2,
+  Repeat,
   ShieldAlert,
   Sparkles,
   Target,
+  TrendingUp,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,9 +29,42 @@ type AiFinancialAnalysis = {
   riskPoints: Array<{ title: string; message: string }>;
 };
 
+type AiFinancialAnalysisMetrics = {
+  savingsRate: number;
+  fixedExpenseRate: number;
+  dailyAverageExpense: number;
+  projectedMonthEndExpense: number;
+  categoryExpensePercentages: Array<{
+    name: string;
+    total: number;
+    percentage: number;
+  }>;
+  mobilityTotal: number;
+  mobilityRate: number;
+  highImpactTransactions: Array<{
+    date: string;
+    amount: number;
+    currency: string;
+    incomePercentage: number;
+    category: string;
+    account: string;
+    description: string;
+  }>;
+  repeatedSmallExpenses: Array<{
+    description: string;
+    normalizedDescription: string;
+    count: number;
+    total: number;
+    averageAmount: number;
+    categories: string[];
+  }>;
+  creditCardExpenseRate: number;
+};
+
 type ApiResponse = {
   data?: {
     analysis: AiFinancialAnalysis;
+    metrics: AiFinancialAnalysisMetrics;
     cached: boolean;
     month: string;
     generatedAt: string;
@@ -48,7 +86,9 @@ const severityLabels = {
 
 export function FinancialAiAnalysisCard({ month }: { month: string }) {
   const [analysis, setAnalysis] = useState<AiFinancialAnalysis | null>(null);
+  const [metrics, setMetrics] = useState<AiFinancialAnalysisMetrics | null>(null);
   const [isCached, setIsCached] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,7 +110,9 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
       }
 
       setAnalysis(payload.data.analysis);
+      setMetrics(payload.data.metrics);
       setIsCached(payload.data.cached);
+      setIsExpanded(false);
     } catch {
       setError("Error de red. Intentá nuevamente en unos segundos.");
     } finally {
@@ -133,6 +175,54 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
               </div>
             </div>
 
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="w-full justify-between"
+              onClick={() => setIsExpanded((current) => !current)}
+              aria-expanded={isExpanded}
+            >
+              {isExpanded ? "Ocultar detalle" : "Ver detalle del análisis"}
+              <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} aria-hidden="true" />
+            </Button>
+
+            {isExpanded && metrics && (
+              <>
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                  <MetricPill label="Ahorro" value={`${formatPercent(metrics.savingsRate)}`} icon={TrendingUp} />
+                  <MetricPill label="Fijos / ingresos" value={`${formatPercent(metrics.fixedExpenseRate)}`} icon={ShieldAlert} />
+                  <MetricPill label="Proyección cierre" value={formatMoney(metrics.projectedMonthEndExpense)} icon={Target} />
+                  <MetricPill label="Movilidad" value={formatMoney(metrics.mobilityTotal)} detail={`${formatPercent(metrics.mobilityRate)} de ingresos`} icon={Car} />
+                  <MetricPill label="Tarjeta crédito" value={`${formatPercent(metrics.creditCardExpenseRate)}`} icon={CreditCard} />
+                </div>
+
+                <div className="rounded-lg border border-border bg-background/35 p-3">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Repeat className="h-4 w-4 text-violet-300" aria-hidden="true" />
+                    <h3 className="text-sm font-semibold">Gastos repetidos detectados</h3>
+                  </div>
+                  {metrics.repeatedSmallExpenses.length > 0 ? (
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {metrics.repeatedSmallExpenses.slice(0, 4).map((item) => (
+                        <div key={item.normalizedDescription} className="rounded-md border border-border/70 bg-card/40 p-2.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="min-w-0 truncate text-sm font-semibold">{item.description}</p>
+                            <Badge>{item.count}x</Badge>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Total {formatMoney(item.total)} · Promedio {formatMoney(item.averageAmount)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm leading-5 text-muted-foreground">No se detectaron gastos chicos repetidos en este mes.</p>
+                  )}
+                </div>
+              </>
+            )}
+
             <Section title="Alertas" icon={AlertTriangle}>
               {analysis.alerts.map((item) => (
                 <div key={`${item.severity}-${item.title}`} className="rounded-lg border border-border p-3">
@@ -175,6 +265,29 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
   );
 }
 
+function MetricPill({
+  label,
+  value,
+  detail,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+  icon: typeof TrendingUp;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-border bg-background/35 p-3">
+      <div className="mb-2 flex items-center gap-2 text-muted-foreground">
+        <Icon className="h-3.5 w-3.5 shrink-0 text-violet-300" aria-hidden="true" />
+        <p className="truncate text-[11px] font-semibold uppercase tracking-wider">{label}</p>
+      </div>
+      <p className="truncate text-sm font-bold tabular-nums">{value}</p>
+      {detail && <p className="mt-1 truncate text-[11px] text-muted-foreground">{detail}</p>}
+    </div>
+  );
+}
+
 function Section({
   title,
   icon: Icon,
@@ -213,4 +326,19 @@ function SmallItem({
       </div>
     </div>
   );
+}
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatPercent(value: number) {
+  return `${new Intl.NumberFormat("es-AR", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  }).format(value)}%`;
 }

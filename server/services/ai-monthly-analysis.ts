@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { Prisma, TransactionStatus, TransactionType } from "@prisma/client";
-import { argentinaMonthRangeUtc } from "@/lib/dates";
+import { AccountType, PaymentMethod, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { argentinaMonthRangeUtc, formatArgentinaDateInput } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/server/api/errors";
 import { toFiniteNumber } from "./financial-ledger";
@@ -8,6 +8,23 @@ import { assertHouseholdAccess } from "./households";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+const HIGH_IMPACT_INCOME_RATE = 5;
+const FIXED_CATEGORY_NAMES = [
+  "Alquiler / Hipoteca",
+  "Expensas",
+  "Cuota Auto",
+  "Internet / Telefonía",
+  "Servicios",
+  "Suscripciones",
+  "Salud",
+  "Estacionamiento",
+] as const;
+const MOBILITY_CATEGORY_NAMES = [
+  "Cuota Auto",
+  "Combustible",
+  "Estacionamiento",
+  "Transporte",
+] as const;
 
 const analysisSchema = {
   type: "object",
@@ -87,6 +104,38 @@ export type AiFinancialAnalysisResult = {
   riskPoints: Array<{ title: string; message: string }>;
 };
 
+export type AiFinancialAnalysisMetrics = {
+  savingsRate: number;
+  fixedExpenseRate: number;
+  dailyAverageExpense: number;
+  projectedMonthEndExpense: number;
+  categoryExpensePercentages: Array<{
+    name: string;
+    total: number;
+    percentage: number;
+  }>;
+  mobilityTotal: number;
+  mobilityRate: number;
+  highImpactTransactions: Array<{
+    date: string;
+    amount: number;
+    currency: string;
+    incomePercentage: number;
+    category: string;
+    account: string;
+    description: string;
+  }>;
+  repeatedSmallExpenses: Array<{
+    description: string;
+    normalizedDescription: string;
+    count: number;
+    total: number;
+    averageAmount: number;
+    categories: string[];
+  }>;
+  creditCardExpenseRate: number;
+};
+
 export async function generateMonthlyFinancialAnalysis({
   userProfileId,
   householdId,
@@ -113,7 +162,7 @@ export async function generateMonthlyFinancialAnalysis({
     orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
   });
 
-  const compactInput = buildCompactMonthlyInput({ month, transactions });
+  const compactInput = buildCompactMonthlyInput({ year, monthNumber, month, transactions });
   const inputHash = hashJson({
     month,
     transactions: transactions.map((transaction) => ({
@@ -123,6 +172,8 @@ export async function generateMonthlyFinancialAnalysis({
       currency: transaction.currency,
       amount: transaction.amount.toString(),
       description: transaction.description,
+      expenseType: transaction.expenseType,
+      paymentMethod: transaction.paymentMethod,
       accountId: transaction.accountId,
       categoryId: transaction.categoryId,
       occurredAt: transaction.occurredAt.toISOString(),
@@ -138,6 +189,7 @@ export async function generateMonthlyFinancialAnalysis({
   if (existing?.inputHash === inputHash) {
     return {
       analysis: existing.result as AiFinancialAnalysisResult,
+      metrics: compactInput.metrics,
       cached: true,
       month,
       generatedAt: existing.updatedAt.toISOString(),
@@ -162,6 +214,7 @@ export async function generateMonthlyFinancialAnalysis({
 
   return {
     analysis: saved.result as AiFinancialAnalysisResult,
+    metrics: compactInput.metrics,
     cached: false,
     month,
     generatedAt: saved.updatedAt.toISOString(),
@@ -184,9 +237,13 @@ function parseMonth(month: string) {
 }
 
 function buildCompactMonthlyInput({
+  year,
+  monthNumber,
   month,
   transactions,
 }: {
+  year: number;
+  monthNumber: number;
   month: string;
   transactions: AnalysisTransaction[];
 }) {
@@ -196,6 +253,14 @@ function buildCompactMonthlyInput({
   const totalExpenses = sumAmounts(expenseTransactions);
   const expensesByCategory = groupExpenses(expenseTransactions, "category");
   const expensesByAccount = groupExpenses(expenseTransactions, "account");
+  const metrics = calculateFinancialMetrics({
+    year,
+    monthNumber,
+    totalIncome,
+    totalExpenses,
+    expenseTransactions,
+    expensesByCategory,
+  });
   const topExpenses = [...expenseTransactions]
     .sort((a, b) => toFiniteNumber(b.amount) - toFiniteNumber(a.amount))
     .slice(0, 8)
@@ -219,11 +284,58 @@ function buildCompactMonthlyInput({
       expensesByCategory,
       expensesByAccount,
     },
+    metrics,
     signals: {
       topExpenses,
       possibleRecurringExpenses: detectRecurringExpenses(expenseTransactions),
       possibleDuplicateExpenses: detectDuplicateExpenses(expenseTransactions),
+      highImpactTransactions: metrics.highImpactTransactions,
+      repeatedSmallExpenses: metrics.repeatedSmallExpenses,
     },
+  };
+}
+
+function calculateFinancialMetrics({
+  year,
+  monthNumber,
+  totalIncome,
+  totalExpenses,
+  expenseTransactions,
+  expensesByCategory,
+}: {
+  year: number;
+  monthNumber: number;
+  totalIncome: number;
+  totalExpenses: number;
+  expenseTransactions: AnalysisTransaction[];
+  expensesByCategory: Array<{ name: string; total: number; count: number }>;
+}): AiFinancialAnalysisMetrics {
+  const balance = totalIncome - totalExpenses;
+  const fixedExpenseTotal = sumAmounts(expenseTransactions.filter(isFixedExpense));
+  const mobilityTransactions = expenseTransactions.filter((tx) =>
+    matchesAnyCategory(tx.category?.name, MOBILITY_CATEGORY_NAMES),
+  );
+  const mobilityTotal = sumAmounts(mobilityTransactions);
+  const creditCardExpenseTotal = sumAmounts(expenseTransactions.filter(isCreditCardExpense));
+  const daysElapsed = getElapsedDaysInMonth(year, monthNumber);
+  const dailyAverageExpense = roundMoney(totalExpenses / daysElapsed);
+  const daysInMonth = new Date(year, monthNumber, 0).getDate();
+
+  return {
+    savingsRate: percentage(balance, totalIncome),
+    fixedExpenseRate: percentage(fixedExpenseTotal, totalIncome),
+    dailyAverageExpense,
+    projectedMonthEndExpense: roundMoney(dailyAverageExpense * daysInMonth),
+    categoryExpensePercentages: expensesByCategory.map((category) => ({
+      name: category.name,
+      total: category.total,
+      percentage: percentage(category.total, totalExpenses),
+    })),
+    mobilityTotal,
+    mobilityRate: percentage(mobilityTotal, totalIncome),
+    highImpactTransactions: getHighImpactTransactions(expenseTransactions, totalIncome),
+    repeatedSmallExpenses: getRepeatedSmallExpenses(expenseTransactions, totalIncome),
+    creditCardExpenseRate: percentage(creditCardExpenseTotal, totalExpenses),
   };
 }
 
@@ -300,6 +412,68 @@ function detectDuplicateExpenses(transactions: AnalysisTransaction[]) {
     .slice(0, 8);
 }
 
+function isFixedExpense(transaction: AnalysisTransaction) {
+  return transaction.expenseType === "FIXED" || matchesAnyCategory(transaction.category?.name, FIXED_CATEGORY_NAMES);
+}
+
+function isCreditCardExpense(transaction: AnalysisTransaction) {
+  return transaction.paymentMethod === PaymentMethod.CREDIT || transaction.account.type === AccountType.CREDIT_CARD;
+}
+
+function getHighImpactTransactions(transactions: AnalysisTransaction[], totalIncome: number) {
+  if (totalIncome <= 0) return [];
+
+  const threshold = totalIncome * (HIGH_IMPACT_INCOME_RATE / 100);
+
+  return transactions
+    .filter((tx) => toFiniteNumber(tx.amount) > threshold)
+    .sort((a, b) => toFiniteNumber(b.amount) - toFiniteNumber(a.amount))
+    .slice(0, 8)
+    .map((tx) => ({
+      date: tx.occurredAt.toISOString().slice(0, 10),
+      amount: toFiniteNumber(tx.amount),
+      currency: tx.currency,
+      incomePercentage: percentage(toFiniteNumber(tx.amount), totalIncome),
+      category: tx.category?.name ?? "Sin categoría",
+      account: tx.account.name,
+      description: normalizeDescription(tx.description),
+    }));
+}
+
+function getRepeatedSmallExpenses(transactions: AnalysisTransaction[], totalIncome: number) {
+  const largeExpenseThreshold = totalIncome > 0 ? totalIncome * (HIGH_IMPACT_INCOME_RATE / 100) : Number.POSITIVE_INFINITY;
+  const groups = new Map<string, AnalysisTransaction[]>();
+
+  transactions.forEach((tx) => {
+    if (toFiniteNumber(tx.amount) > largeExpenseThreshold) return;
+
+    const normalizedDescription = normalizeRepeatedDescription(tx.description);
+    if (!normalizedDescription) return;
+
+    groups.set(normalizedDescription, [...(groups.get(normalizedDescription) ?? []), tx]);
+  });
+
+  return Array.from(groups.entries())
+    .filter(([, items]) => items.length >= 2)
+    .map(([normalizedDescription, items]) => {
+      const total = sumAmounts(items);
+      const categories = Array.from(
+        new Set(items.map((tx) => tx.category?.name ?? "Sin categoría")),
+      ).slice(0, 4);
+
+      return {
+        description: normalizeDescription(items[0]?.description) || normalizedDescription,
+        normalizedDescription,
+        count: items.length,
+        total,
+        averageAmount: roundMoney(total / items.length),
+        categories,
+      };
+    })
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 8);
+}
+
 async function requestOpenAiAnalysis(input: ReturnType<typeof buildCompactMonthlyInput>) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -318,11 +492,11 @@ async function requestOpenAiAnalysis(input: ReturnType<typeof buildCompactMonthl
         {
           role: "system",
           content:
-            "Sos un analista financiero para una app de finanzas personales en Argentina. Respondé en español rioplatense, con tono claro, prudente y accionable. No inventes datos. No des asesoramiento financiero regulado; basate solo en el resumen recibido.",
+            "Sos un analista financiero para una app de finanzas personales en Argentina. Respondé en español rioplatense, con tono claro, prudente y accionable. No inventes datos. No des asesoramiento financiero regulado; basate solo en el resumen, las métricas y las señales recibidas. Usá obligatoriamente las métricas calculadas por backend cuando menciones ahorro, gastos fijos, movilidad, tarjeta de crédito, proyección de cierre, gastos repetidos o transacciones de alto impacto.",
         },
         {
           role: "user",
-          content: `Analizá este resumen mensual compacto y devolvé solo el JSON solicitado:\n${JSON.stringify(input)}`,
+          content: `Analizá este resumen mensual compacto. Las métricas incluidas ya fueron calculadas por backend y son la fuente de verdad: no las recalcules ni inventes datos faltantes. Si una métrica está en 0 por falta de ingresos o gastos, explicalo con prudencia. Devolvé solo el JSON solicitado:\n${JSON.stringify(input)}`,
         },
       ],
       text: {
@@ -436,7 +610,64 @@ function normalizeDescription(description: string | null | undefined) {
   return description?.trim().replace(/\s+/g, " ").slice(0, 80) ?? "";
 }
 
+function normalizeRepeatedDescription(description: string | null | undefined) {
+  const normalized = description
+    ?.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/\d+/g, "")
+    .replace(/[^A-Z* ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return normalized && normalized.length >= 3 ? normalized.slice(0, 80) : "";
+}
+
+function normalizeCategoryName(name: string | null | undefined) {
+  return name
+    ?.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim() ?? "";
+}
+
+function matchesAnyCategory(categoryName: string | null | undefined, candidates: readonly string[]) {
+  const normalizedCategory = normalizeCategoryName(categoryName);
+  if (!normalizedCategory) return false;
+
+  return candidates.some((candidate) => {
+    const normalizedCandidate = normalizeCategoryName(candidate);
+    return normalizedCategory.includes(normalizedCandidate) || normalizedCandidate.includes(normalizedCategory);
+  });
+}
+
+function getElapsedDaysInMonth(year: number, monthNumber: number) {
+  const daysInMonth = new Date(year, monthNumber, 0).getDate();
+  const [currentYear, currentMonth, currentDay] = formatArgentinaDateInput().split("-").map(Number);
+
+  if (year === currentYear && monthNumber === currentMonth) {
+    return clamp(currentDay, 1, daysInMonth);
+  }
+
+  if (year < currentYear || (year === currentYear && monthNumber < currentMonth)) {
+    return daysInMonth;
+  }
+
+  return 1;
+}
+
 function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function percentage(numerator: number, denominator: number) {
+  if (denominator <= 0) return 0;
+  return roundPercent((numerator / denominator) * 100);
+}
+
+function roundPercent(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
