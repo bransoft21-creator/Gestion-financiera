@@ -1,10 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CalendarDays, CheckCircle2, Loader2, Pencil, Plus, Sparkles, Target, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  Flag,
+  Loader2,
+  Pencil,
+  Plus,
+  ShieldAlert,
+  Sparkles,
+  Target,
+  Trash2,
+  TrendingUp,
+  WalletCards,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { EmptyState } from "@/components/app/empty-state";
+import { ActionButton } from "@/components/ui-v2/action-button";
+import {
+  PremiumCard,
+  PremiumCardContent,
+  PremiumCardDescription,
+  PremiumCardHeader,
+  PremiumCardTitle,
+} from "@/components/ui-v2/premium-card";
 import {
   AppFormPanel,
   MobileCreateFab,
@@ -16,8 +39,6 @@ import { formatArgentinaDateInput } from "@/lib/dates";
 import { moneySchema, optionalMoneySchema, parseMoneyInput } from "@/lib/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -55,6 +76,15 @@ type FormState = {
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
+type GoalSummary = {
+  active: number;
+  completed: number;
+  paused: number;
+  averageProgress: number;
+  monthlyCommitments: Partial<Record<CurrencyCode, number>>;
+  nextGoal: GoalItem | null;
+};
+
 const statusLabels: Record<GoalStatus, string> = {
   ACTIVE: "Activa",
   PAUSED: "Pausada",
@@ -86,6 +116,13 @@ const defaultForm: FormState = {
   notes: "",
 };
 
+const cardMotion = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: 12 },
+  transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
+} as const;
+
 export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
   const defaultAccount = getPreferredArsBankAccount(accounts);
   const [goals, setGoals] = useState<GoalItem[]>([]);
@@ -94,6 +131,7 @@ export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
+  const [pendingDeleteGoal, setPendingDeleteGoal] = useState<GoalItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -102,6 +140,8 @@ export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
   const [quickContribAccountId, setQuickContribAccountId] = useState<string>("");
   const [quickContribAmount, setQuickContribAmount] = useState<string>("");
   const [quickContribErrors, setQuickContribErrors] = useState<{ accountId?: string; amount?: string }>({});
+
+  const summary = useMemo(() => buildGoalSummary(goals), [goals]);
 
   useEffect(() => {
     void loadGoals();
@@ -185,13 +225,14 @@ export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
     }
   }
 
-  async function handleDelete(goalId: string) {
-    const shouldDelete = window.confirm("¿Eliminar esta meta? Se aplicará soft delete.");
+  function requestDelete(goal: GoalItem) {
+    setPendingDeleteGoal(goal);
+  }
 
-    if (!shouldDelete) {
-      return;
-    }
+  async function confirmDelete() {
+    if (!pendingDeleteGoal) return;
 
+    const goalId = pendingDeleteGoal.id;
     setDeletingGoalId(goalId);
     setMessage(null);
 
@@ -208,6 +249,7 @@ export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
       }
 
       toast.success("Meta eliminada.");
+      setPendingDeleteGoal(null);
       if (editingGoalId === goalId) {
         resetForm();
         setIsFormOpen(false);
@@ -317,217 +359,319 @@ export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
     }));
   }
 
-  const active = goals.filter((g) => g.status === "ACTIVE").length;
-  const completed = goals.filter((g) => g.status === "COMPLETED").length;
-  const paused = goals.filter((g) => g.status === "PAUSED").length;
+  function openNewGoal() {
+    resetForm();
+    setIsFormOpen(true);
+  }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-      <AppFormPanel isOpen={isFormOpen} onClose={() => setIsFormOpen(false)}>
-        <CardHeader className={appFormHeaderClass()}>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Plus className="h-5 w-5" aria-hidden="true" />
+    <>
+      <div className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
+        <AppFormPanel
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          className="border-white/10 bg-zinc-950/80 shadow-[0_24px_80px_rgba(0,0,0,0.32)] xl:rounded-[var(--v2-radius-xl)]"
+        >
+          <div className={appFormHeaderClass("border-white/10 bg-zinc-950/95 xl:bg-transparent")}>
+            <div className="flex items-start gap-3 p-5 sm:p-6">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
+                <Flag className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold leading-tight text-white">
+                  {editingGoalId ? "Ajustar hito" : "Nuevo hito"}
+                </h2>
+                <p className="mt-1 text-sm leading-5 text-zinc-400">Objetivo, ritmo y fecha esperada.</p>
+              </div>
+              <ActionButton
+                type="button"
+                variant="quiet"
+                size="icon"
+                aria-label="Cerrar formulario"
+                className="ml-auto xl:hidden"
+                onClick={() => setIsFormOpen(false)}
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
+              </ActionButton>
             </div>
-            <div>
-              <CardTitle>{editingGoalId ? "Editar meta" : "Nueva meta"}</CardTitle>
-              <CardDescription>Objetivo, progreso y fecha esperada.</CardDescription>
-            </div>
-            <Button type="button" variant="ghost" size="icon" aria-label="Cerrar formulario" className="ml-auto xl:hidden" onClick={() => setIsFormOpen(false)}>
-              <X className="h-5 w-5" aria-hidden="true" />
-            </Button>
           </div>
-        </CardHeader>
-        <CardContent className={appFormContentClass(isFormOpen)}>
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <Field label="Nombre" error={errors.name}>
-              <Input value={form.name} onChange={(event) => updateForm("name", event.target.value)} />
-            </Field>
-
-            <div className="grid gap-3 sm:grid-cols-[96px_1fr]">
-              <Field label="Moneda" error={errors.currency}>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={form.currency}
-                  onChange={(event) => updateForm("currency", event.target.value as CurrencyCode)}
-                >
-                  <option value="ARS">ARS</option>
-                  <option value="USD">USD</option>
-                </select>
-              </Field>
-              <Field label="Objetivo" error={errors.targetAmount}>
+          <div className={appFormContentClass(isFormOpen, "px-5 sm:px-6")}>
+            <form className="space-y-4 pb-5" onSubmit={handleSubmit}>
+              <Field label="Nombre" error={errors.name}>
                 <Input
-                  inputMode="decimal"
-                  value={form.targetAmount}
-                  onChange={(event) => updateForm("targetAmount", event.target.value)}
+                  value={form.name}
+                  onChange={(event) => updateForm("name", event.target.value)}
+                  placeholder="Ej. Fondo de emergencia"
+                  className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-zinc-600"
                 />
               </Field>
-            </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Actual" error={errors.currentAmount}>
-                <Input
-                  inputMode="decimal"
-                  value={form.currentAmount}
-                  onChange={(event) => updateForm("currentAmount", event.target.value)}
+              <div className="grid gap-3 sm:grid-cols-[104px_1fr]">
+                <Field label="Moneda" error={errors.currency}>
+                  <select
+                    className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                    value={form.currency}
+                    onChange={(event) => updateForm("currency", event.target.value as CurrencyCode)}
+                  >
+                    <option value="ARS">ARS</option>
+                    <option value="USD">USD</option>
+                  </select>
+                </Field>
+                <Field label="Objetivo" error={errors.targetAmount}>
+                  <Input
+                    inputMode="decimal"
+                    value={form.targetAmount}
+                    onChange={(event) => updateForm("targetAmount", event.target.value)}
+                    className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white"
+                  />
+                </Field>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Actual" error={errors.currentAmount}>
+                  <Input
+                    inputMode="decimal"
+                    value={form.currentAmount}
+                    onChange={(event) => updateForm("currentAmount", event.target.value)}
+                    className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white"
+                  />
+                </Field>
+                <Field label="Aporte mensual" error={errors.requiredMonthlyAmount}>
+                  <Input
+                    inputMode="decimal"
+                    value={form.requiredMonthlyAmount}
+                    onChange={(event) => updateForm("requiredMonthlyAmount", event.target.value)}
+                    className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white"
+                  />
+                </Field>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Fecha objetivo" error={errors.targetDate}>
+                  <Input
+                    type="date"
+                    value={form.targetDate}
+                    onChange={(event) => updateForm("targetDate", event.target.value)}
+                    className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white"
+                  />
+                </Field>
+                <Field label="Estado" error={errors.status}>
+                  <select
+                    className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                    value={form.status}
+                    onChange={(event) => updateForm("status", event.target.value as GoalStatus)}
+                  >
+                    {(editingGoalId ? statuses : statuses.filter((status) => status !== "CANCELED")).map((status) => (
+                      <option key={status} value={status}>
+                        {statusLabels[status]}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+
+              <Field label="Notas" error={errors.notes}>
+                <textarea
+                  className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
+                  value={form.notes}
+                  onChange={(event) => updateForm("notes", event.target.value)}
+                  placeholder="Qué significa este hito para vos..."
                 />
               </Field>
-              <Field label="Aporte mensual" error={errors.requiredMonthlyAmount}>
-                <Input
-                  inputMode="decimal"
-                  value={form.requiredMonthlyAmount}
-                  onChange={(event) => updateForm("requiredMonthlyAmount", event.target.value)}
-                />
-              </Field>
-            </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Fecha objetivo" error={errors.targetDate}>
-                <Input
-                  type="date"
-                  value={form.targetDate}
-                  onChange={(event) => updateForm("targetDate", event.target.value)}
-                />
-              </Field>
-              <Field label="Estado" error={errors.status}>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={form.status}
-                  onChange={(event) => updateForm("status", event.target.value as GoalStatus)}
-                >
-                  {(editingGoalId ? statuses : statuses.filter((s) => s !== "CANCELED")).map((status) => (
-                    <option key={status} value={status}>
-                      {statusLabels[status]}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-
-            <Field label="Notas" error={errors.notes}>
-              <textarea
-                className="min-h-20 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={form.notes}
-                onChange={(event) => updateForm("notes", event.target.value)}
-              />
-            </Field>
-
-            {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
-
-            <div className={appFormActionsClass("xl:grid-cols-1 2xl:grid-cols-2")}>
-              <Button className="h-11 w-full" disabled={isSaving}>
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-                {editingGoalId ? "Guardar cambios" : "Crear meta"}
-              </Button>
-              {editingGoalId ? (
-                <Button type="button" variant="outline" className="h-11 w-full" onClick={() => { resetForm(); setIsFormOpen(false); }}>
-                  <X className="h-4 w-4" aria-hidden="true" />
-                  Cancelar
-                </Button>
+              {message ? (
+                <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">
+                  {message}
+                </p>
               ) : null}
-            </div>
-          </form>
-        </CardContent>
-      </AppFormPanel>
 
-      <div className="space-y-5">
-        {/* Summary chips */}
-        {!isLoading && goals.length > 0 && (
-          <div className="flex flex-wrap gap-2.5">
-            <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-2">
-              <Sparkles className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
-              <span className="text-[13px] font-semibold text-emerald-400">{active} activas</span>
-            </div>
-            {paused > 0 && (
-              <div className="flex items-center gap-2 rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3.5 py-2">
-                <span className="text-[13px] font-semibold text-yellow-400">{paused} pausadas</span>
+              <div className={appFormActionsClass("xl:grid-cols-1 2xl:grid-cols-2")}>
+                <ActionButton className="w-full" disabled={isSaving}>
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+                  {editingGoalId ? "Guardar cambios" : "Crear hito"}
+                </ActionButton>
+                {editingGoalId ? (
+                  <ActionButton
+                    type="button"
+                    variant="glass"
+                    className="w-full"
+                    onClick={() => {
+                      resetForm();
+                      setIsFormOpen(false);
+                    }}
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                    Cancelar
+                  </ActionButton>
+                ) : null}
               </div>
-            )}
-            <div className="flex items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/10 px-3.5 py-2">
-              <Target className="h-3.5 w-3.5 text-violet-400" aria-hidden="true" />
-              <span className="text-[13px] font-semibold text-violet-400">{completed} completadas</span>
-            </div>
+            </form>
           </div>
-        )}
+        </AppFormPanel>
 
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-5">
+          <GoalsBriefing summary={summary} goalCount={goals.length} isLoading={isLoading} onCreate={openNewGoal} />
+
+          <PremiumCard variant="default" className="overflow-hidden">
+            <PremiumCardHeader className="pb-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <CardTitle>Listado</CardTitle>
-                  <CardDescription>{goals.length} metas activas o históricas.</CardDescription>
+                  <PremiumCardTitle>Hitos en movimiento</PremiumCardTitle>
+                  <PremiumCardDescription>
+                    {goals.length} metas entre activas, pausadas e históricas.
+                  </PremiumCardDescription>
                 </div>
-              <div className="flex items-center gap-2">
-                <Badge title="Solo metas activas con aporte mensual definido se suman como obligación en el dashboard">Activa + aporte → dashboard</Badge>
-                <Button type="button" size="sm" className="hidden xl:inline-flex" onClick={() => { resetForm(); setIsFormOpen(true); }}>
-                  <Plus className="h-4 w-4" aria-hidden="true" />
-                  Nueva
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className="w-fit border-emerald-300/20 bg-emerald-300/10 text-emerald-100">
+                    {summary.active} activas
+                  </Badge>
+                  <ActionButton type="button" size="sm" className="hidden xl:inline-flex" onClick={openNewGoal}>
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                    Nuevo
+                  </ActionButton>
+                </div>
+              </div>
+            </PremiumCardHeader>
+            <PremiumCardContent>
+              {isLoading ? (
+                <GoalSkeletonList />
+              ) : goals.length === 0 ? (
+                <GoalEmptyState onCreate={openNewGoal} />
+              ) : (
+                <div className="grid gap-3">
+                  <AnimatePresence initial={false}>
+                    {goals.map((goal) => (
+                      <GoalCard
+                        key={goal.id}
+                        goal={goal}
+                        accounts={accounts}
+                        isDeleting={deletingGoalId === goal.id}
+                        isContributing={contributingGoalId === goal.id}
+                        isContribOpen={quickContribGoalId === goal.id}
+                        quickContribAccountId={quickContribAccountId}
+                        quickContribAmount={quickContribAmount}
+                        quickContribErrors={quickContribErrors}
+                        onEdit={startEditing}
+                        onDelete={requestDelete}
+                        onContribOpen={() => openContribution(goal)}
+                        onContribCancel={cancelContribution}
+                        onContribAccountChange={setQuickContribAccountId}
+                        onContribAmountChange={setQuickContribAmount}
+                        onContribConfirm={() => handleContribConfirm(goal)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+            </PremiumCardContent>
+          </PremiumCard>
+        </div>
+        <MobileCreateFab label="Nueva meta" onClick={openNewGoal} />
+      </div>
+
+      <DeleteGoalDialog
+        goal={pendingDeleteGoal}
+        isDeleting={deletingGoalId === pendingDeleteGoal?.id}
+        onCancel={() => setPendingDeleteGoal(null)}
+        onConfirm={confirmDelete}
+      />
+    </>
+  );
+}
+
+function GoalsBriefing({
+  summary,
+  goalCount,
+  isLoading,
+  onCreate,
+}: {
+  summary: GoalSummary;
+  goalCount: number;
+  isLoading: boolean;
+  onCreate: () => void;
+}) {
+  const state = getGoalState(summary, goalCount);
+  const monthlyText = formatCommitments(summary.monthlyCommitments);
+
+  return (
+    <motion.div {...cardMotion}>
+      <PremiumCard variant="raised" className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_18%_0%,rgba(52,211,153,0.18),transparent_36%),radial-gradient(circle_at_82%_0%,rgba(96,165,250,0.14),transparent_34%)]" />
+        <PremiumCardContent className="relative p-5 sm:p-6">
+          {isLoading ? (
+            <div className="space-y-5">
+              <Skeleton className="h-5 w-36 rounded-full bg-white/10" />
+              <Skeleton className="h-8 w-80 max-w-full rounded-full bg-white/10" />
+              <Skeleton className="h-3 w-full rounded-full bg-white/10" />
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[1, 2, 3].map((item) => (
+                  <Skeleton key={item} className="h-20 rounded-3xl bg-white/10" />
+                ))}
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-          {isLoading ? (
-            <div className="grid gap-3">
-              {[1, 2].map((i) => (
-                <div key={i} className="rounded-xl border border-border p-4 space-y-4">
-                  <div className="flex gap-3">
-                    <Skeleton className="h-10 w-10 rounded-xl shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-36" />
-                      <Skeleton className="h-3 w-24" />
-                    </div>
-                    <Skeleton className="h-16 w-16 rounded-full shrink-0" />
-                  </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[1,2,3,4].map((j) => <Skeleton key={j} className="h-14 rounded-xl" />)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : goals.length === 0 ? (
-            <EmptyState
-              icon={Target}
-              title="Sin metas financieras"
-              description="Creá una meta para seguir ahorro, progreso y fecha objetivo."
-            />
           ) : (
-            <div className="grid gap-3">
-              {goals.map((goal) => (
-                <GoalCard
-                  key={goal.id}
-                  goal={goal}
-                  accounts={accounts}
-                  isDeleting={deletingGoalId === goal.id}
-                  isContributing={contributingGoalId === goal.id}
-                  isContribOpen={quickContribGoalId === goal.id}
-                  quickContribAccountId={quickContribAccountId}
-                  quickContribAmount={quickContribAmount}
-                  quickContribErrors={quickContribErrors}
-                  onEdit={startEditing}
-                  onDelete={handleDelete}
-                  onContribOpen={() => openContribution(goal)}
-                  onContribCancel={cancelContribution}
-                  onContribAccountChange={setQuickContribAccountId}
-                  onContribAmountChange={setQuickContribAmount}
-                  onContribConfirm={() => handleContribConfirm(goal)}
+            <>
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-2xl">
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-zinc-300">
+                    <Sparkles className="h-3.5 w-3.5 text-emerald-200" aria-hidden="true" />
+                    Momentum financiero
+                  </div>
+                  <h2 className="text-balance text-2xl font-semibold leading-tight text-white sm:text-3xl">
+                    {state.title}
+                  </h2>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">{state.description}</p>
+                </div>
+
+                <div className="flex items-center gap-3 lg:flex-col lg:items-end">
+                  <CircularProgress value={summary.averageProgress} size={96} strokeWidth={7} />
+                  <ActionButton type="button" variant="glass" size="sm" onClick={onCreate}>
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                    Nuevo hito
+                  </ActionButton>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <GoalBriefMetric icon={Target} label="Activas" value={`${summary.active}`} />
+                <GoalBriefMetric icon={WalletCards} label="Aporte mensual" value={monthlyText} />
+                <GoalBriefMetric
+                  icon={CalendarDays}
+                  label="Próximo hito"
+                  value={summary.nextGoal?.targetDate ? formatDate(summary.nextGoal.targetDate) : "Sin fecha"}
                 />
-              ))}
-            </div>
+              </div>
+            </>
           )}
-        </CardContent>
-        </Card>
-      </div>
-      <MobileCreateFab label="Nueva meta" onClick={() => { resetForm(); setIsFormOpen(true); }} />
+        </PremiumCardContent>
+      </PremiumCard>
+    </motion.div>
+  );
+}
+
+function GoalBriefMetric({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
+      <Icon className="h-4 w-4 text-zinc-400" aria-hidden />
+      <p className="mt-3 text-[11px] font-medium uppercase text-zinc-500">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-white">{value}</p>
     </div>
   );
 }
 
 function getPreferredArsBankAccount(accounts: AccountOption[]) {
   return (
-    accounts.find((a) => a.currency === "ARS" && a.type === "BANK" && a.name.toLowerCase() === "cuenta bancaria") ??
-    accounts.find((a) => a.currency === "ARS" && a.type === "BANK") ??
-    accounts.find((a) => a.currency === "ARS") ??
+    accounts.find((account) => account.currency === "ARS" && account.type === "BANK" && account.name.toLowerCase() === "cuenta bancaria") ??
+    accounts.find((account) => account.currency === "ARS" && account.type === "BANK") ??
+    accounts.find((account) => account.currency === "ARS") ??
     accounts[0]
   );
 }
@@ -543,9 +687,9 @@ function Field({
 }) {
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label className="text-xs font-semibold uppercase text-zinc-500">{label}</Label>
       {children}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="text-xs text-rose-300">{error}</p> : null}
     </div>
   );
 }
@@ -554,27 +698,34 @@ function CircularProgress({ value, size = 72, strokeWidth = 6 }: { value: number
   const r = (size - strokeWidth) / 2;
   const circ = 2 * Math.PI * r;
   const [offset, setOffset] = useState(circ);
+  const normalized = Math.min(Math.max(value, 0), 100);
 
   useEffect(() => {
-    const t = setTimeout(() => setOffset(circ - (Math.min(value, 100) / 100) * circ), 120);
-    return () => clearTimeout(t);
-  }, [value, circ]);
+    const timer = setTimeout(() => setOffset(circ - (normalized / 100) * circ), 120);
+    return () => clearTimeout(timer);
+  }, [normalized, circ]);
 
-  const color = value >= 100 ? "#a78bfa" : value >= 60 ? "#34d399" : value >= 30 ? "#60a5fa" : "#fbbf24";
+  const color = normalized >= 100 ? "#c4b5fd" : normalized >= 60 ? "#5eead4" : normalized >= 30 ? "#93c5fd" : "#fcd34d";
 
   return (
     <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
       <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth={strokeWidth} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,.08)" strokeWidth={strokeWidth} />
         <circle
-          cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={strokeWidth}
-          strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
-          style={{ transition: "stroke-dashoffset 0.85s cubic-bezier(.4,0,.2,1)" }}
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
+          style={{ filter: `drop-shadow(0 0 12px ${color}55)`, transition: "stroke-dashoffset 0.85s cubic-bezier(.4,0,.2,1)" }}
         />
       </svg>
-      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 12, fontWeight: 700, color: "hsl(var(--foreground))" }}>
-        {Math.round(value)}%
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-sm font-semibold tabular-nums text-white">{Math.round(value)}%</span>
       </div>
     </div>
   );
@@ -606,88 +757,93 @@ function GoalCard({
   quickContribAmount: string;
   quickContribErrors: { accountId?: string; amount?: string };
   onEdit: (goal: GoalItem) => void;
-  onDelete: (goalId: string) => void;
+  onDelete: (goal: GoalItem) => void;
   onContribOpen: () => void;
   onContribCancel: () => void;
-  onContribAccountChange: (v: string) => void;
-  onContribAmountChange: (v: string) => void;
+  onContribAccountChange: (value: string) => void;
+  onContribAmountChange: (value: string) => void;
   onContribConfirm: () => void;
 }) {
   const actualPct = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
   const displayPct = Math.min(actualPct, 100);
+  const remaining = Math.max(goal.targetAmount - goal.currentAmount, 0);
   const impactsDashboard = goal.status === "ACTIVE" && goal.requiredMonthlyAmount != null;
   const canContribute = goal.status === "ACTIVE" && goal.currentAmount < goal.targetAmount && accounts.length > 0;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:border-border/80 animate-fade-up">
-      <div className="flex items-start justify-between gap-3">
+    <motion.article
+      layout
+      {...cardMotion}
+      className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.035] p-4 transition duration-200 hover:border-white/[0.16] hover:bg-white/[0.055] sm:p-5"
+    >
+      <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-emerald-100">
             <Target className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold">{goal.name}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="truncate text-base font-semibold text-white">{goal.name}</p>
+            <p className="mt-1 text-sm leading-5 text-zinc-400">
               {formatMoney(goal.currentAmount, goal.currency)} de {formatMoney(goal.targetAmount, goal.currency)}
             </p>
             {goal.targetDate ? (
-              <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <CalendarDays className="h-3 w-3" aria-hidden="true" />
+              <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs text-zinc-300">
+                <CalendarDays className="h-3.5 w-3.5 text-zinc-500" aria-hidden="true" />
                 {formatDate(goal.targetDate)}
               </p>
             ) : null}
             <div className="mt-2 flex flex-wrap gap-2">
-              <Badge>{statusLabels[goal.status]}</Badge>
+              <Badge className={getStatusClass(goal.status)}>{statusLabels[goal.status]}</Badge>
               {goal.requiredMonthlyAmount ? (
-                <Badge>{formatMoney(goal.requiredMonthlyAmount, goal.currency)} / mes</Badge>
+                <Badge className="border-white/10 bg-white/[0.06] text-zinc-200">
+                  {formatMoney(goal.requiredMonthlyAmount, goal.currency)} / mes
+                </Badge>
               ) : null}
               {impactsDashboard ? (
-                <Badge className="border-emerald-500/30 text-emerald-400">impacta dashboard</Badge>
+                <Badge className="border-emerald-300/20 bg-emerald-300/10 text-emerald-100">impacta dashboard</Badge>
               ) : null}
             </div>
           </div>
         </div>
-        <CircularProgress value={displayPct} size={68} strokeWidth={5} />
+        <CircularProgress value={displayPct} size={72} strokeWidth={6} />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <GoalMetric label="Actual" value={formatMoney(goal.currentAmount, goal.currency)} />
-        <GoalMetric label="Objetivo" value={formatMoney(goal.targetAmount, goal.currency)} />
+        <GoalMetric label="Falta" value={formatMoney(remaining, goal.currency)} />
         <GoalMetric label="Progreso" value={`${actualPct.toFixed(0)}%`} />
         <GoalMetric label="Estado" value={statusLabels[goal.status]} />
       </div>
 
-      {goal.notes ? <p className="mt-3 text-sm text-muted-foreground">{goal.notes}</p> : null}
+      {goal.notes ? <p className="mt-4 rounded-2xl border border-white/[0.08] bg-black/15 p-3 text-sm leading-6 text-zinc-400">{goal.notes}</p> : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {canContribute && (
-          <Button
+          <ActionButton
             type="button"
-            variant="outline"
+            variant="glass"
             size="sm"
-            className="h-10"
             disabled={isContributing}
             onClick={isContribOpen ? onContribCancel : onContribOpen}
           >
             {isContributing ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             ) : (
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-200" aria-hidden="true" />
             )}
             Hacer aporte
-          </Button>
+          </ActionButton>
         )}
-        <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => onEdit(goal)}>
+        <ActionButton type="button" variant="glass" size="sm" onClick={() => onEdit(goal)}>
           <Pencil className="h-4 w-4" aria-hidden="true" />
           Editar
-        </Button>
-        <Button
+        </ActionButton>
+        <ActionButton
           type="button"
-          variant="destructive"
+          variant="danger"
           size="sm"
-          className="h-10"
           disabled={isDeleting}
-          onClick={() => onDelete(goal.id)}
+          onClick={() => onDelete(goal)}
         >
           {isDeleting ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -695,65 +851,255 @@ function GoalCard({
             <Trash2 className="h-4 w-4" aria-hidden="true" />
           )}
           Eliminar
-        </Button>
+        </ActionButton>
       </div>
 
-      {isContribOpen && (
-        <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-3">
-          <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Registrar aporte</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Cuenta</label>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={quickContribAccountId}
-                onChange={(e) => onContribAccountChange(e.target.value)}
-              >
-                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-              {quickContribErrors.accountId ? <p className="text-xs text-destructive">{quickContribErrors.accountId}</p> : null}
+      <AnimatePresence initial={false}>
+        {isContribOpen ? (
+          <motion.div
+            {...cardMotion}
+            className="mt-4 space-y-3 rounded-[1.5rem] border border-emerald-300/20 bg-emerald-300/10 p-4"
+          >
+            <p className="text-xs font-semibold uppercase text-emerald-100">Registrar aporte</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-zinc-400">Cuenta</label>
+                <select
+                  className="v2-focus-ring h-10 w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-3 text-sm text-white outline-none"
+                  value={quickContribAccountId}
+                  onChange={(event) => onContribAccountChange(event.target.value)}
+                >
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                    </option>
+                  ))}
+                </select>
+                {quickContribErrors.accountId ? <p className="text-xs text-rose-200">{quickContribErrors.accountId}</p> : null}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-zinc-400">Monto ({goal.currency})</label>
+                <Input
+                  inputMode="decimal"
+                  value={quickContribAmount}
+                  onChange={(event) => onContribAmountChange(event.target.value)}
+                  placeholder="0"
+                  className="v2-focus-ring h-10 rounded-2xl border-white/10 bg-zinc-950/70 text-white placeholder:text-zinc-600"
+                />
+                {quickContribErrors.amount ? <p className="text-xs text-rose-200">{quickContribErrors.amount}</p> : null}
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Monto ({goal.currency})</label>
-              <Input
-                inputMode="decimal"
-                value={quickContribAmount}
-                onChange={(e) => onContribAmountChange(e.target.value)}
-                placeholder="0"
-                className="h-9"
-              />
-              {quickContribErrors.amount ? <p className="text-xs text-destructive">{quickContribErrors.amount}</p> : null}
+            <div className="flex flex-wrap gap-2">
+              <ActionButton type="button" size="sm" disabled={isContributing} onClick={onContribConfirm}>
+                {isContributing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+                Confirmar
+              </ActionButton>
+              <ActionButton type="button" variant="quiet" size="sm" onClick={onContribCancel}>
+                <X className="h-4 w-4" aria-hidden="true" />
+                Cancelar
+              </ActionButton>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              disabled={isContributing}
-              onClick={onContribConfirm}
-            >
-              {isContributing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
-              Confirmar
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={onContribCancel}>
-              <X className="h-4 w-4" aria-hidden="true" />
-              Cancelar
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </motion.article>
   );
 }
 
 function GoalMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-border bg-secondary/50 p-3">
-      <p className="text-[11px] text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-semibold">{value}</p>
+    <div className="min-w-0 rounded-2xl border border-white/[0.08] bg-black/15 p-3">
+      <p className="text-[10px] font-medium uppercase text-zinc-500">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-white">{value}</p>
     </div>
   );
+}
+
+function GoalSkeletonList() {
+  return (
+    <div className="grid gap-3">
+      {[1, 2].map((item) => (
+        <div key={item} className="space-y-4 rounded-[1.75rem] border border-white/[0.08] bg-white/[0.035] p-4">
+          <div className="flex gap-3">
+            <Skeleton className="h-11 w-11 shrink-0 rounded-2xl bg-white/10" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-40 bg-white/10" />
+              <Skeleton className="h-3 w-56 max-w-full bg-white/10" />
+            </div>
+            <Skeleton className="h-16 w-16 shrink-0 rounded-full bg-white/10" />
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[1, 2, 3, 4].map((metric) => (
+              <Skeleton key={metric} className="h-16 rounded-2xl bg-white/10" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function GoalEmptyState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="rounded-[1.75rem] border border-dashed border-white/10 bg-white/[0.025] p-6 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-zinc-300">
+        <Target className="h-5 w-5" aria-hidden="true" />
+      </div>
+      <h3 className="mt-4 text-base font-semibold text-white">Todavía no hay hitos financieros</h3>
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-zinc-400">
+        Creá una meta que valga la pena mirar: ahorro, fecha y aporte sugerido.
+      </p>
+      <ActionButton type="button" className="mt-5" onClick={onCreate}>
+        <Plus className="h-4 w-4" aria-hidden="true" />
+        Crear hito
+      </ActionButton>
+    </div>
+  );
+}
+
+function DeleteGoalDialog({
+  goal,
+  isDeleting,
+  onCancel,
+  onConfirm,
+}: {
+  goal: GoalItem | null;
+  isDeleting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AnimatePresence>
+      {goal ? (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-xl sm:items-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <motion.div
+            className="w-full max-w-md"
+            initial={{ opacity: 0, y: 24, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <PremiumCard variant="raised">
+              <PremiumCardHeader>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-rose-300/20 bg-rose-400/10 text-rose-100">
+                    <ShieldAlert className="h-5 w-5" aria-hidden="true" />
+                  </div>
+                  <div>
+                    <PremiumCardTitle>Eliminar {goal.name}</PremiumCardTitle>
+                    <PremiumCardDescription>
+                      Se quita este hito de la vista. Los aportes ya registrados no se modifican.
+                    </PremiumCardDescription>
+                  </div>
+                </div>
+              </PremiumCardHeader>
+              <PremiumCardContent>
+                <div className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
+                  <div className="flex items-center gap-2 text-sm text-zinc-300">
+                    <TrendingUp className="h-4 w-4 text-zinc-500" aria-hidden="true" />
+                    Progreso actual
+                  </div>
+                  <p className="mt-2 text-xl font-semibold tabular-nums text-white">
+                    {formatMoney(goal.currentAmount, goal.currency)} de {formatMoney(goal.targetAmount, goal.currency)}
+                  </p>
+                </div>
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                  <ActionButton type="button" variant="glass" onClick={onCancel} disabled={isDeleting}>
+                    Cancelar
+                  </ActionButton>
+                  <ActionButton type="button" variant="danger" onClick={onConfirm} disabled={isDeleting}>
+                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+                    Eliminar
+                  </ActionButton>
+                </div>
+              </PremiumCardContent>
+            </PremiumCard>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
+function buildGoalSummary(goals: GoalItem[]): GoalSummary {
+  const activeGoals = goals.filter((goal) => goal.status === "ACTIVE");
+  const progressValues = goals.map((goal) => (goal.targetAmount > 0 ? Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) : 0));
+  const nextGoal =
+    activeGoals
+      .filter((goal) => goal.targetDate)
+      .sort((a, b) => new Date(a.targetDate ?? "").getTime() - new Date(b.targetDate ?? "").getTime())[0] ?? null;
+
+  return {
+    active: activeGoals.length,
+    completed: goals.filter((goal) => goal.status === "COMPLETED").length,
+    paused: goals.filter((goal) => goal.status === "PAUSED").length,
+    averageProgress:
+      progressValues.length > 0
+        ? Math.round(progressValues.reduce((sum, value) => sum + value, 0) / progressValues.length)
+        : 0,
+    monthlyCommitments: activeGoals.reduce<Partial<Record<CurrencyCode, number>>>((acc, goal) => {
+      if (goal.requiredMonthlyAmount != null) {
+        acc[goal.currency] = (acc[goal.currency] ?? 0) + goal.requiredMonthlyAmount;
+      }
+      return acc;
+    }, {}),
+    nextGoal,
+  };
+}
+
+function getGoalState(summary: GoalSummary, goalCount: number) {
+  if (goalCount === 0) {
+    return {
+      title: "Todavía no hay un norte financiero visible.",
+      description: "Creá tu primer hito para que el sistema pueda mostrar ritmo, intención y próximos pasos.",
+    };
+  }
+
+  if (summary.completed > 0 && summary.active === 0) {
+    return {
+      title: "Ya cerraste hitos. Toca elegir el próximo.",
+      description: "Tenés progreso ganado. Un nuevo objetivo mantiene viva la dirección del mes.",
+    };
+  }
+
+  if (summary.averageProgress >= 70) {
+    return {
+      title: "Tus metas están cerca de volverse reales.",
+      description: "El progreso promedio ya está alto. Conviene cuidar el ritmo y priorizar el próximo cierre.",
+    };
+  }
+
+  if (summary.paused > summary.active && summary.paused > 0) {
+    return {
+      title: "Hay metas pausadas esperando una decisión.",
+      description: "Reactivar una sola puede ordenar mejor el flujo del mes sin sumar ruido financiero.",
+    };
+  }
+
+  return {
+    title: "Tus hitos ya tienen dirección.",
+    description: "El sistema está siguiendo progreso, aportes y fechas para que cada meta tenga una próxima acción clara.",
+  };
+}
+
+function formatCommitments(commitments: Partial<Record<CurrencyCode, number>>) {
+  const parts = (["ARS", "USD"] as CurrencyCode[])
+    .filter((currency) => (commitments[currency] ?? 0) > 0)
+    .map((currency) => formatMoney(commitments[currency] ?? 0, currency));
+
+  return parts.length > 0 ? parts.join(" + ") : "Sin aporte";
+}
+
+function getStatusClass(status: GoalStatus) {
+  if (status === "ACTIVE") return "border-emerald-300/20 bg-emerald-300/10 text-emerald-100";
+  if (status === "COMPLETED") return "border-violet-300/20 bg-violet-300/10 text-violet-100";
+  if (status === "PAUSED") return "border-amber-300/20 bg-amber-300/10 text-amber-100";
+  return "border-zinc-300/10 bg-zinc-300/10 text-zinc-300";
 }
 
 function formatMoney(value: number, currency: CurrencyCode) {

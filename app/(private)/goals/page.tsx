@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/app/page-header";
+import { V2PageShell } from "@/components/layout/v2-page-shell";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getGoalWorkspace } from "@/server/services/workspace";
 import { GoalsClient } from "./goals-client";
@@ -8,12 +8,12 @@ export default async function GoalsPage() {
   const workspace = await getGoalWorkspace(userProfile.id);
 
   return (
-    <>
-      <PageHeader
-        title="Metas"
-        description="Objetivos de ahorro y progreso acumulado. Metas activas con aporte mensual definido se incluyen como obligación en el dashboard."
-      />
+    <V2PageShell
+      eyebrow="Hitos financieros"
+      title="Tus próximos movimientos importantes"
+      description="Seguís ahorro, fechas y aportes como una historia de progreso, no como una lista de tareas."
+    >
       <GoalsClient householdId={workspace.household.id} accounts={workspace.accounts} />
-    </>
+    </V2PageShell>
   );
 }
