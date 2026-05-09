@@ -337,9 +337,9 @@ async function requestOpenAiAnalysis(input: ReturnType<typeof buildCompactMonthl
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    console.error("OpenAI analysis error:", message);
-    throw new ApiError(502, "No se pudo generar el análisis con IA.");
+    const apiError = await readOpenAiError(response);
+    console.error("OpenAI analysis error:", apiError);
+    throw new ApiError(apiError.status, apiError.message);
   }
 
   const payload = (await response.json()) as { output_text?: string; output?: unknown };
@@ -372,6 +372,49 @@ function extractResponsesText(output: unknown) {
   }
 
   return null;
+}
+
+async function readOpenAiError(response: Response) {
+  const fallback = {
+    status: 502,
+    message: "No se pudo generar el análisis con IA.",
+  };
+
+  try {
+    const payload = (await response.json()) as {
+      error?: {
+        code?: string | null;
+        message?: string;
+        type?: string;
+      };
+    };
+    const code = payload.error?.code;
+
+    if (code === "insufficient_quota") {
+      return {
+        status: 402,
+        message: "La cuenta de OpenAI no tiene crédito disponible o alcanzó su límite mensual.",
+      };
+    }
+
+    if (code === "invalid_api_key") {
+      return {
+        status: 401,
+        message: "La API key de OpenAI no es válida. Revisá OPENAI_API_KEY.",
+      };
+    }
+
+    if (response.status === 429) {
+      return {
+        status: 429,
+        message: "OpenAI está limitando las solicitudes. Probá nuevamente en unos minutos.",
+      };
+    }
+
+    return fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function normalizeAnalysisResult(result: AiFinancialAnalysisResult): AiFinancialAnalysisResult {
