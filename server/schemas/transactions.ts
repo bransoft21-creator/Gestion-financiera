@@ -98,6 +98,7 @@ export const listTransactionsSchema = z
     from: filterDateSchema.optional(),
     to: filterDateSchema.optional(),
     limit: z.coerce.number().int().positive().max(100).default(50),
+    cursor: z.string().min(1).optional(),
   })
   .refine((data) => !data.from || !data.to || data.from <= data.to, {
     message: "La fecha 'from' debe ser anterior o igual a 'to'",

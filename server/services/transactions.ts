@@ -106,7 +106,7 @@ export async function listTransactions(
 ) {
   await assertHouseholdAccess(userProfileId, input.householdId);
 
-  return prisma.transaction.findMany({
+  const items = await prisma.transaction.findMany({
     where: {
       householdId: input.householdId,
       accountId: input.accountId,
@@ -120,9 +120,19 @@ export async function listTransactions(
       },
     },
     include: transactionInclude,
-    orderBy: { occurredAt: "desc" },
-    take: input.limit,
+    orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
+    take: input.limit + 1,
+    ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
   });
+
+  const hasMore = items.length > input.limit;
+  const data = hasMore ? items.slice(0, input.limit) : items;
+
+  return {
+    data,
+    hasMore,
+    nextCursor: hasMore ? (data[data.length - 1]?.id ?? null) : null,
+  };
 }
 
 export async function updateTransaction(

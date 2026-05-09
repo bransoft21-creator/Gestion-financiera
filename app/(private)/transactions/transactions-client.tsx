@@ -189,6 +189,9 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   ));
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
   const [message, setMessage] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const filteredCategories = useMemo(() => {
     return categories.filter((category) => isCategoryAllowedForType(category.type, form.type));
@@ -222,31 +225,51 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  async function loadTransactions(nextFilters = filters) {
-    setIsLoading(true);
+  async function loadTransactions(
+    nextFilters = filters,
+    options: { append?: boolean; cursor?: string | null } = {},
+  ) {
+    const { append = false, cursor = null } = options;
+
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
+      setIsLoading(true);
+      setNextCursor(null);
+      setHasMore(false);
+    }
     setMessage(null);
 
     try {
-      const params = new URLSearchParams({ householdId, limit: "100" });
+      const params = new URLSearchParams({ householdId, limit: "50" });
 
       if (nextFilters.type) params.set("type", nextFilters.type);
       if (nextFilters.categoryId) params.set("categoryId", nextFilters.categoryId);
       if (nextFilters.from) params.set("from", nextFilters.from);
       if (nextFilters.to) params.set("to", nextFilters.to);
+      if (cursor) params.set("cursor", cursor);
 
       const response = await fetch(`/api/transactions?${params.toString()}`);
-      const payload = (await response.json()) as { data?: TransactionItem[]; error?: string };
+      const payload = (await response.json()) as {
+        data?: { data: TransactionItem[]; hasMore: boolean; nextCursor: string | null };
+        error?: string;
+      };
 
       if (!response.ok) {
         toast.error(payload.error ?? "No se pudieron cargar las transacciones.");
         return;
       }
 
-      setTransactions(payload.data ?? []);
+      if (payload.data) {
+        setTransactions((prev) => append ? [...prev, ...payload.data!.data] : payload.data!.data);
+        setHasMore(payload.data.hasMore);
+        setNextCursor(payload.data.nextCursor);
+      }
     } catch {
       toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   }
 
@@ -739,7 +762,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                       onClick={() => {
                         const nextFilters = { type: "", categoryId: "", from: "", to: "" };
                         setFilters(nextFilters);
-                        void loadTransactions(nextFilters);
+                        void loadTransactions(nextFilters, { append: false });
                       }}
                     >
                       Limpiar
@@ -863,6 +886,23 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                     onDelete={handleDelete}
                   />
                 ))}
+
+                {hasMore && (
+                  <div className="flex justify-center pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isLoadingMore}
+                      onClick={() => loadTransactions(filters, { append: true, cursor: nextCursor })}
+                    >
+                      {isLoadingMore ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                      ) : null}
+                      {isLoadingMore ? "Cargando..." : "Cargar más"}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
