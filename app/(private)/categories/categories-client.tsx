@@ -4,9 +4,15 @@ import { useMemo, useState } from "react";
 import { FolderTree, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
+import { ActionButton } from "@/components/ui-v2/action-button";
+import {
+  PremiumCard,
+  PremiumCardContent,
+  PremiumCardDescription,
+  PremiumCardHeader,
+  PremiumCardTitle,
+} from "@/components/ui-v2/premium-card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -210,20 +216,20 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
   return (
     <div className={`grid min-w-0 gap-6 ${isFormOpen ? "xl:grid-cols-[360px_1fr]" : ""}`}>
       {isFormOpen ? (
-        <Card>
-          <CardHeader className="p-4">
+        <PremiumCard variant="raised">
+          <PremiumCardHeader className="p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
                 <Plus className="h-4 w-4" aria-hidden="true" />
               </div>
               <div className="min-w-0">
-                <CardTitle>{editingCategoryId ? "Editar categoría" : "Nueva categoría"}</CardTitle>
-                <CardDescription>Clasificación financiera reusable.</CardDescription>
+                <PremiumCardTitle>{editingCategoryId ? "Editar categoría" : "Nueva categoría"}</PremiumCardTitle>
+                <PremiumCardDescription>Clasificación financiera reusable.</PremiumCardDescription>
               </div>
-              <Button
+              <ActionButton
                 type="button"
-                variant="ghost"
                 size="icon"
+                variant="quiet"
                 className="ml-auto h-9 w-9"
                 onClick={() => {
                   resetForm();
@@ -232,18 +238,18 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
                 aria-label="Cerrar formulario"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
-              </Button>
+              </ActionButton>
             </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
+          </PremiumCardHeader>
+          <PremiumCardContent className="px-4 pb-4">
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Field label="Nombre" error={errors.name}>
-              <Input value={form.name} onChange={(event) => updateForm("name", event.target.value)} />
+              <Input className={inputClass} value={form.name} onChange={(event) => updateForm("name", event.target.value)} />
             </Field>
 
             <Field label="Tipo" error={errors.type}>
               <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className={selectClass}
                 value={form.type}
                 onChange={(event) => updateForm("type", event.target.value as CategoryType)}
               >
@@ -259,13 +265,14 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
               <Field label="Color" error={errors.color}>
                 <input
                   type="color"
-                  className="h-10 w-full rounded-md border border-input bg-background p-1"
+                  className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] p-1"
                   value={form.color}
                   onChange={(event) => updateForm("color", event.target.value)}
                 />
               </Field>
               <Field label="Icono" error={errors.icon}>
                 <Input
+                  className={inputClass}
                   value={form.icon}
                   onChange={(event) => updateForm("icon", event.target.value)}
                   placeholder="Ej: receipt"
@@ -275,7 +282,7 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
 
             <Field label="Categoría padre" error={errors.parentId}>
               <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className={selectClass}
                 value={form.parentId}
                 onChange={(event) => updateForm("parentId", event.target.value)}
               >
@@ -288,18 +295,18 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
               </select>
             </Field>
 
-            {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
+            {message ? <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">{message}</p> : null}
 
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-              <Button className="h-11 w-full" disabled={isLoading}>
+              <ActionButton className="w-full" disabled={isLoading}>
                 {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                 {editingCategoryId ? "Guardar cambios" : "Crear categoría"}
-              </Button>
+              </ActionButton>
               {editingCategoryId ? (
-                <Button
+                <ActionButton
                   type="button"
-                  variant="outline"
-                  className="h-11 w-full"
+                  variant="glass"
+                  className="w-full"
                   onClick={() => {
                     resetForm();
                     setIsFormOpen(false);
@@ -307,22 +314,22 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
                   Cancelar
-                </Button>
+                </ActionButton>
               ) : null}
             </div>
           </form>
-          </CardContent>
-        </Card>
+          </PremiumCardContent>
+        </PremiumCard>
       ) : null}
 
-      <Card>
-        <CardHeader>
+      <PremiumCard>
+        <PremiumCardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle>Listado</CardTitle>
-              <CardDescription>{categories.length} categorías activas.</CardDescription>
+              <PremiumCardTitle>Mapa de categorías</PremiumCardTitle>
+              <PremiumCardDescription>{categories.length} categorías activas.</PremiumCardDescription>
             </div>
-            <Button
+            <ActionButton
               type="button"
               size="sm"
               className="w-full sm:w-auto"
@@ -333,10 +340,10 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
               Nueva categoría
-            </Button>
+            </ActionButton>
           </div>
-        </CardHeader>
-        <CardContent>
+        </PremiumCardHeader>
+        <PremiumCardContent>
           {categories.length === 0 ? (
             <EmptyState
               icon={FolderTree}
@@ -357,11 +364,14 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </PremiumCardContent>
+      </PremiumCard>
     </div>
   );
 }
+
+const inputClass = "v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-zinc-600";
+const selectClass = "v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition hover:bg-white/[0.07]";
 
 function Field({
   label,
@@ -374,9 +384,9 @@ function Field({
 }) {
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label className="text-xs font-semibold uppercase text-zinc-500">{label}</Label>
       {children}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="text-xs text-rose-300">{error}</p> : null}
     </div>
   );
 }
@@ -395,7 +405,7 @@ function CategoryCard({
   onDelete: (categoryId: string) => void;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card px-2.5 py-2 transition-all duration-200 hover:border-border/80">
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] px-3 py-2.5 transition duration-200 hover:border-white/[0.16] hover:bg-white/[0.055]">
       <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"
@@ -408,31 +418,31 @@ function CategoryCard({
           />
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
-              <p className="truncate text-xs font-semibold sm:text-sm">{category.name}</p>
-              {parentName ? <span className="truncate text-[11px] text-muted-foreground">· {parentName}</span> : null}
+              <p className="truncate text-xs font-semibold text-white sm:text-sm">{category.name}</p>
+              {parentName ? <span className="truncate text-[11px] text-zinc-500">· {parentName}</span> : null}
             </div>
             <div className="mt-1 flex min-w-0 items-center gap-1.5 overflow-hidden">
-              <Badge className="h-5 shrink-0 px-1.5 py-0 text-[10px]">{categoryTypeLabels[category.type]}</Badge>
-              <Badge className="h-5 shrink-0 px-1.5 py-0 text-[10px]">{category.isSystem ? "Base" : "Personal"}</Badge>
-              {category.icon ? <Badge className="h-5 shrink-0 px-1.5 py-0 text-[10px]">{category.icon}</Badge> : null}
+              <Badge className="h-5 shrink-0 border-white/10 bg-white/[0.06] px-1.5 py-0 text-[10px] text-zinc-200">{categoryTypeLabels[category.type]}</Badge>
+              <Badge className="h-5 shrink-0 border-white/10 bg-white/[0.06] px-1.5 py-0 text-[10px] text-zinc-200">{category.isSystem ? "Base" : "Personal"}</Badge>
+              {category.icon ? <Badge className="h-5 shrink-0 border-white/10 bg-white/[0.06] px-1.5 py-0 text-[10px] text-zinc-200">{category.icon}</Badge> : null}
             </div>
           </div>
         </button>
-        <Button
+        <ActionButton
           type="button"
-          variant="ghost"
+          variant="quiet"
           size="icon"
           className="h-8 w-8 shrink-0 text-muted-foreground"
           onClick={() => onEdit(category)}
           aria-label="Editar categoría"
         >
           <Pencil className="h-4 w-4" aria-hidden="true" />
-        </Button>
-        <Button
+        </ActionButton>
+        <ActionButton
           type="button"
-          variant="ghost"
+          variant="danger"
           size="icon"
-          className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          className="h-8 w-8 shrink-0"
           disabled={isDeleting}
           onClick={() => onDelete(category.id)}
           aria-label="Eliminar categoría"
@@ -442,7 +452,7 @@ function CategoryCard({
           ) : (
             <Trash2 className="h-4 w-4" aria-hidden="true" />
           )}
-        </Button>
+        </ActionButton>
       </div>
     </div>
   );

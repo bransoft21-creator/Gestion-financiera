@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/app/page-header";
+import { V2PageShell } from "@/components/layout/v2-page-shell";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getRecurringExpenseWorkspace } from "@/server/services/workspace";
 import { RecurringExpensesClient } from "./recurring-expenses-client";
@@ -8,16 +8,16 @@ export default async function RecurringPage() {
   const { household, accounts, categories } = await getRecurringExpenseWorkspace(userProfile.id);
 
   return (
-    <>
-      <PageHeader
-        title="Gastos Recurrentes"
-        description="Suscripciones, alquiler, servicios y cualquier gasto que se repite. Mantené el control de los vencimientos próximos."
-      />
+    <V2PageShell
+      eyebrow="Gastos fijos invisibles"
+      title="El dinero que se va solo"
+      description="Suscripciones, servicios y pagos automáticos vistos como compromisos silenciosos del mes."
+    >
       <RecurringExpensesClient
         householdId={household.id}
         accounts={accounts}
         categories={categories}
       />
-    </>
+    </V2PageShell>
   );
 }

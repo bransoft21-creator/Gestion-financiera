@@ -1,5 +1,4 @@
-import { Landmark, Plus } from "lucide-react";
-import { PageHeader } from "@/components/app/page-header";
+import { V2PageShell } from "@/components/layout/v2-page-shell";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getAccountWorkspace } from "@/server/services/workspace";
 import { AccountsClient } from "./accounts-client";
@@ -9,12 +8,12 @@ export default async function AccountsPage() {
   const { household } = await getAccountWorkspace(userProfile.id);
 
   return (
-    <>
-      <PageHeader
-        title="Cuentas"
-        description="Administrá tus cuentas bancarias, efectivo, tarjetas y billeteras digitales. El patrimonio neto se calcula en tiempo real."
-      />
+    <V2PageShell
+      eyebrow="Dónde vive tu dinero"
+      title="Tus cuentas, ordenadas por claridad"
+      description="Bancos, efectivo, tarjetas y billeteras como lugares financieros, no como registros administrativos."
+    >
       <AccountsClient householdId={household.id} />
-    </>
+    </V2PageShell>
   );
 }

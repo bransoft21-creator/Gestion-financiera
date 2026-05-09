@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Loader2,
   PiggyBank,
+  Sparkles,
   Star,
   TrendingDown,
   TrendingUp,
@@ -27,6 +28,12 @@ import {
   YAxis,
 } from "recharts";
 import { EmptyState } from "@/components/app/empty-state";
+import {
+  PremiumCard,
+  PremiumCardContent,
+  PremiumCardDescription,
+  PremiumCardTitle,
+} from "@/components/ui-v2/premium-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type TrendPoint = {
@@ -137,13 +144,13 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="flex h-72 flex-col items-center justify-center p-8 text-center">
-          <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />
-          <h2 className="mt-4 text-lg font-semibold">No se pudo cargar el reporte</h2>
-          <p className="mt-2 text-sm text-muted-foreground">{error}</p>
-        </CardContent>
-      </Card>
+      <PremiumCard variant="raised">
+        <PremiumCardContent className="flex h-72 flex-col items-center justify-center p-8 text-center">
+          <AlertTriangle className="h-8 w-8 text-rose-200" aria-hidden="true" />
+          <h2 className="mt-4 text-lg font-semibold text-white">No se pudo cargar la memoria</h2>
+          <p className="mt-2 text-sm text-zinc-400">{error}</p>
+        </PremiumCardContent>
+      </PremiumCard>
     );
   }
 
@@ -166,42 +173,69 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
 
   return (
     <div className="space-y-6">
-      {/* Period selector */}
-      <div
-        className="flex w-full overflow-x-auto rounded-[10px] border border-border p-1 sm:w-fit"
-        style={{ background: "var(--surface)" }}
-      >
-        {PERIODS.map(({ value, label }) => (
-          <button
-            key={value}
-            type="button"
-            disabled={isLoading}
-            onClick={() => setMonths(value)}
-            className="shrink-0 rounded-[7px] px-4 py-2 text-xs font-semibold transition-all duration-150 disabled:opacity-50"
-            style={
-              months === value
-                ? { background: "hsl(var(--primary))", color: "#fff", boxShadow: "0 2px 8px rgba(124,58,237,.35)" }
-                : { background: "transparent", color: "hsl(var(--muted-foreground))" }
-            }
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <PremiumCard variant="raised" className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_18%_0%,rgba(96,165,250,0.16),transparent_36%),radial-gradient(circle_at_82%_0%,rgba(52,211,153,0.13),transparent_34%)]" />
+        <PremiumCardContent className="relative p-5 sm:p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-2xl">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-zinc-300">
+                <Sparkles className="h-3.5 w-3.5 text-sky-200" aria-hidden="true" />
+                Lectura del período
+              </div>
+              <h2 className="text-balance text-2xl font-semibold leading-tight text-white sm:text-3xl">
+                {hasTrend ? getMemoryTitle(totalSavings, avgSavingsRate) : "Tu memoria financiera se está formando."}
+              </h2>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">
+                {hasTrend
+                  ? "Miramos ingresos, gastos, ahorro y categorías para encontrar el pulso real del período."
+                  : "Registrá movimientos y snapshots para que la app pueda narrar tendencias con más precisión."}
+              </p>
+            </div>
+
+            <div className="flex w-full overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.045] p-1 sm:w-fit">
+              {PERIODS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => setMonths(value)}
+                  className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition disabled:opacity-50 ${
+                    months === value ? "bg-white text-zinc-950" : "text-zinc-400 hover:bg-white/[0.06] hover:text-white"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {hasTrend ? (
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <MemoryMetric icon={TrendingUp} label="Ingresos" value={formatMoney(totalIncome)} />
+              <MemoryMetric icon={TrendingDown} label="Gastos" value={formatMoney(totalExpenses)} />
+              <MemoryMetric icon={PiggyBank} label="Ahorro" value={formatMoney(totalSavings)} />
+            </div>
+          ) : null}
+        </PremiumCardContent>
+      </PremiumCard>
 
       {isLoading ? (
-        <Card>
-          <CardContent className="flex h-72 items-center justify-center text-sm text-muted-foreground">
+        <PremiumCard>
+          <PremiumCardContent className="flex h-72 items-center justify-center text-sm text-zinc-400">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-            Generando reporte
-          </CardContent>
-        </Card>
+            Generando memoria
+          </PremiumCardContent>
+        </PremiumCard>
       ) : !hasTrend ? (
-        <EmptyState
-          icon={TrendingUp}
-          title="Sin datos suficientes"
-          description="Registrá transacciones para ver la evolución mensual de tus finanzas."
-        />
+        <PremiumCard>
+          <PremiumCardContent>
+            <EmptyState
+              icon={TrendingUp}
+              title="Sin datos suficientes"
+              description="Registrá transacciones para ver la evolución mensual de tus finanzas."
+            />
+          </PremiumCardContent>
+        </PremiumCard>
       ) : (
         <>
           {/* Period summary */}
@@ -237,10 +271,10 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
           ) : null}
 
           {/* Income vs Expenses chart */}
-          <Card>
+          <PremiumCard>
             <CardHeader>
-              <CardTitle>Ingresos vs Gastos</CardTitle>
-              <CardDescription>Comparación mensual para identificar tendencias.</CardDescription>
+              <PremiumCardTitle>Ingresos vs Gastos</PremiumCardTitle>
+              <PremiumCardDescription>Comparación mensual para identificar tendencias.</PremiumCardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-[300px] w-full">
@@ -278,13 +312,13 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                 </ResponsiveContainer>
               </div>
             </CardContent>
-          </Card>
+          </PremiumCard>
 
           {/* Savings rate chart */}
-          <Card>
+          <PremiumCard>
             <CardHeader>
-              <CardTitle>Tasa de ahorro</CardTitle>
-              <CardDescription>Porcentaje mensual: (ingresos − gastos) / ingresos.</CardDescription>
+              <PremiumCardTitle>Tasa de ahorro</PremiumCardTitle>
+              <PremiumCardDescription>Porcentaje mensual: ingresos menos gastos sobre ingresos.</PremiumCardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-[240px] w-full">
@@ -325,7 +359,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                 </ResponsiveContainer>
               </div>
             </CardContent>
-          </Card>
+          </PremiumCard>
 
           {/* Categories */}
           {hasCategories ? (
@@ -475,6 +509,31 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
 }
 
 const MONTH_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+function MemoryMetric({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
+      <Icon className="h-4 w-4 text-zinc-400" aria-hidden="true" />
+      <p className="mt-3 text-[11px] font-medium uppercase text-zinc-500">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-white">{value}</p>
+    </div>
+  );
+}
+
+function getMemoryTitle(totalSavings: number, avgSavingsRate: number) {
+  if (totalSavings < 0) return "El período dejó una señal de presión.";
+  if (avgSavingsRate >= 25) return "Tu dinero tuvo un período fuerte.";
+  if (avgSavingsRate >= 10) return "El período cerró con margen saludable.";
+  return "El período necesita una lectura más fina.";
+}
 
 function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[] }) {
   const chartData = snapshots.map((s) => ({

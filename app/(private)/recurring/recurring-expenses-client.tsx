@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Bell,
   CalendarClock,
@@ -16,7 +17,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { EmptyState } from "@/components/app/empty-state";
+import { ActionButton } from "@/components/ui-v2/action-button";
+import {
+  PremiumCard,
+  PremiumCardContent,
+  PremiumCardDescription,
+  PremiumCardHeader,
+  PremiumCardTitle,
+} from "@/components/ui-v2/premium-card";
 import {
   AppFormPanel,
   MobileCreateFab,
@@ -26,8 +34,6 @@ import {
 } from "@/components/app/mobile-form";
 import { moneySchema } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -73,6 +79,14 @@ type FormState = {
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
+type RecurringSummary = {
+  activeMonthly: number;
+  activeCount: number;
+  inactiveCount: number;
+  dueSoonCount: number;
+  nextItem: RecurringItem | null;
+};
+
 const frequencyLabels: Record<Frequency, string> = {
   WEEKLY: "Semanal",
   BIWEEKLY: "Quincenal",
@@ -115,6 +129,16 @@ const defaultForm: FormState = {
   notes: "",
 };
 
+const cardMotion = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: 12 },
+  transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
+} as const;
+
+const inputClass = "v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-zinc-600";
+const selectClass = "v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition hover:bg-white/[0.07]";
+
 export function RecurringExpensesClient({ householdId, accounts, categories }: RecurringClientProps) {
   const defaultAccount = getPreferredArsBankAccount(accounts);
   const getDefaultForm = (): FormState => ({
@@ -135,6 +159,9 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
   const [errors, setErrors] = useState<FormErrors>({});
   const [message, setMessage] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
+  const [pendingDeleteItem, setPendingDeleteItem] = useState<RecurringItem | null>(null);
+
+  const summary = buildRecurringSummary(items, upcomingCount);
 
   useEffect(() => {
     void loadItems();
@@ -258,8 +285,14 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!window.confirm("¿Eliminar este gasto recurrente?")) return;
+  function requestDelete(item: RecurringItem) {
+    setPendingDeleteItem(item);
+  }
+
+  async function confirmDelete() {
+    if (!pendingDeleteItem) return;
+
+    const id = pendingDeleteItem.id;
     setDeletingId(id);
     setMessage(null);
 
@@ -276,6 +309,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
       }
 
       toast.success("Recurrente eliminado.");
+      setPendingDeleteItem(null);
       if (editingId === id) resetForm();
       await loadItems();
     } catch {
@@ -351,181 +385,293 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  function openNewItem() {
+    resetForm();
+    setIsFormOpen(true);
+  }
+
   return (
-    <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-      <AppFormPanel isOpen={isFormOpen} onClose={() => setIsFormOpen(false)}>
-        <CardHeader className={appFormHeaderClass()}>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
+    <>
+    <div className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
+      <AppFormPanel
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        className="border-white/10 bg-zinc-950/80 shadow-[0_24px_80px_rgba(0,0,0,0.32)] xl:rounded-[var(--v2-radius-xl)]"
+      >
+        <div className={appFormHeaderClass("border-white/10 bg-zinc-950/95 xl:bg-transparent")}>
+          <div className="flex items-start gap-3 p-5 sm:p-6">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
               <RefreshCw className="h-5 w-5" aria-hidden="true" />
             </div>
-            <div>
-              <CardTitle>{editingId ? "Editar recurrente" : "Nuevo recurrente"}</CardTitle>
-              <CardDescription>
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold leading-tight text-white">{editingId ? "Editar gasto fijo" : "Nuevo gasto fijo"}</h2>
+              <p className="mt-1 text-sm leading-5 text-zinc-400">
                 {editingId ? "Modificá los datos." : "Suscripción, servicio o pago periódico."}
-              </CardDescription>
+              </p>
             </div>
-            <Button type="button" variant="ghost" size="icon" aria-label="Cerrar formulario" className="ml-auto xl:hidden" onClick={() => setIsFormOpen(false)}>
+            <ActionButton type="button" variant="quiet" size="icon" aria-label="Cerrar formulario" className="ml-auto xl:hidden" onClick={() => setIsFormOpen(false)}>
               <X className="h-5 w-5" aria-hidden="true" />
-            </Button>
+            </ActionButton>
           </div>
-        </CardHeader>
-        <CardContent className={appFormContentClass(isFormOpen)}>
-          <form className="space-y-4" onSubmit={handleSubmit}>
+        </div>
+        <div className={appFormContentClass(isFormOpen, "px-5 sm:px-6")}>
+          <form className="space-y-4 pb-5" onSubmit={handleSubmit}>
             <Field label="Nombre" error={errors.name}>
-              <Input value={form.name} onChange={(e) => updateForm("name", e.target.value)} placeholder="Ej: Netflix, Alquiler, Gym" />
+              <Input className={inputClass} value={form.name} onChange={(e) => updateForm("name", e.target.value)} placeholder="Ej: Netflix, Alquiler, Gym" />
             </Field>
 
-            <div className="grid gap-3 sm:grid-cols-[96px_1fr]">
+            <div className="grid gap-3 sm:grid-cols-[104px_1fr]">
               <Field label="Moneda" error={errors.currency}>
-                <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" value={form.currency} onChange={(e) => updateForm("currency", e.target.value as CurrencyCode)}>
+                <select className={selectClass} value={form.currency} onChange={(e) => updateForm("currency", e.target.value as CurrencyCode)}>
                   <option value="ARS">ARS</option>
                   <option value="USD">USD</option>
                 </select>
               </Field>
               <Field label="Monto" error={errors.amount}>
-                <Input inputMode="decimal" value={form.amount} onChange={(e) => updateForm("amount", e.target.value)} placeholder="0" />
+                <Input className={inputClass} inputMode="decimal" value={form.amount} onChange={(e) => updateForm("amount", e.target.value)} placeholder="0" />
               </Field>
             </div>
 
             <Field label="Frecuencia" error={errors.frequency}>
-              <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" value={form.frequency} onChange={(e) => updateForm("frequency", e.target.value as Frequency)}>
+              <select className={selectClass} value={form.frequency} onChange={(e) => updateForm("frequency", e.target.value as Frequency)}>
                 {frequencies.map((f) => <option key={f} value={f}>{frequencyLabels[f]}</option>)}
               </select>
             </Field>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Próximo vencimiento" error={errors.nextDueDate}>
-                <Input type="date" value={form.nextDueDate} onChange={(e) => updateForm("nextDueDate", e.target.value)} />
+                <Input className={inputClass} type="date" value={form.nextDueDate} onChange={(e) => updateForm("nextDueDate", e.target.value)} />
               </Field>
               <Field label="Fecha de fin" error={errors.endDate}>
-                <Input type="date" value={form.endDate} onChange={(e) => updateForm("endDate", e.target.value)} />
+                <Input className={inputClass} type="date" value={form.endDate} onChange={(e) => updateForm("endDate", e.target.value)} />
               </Field>
             </div>
 
             <Field label="Cuenta" error={errors.accountId}>
-              <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" value={form.accountId} onChange={(e) => updateForm("accountId", e.target.value)}>
+              <select className={selectClass} value={form.accountId} onChange={(e) => updateForm("accountId", e.target.value)}>
                 <option value="">Sin cuenta</option>
                 {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </Field>
 
             <Field label="Categoría" error={errors.categoryId}>
-              <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" value={form.categoryId} onChange={(e) => updateForm("categoryId", e.target.value)}>
+              <select className={selectClass} value={form.categoryId} onChange={(e) => updateForm("categoryId", e.target.value)}>
                 <option value="">Sin categoría</option>
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </Field>
 
             <Field label="Notas" error={errors.notes}>
-              <textarea className="min-h-16 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" value={form.notes} onChange={(e) => updateForm("notes", e.target.value)} placeholder="Detalle opcional" />
+              <textarea className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600" value={form.notes} onChange={(e) => updateForm("notes", e.target.value)} placeholder="Detalle opcional" />
             </Field>
 
-            {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
+            {message ? <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">{message}</p> : null}
 
             <div className={appFormActionsClass()}>
-              <Button className="h-11 w-full" disabled={isSaving}>
+              <ActionButton className="w-full" disabled={isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-                {editingId ? "Guardar cambios" : "Crear recurrente"}
-              </Button>
+                {editingId ? "Guardar cambios" : "Crear gasto fijo"}
+              </ActionButton>
               {editingId ? (
-                <Button type="button" variant="outline" className="h-11 w-full" onClick={resetForm}>
+                <ActionButton type="button" variant="glass" className="w-full" onClick={resetForm}>
                   <X className="h-4 w-4" aria-hidden="true" />
                   Cancelar
-                </Button>
+                </ActionButton>
               ) : null}
             </div>
           </form>
-        </CardContent>
+        </div>
       </AppFormPanel>
 
-      <div className="space-y-6">
-        {/* Summary cards */}
-        {!isLoading && (
-          <div className="flex flex-wrap gap-3">
-            <div className="flex-1 min-w-[160px] rounded-xl border border-border bg-card px-4 py-3.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total mensual activo</p>
-              <p className="mt-1 text-[22px] font-extrabold tabular-nums text-foreground">
-                {formatMoney(items.filter((i) => i.isActive).reduce((s, i) => s + i.amount, 0), "ARS")}
-              </p>
-            </div>
-            <div className="flex-1 min-w-[140px] rounded-xl border border-rose-500/18 bg-rose-500/8 px-4 py-3.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-rose-400/70">Vencen pronto</p>
-              <p className="mt-1 text-[22px] font-extrabold text-rose-400">{upcomingCount}</p>
-            </div>
-          </div>
-        )}
+      <div className="space-y-5">
+        <RecurringBriefing summary={summary} isLoading={isLoading} onCreate={openNewItem} />
 
         {upcomingCount > 0 && (
-          <div className="flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
-            <Bell className="h-5 w-5 shrink-0 text-amber-400" aria-hidden="true" />
-            <p className="text-sm text-muted-foreground">
-              <span className="font-semibold text-amber-400">{upcomingCount} vencimiento{upcomingCount > 1 ? "s" : ""}</span> dentro de los próximos 30 días.
+          <div className="flex items-center gap-3 rounded-3xl border border-amber-300/20 bg-amber-300/10 p-4">
+            <Bell className="h-5 w-5 shrink-0 text-amber-100" aria-hidden="true" />
+            <p className="text-sm text-zinc-300">
+              <span className="font-semibold text-amber-100">{upcomingCount} vencimiento{upcomingCount > 1 ? "s" : ""}</span> dentro de los próximos 30 días.
             </p>
           </div>
         )}
 
-        <Card>
-          <CardHeader>
+        <PremiumCard variant="default" className="overflow-hidden">
+          <PremiumCardHeader className="pb-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle>Gastos recurrentes</CardTitle>
-                <CardDescription>{items.length} registrados</CardDescription>
+                <PremiumCardTitle>Pagos silenciosos</PremiumCardTitle>
+                <PremiumCardDescription>{items.length} recurrentes registrados</PremiumCardDescription>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {(["all", "active", "inactive"] as const).map((f) => (
-                  <Button
+                  <ActionButton
                     key={f}
                     type="button"
-                    variant={activeFilter === f ? "default" : "outline"}
+                    variant={activeFilter === f ? "primary" : "glass"}
                     size="sm"
                     onClick={() => setActiveFilter(f)}
                   >
                     {f === "all" ? "Todos" : f === "active" ? "Activos" : "Inactivos"}
-                  </Button>
+                  </ActionButton>
                 ))}
-                <Button type="button" size="sm" className="hidden xl:inline-flex" onClick={() => { resetForm(); setIsFormOpen(true); }}>
+                <ActionButton type="button" size="sm" className="hidden xl:inline-flex" onClick={openNewItem}>
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   Nuevo
-                </Button>
+                </ActionButton>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
+          </PremiumCardHeader>
+          <PremiumCardContent>
             {isLoading ? (
-              <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                Cargando recurrentes
+              <div className="grid gap-3">
+                {[1, 2, 3].map((item) => <div key={item} className="h-28 rounded-[1.5rem] border border-white/[0.08] bg-white/[0.035]" />)}
               </div>
             ) : items.length === 0 ? (
-              <EmptyState
-                icon={CalendarClock}
-                title="Sin gastos recurrentes"
-                description="Agregá suscripciones, alquileres o servicios que se repiten periódicamente."
-              />
+              <RecurringEmptyState onCreate={openNewItem} />
             ) : (
-              <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
-                {items.map((item) => (
-                  <RecurringRow
-                    key={item.id}
-                    item={item}
-                    isToggling={togglingId === item.id}
-                    isDeleting={deletingId === item.id}
-                    isPaying={payingId === item.id}
-                    onEdit={() => startEditing(item)}
-                    onToggle={() => handleToggle(item)}
-                    onDelete={() => handleDelete(item.id)}
-                    onPay={() => handlePay(item)}
-                  />
-                ))}
+              <div className="grid gap-3">
+                <AnimatePresence initial={false}>
+                  {items.map((item) => (
+                    <RecurringRow
+                      key={item.id}
+                      item={item}
+                      isToggling={togglingId === item.id}
+                      isDeleting={deletingId === item.id}
+                      isPaying={payingId === item.id}
+                      onEdit={() => startEditing(item)}
+                      onToggle={() => handleToggle(item)}
+                      onDelete={() => requestDelete(item)}
+                      onPay={() => handlePay(item)}
+                    />
+                  ))}
+                </AnimatePresence>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </PremiumCardContent>
+        </PremiumCard>
       </div>
 
-      <MobileCreateFab label="Nuevo recurrente" onClick={() => { resetForm(); setIsFormOpen(true); }} />
+      <MobileCreateFab label="Nuevo recurrente" onClick={openNewItem} />
     </div>
+    <DeleteRecurringDialog
+      item={pendingDeleteItem}
+      isDeleting={deletingId === pendingDeleteItem?.id}
+      onCancel={() => setPendingDeleteItem(null)}
+      onConfirm={confirmDelete}
+    />
+    </>
+  );
+}
+
+function RecurringBriefing({ summary, isLoading, onCreate }: { summary: RecurringSummary; isLoading: boolean; onCreate: () => void }) {
+  return (
+    <motion.div {...cardMotion}>
+      <PremiumCard variant="raised" className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_18%_0%,rgba(244,114,182,0.14),transparent_36%),radial-gradient(circle_at_82%_0%,rgba(45,212,191,0.13),transparent_34%)]" />
+        <PremiumCardContent className="relative p-5 sm:p-6">
+          {isLoading ? (
+            <div className="space-y-5">
+              <div className="h-5 w-40 rounded-full bg-white/10" />
+              <div className="h-8 w-80 max-w-full rounded-full bg-white/10" />
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[1, 2, 3].map((item) => <div key={item} className="h-20 rounded-3xl bg-white/10" />)}
+              </div>
+            </div>
+          ) : (
+            <>
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-zinc-300">
+                  <RefreshCw className="h-3.5 w-3.5 text-teal-200" aria-hidden="true" />
+                  Costo invisible
+                </div>
+                <h2 className="text-balance text-2xl font-semibold leading-tight text-white sm:text-3xl">
+                  {summary.activeCount > 0 ? "Estos gastos ya tienen permiso para volver." : "Todavía no hay gastos automáticos activos."}
+                </h2>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">
+                  {summary.activeCount > 0
+                    ? "La app los mantiene visibles para que el mes no se llene de cobros silenciosos."
+                    : "Cuando cargues suscripciones y servicios, vas a ver cuánto se va solo cada mes."}
+                </p>
+              </div>
+              <div className="rounded-[2rem] border border-white/10 bg-white/[0.055] p-4 text-right">
+                <p className="text-[11px] font-semibold uppercase text-zinc-500">Activo mensual</p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-white">{formatMoney(summary.activeMonthly, "ARS")}</p>
+                <ActionButton type="button" variant="glass" size="sm" className="mt-3" onClick={onCreate}>
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Nuevo
+                </ActionButton>
+              </div>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <RecurringMetric label="Activos" value={`${summary.activeCount}`} />
+              <RecurringMetric label="Vencen pronto" value={`${summary.dueSoonCount}`} />
+              <RecurringMetric label="Próximo" value={summary.nextItem ? summary.nextItem.name : "Sin fecha"} />
+            </div>
+            </>
+          )}
+        </PremiumCardContent>
+      </PremiumCard>
+    </motion.div>
+  );
+}
+
+function RecurringMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
+      <p className="text-[11px] font-medium uppercase text-zinc-500">{label}</p>
+      <p className="mt-2 truncate text-sm font-semibold tabular-nums text-white">{value}</p>
+    </div>
+  );
+}
+
+function RecurringEmptyState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="rounded-[1.75rem] border border-dashed border-white/10 bg-white/[0.025] p-6 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-zinc-300">
+        <CalendarClock className="h-5 w-5" aria-hidden="true" />
+      </div>
+      <h3 className="mt-4 text-base font-semibold text-white">Sin gastos fijos invisibles</h3>
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-zinc-400">
+        Agregá suscripciones, alquileres o servicios para revelar cuánto se va solo.
+      </p>
+      <ActionButton type="button" className="mt-5" onClick={onCreate}>
+        <Plus className="h-4 w-4" aria-hidden="true" />
+        Crear gasto fijo
+      </ActionButton>
+    </div>
+  );
+}
+
+function DeleteRecurringDialog({ item, isDeleting, onCancel, onConfirm }: { item: RecurringItem | null; isDeleting: boolean; onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <AnimatePresence>
+      {item ? (
+        <motion.div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-xl sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div className="w-full max-w-md" initial={{ opacity: 0, y: 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.98 }}>
+            <PremiumCard variant="raised">
+              <PremiumCardHeader>
+                <PremiumCardTitle>Eliminar {item.name}</PremiumCardTitle>
+                <PremiumCardDescription>Se quita este gasto fijo. Los pagos ya registrados no se modifican.</PremiumCardDescription>
+              </PremiumCardHeader>
+              <PremiumCardContent>
+                <div className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
+                  <p className="text-sm text-zinc-400">Monto recurrente</p>
+                  <p className="mt-2 text-xl font-semibold tabular-nums text-white">{formatMoney(item.amount, item.currency)}</p>
+                </div>
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                  <ActionButton type="button" variant="glass" onClick={onCancel} disabled={isDeleting}>Cancelar</ActionButton>
+                  <ActionButton type="button" variant="danger" onClick={onConfirm} disabled={isDeleting}>
+                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+                    Eliminar
+                  </ActionButton>
+                </div>
+              </PremiumCardContent>
+            </PremiumCard>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }
 
@@ -557,17 +703,21 @@ function RecurringRow({
   };
 
   return (
-    <div className={`grid gap-3 bg-card p-4 xl:grid-cols-[1fr_auto_auto] xl:items-center ${!item.isActive ? "opacity-50" : ""}`}>
+    <motion.article
+      layout
+      {...cardMotion}
+      className={`rounded-[1.75rem] border border-white/[0.08] bg-white/[0.035] p-4 transition duration-200 hover:border-white/[0.16] hover:bg-white/[0.055] sm:p-5 ${!item.isActive ? "opacity-55" : ""}`}
+    >
       <div className="flex min-w-0 items-start gap-3">
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.isActive ? "bg-violet-500/15 text-violet-400" : "bg-secondary text-muted-foreground"}`}>
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 ${item.isActive ? "bg-white/[0.06] text-teal-100" : "bg-white/[0.03] text-zinc-500"}`}>
           <RefreshCw className="h-5 w-5" aria-hidden="true" />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-sm font-medium">{item.name}</p>
-            <Badge>{frequencyLabels[item.frequency]}</Badge>
+            <p className="truncate text-base font-semibold text-white">{item.name}</p>
+            <Badge className="border-white/10 bg-white/[0.06] text-zinc-200">{frequencyLabels[item.frequency]}</Badge>
             {item.isDueSoon && item.isActive && (
-              <Badge className={item.daysUntilDue < 0 ? "border-rose-300 bg-rose-50 text-rose-700" : "border-amber-300 bg-amber-50 text-amber-700"}>
+              <Badge className={item.daysUntilDue < 0 ? "border-rose-300/20 bg-rose-400/10 text-rose-100" : "border-amber-300/20 bg-amber-300/10 text-amber-100"}>
                 {item.daysUntilDue < 0
                   ? `Vencido hace ${Math.abs(item.daysUntilDue)}d`
                   : item.daysUntilDue === 0
@@ -576,7 +726,7 @@ function RecurringRow({
               </Badge>
             )}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-sm leading-5 text-zinc-400">
             Vence {formatDate(item.nextDueDate)}
             {item.account ? ` · ${item.account.name}` : ""}
             {item.category ? ` · ${item.category.name}` : ""}
@@ -589,7 +739,7 @@ function RecurringRow({
             const label = d < 0 ? `Vencido hace ${Math.abs(d)}d` : d === 0 ? "Hoy" : d === 1 ? "Mañana" : `en ${d}d`;
             return (
               <div className="mt-2 flex items-center gap-2">
-                <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-secondary">
+                <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/[0.08]">
                   <div className="h-full rounded-full transition-[width] duration-500"
                     style={{ width: `${barW}%`, background: urgColor }} />
                 </div>
@@ -602,15 +752,14 @@ function RecurringRow({
           })()}
         </div>
       </div>
-      <div className="text-left sm:text-right">
-        <p className="text-sm font-semibold text-rose-400">
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-lg font-semibold tabular-nums text-rose-100">
           -{formatMoney(item.amount, item.currency)}
         </p>
-      </div>
-      <div className="flex gap-2 xl:justify-end">
-        <Button
+        <div className="flex flex-wrap gap-2 sm:justify-end">
+        <ActionButton
           type="button"
-          variant="outline"
+          variant="glass"
           size="sm"
           disabled={isPaying || !item.isActive || !item.account}
           title={!item.account ? "Asigná una cuenta para registrar el pago" : "Registrar pago"}
@@ -619,13 +768,13 @@ function RecurringRow({
           {isPaying ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+            <CheckCircle2 className="h-4 w-4 text-emerald-200" aria-hidden="true" />
           )}
-        </Button>
-        <Button type="button" variant="outline" size="sm" onClick={onEdit}>
+        </ActionButton>
+        <ActionButton type="button" variant="glass" size="sm" onClick={onEdit}>
           <Pencil className="h-4 w-4" aria-hidden="true" />
-        </Button>
-        <Button type="button" variant="outline" size="sm" disabled={isToggling} onClick={onToggle}>
+        </ActionButton>
+        <ActionButton type="button" variant="glass" size="sm" disabled={isToggling} onClick={onToggle}>
           {isToggling ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : item.isActive ? (
@@ -633,13 +782,29 @@ function RecurringRow({
           ) : (
             <Play className="h-4 w-4" aria-hidden="true" />
           )}
-        </Button>
-        <Button type="button" variant="destructive" size="sm" disabled={isDeleting} onClick={onDelete}>
+        </ActionButton>
+        <ActionButton type="button" variant="danger" size="sm" disabled={isDeleting} onClick={onDelete}>
           {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Trash2 className="h-4 w-4" aria-hidden="true" />}
-        </Button>
+        </ActionButton>
+        </div>
       </div>
-    </div>
+    </motion.article>
   );
+}
+
+function buildRecurringSummary(items: RecurringItem[], upcomingCount: number): RecurringSummary {
+  const activeItems = items.filter((item) => item.isActive);
+
+  return {
+    activeMonthly: activeItems.reduce((sum, item) => sum + item.amount, 0),
+    activeCount: activeItems.length,
+    inactiveCount: items.length - activeItems.length,
+    dueSoonCount: upcomingCount,
+    nextItem:
+      activeItems
+        .filter((item) => item.nextDueDate)
+        .sort((a, b) => new Date(a.nextDueDate).getTime() - new Date(b.nextDueDate).getTime())[0] ?? null,
+  };
 }
 
 function formatMoney(value: number, currency: CurrencyCode) {
@@ -662,9 +827,9 @@ function getPreferredArsBankAccount(accounts: AccountOption[]) {
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label className="text-xs font-semibold uppercase text-zinc-500">{label}</Label>
       {children}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="text-xs text-rose-300">{error}</p> : null}
     </div>
   );
 }

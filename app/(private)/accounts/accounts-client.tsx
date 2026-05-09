@@ -14,6 +14,14 @@ import {
 import { toast } from "sonner";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
+import { ActionButton } from "@/components/ui-v2/action-button";
+import {
+  PremiumCard,
+  PremiumCardContent,
+  PremiumCardDescription,
+  PremiumCardHeader,
+  PremiumCardTitle,
+} from "@/components/ui-v2/premium-card";
 import {
   AppFormPanel,
   MobileCreateFab,
@@ -238,35 +246,40 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
   const archivedAccounts = accounts.filter((a) => a.isArchived);
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-      <AppFormPanel isOpen={isFormOpen} onClose={() => setIsFormOpen(false)}>
-        <CardHeader className={appFormHeaderClass()}>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
+    <div className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
+      <AppFormPanel
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        className="border-white/10 bg-zinc-950/80 shadow-[0_24px_80px_rgba(0,0,0,0.32)] xl:rounded-[var(--v2-radius-xl)]"
+      >
+        <div className={appFormHeaderClass("border-white/10 bg-zinc-950/95 xl:bg-transparent")}>
+          <div className="flex items-start gap-3 p-5 sm:p-6">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
               <Plus className="h-5 w-5" aria-hidden="true" />
             </div>
-            <div>
-              <CardTitle>{editingAccountId ? "Editar cuenta" : "Nueva cuenta"}</CardTitle>
-              <CardDescription>
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold leading-tight text-white">{editingAccountId ? "Editar lugar" : "Nuevo lugar"}</h2>
+              <p className="mt-1 text-sm leading-5 text-zinc-400">
                 {editingAccountId ? "Modificá los datos de la cuenta." : "Agregá una cuenta bancaria, efectivo o tarjeta."}
-              </CardDescription>
+              </p>
             </div>
-            <Button
+            <ActionButton
               type="button"
-              variant="ghost"
+              variant="quiet"
               size="icon"
               aria-label="Cerrar formulario"
               className="ml-auto xl:hidden"
               onClick={() => setIsFormOpen(false)}
             >
               <X className="h-5 w-5" aria-hidden="true" />
-            </Button>
+            </ActionButton>
           </div>
-        </CardHeader>
-        <CardContent className={appFormContentClass(isFormOpen)}>
-          <form className="space-y-4" onSubmit={handleSubmit}>
+        </div>
+        <div className={appFormContentClass(isFormOpen, "px-5 sm:px-6")}>
+          <form className="space-y-4 pb-5" onSubmit={handleSubmit}>
             <Field label="Nombre" error={errors.name}>
               <Input
+                className={inputClass}
                 value={form.name}
                 onChange={(e) => updateForm("name", e.target.value)}
                 placeholder="Ej: Cuenta Galicia, Efectivo, Visa"
@@ -275,7 +288,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
 
             <Field label="Tipo" error={errors.type}>
               <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className={selectClass}
                 value={form.type}
                 onChange={(e) => updateForm("type", e.target.value as AccountType)}
               >
@@ -288,7 +301,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Moneda" error={errors.currency}>
                 <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className={selectClass}
                   value={form.currency}
                   onChange={(e) => updateForm("currency", e.target.value as CurrencyCode)}
                 >
@@ -301,6 +314,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
                 error={errors.openingBalance}
               >
                 <Input
+                  className={inputClass}
                   inputMode="decimal"
                   value={form.openingBalance}
                   onChange={(e) => updateForm("openingBalance", e.target.value)}
@@ -312,6 +326,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
             {form.type === "CREDIT_CARD" && (
               <Field label="Límite de crédito" error={errors.creditLimit}>
                 <Input
+                  className={inputClass}
                   inputMode="decimal"
                   value={form.creditLimit}
                   onChange={(e) => updateForm("creditLimit", e.target.value)}
@@ -321,49 +336,49 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
             )}
 
             {message ? (
-              <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p>
+              <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">{message}</p>
             ) : null}
 
             <div className={appFormActionsClass()}>
-              <Button className="h-11 w-full" disabled={isSaving}>
+              <ActionButton className="w-full" disabled={isSaving}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-                {editingAccountId ? "Guardar cambios" : "Crear cuenta"}
-              </Button>
+                {editingAccountId ? "Guardar cambios" : "Crear lugar"}
+              </ActionButton>
               {editingAccountId ? (
-                <Button type="button" variant="outline" className="h-11 w-full" onClick={resetForm}>
+                <ActionButton type="button" variant="glass" className="w-full" onClick={resetForm}>
                   <X className="h-4 w-4" aria-hidden="true" />
                   Cancelar
-                </Button>
+                </ActionButton>
               ) : null}
             </div>
           </form>
-        </CardContent>
+        </div>
       </AppFormPanel>
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div className="grid gap-3 sm:grid-cols-3">
           <SummaryCard label="Activos" value={formatMoney(assets, "ARS")} tone="positive" />
           <SummaryCard label="Pasivos" value={formatMoney(liabilities, "ARS")} tone="danger" />
           <SummaryCard label="Patrimonio neto" value={formatMoney(netWorth, "ARS")} tone={netWorth >= 0 ? "default" : "warning"} highlight />
         </div>
 
-        <Card>
-          <CardHeader>
+        <PremiumCard>
+          <PremiumCardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle>Cuentas activas</CardTitle>
-                <CardDescription>{activeAccounts.length} cuentas</CardDescription>
+                <PremiumCardTitle>Lugares activos</PremiumCardTitle>
+                <PremiumCardDescription>{activeAccounts.length} cuentas donde vive tu dinero</PremiumCardDescription>
               </div>
               <div className="flex gap-2">
-                <Button
+                <ActionButton
                   type="button"
-                  variant="outline"
+                  variant="glass"
                   size="sm"
                   onClick={() => setShowArchived((v) => !v)}
                 >
                   {showArchived ? "Ocultar archivadas" : "Ver archivadas"}
-                </Button>
-                <Button
+                </ActionButton>
+                <ActionButton
                   type="button"
                   size="sm"
                   className="hidden xl:inline-flex"
@@ -371,11 +386,11 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
                 >
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   Nueva
-                </Button>
+                </ActionButton>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
+          </PremiumCardHeader>
+          <PremiumCardContent>
             {isLoading ? (
               <div className="space-y-2">
                 {[1, 2, 3].map((i) => (
@@ -396,7 +411,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
                 description="Agregá tu primera cuenta para comenzar a registrar movimientos."
               />
             ) : (
-              <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+              <div className="grid gap-3">
                 {activeAccounts.map((account) => (
                   <AccountRow
                     key={account.id}
@@ -411,7 +426,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
             {showArchived && archivedAccounts.length > 0 && (
               <div className="mt-6">
                 <p className="mb-3 text-sm font-medium text-muted-foreground">Archivadas</p>
-                <div className="divide-y divide-border overflow-hidden rounded-xl border border-border opacity-60">
+                <div className="grid gap-3 opacity-60">
                   {archivedAccounts.map((account) => (
                     <AccountRow
                       key={account.id}
@@ -423,14 +438,17 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </PremiumCardContent>
+        </PremiumCard>
       </div>
 
       <MobileCreateFab label="Nueva cuenta" onClick={() => { resetForm(); setIsFormOpen(true); }} />
     </div>
   );
 }
+
+const inputClass = "v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-zinc-600";
+const selectClass = "v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition hover:bg-white/[0.07]";
 
 function AccountRow({
   account,
@@ -453,16 +471,16 @@ function AccountRow({
   const isCredit = account.type === "CREDIT_CARD";
 
   return (
-    <div className="grid gap-3 bg-card p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+    <div className="grid gap-3 rounded-[1.5rem] border border-white/[0.08] bg-white/[0.035] p-4 sm:grid-cols-[1fr_auto] sm:items-center">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-sky-100">
           <Landmark className="h-5 w-5" aria-hidden="true" />
         </div>
         <div>
-          <p className="text-sm font-semibold">{account.name}</p>
+          <p className="text-sm font-semibold text-white">{account.name}</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <Badge>{typeLabels[account.type]}</Badge>
-            <span className="text-xs text-muted-foreground">{account.currency}</span>
+            <Badge className="border-white/10 bg-white/[0.06] text-zinc-200">{typeLabels[account.type]}</Badge>
+            <span className="text-xs text-zinc-500">{account.currency}</span>
             {account.creditLimit && (
               <span className="text-xs text-muted-foreground">
                 Límite: {formatMoney(account.creditLimit, account.currency)}
@@ -479,17 +497,17 @@ function AccountRow({
           <p className="text-xs text-muted-foreground">saldo actual</p>
         </div>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onEdit}>
+          <ActionButton type="button" variant="glass" size="sm" onClick={onEdit}>
             <Pencil className="h-4 w-4" aria-hidden="true" />
             Editar
-          </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={onArchive}>
+          </ActionButton>
+          <ActionButton type="button" variant="quiet" size="sm" onClick={onArchive}>
             {account.isArchived ? (
               <ArchiveRestore className="h-4 w-4" aria-hidden="true" />
             ) : (
               <Archive className="h-4 w-4" aria-hidden="true" />
             )}
-          </Button>
+          </ActionButton>
         </div>
       </div>
     </div>
@@ -515,8 +533,8 @@ function SummaryCard({
   }[tone];
 
   return (
-    <div className={`rounded-xl border border-border p-4 ${highlight ? "border-primary/30 bg-primary/5" : "bg-card"}`}>
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+    <div className={`rounded-3xl border border-white/[0.08] p-4 ${highlight ? "bg-white/[0.055]" : "bg-white/[0.035]"}`}>
+      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
       <p className={`mt-2 text-xl font-bold tabular-nums ${highlight ? "text-foreground" : toneClass}`}>
         {value}
       </p>
@@ -535,9 +553,9 @@ function Field({
 }) {
   return (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label className="text-xs font-semibold uppercase text-zinc-500">{label}</Label>
       {children}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="text-xs text-rose-300">{error}</p> : null}
     </div>
   );
 }
