@@ -10,6 +10,7 @@ import {
   Brain,
   CalendarDays,
   Car,
+  ChevronDown,
   CircleDollarSign,
   CreditCard,
   Eye,
@@ -214,6 +215,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
   const [comparison, setComparison] = useState<AiFinancialAnalysisComparison | null>(null);
   const [isCached, setIsCached] = useState(false);
   const [isStale, setIsStale] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isForbidden, setIsForbidden] = useState(false);
@@ -225,6 +227,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
     setComparison(null);
     setIsCached(false);
     setIsStale(false);
+    setIsOpen(false);
   }, []);
 
   const applyPayload = useCallback((payload: NonNullable<ApiResponse["data"]> & { analysis?: AiFinancialAnalysis }) => {
@@ -247,6 +250,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
     async function loadSavedAnalysis() {
       setIsLoadingSaved(true);
       setError(null);
+      setIsOpen(false);
 
       try {
         const params = new URLSearchParams({ month });
@@ -322,6 +326,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
       }
 
       applyPayload({ ...payload.data, analysis: nextAnalysis });
+      setIsOpen(true);
     } catch {
       setError("Error de red. Intentá nuevamente en unos segundos.");
     } finally {
@@ -335,7 +340,13 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
     <section className="mb-7 overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.16),transparent_31%),radial-gradient(circle_at_82%_12%,rgba(251,191,36,0.12),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))] p-1 shadow-[0_30px_120px_rgba(0,0,0,0.38)]">
       <div className="rounded-[24px] bg-background/78 px-4 py-4 backdrop-blur-xl sm:px-6 sm:py-6">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
+          <button
+            type="button"
+            className="group flex min-w-0 items-center gap-3 rounded-2xl text-left outline-none transition focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={() => analysis && metrics ? setIsOpen((current) => !current) : undefined}
+            aria-expanded={analysis && metrics ? isOpen : undefined}
+            aria-controls="financial-copilot-content"
+          >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-teal-100 shadow-inner">
               <Brain className="h-5 w-5" aria-hidden="true" />
             </div>
@@ -346,41 +357,146 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">Lo importante de tu dinero, sin ruido.</p>
             </div>
-          </div>
+            {analysis && metrics && (
+              <ChevronDown
+                className={`ml-auto h-4 w-4 shrink-0 text-zinc-500 transition duration-300 group-hover:text-zinc-300 ${isOpen ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
+            )}
+          </button>
 
-          <Button
-            onClick={handleAnalyze}
-            disabled={isLoading || isForbidden}
-            className="h-11 w-full rounded-2xl bg-white text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.12)] hover:bg-zinc-100 sm:w-auto"
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
-            {analysis ? "Actualizar lectura" : "Analizar con IA"}
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {analysis && metrics && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsOpen((current) => !current)}
+                className="h-11 w-full rounded-2xl border-white/10 bg-white/5 text-zinc-100 hover:bg-white/10 sm:w-auto"
+                aria-expanded={isOpen}
+                aria-controls="financial-copilot-content"
+              >
+                <ChevronDown className={`h-4 w-4 transition duration-300 ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+                {isOpen ? "Ocultar" : "Ver lectura"}
+              </Button>
+            )}
+            <Button
+              onClick={handleAnalyze}
+              disabled={isLoading || isForbidden}
+              className="h-11 w-full rounded-2xl bg-white text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.12)] hover:bg-zinc-100 sm:w-auto"
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
+              {analysis ? "Actualizar lectura" : "Analizar con IA"}
+            </Button>
+          </div>
         </div>
 
-        <AnimatePresence mode="wait">
-          {isLoadingSaved ? (
-            <PremiumLoading key="loading" />
-          ) : analysis && metrics ? (
-            <CopilotExperience
-              key="experience"
-              analysis={analysis}
-              metrics={metrics}
-              comparison={comparison}
-              isStale={isStale}
-            />
-          ) : (
-            <CopilotEmptyState
-              key="empty"
-              error={error}
-              isForbidden={isForbidden}
-              onAnalyze={handleAnalyze}
-              isLoading={isLoading}
-            />
-          )}
-        </AnimatePresence>
+        <div id="financial-copilot-content">
+          <AnimatePresence mode="wait" initial={false}>
+            {isLoadingSaved ? (
+              <PremiumLoading key="loading" />
+            ) : analysis && metrics && !isOpen ? (
+              <CollapsedCopilotPreview
+                key="preview"
+                analysis={analysis}
+                metrics={metrics}
+                comparison={comparison}
+                isStale={isStale}
+                onOpen={() => setIsOpen(true)}
+              />
+            ) : analysis && metrics ? (
+              <CopilotExperience
+                key="experience"
+                analysis={analysis}
+                metrics={metrics}
+                comparison={comparison}
+                isStale={isStale}
+              />
+            ) : (
+              <CopilotEmptyState
+                key="empty"
+                error={error}
+                isForbidden={isForbidden}
+                onAnalyze={handleAnalyze}
+                isLoading={isLoading}
+              />
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </section>
+  );
+}
+
+function CollapsedCopilotPreview({
+  analysis,
+  metrics,
+  comparison,
+  isStale,
+  onOpen,
+}: {
+  analysis: AiFinancialAnalysis;
+  metrics: AiFinancialAnalysisMetrics;
+  comparison: AiFinancialAnalysisComparison | null;
+  isStale: boolean;
+  onOpen: () => void;
+}) {
+  const hero = useMemo(() => buildHeroNarrative(analysis, metrics, comparison), [analysis, metrics, comparison]);
+  const insights = useMemo(() => buildImportantInsights(analysis, metrics, comparison), [analysis, metrics, comparison]);
+  const primaryInsight = insights[0];
+  const score = clamp(Math.round(analysis.score), 0, 100);
+  const scoreTone = getScoreTone(score);
+  const scoreStyle = toneStyles[scoreTone];
+
+  return (
+    <motion.button
+      type="button"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.28, ease: easeOut }}
+      onClick={onOpen}
+      className="group w-full overflow-hidden rounded-[24px] border border-white/10 bg-zinc-950/45 p-4 text-left transition hover:border-white/20 hover:bg-zinc-950/55 sm:p-5"
+    >
+      <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
+        <div className="min-w-0">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <Badge className={`${scoreStyle.badge}`}>Score {score}/100</Badge>
+            {isStale && <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-100">Hay cambios nuevos</Badge>}
+            <Badge className="border-white/10 bg-white/8 text-zinc-300">Tocar para desplegar</Badge>
+          </div>
+          <h2 className="text-balance text-2xl font-semibold leading-tight text-white sm:text-3xl">{hero.title}</h2>
+          <p className="mt-3 line-clamp-2 max-w-2xl text-sm leading-6 text-zinc-400">{hero.subtitle}</p>
+          {primaryInsight && (
+            <div className="mt-4 flex min-w-0 items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.045] px-3 py-2.5">
+              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${toneStyles[primaryInsight.tone].icon}`}>
+                <primaryInsight.icon className="h-4 w-4" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-zinc-100">{primaryInsight.title}</p>
+                <p className="truncate text-xs text-zinc-500">{primaryInsight.message}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
+          <div className={`relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full border ${scoreStyle.card}`}>
+            <div
+              className="absolute inset-2 rounded-full"
+              style={{
+                background: `conic-gradient(${scoreColor(score)} ${score * 3.6}deg, rgba(255,255,255,0.08) 0deg)`,
+              }}
+            />
+            <div className="absolute inset-4 rounded-full bg-zinc-950" />
+            <span className={`relative text-xl font-semibold tabular-nums ${scoreStyle.text}`}>{score}</span>
+          </div>
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/8 px-3 py-2 text-xs font-medium text-zinc-200 transition group-hover:bg-white/12">
+            Abrir
+            <ChevronDown className="-rotate-90 h-3.5 w-3.5" aria-hidden="true" />
+          </span>
+        </div>
+      </div>
+    </motion.button>
   );
 }
 
