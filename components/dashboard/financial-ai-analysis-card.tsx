@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -30,10 +30,25 @@ type AiFinancialAnalysis = {
 };
 
 type AiFinancialAnalysisMetrics = {
+  month: string;
+  hasData: boolean;
+  income: number;
+  expenses: number;
+  balance: number;
   savingsRate: number;
   fixedExpenseRate: number;
   dailyAverageExpense: number;
   projectedMonthEndExpense: number;
+  expensesByCategory: Array<{
+    name: string;
+    total: number;
+    count: number;
+  }>;
+  expensesByAccount: Array<{
+    name: string;
+    total: number;
+    count: number;
+  }>;
   categoryExpensePercentages: Array<{
     name: string;
     total: number;
@@ -61,14 +76,42 @@ type AiFinancialAnalysisMetrics = {
   creditCardExpenseRate: number;
 };
 
+type AiFinancialAnalysisComparison = {
+  available: boolean;
+  currentMonth: string;
+  previousMonth: string;
+  incomeChangeAmount: number;
+  incomeChangePercent: number | null;
+  expenseChangeAmount: number;
+  expenseChangePercent: number | null;
+  balanceChangeAmount: number;
+  balanceChangePercent: number | null;
+  savingsRateChange: number;
+  fixedExpenseRateChange: number;
+  mobilityChangeAmount: number;
+  mobilityChangePercent: number | null;
+  creditCardRateChange: number;
+  categoryChanges: Array<{
+    category: string;
+    currentAmount: number;
+    previousAmount: number;
+    changeAmount: number;
+    changePercent: number | null;
+  }>;
+};
+
 type ApiResponse = {
   data?: {
-    analysis: AiFinancialAnalysis;
+    analysis?: AiFinancialAnalysis;
+    result?: AiFinancialAnalysis;
     metrics: AiFinancialAnalysisMetrics;
+    previousMonthMetrics: AiFinancialAnalysisMetrics;
+    comparison: AiFinancialAnalysisComparison;
     cached: boolean;
+    stale?: boolean;
     month: string;
     generatedAt: string;
-  };
+  } | null;
   error?: string;
 };
 
@@ -87,12 +130,93 @@ const severityLabels = {
 export function FinancialAiAnalysisCard({ month }: { month: string }) {
   const [analysis, setAnalysis] = useState<AiFinancialAnalysis | null>(null);
   const [metrics, setMetrics] = useState<AiFinancialAnalysisMetrics | null>(null);
+  const [comparison, setComparison] = useState<AiFinancialAnalysisComparison | null>(null);
   const [isCached, setIsCached] = useState(false);
+  const [isStale, setIsStale] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isLoadingSaved, setIsLoadingSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isForbidden, setIsForbidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const clearAnalysis = useCallback(() => {
+    setAnalysis(null);
+    setMetrics(null);
+    setComparison(null);
+    setIsCached(false);
+    setIsStale(false);
+  }, []);
+
+  const applyPayload = useCallback((payload: NonNullable<ApiResponse["data"]> & { analysis?: AiFinancialAnalysis }) => {
+    const nextAnalysis = payload.analysis ?? payload.result;
+    if (!nextAnalysis) {
+      clearAnalysis();
+      return;
+    }
+
+    setAnalysis(nextAnalysis);
+    setMetrics(payload.metrics);
+    setComparison(payload.comparison);
+    setIsCached(payload.cached);
+    setIsStale(Boolean(payload.stale));
+  }, [clearAnalysis]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadSavedAnalysis() {
+      setIsLoadingSaved(true);
+      setError(null);
+      setIsExpanded(false);
+
+      try {
+        const params = new URLSearchParams({ month });
+        const response = await fetch(`/api/ai/monthly-analysis?${params.toString()}`);
+        const payload = (await response.json()) as ApiResponse;
+
+        if (ignore) return;
+
+        if (response.status === 403) {
+          setIsForbidden(true);
+          setError(null);
+          clearAnalysis();
+          return;
+        }
+
+        if (!response.ok) {
+          setError(payload.error ?? "No se pudo cargar el informe guardado.");
+          clearAnalysis();
+          return;
+        }
+
+        if (!payload.data) {
+          clearAnalysis();
+          return;
+        }
+
+        applyPayload(payload.data);
+      } catch {
+        if (!ignore) {
+          setError("Error de red al cargar el informe guardado.");
+          clearAnalysis();
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingSaved(false);
+        }
+      }
+    }
+
+    void loadSavedAnalysis();
+
+    return () => {
+      ignore = true;
+    };
+  }, [applyPayload, clearAnalysis, month]);
+
   async function handleAnalyze() {
+    if (isForbidden) return;
+
     setIsLoading(true);
     setError(null);
 
@@ -104,15 +228,22 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
       });
       const payload = (await response.json()) as ApiResponse;
 
-      if (!response.ok || !payload.data) {
+      const nextAnalysis = payload.data?.analysis ?? payload.data?.result;
+
+      if (response.status === 403) {
+        setIsForbidden(true);
+        setError(null);
+        clearAnalysis();
+        return;
+      }
+
+      if (!response.ok || !payload.data || !nextAnalysis) {
         setError(payload.error ?? "No se pudo generar el análisis.");
         return;
       }
 
-      setAnalysis(payload.data.analysis);
-      setMetrics(payload.data.metrics);
-      setIsCached(payload.data.cached);
-      setIsExpanded(false);
+      applyPayload({ ...payload.data, analysis: nextAnalysis });
+      setIsExpanded(true);
     } catch {
       setError("Error de red. Intentá nuevamente en unos segundos.");
     } finally {
@@ -125,24 +256,43 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
 
   return (
     <Card className="mb-6 overflow-hidden">
-      <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
+      <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <button
+          type="button"
+          className="min-w-0 text-left"
+          onClick={() => setIsExpanded((current) => !current)}
+          aria-expanded={isExpanded}
+        >
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-300">
               <Brain className="h-4 w-4" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <CardTitle className="text-base">Análisis inteligente del mes</CardTitle>
-              <CardDescription className="mt-0.5">Lectura compacta de tus ingresos, gastos y señales.</CardDescription>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <CardTitle className="text-base">Análisis inteligente del mes</CardTitle>
+                {analysis && <Badge className={scoreTone}>Score {Math.round(score)}</Badge>}
+                {isForbidden && <Badge className="border-amber-500/25 bg-amber-500/10 text-amber-200">No habilitado</Badge>}
+                {isStale && <Badge className="border-amber-500/25 bg-amber-500/10 text-amber-200">Hay cambios</Badge>}
+              </div>
+              <CardDescription className="mt-0.5">
+                {isForbidden
+                  ? "Contactá al administrador para activar esta funcionalidad."
+                  : isLoadingSaved
+                    ? "Buscando informe guardado..."
+                    : analysis
+                      ? "Informe guardado. Tocá para desplegar."
+                      : "Tocá para abrir la sección de IA."}
+              </CardDescription>
             </div>
+            <ChevronDown className={`ml-auto h-4 w-4 shrink-0 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} aria-hidden="true" />
           </div>
-        </div>
-        <Button onClick={handleAnalyze} disabled={isLoading} className="w-full sm:w-auto">
+        </button>
+        <Button onClick={handleAnalyze} disabled={isLoading || isForbidden} className="w-full sm:w-auto">
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
-          {analysis ? "Actualizar análisis" : "Analizar con IA"}
+          {analysis ? "Actualizar informe" : "Analizar con IA"}
         </Button>
       </CardHeader>
-      <CardContent className="space-y-4">
+      {isExpanded && <CardContent className="space-y-4">
         {error && (
           <div className="flex gap-3 rounded-lg border border-rose-500/25 bg-rose-500/10 p-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden="true" />
@@ -150,7 +300,16 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
           </div>
         )}
 
-        {!analysis && !error && (
+        {isForbidden && (
+          <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-4">
+            <p className="text-sm font-semibold text-amber-100">Funcionalidad no habilitada</p>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              Para activar el análisis inteligente con IA, contactate con el administrador.
+            </p>
+          </div>
+        )}
+
+        {!analysis && !error && !isForbidden && (
           <div className="rounded-lg border border-border bg-secondary/30 p-4">
             <p className="text-sm leading-6 text-muted-foreground">
               Generá una lectura mensual con alertas, recomendaciones y riesgos detectados sin enviar tus transacciones completas a la IA.
@@ -175,19 +334,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
               </div>
             </div>
 
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="w-full justify-between"
-              onClick={() => setIsExpanded((current) => !current)}
-              aria-expanded={isExpanded}
-            >
-              {isExpanded ? "Ocultar detalle" : "Ver detalle del análisis"}
-              <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} aria-hidden="true" />
-            </Button>
-
-            {isExpanded && metrics && (
+            {metrics && (
               <>
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                   <MetricPill label="Ahorro" value={`${formatPercent(metrics.savingsRate)}`} icon={TrendingUp} />
@@ -220,6 +367,8 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
                     <p className="text-sm leading-5 text-muted-foreground">No se detectaron gastos chicos repetidos en este mes.</p>
                   )}
                 </div>
+
+                {comparison && <ComparisonSection comparison={comparison} />}
               </>
             )}
 
@@ -260,9 +409,127 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
             </div>
           </>
         )}
-      </CardContent>
+      </CardContent>}
     </Card>
   );
+}
+
+function ComparisonSection({ comparison }: { comparison: AiFinancialAnalysisComparison }) {
+  const increases = comparison.categoryChanges
+    .filter((category) => category.changeAmount > 0)
+    .sort((a, b) => b.changeAmount - a.changeAmount)
+    .slice(0, 3);
+  const decreases = comparison.categoryChanges
+    .filter((category) => category.changeAmount < 0)
+    .sort((a, b) => a.changeAmount - b.changeAmount)
+    .slice(0, 3);
+
+  return (
+    <section className="rounded-lg border border-border bg-background/35 p-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold">Comparación con el mes anterior</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {comparison.currentMonth} vs {comparison.previousMonth}
+          </p>
+        </div>
+        <ChangeBadge value={comparison.available ? comparison.expenseChangeAmount : 0} />
+      </div>
+
+      {!comparison.available ? (
+        <p className="text-sm leading-5 text-muted-foreground">
+          No hay datos suficientes del mes anterior para comparar.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            <ChangeMetric label="Gastos" amount={comparison.expenseChangeAmount} percent={comparison.expenseChangePercent} />
+            <ChangeMetric label="Ingresos" amount={comparison.incomeChangeAmount} percent={comparison.incomeChangePercent} />
+            <ChangeMetric label="Balance" amount={comparison.balanceChangeAmount} percent={comparison.balanceChangePercent} />
+            <ChangeMetric label="Ahorro" amount={comparison.savingsRateChange} kind="percentagePoints" />
+            <ChangeMetric label="Movilidad" amount={comparison.mobilityChangeAmount} percent={comparison.mobilityChangePercent} />
+            <ChangeMetric label="Uso tarjeta" amount={comparison.creditCardRateChange} kind="percentagePoints" />
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            <CategoryChanges title="Categorías que más subieron" items={increases} emptyText="No hubo subas por categoría." />
+            <CategoryChanges title="Categorías que más bajaron" items={decreases} emptyText="No hubo bajas por categoría." />
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ChangeMetric({
+  label,
+  amount,
+  percent,
+  kind = "money",
+}: {
+  label: string;
+  amount: number;
+  percent?: number | null;
+  kind?: "money" | "percentagePoints";
+}) {
+  return (
+    <div className="min-w-0 rounded-md border border-border/70 bg-card/40 p-2.5">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <p className="truncate text-xs font-medium text-muted-foreground">{label}</p>
+        <ChangeBadge value={amount} />
+      </div>
+      <p className="truncate text-sm font-bold tabular-nums">
+        {kind === "money" ? formatSignedMoney(amount) : formatSignedPercentagePoints(amount)}
+      </p>
+      {kind === "money" && (
+        <p className="mt-0.5 text-[11px] text-muted-foreground">{formatNullableChangePercent(percent)}</p>
+      )}
+    </div>
+  );
+}
+
+function CategoryChanges({
+  title,
+  items,
+  emptyText,
+}: {
+  title: string;
+  items: AiFinancialAnalysisComparison["categoryChanges"];
+  emptyText: string;
+}) {
+  return (
+    <div className="rounded-md border border-border/70 bg-card/40 p-3">
+      <h4 className="text-sm font-semibold">{title}</h4>
+      {items.length > 0 ? (
+        <div className="mt-2 space-y-2">
+          {items.map((item) => (
+            <div key={item.category} className="min-w-0 rounded-md bg-background/40 p-2">
+              <div className="flex items-start justify-between gap-2">
+                <p className="min-w-0 truncate text-sm font-medium">{item.category}</p>
+                <ChangeBadge value={item.changeAmount} />
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {formatSignedMoney(item.changeAmount)} · {formatNullableChangePercent(item.changePercent)}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2 text-sm leading-5 text-muted-foreground">{emptyText}</p>
+      )}
+    </div>
+  );
+}
+
+function ChangeBadge({ value }: { value: number }) {
+  const label = value > 0 ? "Subió" : value < 0 ? "Bajó" : "Sin cambios";
+  const className = value > 0
+    ? "border-rose-500/25 bg-rose-500/10 text-rose-200"
+    : value < 0
+      ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200"
+      : "border-border bg-secondary/50 text-muted-foreground";
+
+  return <Badge className={className}>{label}</Badge>;
 }
 
 function MetricPill({
@@ -336,9 +603,28 @@ function formatMoney(value: number) {
   }).format(value);
 }
 
+function formatSignedMoney(value: number) {
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${formatMoney(value)}`;
+}
+
 function formatPercent(value: number) {
   return `${new Intl.NumberFormat("es-AR", {
     maximumFractionDigits: 2,
     minimumFractionDigits: 0,
   }).format(value)}%`;
+}
+
+function formatSignedPercentagePoints(value: number) {
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${formatPercent(value)} p.p.`;
+}
+
+function formatNullableChangePercent(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return "Sin base anterior";
+  }
+
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${formatPercent(value)}`;
 }

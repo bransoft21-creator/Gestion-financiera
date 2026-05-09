@@ -105,10 +105,25 @@ export type AiFinancialAnalysisResult = {
 };
 
 export type AiFinancialAnalysisMetrics = {
+  month: string;
+  hasData: boolean;
+  income: number;
+  expenses: number;
+  balance: number;
   savingsRate: number;
   fixedExpenseRate: number;
   dailyAverageExpense: number;
   projectedMonthEndExpense: number;
+  expensesByCategory: Array<{
+    name: string;
+    total: number;
+    count: number;
+  }>;
+  expensesByAccount: Array<{
+    name: string;
+    total: number;
+    count: number;
+  }>;
   categoryExpensePercentages: Array<{
     name: string;
     total: number;
@@ -136,6 +151,30 @@ export type AiFinancialAnalysisMetrics = {
   creditCardExpenseRate: number;
 };
 
+export type AiFinancialAnalysisComparison = {
+  available: boolean;
+  currentMonth: string;
+  previousMonth: string;
+  incomeChangeAmount: number;
+  incomeChangePercent: number | null;
+  expenseChangeAmount: number;
+  expenseChangePercent: number | null;
+  balanceChangeAmount: number;
+  balanceChangePercent: number | null;
+  savingsRateChange: number;
+  fixedExpenseRateChange: number;
+  mobilityChangeAmount: number;
+  mobilityChangePercent: number | null;
+  creditCardRateChange: number;
+  categoryChanges: Array<{
+    category: string;
+    currentAmount: number;
+    previousAmount: number;
+    changeAmount: number;
+    changePercent: number | null;
+  }>;
+};
+
 export async function generateMonthlyFinancialAnalysis({
   userProfileId,
   householdId,
@@ -147,39 +186,13 @@ export async function generateMonthlyFinancialAnalysis({
 }) {
   await assertHouseholdAccess(userProfileId, householdId);
 
-  const { year, monthNumber } = parseMonth(month);
-  const { start, end } = argentinaMonthRangeUtc(year, monthNumber);
-
-  const transactions = await prisma.transaction.findMany({
-    where: {
-      householdId,
-      deletedAt: null,
-      status: { not: TransactionStatus.CANCELED },
-      type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
-      occurredAt: { gte: start, lt: end },
-    },
-    include: analysisTransactionInclude,
-    orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
-  });
-
-  const compactInput = buildCompactMonthlyInput({ year, monthNumber, month, transactions });
-  const inputHash = hashJson({
+  const compactBundle = await buildCompactInputForMonth(householdId, month);
+  const compactInput = compactBundle.input;
+  const inputHash = buildInputHash({
     month,
-    transactions: transactions.map((transaction) => ({
-      id: transaction.id,
-      type: transaction.type,
-      status: transaction.status,
-      currency: transaction.currency,
-      amount: transaction.amount.toString(),
-      description: transaction.description,
-      expenseType: transaction.expenseType,
-      paymentMethod: transaction.paymentMethod,
-      accountId: transaction.accountId,
-      categoryId: transaction.categoryId,
-      occurredAt: transaction.occurredAt.toISOString(),
-      updatedAt: transaction.updatedAt.toISOString(),
-      deletedAt: transaction.deletedAt?.toISOString() ?? null,
-    })),
+    previousMonth: compactInput.previousMonthMetrics.month,
+    transactions: compactBundle.currentTransactions,
+    previousTransactions: compactBundle.previousTransactions,
   });
 
   const existing = await prisma.aiFinancialAnalysis.findUnique({
@@ -189,7 +202,10 @@ export async function generateMonthlyFinancialAnalysis({
   if (existing?.inputHash === inputHash) {
     return {
       analysis: existing.result as AiFinancialAnalysisResult,
+      result: existing.result as AiFinancialAnalysisResult,
       metrics: compactInput.metrics,
+      previousMonthMetrics: compactInput.previousMonthMetrics,
+      comparison: compactInput.comparison,
       cached: true,
       month,
       generatedAt: existing.updatedAt.toISOString(),
@@ -214,10 +230,54 @@ export async function generateMonthlyFinancialAnalysis({
 
   return {
     analysis: saved.result as AiFinancialAnalysisResult,
+    result: saved.result as AiFinancialAnalysisResult,
     metrics: compactInput.metrics,
+    previousMonthMetrics: compactInput.previousMonthMetrics,
+    comparison: compactInput.comparison,
     cached: false,
     month,
     generatedAt: saved.updatedAt.toISOString(),
+  };
+}
+
+export async function getSavedMonthlyFinancialAnalysis({
+  userProfileId,
+  householdId,
+  month,
+}: {
+  userProfileId: string;
+  householdId: string;
+  month: string;
+}) {
+  await assertHouseholdAccess(userProfileId, householdId);
+
+  const existing = await prisma.aiFinancialAnalysis.findUnique({
+    where: { userId_month: { userId: userProfileId, month } },
+  });
+
+  if (!existing) {
+    return null;
+  }
+
+  const compactBundle = await buildCompactInputForMonth(householdId, month);
+  const compactInput = compactBundle.input;
+  const currentHash = buildInputHash({
+    month,
+    previousMonth: compactInput.previousMonthMetrics.month,
+    transactions: compactBundle.currentTransactions,
+    previousTransactions: compactBundle.previousTransactions,
+  });
+
+  return {
+    analysis: existing.result as AiFinancialAnalysisResult,
+    result: existing.result as AiFinancialAnalysisResult,
+    metrics: compactInput.metrics,
+    previousMonthMetrics: compactInput.previousMonthMetrics,
+    comparison: compactInput.comparison,
+    cached: true,
+    stale: existing.inputHash !== currentHash,
+    month,
+    generatedAt: existing.updatedAt.toISOString(),
   };
 }
 
@@ -236,31 +296,73 @@ function parseMonth(month: string) {
   return { year, monthNumber };
 }
 
+async function buildCompactInputForMonth(householdId: string, month: string) {
+  const { year, monthNumber } = parseMonth(month);
+  const { start, end } = argentinaMonthRangeUtc(year, monthNumber);
+  const previousPeriod = getPreviousMonthPeriod(year, monthNumber);
+  const { start: previousStart, end: previousEnd } = argentinaMonthRangeUtc(
+    previousPeriod.year,
+    previousPeriod.monthNumber,
+  );
+
+  const [currentTransactions, previousTransactions] = await Promise.all([
+    prisma.transaction.findMany({
+      where: {
+        householdId,
+        deletedAt: null,
+        status: { not: TransactionStatus.CANCELED },
+        type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
+        occurredAt: { gte: start, lt: end },
+      },
+      include: analysisTransactionInclude,
+      orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
+    }),
+    prisma.transaction.findMany({
+      where: {
+        householdId,
+        deletedAt: null,
+        status: { not: TransactionStatus.CANCELED },
+        type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
+        occurredAt: { gte: previousStart, lt: previousEnd },
+      },
+      include: analysisTransactionInclude,
+      orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
+    }),
+  ]);
+
+  return {
+    input: buildCompactMonthlyInput({
+      currentPeriod: { year, monthNumber, month },
+      currentTransactions,
+      previousPeriod,
+      previousTransactions,
+    }),
+    currentTransactions,
+    previousTransactions,
+  };
+}
+
 function buildCompactMonthlyInput({
-  year,
-  monthNumber,
-  month,
-  transactions,
+  currentPeriod,
+  currentTransactions,
+  previousPeriod,
+  previousTransactions,
 }: {
-  year: number;
-  monthNumber: number;
-  month: string;
-  transactions: AnalysisTransaction[];
+  currentPeriod: { year: number; monthNumber: number; month: string };
+  currentTransactions: AnalysisTransaction[];
+  previousPeriod: { year: number; monthNumber: number; month: string };
+  previousTransactions: AnalysisTransaction[];
 }) {
-  const incomeTransactions = transactions.filter((tx) => tx.type === TransactionType.INCOME);
-  const expenseTransactions = transactions.filter((tx) => tx.type === TransactionType.EXPENSE);
-  const totalIncome = sumAmounts(incomeTransactions);
-  const totalExpenses = sumAmounts(expenseTransactions);
-  const expensesByCategory = groupExpenses(expenseTransactions, "category");
-  const expensesByAccount = groupExpenses(expenseTransactions, "account");
-  const metrics = calculateFinancialMetrics({
-    year,
-    monthNumber,
-    totalIncome,
-    totalExpenses,
-    expenseTransactions,
-    expensesByCategory,
+  const metrics = buildMonthMetrics({
+    period: currentPeriod,
+    transactions: currentTransactions,
   });
+  const previousMonthMetrics = buildMonthMetrics({
+    period: previousPeriod,
+    transactions: previousTransactions,
+  });
+  const comparison = buildMonthlyComparison(metrics, previousMonthMetrics);
+  const expenseTransactions = currentTransactions.filter((tx) => tx.type === TransactionType.EXPENSE);
   const topExpenses = [...expenseTransactions]
     .sort((a, b) => toFiniteNumber(b.amount) - toFiniteNumber(a.amount))
     .slice(0, 8)
@@ -274,17 +376,24 @@ function buildCompactMonthlyInput({
     }));
 
   return {
-    month,
+    month: currentPeriod.month,
     currency: "ARS",
-    transactionCount: transactions.length,
+    transactionCount: currentTransactions.length,
     summary: {
-      totalIncome,
-      totalExpenses,
-      balance: totalIncome - totalExpenses,
-      expensesByCategory,
-      expensesByAccount,
+      totalIncome: metrics.income,
+      totalExpenses: metrics.expenses,
+      balance: metrics.balance,
+      expensesByCategory: metrics.expensesByCategory,
+      expensesByAccount: metrics.expensesByAccount,
     },
     metrics,
+    previousMonth: {
+      month: previousMonthMetrics.month,
+      hasData: previousMonthMetrics.hasData,
+      metrics: previousMonthMetrics,
+    },
+    previousMonthMetrics,
+    comparison,
     signals: {
       topExpenses,
       possibleRecurringExpenses: detectRecurringExpenses(expenseTransactions),
@@ -295,37 +404,42 @@ function buildCompactMonthlyInput({
   };
 }
 
-function calculateFinancialMetrics({
-  year,
-  monthNumber,
-  totalIncome,
-  totalExpenses,
-  expenseTransactions,
-  expensesByCategory,
+function buildMonthMetrics({
+  period,
+  transactions,
 }: {
-  year: number;
-  monthNumber: number;
-  totalIncome: number;
-  totalExpenses: number;
-  expenseTransactions: AnalysisTransaction[];
-  expensesByCategory: Array<{ name: string; total: number; count: number }>;
+  period: { year: number; monthNumber: number; month: string };
+  transactions: AnalysisTransaction[];
 }): AiFinancialAnalysisMetrics {
+  const incomeTransactions = transactions.filter((tx) => tx.type === TransactionType.INCOME);
+  const expenseTransactions = transactions.filter((tx) => tx.type === TransactionType.EXPENSE);
+  const totalIncome = sumAmounts(incomeTransactions);
+  const totalExpenses = sumAmounts(expenseTransactions);
   const balance = totalIncome - totalExpenses;
+  const expensesByCategory = groupExpenses(expenseTransactions, "category");
+  const expensesByAccount = groupExpenses(expenseTransactions, "account");
   const fixedExpenseTotal = sumAmounts(expenseTransactions.filter(isFixedExpense));
   const mobilityTransactions = expenseTransactions.filter((tx) =>
     matchesAnyCategory(tx.category?.name, MOBILITY_CATEGORY_NAMES),
   );
   const mobilityTotal = sumAmounts(mobilityTransactions);
   const creditCardExpenseTotal = sumAmounts(expenseTransactions.filter(isCreditCardExpense));
-  const daysElapsed = getElapsedDaysInMonth(year, monthNumber);
+  const daysElapsed = getElapsedDaysInMonth(period.year, period.monthNumber);
   const dailyAverageExpense = roundMoney(totalExpenses / daysElapsed);
-  const daysInMonth = new Date(year, monthNumber, 0).getDate();
+  const daysInMonth = new Date(period.year, period.monthNumber, 0).getDate();
 
   return {
+    month: period.month,
+    hasData: transactions.length > 0,
+    income: totalIncome,
+    expenses: totalExpenses,
+    balance,
     savingsRate: percentage(balance, totalIncome),
     fixedExpenseRate: percentage(fixedExpenseTotal, totalIncome),
     dailyAverageExpense,
     projectedMonthEndExpense: roundMoney(dailyAverageExpense * daysInMonth),
+    expensesByCategory,
+    expensesByAccount,
     categoryExpensePercentages: expensesByCategory.map((category) => ({
       name: category.name,
       total: category.total,
@@ -337,6 +451,55 @@ function calculateFinancialMetrics({
     repeatedSmallExpenses: getRepeatedSmallExpenses(expenseTransactions, totalIncome),
     creditCardExpenseRate: percentage(creditCardExpenseTotal, totalExpenses),
   };
+}
+
+function buildMonthlyComparison(
+  current: AiFinancialAnalysisMetrics,
+  previous: AiFinancialAnalysisMetrics,
+): AiFinancialAnalysisComparison {
+  const available = previous.hasData;
+
+  return {
+    available,
+    currentMonth: current.month,
+    previousMonth: previous.month,
+    incomeChangeAmount: available ? roundMoney(current.income - previous.income) : 0,
+    incomeChangePercent: available ? percentChange(current.income, previous.income) : null,
+    expenseChangeAmount: available ? roundMoney(current.expenses - previous.expenses) : 0,
+    expenseChangePercent: available ? percentChange(current.expenses, previous.expenses) : null,
+    balanceChangeAmount: available ? roundMoney(current.balance - previous.balance) : 0,
+    balanceChangePercent: available ? percentChange(current.balance, previous.balance) : null,
+    savingsRateChange: available ? roundPercent(current.savingsRate - previous.savingsRate) : 0,
+    fixedExpenseRateChange: available ? roundPercent(current.fixedExpenseRate - previous.fixedExpenseRate) : 0,
+    mobilityChangeAmount: available ? roundMoney(current.mobilityTotal - previous.mobilityTotal) : 0,
+    mobilityChangePercent: available ? percentChange(current.mobilityTotal, previous.mobilityTotal) : null,
+    creditCardRateChange: available ? roundPercent(current.creditCardExpenseRate - previous.creditCardExpenseRate) : 0,
+    categoryChanges: available ? buildCategoryChanges(current, previous) : [],
+  };
+}
+
+function buildCategoryChanges(
+  current: AiFinancialAnalysisMetrics,
+  previous: AiFinancialAnalysisMetrics,
+) {
+  const currentTotals = new Map(current.expensesByCategory.map((category) => [category.name, category.total]));
+  const previousTotals = new Map(previous.expensesByCategory.map((category) => [category.name, category.total]));
+  const categoryNames = Array.from(new Set([...currentTotals.keys(), ...previousTotals.keys()])).sort((a, b) =>
+    a.localeCompare(b, "es"),
+  );
+
+  return categoryNames.map((category) => {
+    const currentAmount = currentTotals.get(category) ?? 0;
+    const previousAmount = previousTotals.get(category) ?? 0;
+
+    return {
+      category,
+      currentAmount,
+      previousAmount,
+      changeAmount: roundMoney(currentAmount - previousAmount),
+      changePercent: percentChange(currentAmount, previousAmount),
+    };
+  });
 }
 
 function sumAmounts(transactions: AnalysisTransaction[]) {
@@ -492,11 +655,11 @@ async function requestOpenAiAnalysis(input: ReturnType<typeof buildCompactMonthl
         {
           role: "system",
           content:
-            "Sos un analista financiero para una app de finanzas personales en Argentina. Respondé en español rioplatense, con tono claro, prudente y accionable. No inventes datos. No des asesoramiento financiero regulado; basate solo en el resumen, las métricas y las señales recibidas. Usá obligatoriamente las métricas calculadas por backend cuando menciones ahorro, gastos fijos, movilidad, tarjeta de crédito, proyección de cierre, gastos repetidos o transacciones de alto impacto.",
+            "Sos un analista financiero para una app de finanzas personales en Argentina. Respondé en español rioplatense, con tono claro, prudente y accionable. No inventes datos. No des asesoramiento financiero regulado; basate solo en el resumen, las métricas, la comparación y las señales recibidas. Usá obligatoriamente las métricas calculadas por backend cuando menciones ahorro, gastos fijos, movilidad, tarjeta de crédito, proyección de cierre, gastos repetidos, transacciones de alto impacto o cambios contra el mes anterior. Si comparison.available es false, tenés prohibido inventar comparaciones contra el mes anterior.",
         },
         {
           role: "user",
-          content: `Analizá este resumen mensual compacto. Las métricas incluidas ya fueron calculadas por backend y son la fuente de verdad: no las recalcules ni inventes datos faltantes. Si una métrica está en 0 por falta de ingresos o gastos, explicalo con prudencia. Devolvé solo el JSON solicitado:\n${JSON.stringify(input)}`,
+          content: `Analizá este resumen mensual compacto. Las métricas y la comparación incluidas ya fueron calculadas por backend y son la fuente de verdad: no las recalcules ni inventes datos faltantes. Usá la comparación para detectar mejoras, deterioros, categorías que subieron o bajaron, cambios en ahorro, uso de tarjeta y movilidad. Si comparison.available es false, indicá que no hay base comparativa suficiente y no inventes tendencias. Si una métrica está en 0 por falta de ingresos o gastos, explicalo con prudencia. Devolvé solo el JSON solicitado:\n${JSON.stringify(input)}`,
         },
       ],
       text: {
@@ -606,6 +769,58 @@ function hashJson(value: unknown) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
+function buildInputHash({
+  month,
+  previousMonth,
+  transactions,
+  previousTransactions,
+}: {
+  month: string;
+  previousMonth: string;
+  transactions: AnalysisTransaction[];
+  previousTransactions: AnalysisTransaction[];
+}) {
+  return hashJson({
+    month,
+    previousMonth,
+    transactions: serializeTransactionsForHash(transactions),
+    previousTransactions: serializeTransactionsForHash(previousTransactions),
+  });
+}
+
+function serializeTransactionsForHash(transactions: AnalysisTransaction[]) {
+  return transactions.map((transaction) => ({
+    id: transaction.id,
+    type: transaction.type,
+    status: transaction.status,
+    currency: transaction.currency,
+    amount: transaction.amount.toString(),
+    description: transaction.description,
+    expenseType: transaction.expenseType,
+    paymentMethod: transaction.paymentMethod,
+    accountId: transaction.accountId,
+    categoryId: transaction.categoryId,
+    occurredAt: transaction.occurredAt.toISOString(),
+    updatedAt: transaction.updatedAt.toISOString(),
+    deletedAt: transaction.deletedAt?.toISOString() ?? null,
+  }));
+}
+
+function getPreviousMonthPeriod(year: number, monthNumber: number) {
+  const previousYear = monthNumber === 1 ? year - 1 : year;
+  const previousMonthNumber = monthNumber === 1 ? 12 : monthNumber - 1;
+
+  return {
+    year: previousYear,
+    monthNumber: previousMonthNumber,
+    month: formatMonth(previousYear, previousMonthNumber),
+  };
+}
+
+function formatMonth(year: number, monthNumber: number) {
+  return `${year}-${String(monthNumber).padStart(2, "0")}`;
+}
+
 function normalizeDescription(description: string | null | undefined) {
   return description?.trim().replace(/\s+/g, " ").slice(0, 80) ?? "";
 }
@@ -665,6 +880,14 @@ function roundMoney(value: number) {
 function percentage(numerator: number, denominator: number) {
   if (denominator <= 0) return 0;
   return roundPercent((numerator / denominator) * 100);
+}
+
+function percentChange(current: number, previous: number) {
+  // A previous value of zero makes percentage variation undefined.
+  // We return null instead of 100 to avoid implying a bounded increase from no baseline.
+  if (previous === 0) return null;
+
+  return roundPercent(((current - previous) / Math.abs(previous)) * 100);
 }
 
 function roundPercent(value: number) {
