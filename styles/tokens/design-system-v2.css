@@ -1,0 +1,85 @@
+:root {
+    --v2-bg: 224 34% 5%;
+    --v2-bg-soft: 224 28% 7%;
+    --v2-surface: 224 24% 9%;
+    --v2-surface-raised: 222 22% 12%;
+    --v2-surface-glass: 0 0% 100%;
+    --v2-border: 220 18% 18%;
+    --v2-border-strong: 220 16% 24%;
+
+    --v2-text: 210 32% 96%;
+    --v2-text-muted: 218 13% 58%;
+    --v2-text-subtle: 220 10% 42%;
+
+    --v2-brand: 176 66% 56%;
+    --v2-brand-2: 42 96% 68%;
+    --v2-brand-3: 263 80% 68%;
+    --v2-positive: 151 72% 58%;
+    --v2-warning: 39 94% 62%;
+    --v2-danger: 351 92% 68%;
+    --v2-info: 199 92% 64%;
+
+    --v2-radius-sm: 0.75rem;
+    --v2-radius-md: 1rem;
+    --v2-radius-lg: 1.375rem;
+    --v2-radius-xl: 1.75rem;
+
+    --v2-shadow-soft: 0 18px 70px rgba(0, 0, 0, 0.26);
+    --v2-shadow-card: 0 22px 80px rgba(0, 0, 0, 0.34);
+    --v2-shadow-glow: 0 0 80px rgba(45, 212, 191, 0.12);
+    --v2-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body {
+  background:
+    radial-gradient(circle at 18% -10%, hsl(var(--v2-brand) / 0.08), transparent 30rem),
+    radial-gradient(circle at 88% 6%, hsl(var(--v2-brand-2) / 0.06), transparent 24rem),
+    hsl(var(--v2-bg));
+}
+
+.v2-shell {
+  background:
+    radial-gradient(circle at top left, hsl(var(--v2-brand) / 0.12), transparent 30rem),
+    radial-gradient(circle at 90% 8%, hsl(var(--v2-brand-2) / 0.10), transparent 26rem),
+    hsl(var(--v2-bg));
+}
+
+.v2-card {
+  border: 1px solid hsl(var(--v2-border) / 0.78);
+  background:
+    linear-gradient(180deg, hsl(var(--v2-surface-glass) / 0.07), hsl(var(--v2-surface-glass) / 0.028)),
+    hsl(var(--v2-surface) / 0.82);
+  box-shadow: var(--v2-shadow-soft);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.v2-card-raised {
+  border: 1px solid hsl(var(--v2-border-strong) / 0.82);
+  background:
+    radial-gradient(circle at 12% 0%, hsl(var(--v2-brand) / 0.12), transparent 18rem),
+    linear-gradient(180deg, hsl(var(--v2-surface-glass) / 0.09), hsl(var(--v2-surface-glass) / 0.03)),
+    hsl(var(--v2-surface-raised) / 0.86);
+  box-shadow: var(--v2-shadow-card);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+.v2-hairline {
+  border-color: hsl(var(--v2-border) / 0.72);
+}
+
+.v2-focus-ring {
+  outline: none;
+}
+
+.v2-focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px hsl(var(--v2-brand) / 0.72), 0 0 0 6px hsl(var(--v2-brand) / 0.16);
+}
+
+.v2-text-gradient {
+  background: linear-gradient(135deg, hsl(var(--v2-text)), hsl(var(--v2-brand)), hsl(var(--v2-brand-2)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

@@ -1,11 +1,11 @@
 {
-  "name": "Finance Control",
-  "short_name": "Finance",
-  "description": "Gestión financiera personal y familiar.",
+  "name": "Financial OS",
+  "short_name": "Financial OS",
+  "description": "Tu sistema operativo financiero personal.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0A0B10",
-  "theme_color": "#7C3AED",
+  "theme_color": "#0F766E",
   "orientation": "portrait",
   "icons": [
     {

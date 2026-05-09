@@ -1,14 +1,14 @@
-import { PageHeader } from "@/components/app/page-header";
+import { V2PageShell } from "@/components/layout/v2-page-shell";
 import { DashboardClient } from "./dashboard-client";
 
 export default function DashboardPage() {
   return (
-    <>
-      <PageHeader
-        title="Dashboard"
-        description="Vista ejecutiva de tu salud financiera mensual con transacciones reales."
-      />
+    <V2PageShell
+      eyebrow="Financial Operating System"
+      title="Qué deberías saber hoy"
+      description="Una lectura clara de tu mes: señales importantes, presión financiera y próximos movimientos."
+    >
       <DashboardClient />
-    </>
+    </V2PageShell>
   );
 }

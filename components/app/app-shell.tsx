@@ -16,10 +16,10 @@ type AppShellProps = {
 
 export function AppShell({ children, userName, userEmail }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="v2-shell min-h-screen bg-background">
       <GlobalProcessingIndicator />
       <MobileHeader userName={userName} />
-      <div className="fixed right-5 top-4 z-30 hidden items-center gap-1 rounded-full border border-border/70 bg-card/80 p-1 shadow-lg shadow-black/20 backdrop-blur lg:flex">
+      <div className="fixed right-5 top-4 z-30 hidden items-center gap-1 rounded-full border border-white/10 bg-zinc-950/72 p-1 shadow-lg shadow-black/20 backdrop-blur-xl lg:flex">
         <PrivacyToggle compact />
         <NotificationsButton compact panelClassName="right-[-44px]" />
         <LogoutButton compact />

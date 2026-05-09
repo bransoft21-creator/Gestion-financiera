@@ -10,13 +10,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Finance Control",
-  description: "Gestión financiera personal y familiar.",
+  title: "Financial OS",
+  description: "Tu sistema operativo financiero personal.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Finance Control",
+    title: "Financial OS",
   },
   icons: {
     apple: "/icons/icon-192.png",

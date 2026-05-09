@@ -19,18 +19,18 @@ import {
 import { cn } from "@/lib/utils";
 
 const bottomNavItems = [
-  { href: "/dashboard",    label: "Inicio",       icon: Gauge },
+  { href: "/dashboard",    label: "Hoy",          icon: Gauge },
   { href: "/transactions", label: "Movimientos",  icon: CircleDollarSign },
-  { href: "/budgets",      label: "Presupuesto",  icon: BarChart3 },
-  { href: "/goals",        label: "Metas",        icon: Sparkles },
+  { href: "/budgets",      label: "Plan",         icon: BarChart3 },
+  { href: "/goals",        label: "Futuro",       icon: Sparkles },
 ] as const;
 
 const moreNavItems = [
   { href: "/accounts",   label: "Cuentas",      icon: Landmark },
   { href: "/categories", label: "Categorías",   icon: FolderTree },
   { href: "/debts",      label: "Deudas",       icon: CreditCard },
-  { href: "/recurring",  label: "Gastos fijos", icon: RefreshCw },
-  { href: "/reports",    label: "Reportes",     icon: TrendingUp },
+  { href: "/recurring",  label: "Compromisos",  icon: RefreshCw },
+  { href: "/reports",    label: "Patrones",     icon: TrendingUp },
 ] as const;
 
 export function BottomNav() {
@@ -57,7 +57,7 @@ export function BottomNav() {
         )}
         style={{
           bottom: 0,
-          background: "rgba(9,11,20,.97)",
+          background: "rgba(5,8,15,.96)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
         }}
@@ -100,7 +100,7 @@ export function BottomNav() {
       <nav
         className="fixed inset-x-0 bottom-0 z-[120] border-t border-border lg:hidden"
         style={{
-          background: "rgba(9,11,20,.88)",
+          background: "rgba(5,8,15,.88)",
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
         }}
@@ -116,7 +116,7 @@ export function BottomNav() {
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-all duration-150",
                   isActive
-                    ? "bg-primary/12 text-primary"
+                    ? "bg-white/[0.08] text-teal-100"
                     : "text-muted-foreground",
                 )}
               >
@@ -132,7 +132,7 @@ export function BottomNav() {
             onClick={() => setMoreOpen(true)}
             className={cn(
               "flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-all duration-150",
-              isMoreActive || moreOpen ? "text-primary" : "text-muted-foreground",
+              isMoreActive || moreOpen ? "text-teal-100" : "text-muted-foreground",
             )}
           >
             <Menu className="h-6 w-6" aria-hidden="true" />

@@ -74,7 +74,7 @@ export function LoginForm() {
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-lg shadow-violet-500/35">
             <WalletCards className="h-5 w-5 text-white" aria-hidden="true" />
           </div>
-          <span className="text-xl font-extrabold tracking-tight text-foreground">Finance Control</span>
+          <span className="text-xl font-extrabold tracking-tight text-foreground">Financial OS</span>
         </div>
 
         {/* Tagline */}
@@ -85,8 +85,7 @@ export function LoginForm() {
           </span>
         </h1>
         <p className="mb-14 max-w-md text-base leading-relaxed text-muted-foreground">
-          Visualizá tu situación financiera real, no solo ingresos menos gastos.
-          Presupuestos, metas y deudas integrados.
+          Entendé qué está pasando con tu dinero, qué cambió y qué conviene hacer hoy.
         </p>
 
         {/* Bullets */}
@@ -113,7 +112,7 @@ export function LoginForm() {
             <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-lg shadow-violet-500/35">
               <WalletCards className="h-6 w-6 text-white" aria-hidden="true" />
             </div>
-            <p className="text-lg font-extrabold text-foreground">Finance Control</p>
+            <p className="text-lg font-extrabold text-foreground">Financial OS</p>
           </div>
 
           {/* Tabs */}
@@ -223,7 +222,7 @@ export function LoginForm() {
           </form>
 
           <p className="mt-8 text-center text-[11px] text-muted-foreground/40">
-            Finance Control · Gestión financiera profesional
+            Financial OS · Copilot financiero personal
           </p>
         </div>
       </div>

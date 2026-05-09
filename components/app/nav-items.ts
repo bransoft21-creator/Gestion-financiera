@@ -11,15 +11,15 @@ import {
 } from "lucide-react";
 
 export const navItems = [
-  { href: "/dashboard",     label: "Dashboard",      icon: Gauge },
-  { href: "/transactions",  label: "Transacciones",  icon: CircleDollarSign },
+  { href: "/dashboard",     label: "Hoy",            icon: Gauge },
+  { href: "/transactions",  label: "Movimientos",    icon: CircleDollarSign },
   { href: "/accounts",      label: "Cuentas",        icon: Landmark },
   { href: "/categories",    label: "Categorías",     icon: FolderTree },
-  { href: "/budgets",       label: "Presupuestos",   icon: BarChart3 },
-  { href: "/goals",         label: "Metas",          icon: Sparkles },
+  { href: "/budgets",       label: "Plan",           icon: BarChart3 },
+  { href: "/goals",         label: "Futuro",         icon: Sparkles },
   { href: "/debts",         label: "Deudas",         icon: CreditCard },
-  { href: "/recurring",     label: "Gastos fijos",   icon: RefreshCw },
-  { href: "/reports",       label: "Reportes",       icon: TrendingUp },
+  { href: "/recurring",     label: "Compromisos",    icon: RefreshCw },
+  { href: "/reports",       label: "Patrones",       icon: TrendingUp },
 ] as const;
 
 export const investmentsNavItem = {

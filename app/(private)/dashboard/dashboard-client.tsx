@@ -23,10 +23,11 @@ import {
   Zap,
 } from "lucide-react";
 import { EmptyState } from "@/components/app/empty-state";
-import { StatCard } from "@/components/app/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FinancialAiAnalysisCard } from "@/components/dashboard/financial-ai-analysis-card";
+import { FinanceMetricCard } from "@/components/finance/finance-metric-card";
+import { PremiumCard } from "@/components/ui-v2/premium-card";
 import {
   ExpenseCategoryChart,
   type ExpenseCategoryChartItem,
@@ -153,31 +154,34 @@ function HeroCard({
   month: number;
 }) {
   const animated = useCountUp(metrics.realAvailable);
+  const isPositive = metrics.realAvailable >= 0;
+  const statusText = isPositive
+    ? "Tu mes tiene margen real después de gastos, reservas y obligaciones."
+    : "Tu mes necesita atención: el disponible real queda por debajo de cero.";
 
   return (
-    <div className="relative mb-6 overflow-hidden rounded-2xl border border-violet-500/28 p-6 sm:p-7"
-      style={{ background: "linear-gradient(135deg, rgba(124,58,237,.22) 0%, rgba(99,102,241,.08) 60%, rgba(15,17,30,.9) 100%)" }}>
-      {/* Glow blob */}
-      <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full"
-        style={{ background: "radial-gradient(circle, rgba(124,58,237,.3) 0%, transparent 70%)" }} />
-      {/* Top border gradient */}
-      <div className="absolute inset-x-0 top-0 h-[2px]"
-        style={{ background: "linear-gradient(90deg,#7c3aed,#6366f1,transparent)" }} />
+    <PremiumCard variant="raised" className="relative mb-6 overflow-hidden p-5 sm:p-7">
+      <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(45,212,191,.18)_0%,transparent_68%)]" />
+      <div className="pointer-events-none absolute bottom-[-8rem] left-[-6rem] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,.12)_0%,transparent_68%)]" />
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="mb-3 flex items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-violet-400/80">
-              Dinero disponible real
+      <div className="relative grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
+        <div className="min-w-0">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-white/10 bg-white/[0.07] px-2.5 py-1 text-[11px] font-semibold text-teal-100">
+              Disponible real
             </span>
-            <span className="rounded-full border border-violet-500/20 bg-violet-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-violet-300">
+            <span className="rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 text-[11px] font-semibold text-zinc-300">
               {MONTH_NAMES[month - 1]} {year}
             </span>
           </div>
-          <p className="mb-5 text-[40px] font-extrabold leading-none tracking-tight tabular-nums text-foreground">
+          <h2 className="text-balance text-2xl font-semibold leading-tight text-white sm:text-4xl">
+            {isPositive ? "Tu dinero respira este mes." : "Tu mes pide una corrección."}
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">{statusText}</p>
+          <p className={`mt-6 text-[42px] font-semibold leading-none tracking-tight tabular-nums sm:text-[56px] ${isPositive ? "text-emerald-100" : "text-rose-100"}`}>
             {formatMoney(animated)}
           </p>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-white/50">
+          <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-white/50">
             <FormulaPill label="Ingresos" value={metrics.income} color="#34d399" href="/transactions?type=INCOME" />
             <span aria-hidden="true">−</span>
             <FormulaPill label="Gastos" value={metrics.expenses} color="#f87171" href="/transactions?type=EXPENSE" />
@@ -188,7 +192,7 @@ function HeroCard({
           </div>
 
           {metrics.income > 0 && (
-            <div className="mt-4 pt-3 border-t border-white/[0.07]">
+            <div className="mt-5 max-w-2xl border-t border-white/[0.07] pt-4">
               <div className="mb-1.5 flex items-center justify-between text-[11px]">
                 <span className="text-white/40">Ingreso consumido</span>
                 <span className={
@@ -212,12 +216,22 @@ function HeroCard({
             </div>
           )}
         </div>
-        <div className="text-right">
-          <p className="text-[11px] text-white/40">Tasa de ahorro</p>
-          <p className="text-[28px] font-bold text-emerald-400">{metrics.savingsRate}%</p>
+        <div className="grid grid-cols-2 gap-2 sm:min-w-[210px] lg:grid-cols-1">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+            <p className="text-[11px] font-semibold uppercase text-zinc-500">Tasa de ahorro</p>
+            <p className={`mt-1 text-2xl font-semibold tabular-nums ${metrics.savingsRate >= 0 ? "text-emerald-100" : "text-rose-100"}`}>
+              {metrics.savingsRate}%
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+            <p className="text-[11px] font-semibold uppercase text-zinc-500">Cierre estimado</p>
+            <p className={`mt-1 text-sm font-semibold tabular-nums ${metrics.projection.projectedRealAvailable >= 0 ? "text-zinc-100" : "text-rose-100"}`}>
+              {formatMoney(metrics.projection.projectedRealAvailable)}
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </PremiumCard>
   );
 }
 
@@ -235,7 +249,7 @@ function FormulaPill({
   return (
     <Link
       href={href}
-      className="flex min-w-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 transition hover:bg-white/5"
+      className="flex min-w-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 transition hover:bg-white/[0.07]"
       aria-label={label}
     >
       <span className="text-xs text-white/50">{label}</span>
@@ -679,21 +693,49 @@ export function DashboardClient() {
       {/* Hero card */}
       <HeroCard metrics={metrics} year={year} month={month} />
 
-      {/* Stat cards */}
-      <section className="stagger-in mb-6 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Ingresos del mes" value={formatMoney(metrics.income)}
-          detail="↑ transacciones de ingreso" icon={ArrowUpCircle} tone="positive"
-          rawValue={metrics.income} formatter={formatMoney} href="/transactions?type=INCOME" />
-        <StatCard label="Gastos del mes" value={formatMoney(metrics.expenses)}
-          detail="transacciones tipo gasto" icon={ArrowDownCircle} tone="danger"
-          rawValue={metrics.expenses} formatter={formatMoney} href="/transactions?type=EXPENSE" />
-        <StatCard label="Presupuesto reservado" value={formatMoney(metrics.remainingReservedBudget)}
-          detail="pendiente de gastar" icon={Lock} tone="warning"
-          rawValue={metrics.remainingReservedBudget} formatter={formatMoney} href="/budgets" />
-        <StatCard label="Obligaciones del mes" value={formatMoney(metrics.upcomingObligations)}
-          detail="recurrentes, metas y deuda" icon={CreditCard}
-          tone={metrics.upcomingObligations === 0 ? "positive" : "warning"}
-          rawValue={metrics.upcomingObligations} formatter={formatMoney} href="/recurring" />
+      <section className="mb-6 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+        <Link href="/transactions?type=INCOME" className="block min-w-0">
+          <FinanceMetricCard
+            label="Entró"
+            value={formatMoney(metrics.income)}
+            detail="Ingresos del mes"
+            icon={ArrowUpCircle}
+            tone="positive"
+            trend="up"
+            trendLabel="Base para tu plan mensual"
+          />
+        </Link>
+        <Link href="/transactions?type=EXPENSE" className="block min-w-0">
+          <FinanceMetricCard
+            label="Salió"
+            value={formatMoney(metrics.expenses)}
+            detail="Gastos registrados"
+            icon={ArrowDownCircle}
+            tone="danger"
+            trend="down"
+            trendLabel={`${metrics.spendingRate}% del ingreso consumido`}
+          />
+        </Link>
+        <Link href="/budgets" className="block min-w-0">
+          <FinanceMetricCard
+            label="Reservado"
+            value={formatMoney(metrics.remainingReservedBudget)}
+            detail="Presupuesto pendiente"
+            icon={Lock}
+            tone="warning"
+            trendLabel="Dinero protegido para categorías"
+          />
+        </Link>
+        <Link href="/recurring" className="block min-w-0">
+          <FinanceMetricCard
+            label="Compromisos"
+            value={formatMoney(metrics.upcomingObligations)}
+            detail="Recurrentes, metas y deuda"
+            icon={CreditCard}
+            tone={metrics.upcomingObligations === 0 ? "positive" : "warning"}
+            trendLabel={metrics.upcomingObligations === 0 ? "Sin presión pendiente" : "Todavía impactan el cierre"}
+          />
+        </Link>
       </section>
 
       <FinancialAiAnalysisCard month={selectedMonth} />

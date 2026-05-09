@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { TrendingUp, WalletCards } from "lucide-react";
+import { Sparkles, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { navItems } from "./nav-items";
 import { LogoutButton } from "./logout-button";
@@ -18,15 +18,15 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
   const accountLabel = userEmail ?? "Hogar principal";
 
   return (
-    <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-card shadow-[1px_0_20px_rgba(0,0,0,0.3)] lg:sticky lg:top-0 lg:flex">
+    <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-zinc-950/72 shadow-[1px_0_30px_rgba(0,0,0,0.32)] backdrop-blur-xl lg:sticky lg:top-0 lg:flex">
       {/* Logo */}
-      <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border px-[18px]">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-violet-600 to-indigo-600 shadow-[0_4px_14px_rgba(124,58,237,.35)]">
-          <WalletCards className="h-[17px] w-[17px] text-white" aria-hidden="true" />
+      <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-[18px]">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] text-teal-100 shadow-[0_10px_34px_rgba(45,212,191,0.12)]">
+          <Sparkles className="h-[17px] w-[17px]" aria-hidden="true" />
         </div>
         <div>
-          <p className="text-[13px] font-bold leading-tight text-foreground">Gestión de gastos</p>
-          <p className="text-[11px] leading-tight text-muted-foreground">Finanzas personales</p>
+          <p className="text-[13px] font-bold leading-tight text-foreground">Financial OS</p>
+          <p className="text-[11px] leading-tight text-muted-foreground">Copilot financiero</p>
         </div>
       </div>
 
@@ -41,10 +41,10 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex h-[38px] items-center gap-2.5 rounded-[9px] border-l-2 px-3 text-[13px] font-medium transition-all duration-150 mb-[1px]",
+                "mb-[1px] flex h-[38px] items-center gap-2.5 rounded-xl border border-transparent px-3 text-[13px] font-medium transition-all duration-150",
                 isActive
-                  ? "border-l-primary bg-primary/13 text-primary"
-                  : "border-l-transparent text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
+                  ? "border-white/10 bg-white/[0.07] text-teal-100 shadow-[0_10px_30px_rgba(45,212,191,0.07)]"
+                  : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
               )}
             >
               <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -59,16 +59,16 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
         >
           <TrendingUp className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="flex-1">Inversiones</span>
-          <span className="rounded-full bg-white/7 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+          <span className="rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
             Pronto
           </span>
         </div>
       </nav>
 
       {/* User footer */}
-      <div className="shrink-0 border-t border-border px-3.5 py-3">
+      <div className="shrink-0 border-t border-white/10 px-3.5 py-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-indigo-600">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.07]">
             <span className="text-[11px] font-bold text-white">
               {displayName.slice(0, 1).toUpperCase()}
             </span>
