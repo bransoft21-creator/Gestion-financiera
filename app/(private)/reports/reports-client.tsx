@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   Loader2,
@@ -11,6 +11,8 @@ import {
   Wallet,
 } from "lucide-react";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -50,6 +52,20 @@ type MonthlyReport = {
   topCategories: TopCategory[];
 };
 
+type MonthlySnapshotItem = {
+  id: string;
+  year: number;
+  month: number;
+  currency: string;
+  incomeAmount: number;
+  expenseAmount: number;
+  reservedAmount: number;
+  goalAllocatedAmount: number;
+  debtOutstandingAmount: number;
+  upcomingObligationsAmount: number;
+  availableAmount: number;
+};
+
 type ReportsClientProps = {
   householdId: string;
 };
@@ -68,6 +84,8 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
   const [months, setMonths] = useState<MonthsOption>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [snapshots, setSnapshots] = useState<MonthlySnapshotItem[]>([]);
+  const snapshotsFetched = useRef(false);
 
   const loadReport = useCallback(async (selectedMonths: MonthsOption) => {
     setIsLoading(true);
@@ -101,6 +119,21 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
 
     return () => window.clearTimeout(timeoutId);
   }, [loadReport, months]);
+
+  useEffect(() => {
+    if (snapshotsFetched.current) return;
+    snapshotsFetched.current = true;
+    void (async () => {
+      try {
+        const params = new URLSearchParams({ householdId, limit: "24" });
+        const res = await fetch(`/api/snapshots?${params}`);
+        const payload = (await res.json()) as { data?: MonthlySnapshotItem[] };
+        if (res.ok && payload.data) setSnapshots(payload.data);
+      } catch {
+        // silencioso — el historial es complementario
+      }
+    })();
+  }, [householdId]);
 
   if (error) {
     return (
@@ -435,6 +468,152 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
           </Card>
         </>
       )}
+
+      {snapshots.length > 0 && <SnapshotHistorySection snapshots={snapshots} />}
+    </div>
+  );
+}
+
+const MONTH_SHORT = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[] }) {
+  const chartData = snapshots.map((s) => ({
+    label: `${MONTH_SHORT[s.month - 1]} ${String(s.year).slice(2)}`,
+    disponible: s.availableAmount,
+    ingresos: s.incomeAmount,
+    gastos: s.expenseAmount,
+    deuda: s.debtOutstandingAmount,
+  }));
+
+  return (
+    <div className="space-y-6 border-t border-border pt-6">
+      <div>
+        <h2 className="text-base font-semibold">Historial de patrimonio</h2>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          Snapshot mensual capturado al cierre de cada período. Refleja el dinero disponible real y la deuda total en ese momento.
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Disponible real por mes</CardTitle>
+          <CardDescription>Evolución del dinero disponible real (ingresos − gastos − reservas − obligaciones) al cierre de cada mes.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[260px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="gradDisp" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#818cf8" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={formatMoneyShort} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={70} />
+                <Tooltip
+                  formatter={(value) => [formatMoney(Number(value)), "Disponible"]}
+                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12 }}
+                />
+                <Area type="monotone" dataKey="disponible" stroke="#818cf8" strokeWidth={2.5} fill="url(#gradDisp)" dot={{ fill: "#818cf8", r: 3 }} activeDot={{ r: 5 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Ingresos vs Gastos histórico</CardTitle>
+            <CardDescription>Comparación mensual acumulada desde el primer snapshot.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[220px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} barCategoryGap="30%">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={formatMoneyShort} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={70} />
+                  <Tooltip
+                    formatter={(value, name) => [formatMoney(Number(value)), name === "ingresos" ? "Ingresos" : "Gastos"]}
+                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12 }}
+                  />
+                  <Bar dataKey="ingresos" fill="#34d399" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="gastos" fill="#f87171" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Deuda total al cierre</CardTitle>
+            <CardDescription>Saldo pendiente de deudas activas registrado en cada snapshot.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[220px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="gradDeuda" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f87171" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#f87171" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={formatMoneyShort} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={70} />
+                  <Tooltip
+                    formatter={(value) => [formatMoney(Number(value)), "Deuda total"]}
+                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12 }}
+                  />
+                  <Area type="monotone" dataKey="deuda" stroke="#f87171" strokeWidth={2.5} fill="url(#gradDeuda)" dot={{ fill: "#f87171", r: 3 }} activeDot={{ r: 5 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Detalle por mes</CardTitle>
+          <CardDescription>Tabla completa de métricas capturadas en cada snapshot.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border text-left text-muted-foreground">
+                  <th className="pb-2 pr-4 font-medium">Mes</th>
+                  <th className="pb-2 pr-4 text-right font-medium text-emerald-400">Ingresos</th>
+                  <th className="pb-2 pr-4 text-right font-medium text-rose-400">Gastos</th>
+                  <th className="pb-2 pr-4 text-right font-medium text-amber-400">Reservado</th>
+                  <th className="pb-2 pr-4 text-right font-medium text-rose-400">Deuda</th>
+                  <th className="pb-2 text-right font-medium text-violet-400">Disponible real</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[...snapshots].reverse().map((s) => (
+                  <tr key={s.id} className="text-foreground">
+                    <td className="py-2 pr-4 font-medium">{MONTH_SHORT[s.month - 1]} {s.year}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums text-emerald-400">{formatMoney(s.incomeAmount)}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums text-rose-400">{formatMoney(s.expenseAmount)}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums text-amber-400">{formatMoney(s.reservedAmount)}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums text-rose-400">{formatMoney(s.debtOutstandingAmount)}</td>
+                    <td className={`py-2 text-right tabular-nums font-semibold ${s.availableAmount >= 0 ? "text-violet-400" : "text-rose-400"}`}>
+                      {formatMoney(s.availableAmount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -357,6 +357,17 @@ export function DashboardClient() {
         const payload = (await response.json()) as { data?: DashboardSummary; error?: string };
         if (!response.ok) { setError(payload.error ?? "No se pudo cargar el dashboard."); return; }
         setSummary(payload.data ?? null);
+
+        // Captura silenciosa del mes anterior al abrir el mes actual
+        if (isCurrentMonth) {
+          const prevMonth = month === 1 ? 12 : month - 1;
+          const prevYear = month === 1 ? year - 1 : year;
+          void fetch("/api/snapshots", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ year: prevYear, month: prevMonth }),
+          });
+        }
       } catch {
         setError("Error de red. Verificá tu conexión e intentá de nuevo.");
       } finally {
@@ -364,7 +375,7 @@ export function DashboardClient() {
       }
     }
     void loadSummary();
-  }, [year, month]);
+  }, [year, month, isCurrentMonth]);
 
   function navigatePrev() {
     if (month === 1) { setYear((y) => y - 1); setMonth(12); }
