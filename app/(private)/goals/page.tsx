@@ -13,7 +13,7 @@ export default async function GoalsPage() {
         title="Metas"
         description="Objetivos de ahorro y progreso acumulado. Metas activas con aporte mensual definido se incluyen como obligación en el dashboard."
       />
-      <GoalsClient householdId={workspace.household.id} />
+      <GoalsClient householdId={workspace.household.id} accounts={workspace.accounts} />
     </>
   );
 }

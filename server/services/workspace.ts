@@ -142,7 +142,12 @@ export async function getBudgetWorkspace(userProfileId: string) {
 
 export async function getGoalWorkspace(userProfileId: string) {
   const household = await getPrimaryHousehold(userProfileId);
-  return { household };
+  const accounts = await prisma.account.findMany({
+    where: { householdId: household.id, deletedAt: null, isArchived: false },
+    select: { id: true, name: true, type: true, currency: true },
+    orderBy: { name: "asc" },
+  });
+  return { household, accounts };
 }
 
 export async function getAccountWorkspace(userProfileId: string) {

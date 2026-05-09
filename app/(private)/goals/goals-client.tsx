@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarDays, Loader2, Pencil, Plus, Sparkles, Target, Trash2, X } from "lucide-react";
+import { CalendarDays, CheckCircle2, Loader2, Pencil, Plus, Sparkles, Target, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
@@ -12,7 +12,8 @@ import {
   appFormContentClass,
   appFormHeaderClass,
 } from "@/components/app/mobile-form";
-import { moneySchema, optionalMoneySchema } from "@/lib/money";
+import { formatArgentinaDateInput } from "@/lib/dates";
+import { moneySchema, optionalMoneySchema, parseMoneyInput } from "@/lib/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import { Label } from "@/components/ui/label";
 
 type GoalStatus = "ACTIVE" | "PAUSED" | "COMPLETED" | "CANCELED";
 type CurrencyCode = "ARS" | "USD";
+type AccountOption = { id: string; name: string; type: string; currency: CurrencyCode };
 
 type GoalItem = {
   id: string;
@@ -37,6 +39,7 @@ type GoalItem = {
 
 type GoalsClientProps = {
   householdId: string;
+  accounts: AccountOption[];
 };
 
 type FormState = {
@@ -83,7 +86,8 @@ const defaultForm: FormState = {
   notes: "",
 };
 
-export function GoalsClient({ householdId }: GoalsClientProps) {
+export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
+  const defaultAccount = getPreferredArsBankAccount(accounts);
   const [goals, setGoals] = useState<GoalItem[]>([]);
   const [form, setForm] = useState<FormState>(defaultForm);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -93,6 +97,11 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [contributingGoalId, setContributingGoalId] = useState<string | null>(null);
+  const [quickContribGoalId, setQuickContribGoalId] = useState<string | null>(null);
+  const [quickContribAccountId, setQuickContribAccountId] = useState<string>("");
+  const [quickContribAmount, setQuickContribAmount] = useState<string>("");
+  const [quickContribErrors, setQuickContribErrors] = useState<{ accountId?: string; amount?: string }>({});
 
   useEffect(() => {
     void loadGoals();
@@ -209,6 +218,72 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
       toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setDeletingGoalId(null);
+    }
+  }
+
+  function openContribution(goal: GoalItem) {
+    setQuickContribGoalId(goal.id);
+    setQuickContribAccountId(defaultAccount?.id ?? "");
+    setQuickContribAmount(goal.requiredMonthlyAmount != null ? String(goal.requiredMonthlyAmount) : "");
+    setQuickContribErrors({});
+  }
+
+  function cancelContribution() {
+    setQuickContribGoalId(null);
+    setQuickContribAccountId("");
+    setQuickContribAmount("");
+    setQuickContribErrors({});
+  }
+
+  async function handleContribConfirm(goal: GoalItem) {
+    if (!quickContribAccountId) {
+      setQuickContribErrors({ accountId: "Seleccioná una cuenta para el aporte." });
+      return;
+    }
+    const parsedAmount = parseMoneyInput(quickContribAmount);
+    if (!parsedAmount.success || parsedAmount.data == null) {
+      setQuickContribErrors({ amount: parsedAmount.success ? "Ingresá un monto." : parsedAmount.error });
+      return;
+    }
+    const remaining = goal.targetAmount - goal.currentAmount;
+    if (parsedAmount.data > remaining && remaining > 0) {
+      setQuickContribErrors({ amount: `El aporte supera el saldo restante (${formatMoney(remaining, goal.currency)}).` });
+      return;
+    }
+
+    setQuickContribErrors({});
+    setContributingGoalId(goal.id);
+    try {
+      const today = formatArgentinaDateInput();
+      const response = await fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          householdId,
+          type: "GOAL_CONTRIBUTION",
+          status: "CONFIRMED",
+          accountId: quickContribAccountId,
+          goalId: goal.id,
+          amount: parsedAmount.data,
+          currency: goal.currency,
+          description: `Aporte: ${goal.name}`,
+          occurredAt: today,
+        }),
+      });
+
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        toast.error(payload.error ?? "No se pudo registrar el aporte.");
+        return;
+      }
+
+      toast.success(`Aporte a "${goal.name}" registrado correctamente.`);
+      cancelContribution();
+      await loadGoals();
+    } catch {
+      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
+    } finally {
+      setContributingGoalId(null);
     }
   }
 
@@ -422,9 +497,20 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
                 <GoalCard
                   key={goal.id}
                   goal={goal}
+                  accounts={accounts}
                   isDeleting={deletingGoalId === goal.id}
+                  isContributing={contributingGoalId === goal.id}
+                  isContribOpen={quickContribGoalId === goal.id}
+                  quickContribAccountId={quickContribAccountId}
+                  quickContribAmount={quickContribAmount}
+                  quickContribErrors={quickContribErrors}
                   onEdit={startEditing}
                   onDelete={handleDelete}
+                  onContribOpen={() => openContribution(goal)}
+                  onContribCancel={cancelContribution}
+                  onContribAccountChange={setQuickContribAccountId}
+                  onContribAmountChange={setQuickContribAmount}
+                  onContribConfirm={() => handleContribConfirm(goal)}
                 />
               ))}
             </div>
@@ -434,6 +520,15 @@ export function GoalsClient({ householdId }: GoalsClientProps) {
       </div>
       <MobileCreateFab label="Nueva meta" onClick={() => { resetForm(); setIsFormOpen(true); }} />
     </div>
+  );
+}
+
+function getPreferredArsBankAccount(accounts: AccountOption[]) {
+  return (
+    accounts.find((a) => a.currency === "ARS" && a.type === "BANK" && a.name.toLowerCase() === "cuenta bancaria") ??
+    accounts.find((a) => a.currency === "ARS" && a.type === "BANK") ??
+    accounts.find((a) => a.currency === "ARS") ??
+    accounts[0]
   );
 }
 
@@ -487,18 +582,41 @@ function CircularProgress({ value, size = 72, strokeWidth = 6 }: { value: number
 
 function GoalCard({
   goal,
+  accounts,
   isDeleting,
+  isContributing,
+  isContribOpen,
+  quickContribAccountId,
+  quickContribAmount,
+  quickContribErrors,
   onEdit,
   onDelete,
+  onContribOpen,
+  onContribCancel,
+  onContribAccountChange,
+  onContribAmountChange,
+  onContribConfirm,
 }: {
   goal: GoalItem;
+  accounts: AccountOption[];
   isDeleting: boolean;
+  isContributing: boolean;
+  isContribOpen: boolean;
+  quickContribAccountId: string;
+  quickContribAmount: string;
+  quickContribErrors: { accountId?: string; amount?: string };
   onEdit: (goal: GoalItem) => void;
   onDelete: (goalId: string) => void;
+  onContribOpen: () => void;
+  onContribCancel: () => void;
+  onContribAccountChange: (v: string) => void;
+  onContribAmountChange: (v: string) => void;
+  onContribConfirm: () => void;
 }) {
   const actualPct = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
   const displayPct = Math.min(actualPct, 100);
   const impactsDashboard = goal.status === "ACTIVE" && goal.requiredMonthlyAmount != null;
+  const canContribute = goal.status === "ACTIVE" && goal.currentAmount < goal.targetAmount && accounts.length > 0;
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:border-border/80 animate-fade-up">
@@ -541,7 +659,24 @@ function GoalCard({
 
       {goal.notes ? <p className="mt-3 text-sm text-muted-foreground">{goal.notes}</p> : null}
 
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:flex">
+      <div className="mt-4 flex flex-wrap gap-2">
+        {canContribute && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-10"
+            disabled={isContributing}
+            onClick={isContribOpen ? onContribCancel : onContribOpen}
+          >
+            {isContributing ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+            )}
+            Hacer aporte
+          </Button>
+        )}
         <Button type="button" variant="outline" size="sm" className="h-10" onClick={() => onEdit(goal)}>
           <Pencil className="h-4 w-4" aria-hidden="true" />
           Editar
@@ -562,6 +697,52 @@ function GoalCard({
           Eliminar
         </Button>
       </div>
+
+      {isContribOpen && (
+        <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-3">
+          <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Registrar aporte</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Cuenta</label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={quickContribAccountId}
+                onChange={(e) => onContribAccountChange(e.target.value)}
+              >
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+              {quickContribErrors.accountId ? <p className="text-xs text-destructive">{quickContribErrors.accountId}</p> : null}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Monto ({goal.currency})</label>
+              <Input
+                inputMode="decimal"
+                value={quickContribAmount}
+                onChange={(e) => onContribAmountChange(e.target.value)}
+                placeholder="0"
+                className="h-9"
+              />
+              {quickContribErrors.amount ? <p className="text-xs text-destructive">{quickContribErrors.amount}</p> : null}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={isContributing}
+              onClick={onContribConfirm}
+            >
+              {isContributing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+              Confirmar
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={onContribCancel}>
+              <X className="h-4 w-4" aria-hidden="true" />
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
