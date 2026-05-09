@@ -167,6 +167,7 @@ model UserProfile {
   investmentAccounts   InvestmentAccount[]     @relation("InvestmentAccountCreatedBy")
   investmentAssets     InvestmentAsset[]       @relation("InvestmentAssetCreatedBy")
   investmentActivities InvestmentTransaction[] @relation("InvestmentTransactionCreatedBy")
+  aiFinancialAnalyses  AiFinancialAnalysis[]
 }
 
 model Household {
@@ -445,6 +446,21 @@ model MonthlySnapshot {
 
   @@unique([householdId, currency, year, month])
   @@index([householdId, year, month])
+}
+
+model AiFinancialAnalysis {
+  id        String   @id @default(cuid())
+  userId    String
+  month     String
+  inputHash String
+  result    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user UserProfile @relation(fields: [userId], references: [id])
+
+  @@unique([userId, month])
+  @@index([userId])
 }
 
 model InvestmentAccount {

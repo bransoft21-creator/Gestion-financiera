@@ -26,6 +26,7 @@ import { EmptyState } from "@/components/app/empty-state";
 import { StatCard } from "@/components/app/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { FinancialAiAnalysisCard } from "@/components/dashboard/financial-ai-analysis-card";
 import {
   ExpenseCategoryChart,
   type ExpenseCategoryChartItem,
@@ -663,6 +664,7 @@ export function DashboardClient() {
   }
 
   const { metrics, expensesByCategory, expenseCategoryDetails, latestTransactions, alerts, insights } = summary;
+  const selectedMonth = `${year}-${String(month).padStart(2, "0")}`;
   const selectedExpenseCategoryId = selectedExpenseCategoryPreference
     && expensesByCategory.some((category) => category.id === selectedExpenseCategoryPreference)
     ? selectedExpenseCategoryPreference
@@ -693,6 +695,8 @@ export function DashboardClient() {
           tone={metrics.upcomingObligations === 0 ? "positive" : "warning"}
           rawValue={metrics.upcomingObligations} formatter={formatMoney} href="/recurring" />
       </section>
+
+      <FinancialAiAnalysisCard month={selectedMonth} />
 
       {/* Expense type breakdown + projection */}
       <section className="mb-6 grid gap-5 lg:grid-cols-2">
