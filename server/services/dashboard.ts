@@ -1,5 +1,5 @@
 import { DebtStatus, GoalStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
-import { argentinaMonthRangeUtc } from "@/lib/dates";
+import { argentinaMonthRangeUtc, formatArgentinaDateInput } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { computeFinancialHealth, toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
@@ -112,6 +112,7 @@ export async function getDashboardSummary(
   const expenses = sumTransactionsByType(monthTransactions, TransactionType.EXPENSE);
   const expensesByCategory = getExpensesByCategory(monthTransactions);
   const expenseCategoryDetails = getExpenseCategoryDetails(monthTransactions);
+  const expensesByType = getExpensesByType(monthTransactions);
   const expensesByCategoryId = getExpenseTotalsByCategoryId(monthTransactions);
   const health = computeFinancialHealth({
     income,
@@ -126,6 +127,14 @@ export async function getDashboardSummary(
     totalOutstandingDebt: debtAggregate._sum.outstandingAmount ?? 0,
   });
 
+  const argDateStr = formatArgentinaDateInput();
+  const [argYear, argMonth, argDay] = argDateStr.split("-").map(Number);
+  const isCurrentMonth = argYear === year && argMonth === month;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const dayOfMonth = isCurrentMonth ? argDay : daysInMonth;
+  const projectedExpenses = dayOfMonth > 0 ? (expenses / dayOfMonth) * daysInMonth : expenses;
+  const projectedBalance = income - projectedExpenses;
+
   return {
     period: {
       year,
@@ -133,7 +142,20 @@ export async function getDashboardSummary(
       from: monthStart.toISOString(),
       to: nextMonthStart.toISOString(),
     },
-    metrics: health,
+    metrics: {
+      ...health,
+      spendingRate: health.income > 0 ? Math.round((health.expenses / health.income) * 100) : 0,
+      expensesByType,
+      projection: {
+        isCurrentMonth,
+        daysInMonth,
+        dayOfMonth,
+        daysRemaining: daysInMonth - dayOfMonth,
+        projectedExpenses: Math.round(projectedExpenses),
+        projectedBalance: Math.round(projectedBalance),
+        projectedRealAvailable: Math.round(projectedBalance - health.upcomingObligations),
+      },
+    },
     expensesByCategory,
     expenseCategoryDetails,
     latestTransactions: latestTransactions.map((transaction) => ({
@@ -170,6 +192,23 @@ export async function getDashboardSummary(
       totalOutstandingDebt: health.totalOutstandingDebt,
     }),
   };
+}
+
+function getExpensesByType(transactions: DashboardTransaction[]) {
+  return transactions.reduce(
+    (acc, tx) => {
+      if (tx.type !== TransactionType.EXPENSE) return acc;
+      const amount = toFiniteNumber(tx.amount);
+      switch (tx.expenseType) {
+        case "FIXED": acc.fixed += amount; break;
+        case "VARIABLE": acc.variable += amount; break;
+        case "EXTRAORDINARY": acc.extraordinary += amount; break;
+        default: acc.unclassified += amount; break;
+      }
+      return acc;
+    },
+    { fixed: 0, variable: 0, extraordinary: 0, unclassified: 0 },
+  );
 }
 
 function getExpenseTotalsByCategoryId(transactions: DashboardTransaction[]) {

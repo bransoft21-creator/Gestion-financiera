@@ -9,13 +9,18 @@ import {
   ArrowRightCircle,
   ArrowUpCircle,
   CreditCard,
+  HelpCircle,
   Lightbulb,
   Loader2,
   Lock,
   Plus,
   ReceiptText,
+  Repeat,
+  ShoppingCart,
   Sparkles,
+  TrendingUp,
   Wallet,
+  Zap,
 } from "lucide-react";
 import { EmptyState } from "@/components/app/empty-state";
 import { StatCard } from "@/components/app/stat-card";
@@ -41,7 +46,23 @@ type DashboardSummary = {
     upcomingObligations: number;
     realAvailable: number;
     savingsRate: number;
+    spendingRate: number;
     totalOutstandingDebt: number;
+    expensesByType: {
+      fixed: number;
+      variable: number;
+      extraordinary: number;
+      unclassified: number;
+    };
+    projection: {
+      isCurrentMonth: boolean;
+      daysInMonth: number;
+      dayOfMonth: number;
+      daysRemaining: number;
+      projectedExpenses: number;
+      projectedBalance: number;
+      projectedRealAvailable: number;
+    };
   };
   expensesByCategory: ExpenseCategoryChartItem[];
   expenseCategoryDetails: Array<{
@@ -163,6 +184,31 @@ function HeroCard({
             <span aria-hidden="true">−</span>
             <FormulaPill label="Obligaciones" value={metrics.upcomingObligations} color="#60a5fa" href="/recurring" />
           </div>
+
+          {metrics.income > 0 && (
+            <div className="mt-4 pt-3 border-t border-white/[0.07]">
+              <div className="mb-1.5 flex items-center justify-between text-[11px]">
+                <span className="text-white/40">Ingreso consumido</span>
+                <span className={
+                  metrics.spendingRate >= 100 ? "font-semibold text-rose-400"
+                  : metrics.spendingRate >= 80 ? "font-semibold text-amber-400"
+                  : "text-white/50"
+                }>
+                  {metrics.spendingRate}%
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${
+                    metrics.spendingRate >= 100 ? "bg-rose-500"
+                    : metrics.spendingRate >= 80 ? "bg-amber-500"
+                    : "bg-emerald-500"
+                  }`}
+                  style={{ width: `${Math.min(metrics.spendingRate, 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
         <div className="text-right">
           <p className="text-[11px] text-white/40">Tasa de ahorro</p>
@@ -292,6 +338,139 @@ function MonthlySignals({
             </div>
           ))}
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── Expense type breakdown ──────────────────────────────────────────────── */
+
+const expenseTypeRows = [
+  { key: "fixed" as const, label: "Fijos", icon: Repeat, iconBg: "bg-sky-500/15 text-sky-400", barColor: "#38bdf8" },
+  { key: "variable" as const, label: "Variables", icon: ShoppingCart, iconBg: "bg-amber-500/15 text-amber-400", barColor: "#fbbf24" },
+  { key: "extraordinary" as const, label: "Extraordinarios", icon: Zap, iconBg: "bg-violet-500/15 text-violet-400", barColor: "#a78bfa" },
+  { key: "unclassified" as const, label: "Sin clasificar", icon: HelpCircle, iconBg: "bg-secondary text-muted-foreground", barColor: "#6b7280" },
+] as const;
+
+function ExpenseTypeBreakdown({
+  expensesByType,
+  total,
+}: {
+  expensesByType: DashboardSummary["metrics"]["expensesByType"];
+  total: number;
+}) {
+  const rows = expenseTypeRows.filter(
+    (row) => row.key === "unclassified" ? expensesByType.unclassified > 0 : true,
+  );
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Composición de gastos</CardTitle>
+        <CardDescription>Fijos, variables y extraordinarios del mes.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {rows.map((row) => {
+          const value = expensesByType[row.key];
+          const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+          return (
+            <div key={row.key} className="flex items-center gap-3">
+              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${row.iconBg}`}>
+                <row.icon className="h-3.5 w-3.5" aria-hidden="true" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">{row.label}</span>
+                  <span className="font-semibold tabular-nums">{formatMoney(value)}</span>
+                </div>
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{ width: `${pct}%`, backgroundColor: row.barColor }}
+                  />
+                </div>
+              </div>
+              <span className="w-9 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">{pct}%</span>
+            </div>
+          );
+        })}
+        {total === 0 && (
+          <p className="py-2 text-center text-xs text-muted-foreground">Sin gastos registrados este mes.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── Month projection ────────────────────────────────────────────────────── */
+
+function buildNarrative(metrics: DashboardSummary["metrics"]): string {
+  if (metrics.income === 0 && metrics.expenses === 0) return "";
+  const parts: string[] = [];
+  if (metrics.income > 0) {
+    parts.push(`Vas gastando ${formatMoney(metrics.expenses)} de ${formatMoney(metrics.income)}.`);
+  }
+  if (metrics.realAvailable >= 0) {
+    const suffix = metrics.upcomingObligations > 0
+      ? ", pero todavía faltan gastos recurrentes por vencer."
+      : ".";
+    parts.push(`Te queda disponible ${formatMoney(metrics.realAvailable)}${suffix}`);
+  } else {
+    parts.push("El disponible real está en negativo al contemplar las obligaciones pendientes.");
+  }
+  return parts.join(" ");
+}
+
+function MonthProjection({ metrics }: { metrics: DashboardSummary["metrics"] }) {
+  const { projection } = metrics;
+  if (!projection.isCurrentMonth || metrics.income === 0) return null;
+
+  const dailyRate = projection.dayOfMonth > 0
+    ? Math.round(metrics.expenses / projection.dayOfMonth)
+    : 0;
+  const narrative = buildNarrative(metrics);
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-400">
+            <TrendingUp className="h-4 w-4" aria-hidden="true" />
+          </div>
+          <div>
+            <CardTitle className="text-sm">Proyección de cierre</CardTitle>
+            <CardDescription>Estimación al fin del mes según tendencia actual.</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {narrative && (
+          <p className="text-sm leading-relaxed text-muted-foreground">{narrative}</p>
+        )}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-lg border border-border bg-background/35 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Gastos proyectados</p>
+            <p className={`mt-1 text-sm font-bold tabular-nums ${
+              projection.projectedExpenses > metrics.income ? "text-rose-400" : "text-foreground"
+            }`}>
+              {formatMoney(projection.projectedExpenses)}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-background/35 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Balance estimado</p>
+            <p className={`mt-1 text-sm font-bold tabular-nums ${
+              projection.projectedBalance >= 0 ? "text-emerald-400" : "text-rose-400"
+            }`}>
+              {formatMoney(projection.projectedBalance)}
+            </p>
+          </div>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Quedan{" "}
+          <span className="font-semibold text-foreground">{projection.daysRemaining}</span>{" "}
+          día{projection.daysRemaining !== 1 ? "s" : ""} del mes · Ritmo actual:{" "}
+          <span className="font-semibold text-foreground">{formatMoney(dailyRate)}</span>/día
+        </p>
       </CardContent>
     </Card>
   );
@@ -482,6 +661,12 @@ export function DashboardClient() {
           detail="recurrentes, metas y deuda" icon={CreditCard}
           tone={metrics.upcomingObligations === 0 ? "positive" : "warning"}
           rawValue={metrics.upcomingObligations} formatter={formatMoney} href="/recurring" />
+      </section>
+
+      {/* Expense type breakdown + projection */}
+      <section className="mb-6 grid gap-5 lg:grid-cols-2">
+        <ExpenseTypeBreakdown expensesByType={metrics.expensesByType} total={metrics.expenses} />
+        <MonthProjection metrics={metrics} />
       </section>
 
       {/* Charts row */}
