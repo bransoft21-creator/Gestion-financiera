@@ -114,6 +114,7 @@ export async function getDashboardSummary(
   const expenseCategoryDetails = getExpenseCategoryDetails(monthTransactions);
   const expensesByType = getExpensesByType(monthTransactions);
   const expensesByCategoryId = getExpenseTotalsByCategoryId(monthTransactions);
+  const fixedToIncomeRatio = income > 0 ? Math.round((expensesByType.fixed / income) * 100) : 0;
   const health = computeFinancialHealth({
     income,
     expenses,
@@ -146,6 +147,7 @@ export async function getDashboardSummary(
       ...health,
       spendingRate: health.income > 0 ? Math.round((health.expenses / health.income) * 100) : 0,
       expensesByType,
+      fixedToIncomeRatio,
       projection: {
         isCurrentMonth,
         daysInMonth,
@@ -190,6 +192,7 @@ export async function getDashboardSummary(
       upcomingObligations: health.upcomingObligations,
       realAvailable: health.realAvailable,
       totalOutstandingDebt: health.totalOutstandingDebt,
+      fixedToIncomeRatio,
     }),
   };
 }
@@ -374,6 +377,7 @@ function buildFinancialInsights({
   upcomingObligations,
   realAvailable,
   totalOutstandingDebt,
+  fixedToIncomeRatio,
 }: {
   income: number;
   expenses: number;
@@ -385,6 +389,7 @@ function buildFinancialInsights({
   upcomingObligations: number;
   realAvailable: number;
   totalOutstandingDebt: number;
+  fixedToIncomeRatio: number;
 }) {
   const insights: Array<{
     title: string;
@@ -421,6 +426,32 @@ function buildFinancialInsights({
       tone: "positive",
       actionLabel: "Ver metas",
       href: "/goals",
+    });
+  }
+
+  if (income > 0 && fixedToIncomeRatio >= 60) {
+    insights.push({
+      title: `Gastos fijos muy altos: ${fixedToIncomeRatio}% de ingresos`,
+      message: "Más de la mitad del ingreso ya está comprometido en obligaciones fijas. El margen para imprevistos es muy ajustado.",
+      tone: "danger",
+      actionLabel: "Ver gastos",
+      href: "/transactions?type=EXPENSE",
+    });
+  } else if (income > 0 && fixedToIncomeRatio >= 40) {
+    insights.push({
+      title: `Gastos fijos: ${fixedToIncomeRatio}% de ingresos`,
+      message: "Los compromisos fijos son elevados. Idealmente deberían mantenerse por debajo del 50% del ingreso.",
+      tone: "warning",
+      actionLabel: "Ver gastos",
+      href: "/transactions?type=EXPENSE",
+    });
+  } else if (income > 0 && fixedToIncomeRatio > 0 && fixedToIncomeRatio < 40) {
+    insights.push({
+      title: `Gastos fijos saludables: ${fixedToIncomeRatio}% de ingresos`,
+      message: "Los compromisos fijos dejan buen margen para gastos variables y ahorro.",
+      tone: "positive",
+      actionLabel: "Ver transacciones",
+      href: "/transactions?type=EXPENSE",
     });
   }
 

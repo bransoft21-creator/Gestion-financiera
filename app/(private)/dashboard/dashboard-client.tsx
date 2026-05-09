@@ -54,6 +54,7 @@ type DashboardSummary = {
       extraordinary: number;
       unclassified: number;
     };
+    fixedToIncomeRatio: number;
     projection: {
       isCurrentMonth: boolean;
       daysInMonth: number;
@@ -355,13 +356,24 @@ const expenseTypeRows = [
 function ExpenseTypeBreakdown({
   expensesByType,
   total,
+  income,
+  fixedToIncomeRatio,
 }: {
   expensesByType: DashboardSummary["metrics"]["expensesByType"];
   total: number;
+  income: number;
+  fixedToIncomeRatio: number;
 }) {
   const rows = expenseTypeRows.filter(
     (row) => row.key === "unclassified" ? expensesByType.unclassified > 0 : true,
   );
+
+  const fixedRatioColor = fixedToIncomeRatio >= 60 ? "#f87171"
+    : fixedToIncomeRatio >= 40 ? "#fbbf24"
+    : "#34d399";
+  const fixedRatioTextClass = fixedToIncomeRatio >= 60 ? "text-rose-400"
+    : fixedToIncomeRatio >= 40 ? "text-amber-400"
+    : "text-emerald-400";
 
   return (
     <Card>
@@ -370,6 +382,25 @@ function ExpenseTypeBreakdown({
         <CardDescription>Fijos, variables y extraordinarios del mes.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        {income > 0 && (
+          <div className="rounded-xl border border-border bg-secondary/40 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Gastos fijos sobre ingresos
+            </p>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className={`text-2xl font-extrabold tabular-nums ${fixedRatioTextClass}`}>
+                {fixedToIncomeRatio}%
+              </span>
+              <span className="text-xs text-muted-foreground">de tus ingresos son fijos</span>
+            </div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background/60">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${Math.min(fixedToIncomeRatio, 100)}%`, backgroundColor: fixedRatioColor }}
+              />
+            </div>
+          </div>
+        )}
         {rows.map((row) => {
           const value = expensesByType[row.key];
           const pct = total > 0 ? Math.round((value / total) * 100) : 0;
@@ -665,7 +696,12 @@ export function DashboardClient() {
 
       {/* Expense type breakdown + projection */}
       <section className="mb-6 grid gap-5 lg:grid-cols-2">
-        <ExpenseTypeBreakdown expensesByType={metrics.expensesByType} total={metrics.expenses} />
+        <ExpenseTypeBreakdown
+          expensesByType={metrics.expensesByType}
+          total={metrics.expenses}
+          income={metrics.income}
+          fixedToIncomeRatio={metrics.fixedToIncomeRatio}
+        />
         <MonthProjection metrics={metrics} />
       </section>
 
