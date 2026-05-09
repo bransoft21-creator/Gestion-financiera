@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/app/page-header";
+import { V2PageShell } from "@/components/layout/v2-page-shell";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getDebtWorkspace } from "@/server/services/workspace";
 import { DebtsClient } from "./debts-client";
@@ -8,12 +8,12 @@ export default async function DebtsPage() {
   const { household, accounts } = await getDebtWorkspace(userProfile.id);
 
   return (
-    <>
-      <PageHeader
-        title="Deudas"
-        description="Préstamos, tarjetas de crédito y cuotas. Seguimiento de saldo pendiente, pagos mínimos y vencimientos."
-      />
+    <V2PageShell
+      eyebrow="Compromisos financieros"
+      title="Lo que pesa sobre tu mes"
+      description="Seguís deuda, vencimientos y pagos mínimos como compromisos vivos, no como un listado frío."
+    >
       <DebtsClient householdId={household.id} accounts={accounts} />
-    </>
+    </V2PageShell>
   );
 }
