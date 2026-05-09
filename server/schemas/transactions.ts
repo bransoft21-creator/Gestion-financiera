@@ -1,17 +1,14 @@
-import { CurrencyCode, TransactionStatus, TransactionType } from "@prisma/client";
+import { CurrencyCode, ExpenseType, PaymentMethod, TransactionOrigin, TransactionStatus, TransactionType } from "@prisma/client";
 import { z } from "zod";
 import { argentinaDayStartFromInput, transactionDateFromInput } from "@/lib/dates";
 import { moneySchema } from "@/lib/money";
 
 const currencyValues = Object.values(CurrencyCode) as [CurrencyCode, ...CurrencyCode[]];
-const transactionStatusValues = Object.values(TransactionStatus) as [
-  TransactionStatus,
-  ...TransactionStatus[],
-];
-const transactionTypeValues = Object.values(TransactionType) as [
-  TransactionType,
-  ...TransactionType[],
-];
+const transactionStatusValues = Object.values(TransactionStatus) as [TransactionStatus, ...TransactionStatus[]];
+const transactionTypeValues = Object.values(TransactionType) as [TransactionType, ...TransactionType[]];
+const expenseTypeValues = Object.values(ExpenseType) as [ExpenseType, ...ExpenseType[]];
+const transactionOriginValues = Object.values(TransactionOrigin) as [TransactionOrigin, ...TransactionOrigin[]];
+const paymentMethodValues = Object.values(PaymentMethod) as [PaymentMethod, ...PaymentMethod[]];
 const transactionDateSchema = z.preprocess(transactionDateFromInput, z.date());
 const filterDateSchema = z.preprocess(argentinaDayStartFromInput, z.date());
 
@@ -30,6 +27,13 @@ const createTransactionBaseSchema = z.object({
   transferAmount: moneySchema().optional(),
   description: z.string().trim().max(160).optional(),
   notes: z.string().trim().max(1000).optional(),
+  expenseType: z.enum(expenseTypeValues).optional(),
+  origin: z.enum(transactionOriginValues).default(TransactionOrigin.MANUAL),
+  paymentMethod: z.enum(paymentMethodValues).optional(),
+  isInstallment: z.boolean().default(false),
+  installmentNumber: z.coerce.number().int().positive().optional(),
+  totalInstallments: z.coerce.number().int().positive().optional(),
+  isRecurring: z.boolean().default(false),
   occurredAt: transactionDateSchema,
 });
 
@@ -73,6 +77,10 @@ export const updateTransactionSchema = createTransactionBaseSchema
     goalId: z.string().min(1).nullable().optional(),
     debtId: z.string().min(1).nullable().optional(),
     investmentTransactionId: z.string().min(1).nullable().optional(),
+    expenseType: z.enum(expenseTypeValues).nullable().optional(),
+    paymentMethod: z.enum(paymentMethodValues).nullable().optional(),
+    installmentNumber: z.coerce.number().int().positive().nullable().optional(),
+    totalInstallments: z.coerce.number().int().positive().nullable().optional(),
   })
   .superRefine((data, ctx) => {
     if (

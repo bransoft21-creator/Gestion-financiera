@@ -71,6 +71,26 @@ enum RecurrenceFrequency {
   YEARLY
 }
 
+enum ExpenseType {
+  FIXED
+  VARIABLE
+  EXTRAORDINARY
+}
+
+enum TransactionOrigin {
+  MANUAL
+  CARD_SUMMARY
+  BANK
+  MERCADO_PAGO
+}
+
+enum PaymentMethod {
+  CASH
+  DEBIT
+  CREDIT
+  TRANSFER
+}
+
 enum GoalStatus {
   ACTIVE
   PAUSED
@@ -265,6 +285,13 @@ model Transaction {
   transferAmount            Decimal?          @db.Decimal(18, 2)
   description               String?
   notes                     String?
+  expenseType               ExpenseType?
+  origin                    TransactionOrigin @default(MANUAL)
+  paymentMethod             PaymentMethod?
+  isInstallment             Boolean           @default(false)
+  installmentNumber         Int?
+  totalInstallments         Int?
+  isRecurring               Boolean           @default(false)
   occurredAt                DateTime
   createdAt                 DateTime          @default(now())
   updatedAt                 DateTime          @updatedAt

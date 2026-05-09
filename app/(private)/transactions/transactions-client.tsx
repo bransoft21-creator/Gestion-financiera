@@ -65,6 +65,9 @@ type CategoryOption = {
 };
 
 type TransactionStatus = "PENDING" | "CONFIRMED" | "CANCELED";
+type ExpenseType = "FIXED" | "VARIABLE" | "EXTRAORDINARY";
+type TransactionOrigin = "MANUAL" | "CARD_SUMMARY" | "BANK" | "MERCADO_PAGO";
+type PaymentMethod = "CASH" | "DEBIT" | "CREDIT" | "TRANSFER";
 
 type TransactionItem = {
   id: string;
@@ -74,6 +77,13 @@ type TransactionItem = {
   amount: string;
   description: string | null;
   notes: string | null;
+  expenseType: ExpenseType | null;
+  origin: TransactionOrigin;
+  paymentMethod: PaymentMethod | null;
+  isInstallment: boolean;
+  installmentNumber: number | null;
+  totalInstallments: number | null;
+  isRecurring: boolean;
   occurredAt: string;
   account: {
     id: string;
@@ -124,6 +134,26 @@ const transactionIcons = {
   INVESTMENT: ArrowDownCircle,
 } satisfies Record<TransactionType, typeof ArrowDownCircle>;
 
+const expenseTypeLabels: Record<ExpenseType, string> = {
+  FIXED: "Fijo",
+  VARIABLE: "Variable",
+  EXTRAORDINARY: "Extraordinario",
+};
+
+const paymentMethodLabels: Record<PaymentMethod, string> = {
+  CASH: "Efectivo",
+  DEBIT: "Débito",
+  CREDIT: "Crédito",
+  TRANSFER: "Transferencia",
+};
+
+const transactionOriginLabels: Record<TransactionOrigin, string> = {
+  MANUAL: "Manual",
+  CARD_SUMMARY: "Resumen tarjeta",
+  BANK: "Banco",
+  MERCADO_PAGO: "Mercado Pago",
+};
+
 const formSchema = z.object({
   type: z.enum(transactionTypes as [TransactionType, ...TransactionType[]]),
   accountId: z.string().min(1, "Seleccioná una cuenta."),
@@ -134,12 +164,26 @@ const formSchema = z.object({
   occurredAt: z.string().min(1, "Seleccioná una fecha."),
   description: z.string().trim().min(2, "Agregá una descripción.").max(160),
   notes: z.string().trim().max(1000).optional(),
+  expenseType: z.enum(["FIXED", "VARIABLE", "EXTRAORDINARY"] as [ExpenseType, ...ExpenseType[]]).optional(),
+  paymentMethod: z.enum(["CASH", "DEBIT", "CREDIT", "TRANSFER"] as [PaymentMethod, ...PaymentMethod[]]).optional(),
+  isInstallment: z.boolean().default(false),
+  installmentNumber: z.coerce.number().int().positive().optional(),
+  totalInstallments: z.coerce.number().int().positive().optional(),
+  isRecurring: z.boolean().default(false),
 }).superRefine((data, ctx) => {
   if (data.type === "TRANSFER") {
     if (!data.transferAccountId) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Seleccioná la cuenta destino.", path: ["transferAccountId"] });
     } else if (data.transferAccountId === data.accountId) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "La cuenta destino debe ser diferente.", path: ["transferAccountId"] });
+    }
+  }
+  if (data.isInstallment) {
+    if (!data.installmentNumber) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Ingresá el número de cuota.", path: ["installmentNumber"] });
+    }
+    if (!data.totalInstallments) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Ingresá el total de cuotas.", path: ["totalInstallments"] });
     }
   }
 });
@@ -175,10 +219,18 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       occurredAt: formatArgentinaDateInput(),
       description: "",
       notes: "",
+      expenseType: undefined as ExpenseType | undefined,
+      paymentMethod: "DEBIT" as PaymentMethod,
+      isInstallment: false,
+      installmentNumber: undefined as number | undefined,
+      totalInstallments: undefined as number | undefined,
+      isRecurring: false,
     },
   });
   const watchedType = (useWatch({ control, name: "type" }) as TransactionType | undefined) ?? "EXPENSE";
   const watchedAccountId = (useWatch({ control, name: "accountId" }) as string | undefined) ?? "";
+  const watchedIsInstallment = (useWatch({ control, name: "isInstallment" }) as boolean | undefined) ?? false;
+  const watchedPaymentMethod = (useWatch({ control, name: "paymentMethod" }) as PaymentMethod | undefined);
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
   const [isLoading, setIsLoading] = useState(true);
@@ -297,6 +349,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       const type = data.type as TransactionType;
       const isNonBasicEdit = !!editingTransactionId && !isSupportedFormTransactionType(type);
 
+      const isExpenseOrIncome = type === "EXPENSE" || type === "INCOME";
       const body = isNonBasicEdit
         ? {
             householdId,
@@ -316,6 +369,12 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             occurredAt: data.occurredAt,
             description: data.description,
             notes: editingTransactionId ? ((data.notes as string) ?? "") : (data.notes as string) || undefined,
+            expenseType: type === "EXPENSE" ? ((data.expenseType as string) || null) : null,
+            paymentMethod: isExpenseOrIncome ? ((data.paymentMethod as string) || null) : null,
+            isInstallment: isExpenseOrIncome ? Boolean(data.isInstallment) : false,
+            installmentNumber: isExpenseOrIncome && data.isInstallment ? (data.installmentNumber as number | undefined) : null,
+            totalInstallments: isExpenseOrIncome && data.isInstallment ? (data.totalInstallments as number | undefined) : null,
+            isRecurring: isExpenseOrIncome ? Boolean(data.isRecurring) : false,
           };
 
       const response = await fetch(url, {
@@ -403,6 +462,12 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       occurredAt: transaction.occurredAt.slice(0, 10),
       description: transaction.description ?? "",
       notes: transaction.notes ?? "",
+      expenseType: transaction.expenseType ?? undefined,
+      paymentMethod: transaction.paymentMethod ?? undefined,
+      isInstallment: transaction.isInstallment,
+      installmentNumber: transaction.installmentNumber ?? undefined,
+      totalInstallments: transaction.totalInstallments ?? undefined,
+      isRecurring: transaction.isRecurring,
     });
   }
 
@@ -418,6 +483,12 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       occurredAt: formatArgentinaDateInput(),
       description: "",
       notes: "",
+      expenseType: undefined,
+      paymentMethod: "DEBIT",
+      isInstallment: false,
+      installmentNumber: undefined,
+      totalInstallments: undefined,
+      isRecurring: false,
     });
   }
 
@@ -622,6 +693,79 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                 placeholder="Detalle opcional"
               />
             </Field>
+
+            {(watchedType === "EXPENSE" || watchedType === "INCOME") && !editingTransactionId ? (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {watchedType === "EXPENSE" ? (
+                    <Field label="Tipo de gasto" error={formErrors.expenseType?.message}>
+                      <select
+                        className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        {...register("expenseType")}
+                      >
+                        <option value="">Sin clasificar</option>
+                        {(Object.keys(expenseTypeLabels) as ExpenseType[]).map((et) => (
+                          <option key={et} value={et}>{expenseTypeLabels[et]}</option>
+                        ))}
+                      </select>
+                    </Field>
+                  ) : null}
+                  <Field label="Método de pago" error={formErrors.paymentMethod?.message}>
+                    <select
+                      className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      {...register("paymentMethod")}
+                    >
+                      <option value="">Sin especificar</option>
+                      {(Object.keys(paymentMethodLabels) as PaymentMethod[]).map((pm) => (
+                        <option key={pm} value={pm}>{paymentMethodLabels[pm]}</option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-input accent-primary"
+                      {...register("isRecurring")}
+                    />
+                    Recurrente
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-input accent-primary"
+                      {...register("isInstallment")}
+                    />
+                    Es en cuotas
+                  </label>
+                </div>
+
+                {watchedIsInstallment ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Cuota N°" error={formErrors.installmentNumber?.message}>
+                      <Input
+                        type="number"
+                        min={1}
+                        inputMode="numeric"
+                        {...register("installmentNumber")}
+                        placeholder="Ej: 1"
+                      />
+                    </Field>
+                    <Field label="Total cuotas" error={formErrors.totalInstallments?.message}>
+                      <Input
+                        type="number"
+                        min={1}
+                        inputMode="numeric"
+                        {...register("totalInstallments")}
+                        placeholder="Ej: 12"
+                      />
+                    </Field>
+                  </div>
+                ) : null}
+              </>
+            ) : null}
 
             {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
 
