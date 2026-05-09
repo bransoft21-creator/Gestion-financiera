@@ -118,6 +118,14 @@ export async function listTransactions(
         gte: input.from,
         lt: input.to ? nextArgentinaDayStart(input.to) : undefined,
       },
+      ...(input.search
+        ? {
+            OR: [
+              { description: { contains: input.search, mode: "insensitive" } },
+              { notes: { contains: input.search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
     },
     include: transactionInclude,
     orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
@@ -317,6 +325,38 @@ async function assertDebtPaymentAllowed(
       amount: amountError,
     });
   }
+}
+
+export async function exportTransactions(
+  userProfileId: string,
+  input: Omit<ListTransactionsInput, "limit" | "cursor">,
+) {
+  await assertHouseholdAccess(userProfileId, input.householdId);
+
+  return prisma.transaction.findMany({
+    where: {
+      householdId: input.householdId,
+      accountId: input.accountId,
+      categoryId: input.categoryId,
+      type: input.type,
+      status: input.status ?? { not: TransactionStatus.CANCELED },
+      deletedAt: null,
+      occurredAt: {
+        gte: input.from,
+        lt: input.to ? nextArgentinaDayStart(input.to) : undefined,
+      },
+      ...(input.search
+        ? {
+            OR: [
+              { description: { contains: input.search, mode: "insensitive" } },
+              { notes: { contains: input.search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
+    include: transactionInclude,
+    orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
+  });
 }
 
 export async function deleteTransaction(

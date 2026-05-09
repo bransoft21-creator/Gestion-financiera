@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -93,26 +95,12 @@ type TransactionsClientProps = {
   categories: CategoryOption[];
 };
 
-type FormState = {
-  type: TransactionType;
-  accountId: string;
-  transferAccountId: string;
-  categoryId: string;
-  currency: CurrencyCode;
-  amount: string;
-  occurredAt: string;
-  description: string;
-  notes: string;
-};
-
 type Filters = {
   type: string;
   categoryId: string;
   from: string;
   to: string;
 };
-
-type FormErrors = Partial<Record<keyof FormState, string>>;
 
 const transactionTypeLabels: Record<TransactionType, string> = {
   INCOME: "Ingreso",
@@ -167,18 +155,32 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
     from: searchParams.get("from") ?? "",
     to: searchParams.get("to") ?? "",
   });
-  const [form, setForm] = useState<FormState>({
-    type: "EXPENSE",
-    accountId: defaultAccount?.id ?? "",
-    transferAccountId: "",
-    categoryId: "",
-    currency: defaultAccount?.currency ?? "ARS",
-    amount: "",
-    occurredAt: formatArgentinaDateInput(),
-    description: "",
-    notes: "",
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    setError,
+    reset,
+    control,
+    formState: { errors: formErrors },
+  } = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      type: "EXPENSE" as TransactionType,
+      accountId: defaultAccount?.id ?? "",
+      transferAccountId: "",
+      categoryId: "",
+      currency: (defaultAccount?.currency ?? "ARS") as CurrencyCode,
+      amount: "",
+      occurredAt: formatArgentinaDateInput(),
+      description: "",
+      notes: "",
+    },
   });
-  const [errors, setErrors] = useState<FormErrors>({});
+  const watchedType = (useWatch({ control, name: "type" }) as TransactionType | undefined) ?? "EXPENSE";
+  const watchedAccountId = (useWatch({ control, name: "accountId" }) as string | undefined) ?? "";
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
@@ -194,32 +196,35 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const filteredCategories = useMemo(() => {
-    return categories.filter((category) => isCategoryAllowedForType(category.type, form.type));
-  }, [categories, form.type]);
-
-  const displayedTransactions = useMemo(() => {
-    if (!search.trim()) return transactions;
-    const q = search.trim().toLowerCase();
-    return transactions.filter((t) => t.description?.toLowerCase().includes(q));
-  }, [transactions, search]);
+    return categories.filter((category) => isCategoryAllowedForType(category.type, watchedType));
+  }, [categories, watchedType]);
 
   const groupedTransactions = useMemo(() => {
-    return groupTransactionsByDate(displayedTransactions);
-  }, [displayedTransactions]);
+    return groupTransactionsByDate(transactions);
+  }, [transactions]);
 
   const totalAmount = useMemo(() => {
-    return displayedTransactions.reduce((sum, transaction) => sum + getSignedAmount(transaction), 0);
-  }, [displayedTransactions]);
+    return transactions.reduce((sum, transaction) => sum + getSignedAmount(transaction), 0);
+  }, [transactions]);
   const activeFilterCount = [filters.type, filters.categoryId, filters.from, filters.to].filter(Boolean).length;
 
   useEffect(() => {
-    void loadTransactions();
+    void loadTransactions(filters, "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadTransactions(filtersRef.current, search);
+    }, 350);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
+  useEffect(() => {
     if (searchParams.get("new") === "1") {
       resetForm();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsFormOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -227,6 +232,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
   async function loadTransactions(
     nextFilters = filters,
+    nextSearch = search,
     options: { append?: boolean; cursor?: string | null } = {},
   ) {
     const { append = false, cursor = null } = options;
@@ -247,6 +253,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       if (nextFilters.categoryId) params.set("categoryId", nextFilters.categoryId);
       if (nextFilters.from) params.set("from", nextFilters.from);
       if (nextFilters.to) params.set("to", nextFilters.to);
+      if (nextSearch.trim()) params.set("search", nextSearch.trim());
       if (cursor) params.set("cursor", cursor);
 
       const response = await fetch(`/api/transactions?${params.toString()}`);
@@ -275,28 +282,11 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
   async function handleFilterSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await loadTransactions(filters);
+    await loadTransactions(filters, search);
   }
 
-  async function handleTransactionSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function onTransactionSubmit(data: Record<string, unknown>) {
     setMessage(null);
-
-    const parsed = formSchema.safeParse(form);
-
-    if (!parsed.success) {
-      const nextErrors: FormErrors = {};
-      parsed.error.issues.forEach((issue) => {
-        const field = issue.path[0];
-        if (typeof field === "string") {
-          nextErrors[field as keyof FormState] = issue.message;
-        }
-      });
-      setErrors(nextErrors);
-      return;
-    }
-
-    setErrors({});
     setIsSaving(true);
 
     try {
@@ -304,28 +294,28 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
         ? `/api/transactions/${editingTransactionId}`
         : "/api/transactions";
 
-      const isNonBasicEdit =
-        !!editingTransactionId && !isSupportedFormTransactionType(parsed.data.type);
+      const type = data.type as TransactionType;
+      const isNonBasicEdit = !!editingTransactionId && !isSupportedFormTransactionType(type);
 
       const body = isNonBasicEdit
         ? {
             householdId,
-            amount: parsed.data.amount,
-            occurredAt: parsed.data.occurredAt,
-            description: parsed.data.description,
-            notes: parsed.data.notes || null,
+            amount: data.amount,
+            occurredAt: data.occurredAt,
+            description: data.description,
+            notes: (data.notes as string) || null,
           }
         : {
             householdId,
-            type: parsed.data.type,
-            accountId: parsed.data.accountId,
-            transferAccountId: parsed.data.type === "TRANSFER" ? (parsed.data.transferAccountId || undefined) : undefined,
-            categoryId: parsed.data.categoryId || (editingTransactionId ? null : undefined),
-            currency: parsed.data.currency,
-            amount: parsed.data.amount,
-            occurredAt: parsed.data.occurredAt,
-            description: parsed.data.description,
-            notes: editingTransactionId ? (parsed.data.notes ?? "") : parsed.data.notes || undefined,
+            type,
+            accountId: data.accountId,
+            transferAccountId: type === "TRANSFER" ? ((data.transferAccountId as string) || undefined) : undefined,
+            categoryId: (data.categoryId as string) || (editingTransactionId ? null : undefined),
+            currency: data.currency,
+            amount: data.amount,
+            occurredAt: data.occurredAt,
+            description: data.description,
+            notes: editingTransactionId ? ((data.notes as string) ?? "") : (data.notes as string) || undefined,
           };
 
       const response = await fetch(url, {
@@ -334,18 +324,28 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
         body: JSON.stringify(body),
       });
 
-      const payload = (await response.json()) as { data?: TransactionItem; error?: string; fieldErrors?: FormErrors };
+      const payload = (await response.json()) as {
+        data?: TransactionItem;
+        error?: string;
+        fieldErrors?: Record<string, string>;
+      };
 
       if (!response.ok) {
-        if (payload.fieldErrors) setErrors(payload.fieldErrors);
-        setMessage(payload.error ?? "No se pudo guardar la transacción.");
+        if (payload.fieldErrors) {
+          Object.entries(payload.fieldErrors).forEach(([field, message]) => {
+            setError(field as Parameters<typeof setError>[0], { message });
+          });
+          setMessage(payload.error ?? "Revisá los campos marcados.");
+        } else {
+          setMessage(payload.error ?? "No se pudo guardar la transacción.");
+        }
         return;
       }
 
       toast.success(editingTransactionId ? "Transacción actualizada." : "Transacción guardada.");
       resetForm();
       setIsFormOpen(false);
-      await loadTransactions(filters);
+      await loadTransactions(filters, search);
     } catch {
       setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
@@ -381,7 +381,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
         setIsFormOpen(false);
       }
 
-      await loadTransactions(filters);
+      await loadTransactions(filters, search);
     } catch {
       toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
@@ -392,9 +392,8 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   function startEditing(transaction: TransactionItem) {
     setEditingTransactionId(transaction.id);
     setIsFormOpen(true);
-    setErrors({});
     setMessage(null);
-    setForm({
+    reset({
       type: transaction.type,
       accountId: transaction.account.id,
       transferAccountId: transaction.transferAccount?.id ?? "",
@@ -409,26 +408,17 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
   function resetForm() {
     setEditingTransactionId(null);
-    setErrors({});
-    setForm({
+    reset({
       type: "EXPENSE",
       accountId: defaultAccount?.id ?? "",
       transferAccountId: "",
       categoryId: "",
-      currency: defaultAccount?.currency ?? "ARS",
+      currency: (defaultAccount?.currency ?? "ARS") as CurrencyCode,
       amount: "",
       occurredAt: formatArgentinaDateInput(),
       description: "",
       notes: "",
     });
-  }
-
-  function updateForm<Key extends keyof FormState>(key: Key, value: FormState[Key]) {
-    setForm((current) => ({
-      ...current,
-      [key]: value,
-      ...(key === "type" ? { categoryId: "" } : {}),
-    }));
   }
 
   function toggleGroup(label: string) {
@@ -451,25 +441,30 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
     setCollapsedGroups(new Set());
   }
 
-  function exportCsv() {
-    const header = ["Fecha", "Tipo", "Descripción", "Categoría", "Cuenta", "Moneda", "Monto"];
-    const rows = displayedTransactions.map((t) => [
-      t.occurredAt.slice(0, 10),
-      transactionTypeLabels[t.type],
-      t.description ?? "",
-      t.category?.name ?? "",
-      t.account.name,
-      t.currency,
-      (t.type === "INCOME" ? "" : "-") + Number(t.amount).toFixed(2),
-    ]);
-    const csv = [header, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `transacciones-${new Date().toISOString().slice(0, 10)}.csv`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+  async function exportCsv() {
+    const params = new URLSearchParams({ householdId });
+    if (filters.type) params.set("type", filters.type);
+    if (filters.categoryId) params.set("categoryId", filters.categoryId);
+    if (filters.from) params.set("from", filters.from);
+    if (filters.to) params.set("to", filters.to);
+    if (search.trim()) params.set("search", search.trim());
+
+    try {
+      const response = await fetch(`/api/transactions/export?${params.toString()}`);
+      if (!response.ok) {
+        toast.error("No se pudo exportar.");
+        return;
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `transacciones-${new Date().toISOString().slice(0, 10)}.csv`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Error de red al exportar.");
+    }
   }
 
   return (
@@ -515,20 +510,23 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               </Button>
             </div>
           ) : (
-          <form className="space-y-4" onSubmit={handleTransactionSubmit}>
-            {editingTransactionId && !isSupportedFormTransactionType(form.type) ? (
+          <form className="space-y-4" onSubmit={handleSubmit(onTransactionSubmit)}>
+            {editingTransactionId && !isSupportedFormTransactionType(watchedType) ? (
               <Field label="Tipo">
                 <div className="flex h-10 items-center gap-2 rounded-md border border-input bg-secondary/30 px-3">
-                  <Badge>{transactionTypeLabels[form.type]}</Badge>
+                  <Badge>{transactionTypeLabels[watchedType]}</Badge>
                   <span className="text-xs text-muted-foreground">Solo podés editar monto, fecha, descripción y notas.</span>
                 </div>
               </Field>
             ) : (
-              <Field label="Tipo" error={errors.type}>
+              <Field label="Tipo" error={formErrors.type?.message}>
                 <select
                   className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={form.type}
-                  onChange={(event) => updateForm("type", event.target.value as TransactionType)}
+                  {...register("type")}
+                  onChange={(event) => {
+                    setValue("type", event.target.value as TransactionType);
+                    setValue("categoryId", "");
+                  }}
                 >
                   {supportedFormTransactionTypes.map((type) => (
                     <option key={type} value={type}>
@@ -539,11 +537,10 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               </Field>
             )}
 
-            <Field label={form.type === "TRANSFER" ? "Cuenta origen" : "Cuenta"} error={errors.accountId}>
+            <Field label={watchedType === "TRANSFER" ? "Cuenta origen" : "Cuenta"} error={formErrors.accountId?.message}>
               <select
                 className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={form.accountId}
-                onChange={(event) => updateForm("accountId", event.target.value)}
+                {...register("accountId")}
               >
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
@@ -553,15 +550,14 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               </select>
             </Field>
 
-            {form.type === "TRANSFER" && !editingTransactionId ? (
-              <Field label="Cuenta destino" error={errors.transferAccountId}>
+            {watchedType === "TRANSFER" && !editingTransactionId ? (
+              <Field label="Cuenta destino" error={formErrors.transferAccountId?.message}>
                 <select
                   className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={form.transferAccountId}
-                  onChange={(event) => updateForm("transferAccountId", event.target.value)}
+                  {...register("transferAccountId")}
                 >
                   <option value="">Seleccioná cuenta destino</option>
-                  {accounts.filter((a) => a.id !== form.accountId).map((account) => (
+                  {accounts.filter((a) => a.id !== watchedAccountId).map((account) => (
                     <option key={account.id} value={account.id}>
                       {account.name} · {account.currency}
                     </option>
@@ -570,12 +566,11 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               </Field>
             ) : null}
 
-            {form.type !== "TRANSFER" ? (
-              <Field label="Categoría" error={errors.categoryId}>
+            {watchedType !== "TRANSFER" ? (
+              <Field label="Categoría" error={formErrors.categoryId?.message}>
                 <select
                   className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={form.categoryId}
-                  onChange={(event) => updateForm("categoryId", event.target.value)}
+                  {...register("categoryId")}
                 >
                   <option value="">Sin categoría</option>
                   {filteredCategories.map((category) => (
@@ -588,47 +583,42 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             ) : null}
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Moneda" error={errors.currency}>
+              <Field label="Moneda" error={formErrors.currency?.message}>
                 <select
                   className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  value={form.currency}
-                  onChange={(event) => updateForm("currency", event.target.value as CurrencyCode)}
+                  {...register("currency")}
                 >
                   <option value="ARS">ARS</option>
                   <option value="USD">USD</option>
                 </select>
               </Field>
-              <Field label="Monto" error={errors.amount}>
+              <Field label="Monto" error={formErrors.amount?.message}>
                 <Input
                   inputMode="decimal"
-                  value={form.amount}
-                  onChange={(event) => updateForm("amount", event.target.value)}
+                  {...register("amount")}
                   placeholder="0"
                 />
               </Field>
             </div>
 
-            <Field label="Fecha" error={errors.occurredAt}>
+            <Field label="Fecha" error={formErrors.occurredAt?.message}>
               <Input
                 type="date"
-                value={form.occurredAt}
-                onChange={(event) => updateForm("occurredAt", event.target.value)}
+                {...register("occurredAt")}
               />
             </Field>
 
-            <Field label="Descripción" error={errors.description}>
+            <Field label="Descripción" error={formErrors.description?.message}>
               <Input
-                value={form.description}
-                onChange={(event) => updateForm("description", event.target.value)}
+                {...register("description")}
                 placeholder="Ej: Compra supermercado"
               />
             </Field>
 
-            <Field label="Notas" error={errors.notes}>
+            <Field label="Notas" error={formErrors.notes?.message}>
               <textarea
                 className="min-h-20 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={form.notes}
-                onChange={(event) => updateForm("notes", event.target.value)}
+                {...register("notes")}
                 placeholder="Detalle opcional"
               />
             </Field>
@@ -762,7 +752,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                       onClick={() => {
                         const nextFilters = { type: "", categoryId: "", from: "", to: "" };
                         setFilters(nextFilters);
-                        void loadTransactions(nextFilters, { append: false });
+                        void loadTransactions(nextFilters, search, { append: false });
                       }}
                     >
                       Limpiar
@@ -780,7 +770,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               <div className="min-w-0">
                 <CardTitle>Listado</CardTitle>
                 <CardDescription>
-                  {displayedTransactions.length} movimiento{displayedTransactions.length !== 1 ? "s" : ""} ·{" "}
+                  {transactions.length} movimiento{transactions.length !== 1 ? "s" : ""} ·{" "}
                   <span className={totalAmount >= 0 ? "text-emerald-400" : "text-rose-400"}>
                     {totalAmount >= 0 ? "+" : ""}{formatMoneyBalance(totalAmount)}
                   </span>
@@ -791,8 +781,8 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                 variant="outline"
                 size="sm"
                 className="w-full sm:w-auto"
-                onClick={exportCsv}
-                disabled={displayedTransactions.length === 0}
+                onClick={() => void exportCsv()}
+                disabled={transactions.length === 0}
               >
                 <Download className="h-4 w-4" aria-hidden="true" />
                 CSV
@@ -828,7 +818,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                   </div>
                 ))}
               </div>
-            ) : displayedTransactions.length === 0 ? (
+            ) : transactions.length === 0 ? (
               <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-secondary/20 p-8 text-center">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-muted-foreground shadow-sm">
                   <ReceiptText className="h-6 w-6" aria-hidden="true" />
@@ -894,7 +884,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                       variant="outline"
                       size="sm"
                       disabled={isLoadingMore}
-                      onClick={() => loadTransactions(filters, { append: true, cursor: nextCursor })}
+                      onClick={() => loadTransactions(filters, search, { append: true, cursor: nextCursor })}
                     >
                       {isLoadingMore ? (
                         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

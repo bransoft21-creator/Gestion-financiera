@@ -97,6 +97,7 @@ export const listTransactionsSchema = z
     status: z.enum(transactionStatusValues).optional(),
     from: filterDateSchema.optional(),
     to: filterDateSchema.optional(),
+    search: z.string().trim().max(100).optional(),
     limit: z.coerce.number().int().positive().max(100).default(50),
     cursor: z.string().min(1).optional(),
   })
