@@ -18,6 +18,7 @@ import {
   Plus,
   ReceiptText,
   Search,
+  ShieldAlert,
   Trash2,
   X,
 } from "lucide-react";
@@ -38,6 +39,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ActionButton } from "@/components/ui-v2/action-button";
+import { PremiumCard, PremiumCardContent, PremiumCardHeader } from "@/components/ui-v2/premium-card";
 
 type TransactionType =
   | "INCOME"
@@ -237,6 +240,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   const [isSaving, setIsSaving] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
+  const [pendingDeleteTransaction, setPendingDeleteTransaction] = useState<TransactionItem | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(() => (
     Boolean(searchParams.get("type") ?? searchParams.get("categoryId") ?? searchParams.get("from") ?? searchParams.get("to"))
@@ -258,6 +262,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   const totalAmount = useMemo(() => {
     return transactions.reduce((sum, transaction) => sum + getSignedAmount(transaction), 0);
   }, [transactions]);
+  const feedSummary = useMemo(() => buildFeedSummary(transactions), [transactions]);
   const activeFilterCount = [filters.type, filters.categoryId, filters.from, filters.to].filter(Boolean).length;
 
   useEffect(() => {
@@ -412,13 +417,14 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
     }
   }
 
-  async function handleDelete(transactionId: string) {
-    const shouldDelete = window.confirm("¿Eliminar esta transacción? Esta acción usará soft delete.");
+  async function handleDelete(transaction: TransactionItem) {
+    setPendingDeleteTransaction(transaction);
+  }
 
-    if (!shouldDelete) {
-      return;
-    }
+  async function confirmDelete() {
+    if (!pendingDeleteTransaction) return;
 
+    const transactionId = pendingDeleteTransaction.id;
     setDeletingTransactionId(transactionId);
     setMessage(null);
 
@@ -440,6 +446,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
         setIsFormOpen(false);
       }
 
+      setPendingDeleteTransaction(null);
       await loadTransactions(filters, search);
     } catch {
       toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
@@ -540,6 +547,13 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
   return (
     <div className={`grid min-w-0 gap-6 ${isFormOpen ? "xl:grid-cols-[360px_1fr]" : ""}`}>
+      <DeleteTransactionDialog
+        transaction={pendingDeleteTransaction}
+        isDeleting={pendingDeleteTransaction ? deletingTransactionId === pendingDeleteTransaction.id : false}
+        onCancel={() => setPendingDeleteTransaction(null)}
+        onConfirm={() => void confirmDelete()}
+      />
+
       <AppFormPanel isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} desktopAlwaysOpen={false}>
         <CardHeader className={appFormHeaderClass()}>
           <div className="flex items-center gap-3">
@@ -795,34 +809,36 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       </AppFormPanel>
 
       <div className="min-w-0 space-y-6">
-        <Card>
-          <CardHeader className="p-3">
+        <TransactionFeedBriefing summary={feedSummary} totalAmount={totalAmount} activeFilterCount={activeFilterCount} />
+
+        <PremiumCard>
+          <PremiumCardHeader className="p-3">
             <div className="flex min-w-0 items-center gap-2">
               <div className="relative min-w-0 flex-1">
                 <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                 <Input
-                  className="h-9 min-w-0 pl-8 text-xs"
+                  className="h-10 min-w-0 rounded-2xl border-white/10 bg-white/[0.045] pl-8 text-xs"
                   placeholder="Buscar movimiento..."
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                 />
               </div>
-              <Button
+              <ActionButton
                 type="button"
-                variant={activeFilterCount > 0 ? "secondary" : "outline"}
+                variant={activeFilterCount > 0 ? "glass" : "quiet"}
                 size="sm"
-                className="h-9 shrink-0 px-2 text-xs sm:px-2.5"
+                className="shrink-0"
                 onClick={() => setIsFiltersOpen((current) => !current)}
                 aria-expanded={isFiltersOpen}
               >
                 <Filter className="h-3.5 w-3.5" aria-hidden="true" />
                 {activeFilterCount > 0 ? activeFilterCount : "Filtros"}
                 <ChevronDown className={`h-3.5 w-3.5 transition ${isFiltersOpen ? "rotate-180" : ""}`} aria-hidden="true" />
-              </Button>
-              <Button
+              </ActionButton>
+              <ActionButton
                 type="button"
                 size="sm"
-                className="h-9 shrink-0 px-2 text-xs sm:px-2.5"
+                className="shrink-0"
                 onClick={() => {
                   resetForm();
                   setIsFormOpen(true);
@@ -830,11 +846,11 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               >
                 <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                 Nueva
-              </Button>
+              </ActionButton>
             </div>
-          </CardHeader>
+          </PremiumCardHeader>
           {isFiltersOpen ? (
-            <CardContent className="px-3 pb-3 pt-0">
+            <PremiumCardContent className="px-3 pb-3 pt-0">
               <form className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-5" onSubmit={handleFilterSubmit}>
                 <Field label="Tipo">
                   <select
@@ -883,16 +899,15 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                   />
                 </Field>
                 <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-1">
-                  <Button className="h-9 flex-1 text-xs" disabled={isLoading}>
+                  <ActionButton size="sm" className="flex-1" disabled={isLoading}>
                     {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
                     Aplicar
-                  </Button>
+                  </ActionButton>
                   {activeFilterCount > 0 ? (
-                    <Button
+                    <ActionButton
                       type="button"
-                      variant="ghost"
+                      variant="quiet"
                       size="sm"
-                      className="h-9 px-2 text-xs text-muted-foreground"
                       onClick={() => {
                         const nextFilters = { type: "", categoryId: "", from: "", to: "" };
                         setFilters(nextFilters);
@@ -900,19 +915,19 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                       }}
                     >
                       Limpiar
-                    </Button>
+                    </ActionButton>
                   ) : null}
                 </div>
               </form>
-            </CardContent>
+            </PremiumCardContent>
           ) : null}
-        </Card>
+        </PremiumCard>
 
-        <Card>
-          <CardHeader>
+        <PremiumCard>
+          <PremiumCardHeader>
             <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <CardTitle>Listado</CardTitle>
+                <CardTitle>Feed de movimientos</CardTitle>
                 <CardDescription>
                   {transactions.length} movimiento{transactions.length !== 1 ? "s" : ""} ·{" "}
                   <span className={totalAmount >= 0 ? "text-emerald-400" : "text-rose-400"}>
@@ -944,8 +959,8 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                 Nueva
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
+          </PremiumCardHeader>
+          <PremiumCardContent>
             {isLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3, 4].map((i) => (
@@ -1039,8 +1054,8 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </PremiumCardContent>
+        </PremiumCard>
       </div>
       <MobileCreateFab
         label="Nueva transacción"
@@ -1080,6 +1095,103 @@ function Field({
   );
 }
 
+function TransactionFeedBriefing({
+  summary,
+  totalAmount,
+  activeFilterCount,
+}: {
+  summary: ReturnType<typeof buildFeedSummary>;
+  totalAmount: number;
+  activeFilterCount: number;
+}) {
+  const balanceTone = totalAmount >= 0 ? "text-emerald-100" : "text-rose-100";
+
+  return (
+    <PremiumCard variant="raised" className="overflow-hidden p-5 sm:p-6">
+      <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
+        <div className="min-w-0">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <Badge className="border-white/10 bg-white/[0.07] text-teal-100">Money feed</Badge>
+            {activeFilterCount > 0 && (
+              <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-100">{activeFilterCount} filtros activos</Badge>
+            )}
+          </div>
+          <h2 className="text-balance text-2xl font-semibold leading-tight text-white sm:text-4xl">
+            {summary.count === 0 ? "Todavía no hay movimientos para leer." : "Así se movió tu dinero."}
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
+            {summary.count === 0
+              ? "Cuando registres movimientos, esta vista va a mostrar el pulso real del mes."
+              : `${summary.count} movimientos cargados. Entraron ${formatMoneyBalance(summary.income)} y salieron ${formatMoneyBalance(summary.expenses)}.`}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 lg:min-w-[360px]">
+          <BriefingMetric label="Balance" value={`${totalAmount >= 0 ? "+" : ""}${formatMoneyBalance(totalAmount)}`} className={balanceTone} />
+          <BriefingMetric label="Entró" value={formatMoneyBalance(summary.income)} className="text-emerald-100" />
+          <BriefingMetric label="Salió" value={formatMoneyBalance(summary.expenses)} className="text-rose-100" />
+        </div>
+      </div>
+    </PremiumCard>
+  );
+}
+
+function BriefingMetric({ label, value, className }: { label: string; value: string; className?: string }) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.045] p-3">
+      <p className="truncate text-[11px] font-semibold uppercase text-zinc-500">{label}</p>
+      <p className={`mt-1 truncate text-sm font-semibold tabular-nums sm:text-base ${className ?? "text-zinc-100"}`}>{value}</p>
+    </div>
+  );
+}
+
+function DeleteTransactionDialog({
+  transaction,
+  isDeleting,
+  onCancel,
+  onConfirm,
+}: {
+  transaction: TransactionItem | null;
+  isDeleting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  if (!transaction) return null;
+
+  return (
+    <div className="fixed inset-0 z-[220] flex items-end justify-center bg-black/65 p-3 backdrop-blur-sm sm:items-center">
+      <PremiumCard variant="raised" className="w-full max-w-md p-5">
+        <div className="mb-5 flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-300/12 text-rose-100">
+            <ShieldAlert className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-white">Eliminar movimiento</h2>
+            <p className="mt-1 text-sm leading-6 text-zinc-400">
+              Se va a quitar este movimiento del feed. La operación usa soft delete.
+            </p>
+          </div>
+        </div>
+        <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.045] p-3">
+          <p className="truncate text-sm font-semibold text-zinc-100">{transaction.description ?? "Sin descripción"}</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            {transactionTypeLabels[transaction.type]} · {formatMoney(getDisplayAmount(transaction), transaction.currency)}
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <ActionButton type="button" variant="glass" onClick={onCancel} disabled={isDeleting}>
+            Cancelar
+          </ActionButton>
+          <ActionButton type="button" variant="danger" onClick={onConfirm} disabled={isDeleting}>
+            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Trash2 className="h-4 w-4" aria-hidden="true" />}
+            Eliminar
+          </ActionButton>
+        </div>
+      </PremiumCard>
+    </div>
+  );
+}
+
 function TransactionGroup({
   group,
   isCollapsed,
@@ -1093,7 +1205,7 @@ function TransactionGroup({
   deletingTransactionId: string | null;
   onToggle: () => void;
   onEdit: (transaction: TransactionItem) => void;
-  onDelete: (transactionId: string) => void;
+  onDelete: (transaction: TransactionItem) => void;
 }) {
   return (
     <section className="space-y-1.5">
@@ -1135,7 +1247,7 @@ function TransactionCard({
   transaction: TransactionItem;
   isDeleting: boolean;
   onEdit: (transaction: TransactionItem) => void;
-  onDelete: (transactionId: string) => void;
+  onDelete: (transaction: TransactionItem) => void;
 }) {
   const Icon = transactionIcons[transaction.type];
   const tone = getTransactionTone(transaction.type);
@@ -1145,7 +1257,7 @@ function TransactionCard({
 
   return (
     <article
-      className="group min-w-0 cursor-pointer overflow-hidden rounded-lg border border-border bg-card px-2.5 py-2 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md active:scale-[0.99]"
+      className="group min-w-0 cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 shadow-sm transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06] active:scale-[0.99]"
       role="button"
       tabIndex={0}
       onClick={() => onEdit(transaction)}
@@ -1158,7 +1270,7 @@ function TransactionCard({
     >
       <div className="flex min-w-0 items-center gap-2.5">
         <div
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${tone.icon}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${tone.icon}`}
         >
           <Icon className="h-4 w-4" aria-hidden="true" />
         </div>
@@ -1202,7 +1314,7 @@ function TransactionCard({
           className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
           onClick={(event) => {
             event.stopPropagation();
-            onDelete(transaction.id);
+            onDelete(transaction);
           }}
           disabled={isDeleting}
           aria-label="Eliminar transacción"
@@ -1230,6 +1342,24 @@ function groupTransactionsByDate(transactions: TransactionItem[]) {
     label,
     transactions: items,
   }));
+}
+
+function buildFeedSummary(transactions: TransactionItem[]) {
+  return transactions.reduce(
+    (summary, transaction) => {
+      const amount = Number(transaction.amount);
+      if (!Number.isFinite(amount)) return summary;
+
+      if (transaction.type === "INCOME") {
+        summary.income += amount;
+      } else if (transaction.type !== "TRANSFER") {
+        summary.expenses += amount;
+      }
+      summary.count += 1;
+      return summary;
+    },
+    { income: 0, expenses: 0, count: 0 },
+  );
 }
 
 function getDateGroupLabel(value: string) {

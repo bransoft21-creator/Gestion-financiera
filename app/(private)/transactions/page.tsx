@@ -1,4 +1,4 @@
-import { PageHeader } from "@/components/app/page-header";
+import { V2PageShell } from "@/components/layout/v2-page-shell";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getTransactionWorkspace } from "@/server/services/workspace";
 import { TransactionsClient } from "./transactions-client";
@@ -8,16 +8,16 @@ export default async function TransactionsPage() {
   const workspace = await getTransactionWorkspace(userProfile.id);
 
   return (
-    <>
-      <PageHeader
-        title="Transacciones"
-        description="Registro central de ingresos, gastos, transferencias, ajustes y movimientos vinculados."
-      />
+    <V2PageShell
+      eyebrow="Money feed"
+      title="Movimientos"
+      description="Tu línea de tiempo financiera: qué entró, qué salió y qué patrón empieza a aparecer."
+    >
       <TransactionsClient
         householdId={workspace.household.id}
         accounts={workspace.accounts}
         categories={workspace.categories}
       />
-    </>
+    </V2PageShell>
   );
 }
