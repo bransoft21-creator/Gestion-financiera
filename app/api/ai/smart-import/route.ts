@@ -1,15 +1,20 @@
 import { NextRequest } from "next/server";
 import { handleApiError, ok } from "@/server/api/http";
-import { ApiError } from "@/server/api/errors";
+import { ApiError, ForbiddenError } from "@/server/api/errors";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { analyzeFile } from "@/server/services/smart-import";
 import { getTransactionWorkspace } from "@/server/services/workspace";
+import { isAiEnabled } from "@/lib/feature-flags";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
     const { userProfile } = await getCurrentUser();
+
+    if (!isAiEnabled(userProfile.email)) {
+      throw new ForbiddenError("Funcionalidad no disponible.");
+    }
 
     const formData = await request.formData();
     const file = formData.get("file");

@@ -1,14 +1,21 @@
 import { NextRequest } from "next/server";
 import { handleApiError, ok } from "@/server/api/http";
+import { ForbiddenError } from "@/server/api/errors";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { createTransaction } from "@/server/services/transactions";
 import { importCandidatesSchema } from "@/server/schemas/smart-import";
+import { isAiEnabled } from "@/lib/feature-flags";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
     const { userProfile } = await getCurrentUser();
+
+    if (!isAiEnabled(userProfile.email)) {
+      throw new ForbiddenError("Funcionalidad no disponible.");
+    }
+
     const body = importCandidatesSchema.parse(await request.json());
 
     const created = [];
