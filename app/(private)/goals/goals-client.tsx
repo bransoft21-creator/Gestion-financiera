@@ -1097,7 +1097,7 @@ function formatCommitments(commitments: Partial<Record<CurrencyCode, number>>) {
 
 function getStatusClass(status: GoalStatus) {
   if (status === "ACTIVE") return "border-emerald-300/20 bg-emerald-300/10 text-emerald-100";
-  if (status === "COMPLETED") return "border-violet-300/20 bg-violet-300/10 text-violet-100";
+  if (status === "COMPLETED") return "border-teal-300/20 bg-teal-300/10 text-teal-100";
   if (status === "PAUSED") return "border-amber-300/20 bg-amber-300/10 text-amber-100";
   return "border-zinc-300/10 bg-zinc-300/10 text-zinc-300";
 }

@@ -75,14 +75,14 @@ export function StatCard({
       className={cn(
         "relative overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-500",
         href && "cursor-pointer transition hover:-translate-y-0.5 hover:border-primary/35",
-        highlight && "border-primary/30 bg-gradient-to-br from-primary/10 to-card",
+        highlight && "border-teal-300/30 bg-teal-300/10",
       )}
       style={animationDelay !== undefined ? { animationDelay: `${animationDelay}ms` } : undefined}
     >
       <div
         className={cn(
           "absolute inset-x-0 top-0 h-px bg-gradient-to-r",
-          highlight ? "from-violet-500/80 via-indigo-500/40 to-transparent" : config.line,
+          highlight ? "from-teal-300/80 via-amber-200/35 to-transparent" : config.line,
         )}
       />
 
@@ -106,7 +106,7 @@ export function StatCard({
             </p>
             <p className="mt-1.5 text-xs text-muted-foreground">{detail}</p>
           </div>
-          <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", config.icon)}>
+          <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl", config.icon)}>
             <Icon className="h-5 w-5" aria-hidden="true" />
           </div>
         </div>

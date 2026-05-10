@@ -199,7 +199,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                   type="button"
                   disabled={isLoading}
                   onClick={() => setMonths(value)}
-                  className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition disabled:opacity-50 ${
+                  className={`shrink-0 rounded-[14px] px-4 py-2 text-xs font-semibold transition disabled:opacity-50 ${
                     months === value ? "bg-white text-zinc-950" : "text-zinc-400 hover:bg-white/[0.06] hover:text-white"
                   }`}
                 >
@@ -652,7 +652,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                   <th className="pb-2 pr-4 text-right font-medium text-rose-400">Gastos</th>
                   <th className="pb-2 pr-4 text-right font-medium text-amber-400">Reservado</th>
                   <th className="pb-2 pr-4 text-right font-medium text-rose-400">Deuda</th>
-                  <th className="pb-2 text-right font-medium text-violet-400">Disponible real</th>
+                  <th className="pb-2 text-right font-medium text-teal-200">Disponible real</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -663,7 +663,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                     <td className="py-2 pr-4 text-right tabular-nums text-rose-400">{formatMoney(s.expenseAmount)}</td>
                     <td className="py-2 pr-4 text-right tabular-nums text-amber-400">{formatMoney(s.reservedAmount)}</td>
                     <td className="py-2 pr-4 text-right tabular-nums text-rose-400">{formatMoney(s.debtOutstandingAmount)}</td>
-                    <td className={`py-2 text-right tabular-nums font-semibold ${s.availableAmount >= 0 ? "text-violet-400" : "text-rose-400"}`}>
+                    <td className={`py-2 text-right tabular-nums font-semibold ${s.availableAmount >= 0 ? "text-teal-200" : "text-rose-400"}`}>
                       {formatMoney(s.availableAmount)}
                     </td>
                   </tr>
@@ -689,10 +689,10 @@ function KpiCard({
   Icon: React.ElementType;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-[18px]">
+    <div className="v2-card rounded-2xl p-[18px]">
       <div className="mb-2.5 flex items-center gap-2">
         <div
-          className="flex h-8 w-8 items-center justify-center rounded-lg"
+          className="flex h-8 w-8 items-center justify-center rounded-2xl"
           style={{ background: `${color}18`, color }}
         >
           <Icon className="h-[15px] w-[15px]" aria-hidden="true" />

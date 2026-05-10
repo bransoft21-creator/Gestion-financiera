@@ -34,14 +34,14 @@ export default function GlobalError({
         <div className="flex gap-3">
           <button
             onClick={reset}
-            className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+            className="v2-focus-ring inline-flex min-h-11 items-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
           >
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
             Reintentar
           </button>
           <a
             href="/login"
-            className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500"
+            className="v2-focus-ring inline-flex min-h-11 items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-zinc-950 transition-colors hover:bg-zinc-100"
           >
             Ir al inicio
           </a>

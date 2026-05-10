@@ -315,9 +315,9 @@ function MonthlySignals({
         <CardDescription>Prioridades y próximos pasos.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className={`rounded-xl border p-3 ${primaryTone.shell}`}>
+        <div className={`rounded-2xl border p-3 ${primaryTone.shell}`}>
           <div className="flex items-start gap-2.5">
-            <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${primaryTone.icon}`}>
+            <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl ${primaryTone.icon}`}>
               <Lightbulb className="h-4 w-4" aria-hidden="true" />
             </div>
             <div className="min-w-0">
@@ -340,7 +340,7 @@ function MonthlySignals({
               <Link
                 key={`${insight.title}-${insight.href}`}
                 href={insight.href}
-                className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground transition hover:border-primary/35 hover:bg-secondary/50"
+                className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-xs text-muted-foreground transition hover:border-white/20 hover:bg-white/[0.06]"
               >
                 <Sparkles className={`h-3.5 w-3.5 shrink-0 ${tone.label}`} aria-hidden="true" />
                 <span className="truncate font-medium">{insight.title}</span>
@@ -348,7 +348,7 @@ function MonthlySignals({
             );
           })}
           {alerts.slice(0, 2).map((alert) => (
-            <div key={alert} className="flex gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2">
+            <div key={alert} className="flex gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2">
               <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
               <p className="text-xs leading-5 text-muted-foreground">{alert}</p>
             </div>
@@ -364,7 +364,7 @@ function MonthlySignals({
 const expenseTypeRows = [
   { key: "fixed" as const, label: "Fijos", icon: Repeat, iconBg: "bg-sky-500/15 text-sky-400", barColor: "#38bdf8" },
   { key: "variable" as const, label: "Variables", icon: ShoppingCart, iconBg: "bg-amber-500/15 text-amber-400", barColor: "#fbbf24" },
-  { key: "extraordinary" as const, label: "Extraordinarios", icon: Zap, iconBg: "bg-violet-500/15 text-violet-400", barColor: "#a78bfa" },
+  { key: "extraordinary" as const, label: "Extraordinarios", icon: Zap, iconBg: "bg-teal-300/12 text-teal-100", barColor: "#5eead4" },
   { key: "unclassified" as const, label: "Sin clasificar", icon: HelpCircle, iconBg: "bg-secondary text-muted-foreground", barColor: "#6b7280" },
 ] as const;
 
@@ -398,7 +398,7 @@ function ExpenseTypeBreakdown({
       </CardHeader>
       <CardContent className="space-y-3">
         {income > 0 && (
-          <div className="rounded-xl border border-border bg-secondary/40 px-4 py-3">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Gastos fijos sobre ingresos
             </p>
@@ -421,7 +421,7 @@ function ExpenseTypeBreakdown({
           const pct = total > 0 ? Math.round((value / total) * 100) : 0;
           return (
             <div key={row.key} className="flex items-center gap-3">
-              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${row.iconBg}`}>
+              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl ${row.iconBg}`}>
                 <row.icon className="h-3.5 w-3.5" aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">
@@ -480,7 +480,7 @@ function MonthProjection({ metrics }: { metrics: DashboardSummary["metrics"] }) 
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-400">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-teal-300/12 text-teal-100">
             <TrendingUp className="h-4 w-4" aria-hidden="true" />
           </div>
           <div>
@@ -494,7 +494,7 @@ function MonthProjection({ metrics }: { metrics: DashboardSummary["metrics"] }) 
           <p className="text-sm leading-relaxed text-muted-foreground">{narrative}</p>
         )}
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg border border-border bg-background/35 p-3">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Gastos proyectados</p>
             <p className={`mt-1 text-sm font-bold tabular-nums ${
               projection.projectedExpenses > metrics.income ? "text-rose-400" : "text-foreground"
@@ -502,7 +502,7 @@ function MonthProjection({ metrics }: { metrics: DashboardSummary["metrics"] }) 
               {formatMoney(projection.projectedExpenses)}
             </p>
           </div>
-          <div className="rounded-lg border border-border bg-background/35 p-3">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Balance estimado</p>
             <p className={`mt-1 text-sm font-bold tabular-nums ${
               projection.projectedBalance >= 0 ? "text-emerald-400" : "text-rose-400"
@@ -776,7 +776,7 @@ export function DashboardClient() {
                       <button
                         key={item.id}
                         type="button"
-                        className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm transition hover:bg-secondary ${selectedExpenseCategoryId === item.id ? "bg-secondary" : ""}`}
+                        className={`flex w-full items-center justify-between gap-2 rounded-2xl px-2 py-1.5 text-left text-sm transition hover:bg-white/[0.06] ${selectedExpenseCategoryId === item.id ? "bg-white/[0.08]" : ""}`}
                         onClick={() => setSelectedExpenseCategoryPreference(item.id)}
                       >
                         <span className="flex min-w-0 items-center gap-2">
@@ -794,7 +794,7 @@ export function DashboardClient() {
                   </div>
                 </div>
                 {selectedExpenseCategory ? (
-                  <div className="mt-4 rounded-lg border border-border bg-background/35 p-3">
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
                     <div className="mb-2 flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold">{selectedExpenseCategory.name}</p>
@@ -807,7 +807,7 @@ export function DashboardClient() {
                         <Link
                           key={item.id}
                           href={`/transactions?categoryId=${selectedExpenseCategory.id}`}
-                          className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 transition hover:bg-secondary"
+                          className="flex items-center justify-between gap-3 rounded-2xl px-2 py-1.5 transition hover:bg-white/[0.06]"
                         >
                           <span className="min-w-0">
                             <span className="block truncate text-xs font-medium">{item.description ?? "Sin descripción"}</span>
@@ -830,8 +830,8 @@ export function DashboardClient() {
 
           {/* Savings & metas summary */}
           <div className="grid grid-cols-2 gap-3.5">
-            <Link href="/goals" className="rounded-xl border border-border bg-card p-4 transition hover:-translate-y-0.5 hover:border-primary/35">
-              <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400">
+            <Link href="/goals" className="v2-card rounded-2xl p-4 transition hover:-translate-y-0.5 hover:border-white/20">
+              <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400">
                 <Wallet className="h-4 w-4" aria-hidden="true" />
               </div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ahorro est.</p>
@@ -839,8 +839,8 @@ export function DashboardClient() {
                 {formatMoney(metrics.estimatedSavings)}
               </p>
             </Link>
-            <Link href="/debts" className="rounded-xl border border-border bg-card p-4 transition hover:-translate-y-0.5 hover:border-primary/35">
-              <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/15 text-violet-400">
+            <Link href="/debts" className="v2-card rounded-2xl p-4 transition hover:-translate-y-0.5 hover:border-white/20">
+              <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-2xl bg-teal-300/12 text-teal-100">
                 <Sparkles className="h-4 w-4" aria-hidden="true" />
               </div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Deuda total</p>

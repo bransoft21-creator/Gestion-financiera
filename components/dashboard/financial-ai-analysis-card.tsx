@@ -194,11 +194,11 @@ const toneStyles: Record<InsightTone, {
     text: "text-sky-100",
   },
   violet: {
-    card: "border-violet-300/20 bg-violet-400/[0.08]",
-    glow: "shadow-[0_18px_60px_rgba(167,139,250,0.08)]",
-    icon: "bg-violet-300/12 text-violet-100",
-    badge: "border-violet-300/20 bg-violet-300/10 text-violet-100",
-    text: "text-violet-100",
+    card: "border-teal-300/20 bg-teal-300/[0.08]",
+    glow: "shadow-[0_18px_60px_rgba(45,212,191,0.08)]",
+    icon: "bg-teal-300/12 text-teal-100",
+    badge: "border-teal-300/20 bg-teal-300/10 text-teal-100",
+    text: "text-teal-100",
   },
   zinc: {
     card: "border-white/10 bg-white/[0.055]",

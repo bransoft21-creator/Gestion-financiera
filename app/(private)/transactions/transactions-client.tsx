@@ -159,6 +159,10 @@ const transactionOriginLabels: Record<TransactionOrigin, string> = {
 
 const optionalEnumField = <T extends [string, ...string[]]>(values: T) =>
   z.preprocess((value) => value === "" ? undefined : value, z.enum(values).optional());
+const transactionSelectClass =
+  "v2-focus-ring h-11 w-full min-w-0 max-w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition hover:bg-white/[0.07]";
+const compactSelectClass =
+  "v2-focus-ring h-9 w-full min-w-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs text-white outline-none transition hover:bg-white/[0.07]";
 
 const formSchema = z.object({
   type: z.enum(transactionTypes as [TransactionType, ...TransactionType[]]),
@@ -569,13 +573,13 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       <AppFormPanel isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} desktopAlwaysOpen={false}>
         <CardHeader className={appFormHeaderClass()}>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] text-teal-100">
               <Plus className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
-              <CardTitle>{editingTransactionId ? "Editar transacción" : "Nueva transacción"}</CardTitle>
+              <CardTitle>{editingTransactionId ? "Ajustar movimiento" : "Nuevo movimiento"}</CardTitle>
               <CardDescription>
-                {editingTransactionId ? "Actualizá los campos necesarios." : "Alta rápida con validación."}
+                {editingTransactionId ? "Corregí lo importante sin perder contexto." : "Registrá qué pasó y dejá que el sistema lo lea."}
               </CardDescription>
             </div>
             <Button
@@ -593,7 +597,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
         <CardContent className={appFormContentClass(isFormOpen)}>
           {accounts.length === 0 ? (
             <div className="space-y-4">
-              <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4">
+              <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4">
                 <p className="text-sm font-semibold text-foreground">Primero necesitás una cuenta</p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
                   Para registrar movimientos hace falta crear una cuenta, billetera o tarjeta.
@@ -602,7 +606,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               <Button asChild className="h-11 w-full">
                 <Link href="/accounts">
                   <Plus className="h-4 w-4" aria-hidden="true" />
-                  Crear cuenta
+                  Crear lugar
                 </Link>
               </Button>
             </div>
@@ -610,7 +614,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
           <form className="space-y-4" onSubmit={handleSubmit(onTransactionSubmit)}>
             {editingTransactionId && !isSupportedFormTransactionType(watchedType) ? (
               <Field label="Tipo">
-                <div className="flex h-10 items-center gap-2 rounded-md border border-input bg-secondary/30 px-3">
+                <div className="flex h-11 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4">
                   <Badge>{transactionTypeLabels[watchedType]}</Badge>
                   <span className="text-xs text-muted-foreground">Solo podés editar monto, fecha, descripción y notas.</span>
                 </div>
@@ -618,7 +622,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             ) : (
               <Field label="Tipo" error={formErrors.type?.message}>
                 <select
-                  className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className={transactionSelectClass}
                   {...register("type")}
                   onChange={(event) => {
                     setValue("type", event.target.value as TransactionType);
@@ -636,7 +640,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
             <Field label={watchedType === "TRANSFER" ? "Cuenta origen" : "Cuenta"} error={formErrors.accountId?.message}>
               <select
-                className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className={transactionSelectClass}
                 {...register("accountId")}
               >
                 {accounts.map((account) => (
@@ -650,7 +654,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             {watchedType === "TRANSFER" && !editingTransactionId ? (
               <Field label="Cuenta destino" error={formErrors.transferAccountId?.message}>
                 <select
-                  className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className={transactionSelectClass}
                   {...register("transferAccountId")}
                 >
                   <option value="">Seleccioná cuenta destino</option>
@@ -666,7 +670,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             {watchedType !== "TRANSFER" ? (
               <Field label="Categoría" error={formErrors.categoryId?.message}>
                 <select
-                  className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className={transactionSelectClass}
                   {...register("categoryId")}
                 >
                   <option value="">Sin categoría</option>
@@ -682,7 +686,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Moneda" error={formErrors.currency?.message}>
                 <select
-                  className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className={transactionSelectClass}
                   {...register("currency")}
                 >
                   <option value="ARS">ARS</option>
@@ -714,7 +718,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
             <Field label="Notas" error={formErrors.notes?.message}>
               <textarea
-                className="min-h-20 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none transition hover:bg-white/[0.07]"
                 {...register("notes")}
                 placeholder="Detalle opcional"
               />
@@ -726,7 +730,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                   {watchedType === "EXPENSE" ? (
                     <Field label="Tipo de gasto" error={formErrors.expenseType?.message}>
                       <select
-                        className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className={transactionSelectClass}
                         {...register("expenseType")}
                       >
                         <option value="">Sin clasificar</option>
@@ -738,7 +742,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                   ) : null}
                   <Field label="Método de pago" error={formErrors.paymentMethod?.message}>
                     <select
-                      className="h-10 w-full min-w-0 max-w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className={transactionSelectClass}
                       {...register("paymentMethod")}
                     >
                       <option value="">Sin especificar</option>
@@ -793,7 +797,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               </>
             ) : null}
 
-            {message ? <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
+            {message ? <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">{message}</p> : null}
 
             <div className={appFormActionsClass()}>
               <Button className="h-11 w-full" disabled={isSaving || accounts.length === 0}>
@@ -866,7 +870,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               <form className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-5" onSubmit={handleFilterSubmit}>
                 <Field label="Tipo">
                   <select
-                    className="h-9 w-full min-w-0 rounded-md border border-input bg-background px-2.5 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className={compactSelectClass}
                     value={filters.type}
                     onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}
                   >
@@ -881,7 +885,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
                 <Field label="Categoría">
                   <select
-                    className="h-9 w-full min-w-0 rounded-md border border-input bg-background px-2.5 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className={compactSelectClass}
                     value={filters.categoryId}
                     onChange={(event) => setFilters((current) => ({ ...current, categoryId: event.target.value }))}
                   >
@@ -1070,7 +1074,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
         </PremiumCard>
       </div>
       <MobileCreateFab
-        label="Nueva transacción"
+        label="Nuevo movimiento"
         onClick={() => {
           resetForm();
           setIsFormOpen(true);

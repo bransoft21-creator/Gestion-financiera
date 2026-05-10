@@ -26,9 +26,9 @@ const bottomNavItems = [
 ] as const;
 
 const moreNavItems = [
-  { href: "/accounts",   label: "Cuentas",      icon: Landmark },
-  { href: "/categories", label: "Categorías",   icon: FolderTree },
-  { href: "/debts",      label: "Deudas",       icon: CreditCard },
+  { href: "/accounts",   label: "Dinero",       icon: Landmark },
+  { href: "/categories", label: "Lenguaje",     icon: FolderTree },
+  { href: "/debts",      label: "Presión",      icon: CreditCard },
   { href: "/recurring",  label: "Compromisos",  icon: RefreshCw },
   { href: "/reports",    label: "Patrones",     icon: TrendingUp },
 ] as const;
@@ -52,22 +52,22 @@ export function BottomNav() {
       {/* More drawer */}
       <div
         className={cn(
-          "fixed inset-x-0 z-[130] rounded-t-2xl border-t border-border transition-transform duration-300 ease-out lg:hidden",
+          "fixed inset-x-0 z-[130] rounded-t-[28px] border-t border-white/10 transition-transform duration-300 ease-out lg:hidden",
           moreOpen ? "translate-y-0" : "translate-y-full",
         )}
         style={{
           bottom: 0,
-          background: "rgba(5,8,15,.96)",
+          background: "rgba(5,8,15,.97)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
         }}
       >
         <div className="flex items-center justify-between px-5 pb-2 pt-4">
-          <span className="text-[13px] font-semibold text-foreground">Más opciones</span>
+          <span className="text-[13px] font-semibold text-foreground">Más del sistema</span>
           <button
             type="button"
             onClick={() => setMoreOpen(false)}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/8 text-muted-foreground"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-muted-foreground"
           >
             <X className="h-4 w-4" />
           </button>
@@ -82,9 +82,9 @@ export function BottomNav() {
                 href={item.href}
                 onClick={() => setMoreOpen(false)}
                 className={cn(
-                  "flex h-12 items-center gap-3 rounded-xl px-4 text-[14px] font-medium transition-all duration-150",
+                  "flex h-12 items-center gap-3 rounded-2xl px-4 text-[14px] font-medium transition-all duration-150",
                   isActive
-                    ? "bg-primary/13 text-primary"
+                    ? "border border-white/10 bg-white/[0.08] text-teal-100"
                     : "text-muted-foreground hover:bg-white/[0.05] hover:text-foreground",
                 )}
               >
@@ -98,7 +98,7 @@ export function BottomNav() {
 
       {/* Bottom nav bar */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-[120] border-t border-border lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-[120] border-t border-white/10 lg:hidden"
         style={{
           background: "rgba(5,8,15,.88)",
           backdropFilter: "blur(16px)",
@@ -114,7 +114,7 @@ export function BottomNav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-all duration-150",
+                  "flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 transition-all duration-150",
                   isActive
                     ? "bg-white/[0.08] text-teal-100"
                     : "text-muted-foreground",
@@ -131,7 +131,7 @@ export function BottomNav() {
             type="button"
             onClick={() => setMoreOpen(true)}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 transition-all duration-150",
+              "flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 transition-all duration-150",
               isMoreActive || moreOpen ? "text-teal-100" : "text-muted-foreground",
             )}
           >

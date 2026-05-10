@@ -18,7 +18,7 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
   const accountLabel = userEmail ?? "Hogar principal";
 
   return (
-    <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-zinc-950/72 shadow-[1px_0_30px_rgba(0,0,0,0.32)] backdrop-blur-xl lg:sticky lg:top-0 lg:flex">
+    <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-zinc-950/74 shadow-[1px_0_34px_rgba(0,0,0,0.34)] backdrop-blur-xl lg:sticky lg:top-0 lg:flex">
       {/* Logo */}
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-[18px]">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] text-teal-100 shadow-[0_10px_34px_rgba(45,212,191,0.12)]">
@@ -26,7 +26,7 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
         </div>
         <div>
           <p className="text-[13px] font-bold leading-tight text-foreground">Financial OS</p>
-          <p className="text-[11px] leading-tight text-muted-foreground">Copilot financiero</p>
+          <p className="text-[11px] leading-tight text-muted-foreground">Lectura diaria</p>
         </div>
       </div>
 
@@ -41,7 +41,7 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "mb-[1px] flex h-[38px] items-center gap-2.5 rounded-xl border border-transparent px-3 text-[13px] font-medium transition-all duration-150",
+                "mb-[3px] flex h-[40px] items-center gap-2.5 rounded-2xl border border-transparent px-3 text-[13px] font-medium transition-all duration-150",
                 isActive
                   ? "border-white/10 bg-white/[0.07] text-teal-100 shadow-[0_10px_30px_rgba(45,212,191,0.07)]"
                   : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
@@ -55,7 +55,7 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
 
         {/* Inversiones — pronto */}
         <div
-          className="flex h-[38px] cursor-default items-center gap-2.5 rounded-[9px] border-l-2 border-l-transparent px-3 text-[13px] font-medium text-muted-foreground/50 mb-[1px]"
+          className="mb-[3px] flex h-[40px] cursor-default items-center gap-2.5 rounded-2xl border border-transparent px-3 text-[13px] font-medium text-muted-foreground/50"
         >
           <TrendingUp className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="flex-1">Inversiones</span>

@@ -13,7 +13,7 @@
     --card-foreground: 210 35% 94%;
 
     /* Brand */
-    --primary: 263 80% 60%;
+    --primary: 176 66% 56%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary / muted surfaces */
@@ -23,7 +23,7 @@
     --muted-foreground: 215 14% 52%;
 
     /* Accent (same as primary) */
-    --accent: 263 80% 60%;
+    --accent: 176 66% 56%;
     --accent-foreground: 0 0% 100%;
 
     /* Destructive */
@@ -33,11 +33,11 @@
     /* Form */
     --border: 228 16% 17%;
     --input: 228 16% 18%;
-    --ring: 263 80% 60%;
+    --ring: 176 66% 56%;
     --radius: 0.75rem;
 
     /* Design-system aliases */
-    --violet: hsl(263 80% 60%);
+    --violet: hsl(176 66% 56%);
     --surface: hsl(230 20% 9%);
     --surface-el: hsl(230 20% 12%);
     --surface-2: hsl(230 22% 13%);
@@ -45,7 +45,7 @@
     --muted-color: hsl(215 14% 52%);
 
     /* Glow tokens for subtle effects */
-    --glow-primary: rgba(124, 58, 237, 0.14);
+    --glow-primary: rgba(45, 212, 191, 0.14);
     --glow-emerald: rgba(52, 211, 153, 0.10);
     --glow-rose: rgba(248, 113, 113, 0.10);
     --glow-sky: rgba(56, 189, 248, 0.10);

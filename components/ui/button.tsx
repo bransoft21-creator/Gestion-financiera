@@ -4,25 +4,25 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 active:scale-[0.97]",
+  "v2-focus-ring inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-4 text-sm font-semibold transition duration-200 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
   {
     variants: {
       variant: {
         default:
-          "bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-sm shadow-violet-900/40 hover:from-violet-500 hover:to-indigo-500 hover:shadow-md hover:shadow-violet-900/50",
+          "bg-white text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.12)] hover:bg-zinc-100",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border border-white/10 bg-white/[0.055] text-zinc-100 hover:bg-white/[0.09]",
         ghost:
-          "hover:bg-secondary hover:text-secondary-foreground",
+          "text-zinc-300 hover:bg-white/[0.06] hover:text-white",
         outline:
-          "border border-border bg-transparent hover:bg-secondary hover:border-border/80 text-foreground",
+          "border border-white/10 bg-white/[0.035] text-zinc-100 hover:bg-white/[0.075]",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+          "border border-rose-300/20 bg-rose-400/10 text-rose-100 hover:bg-rose-400/15",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 px-3",
-        icon: "h-10 w-10",
+        default: "h-11",
+        sm: "h-9 min-h-9 rounded-xl px-3 text-xs",
+        icon: "h-11 w-11 px-0",
       },
     },
     defaultVariants: {

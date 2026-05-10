@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart3, Eye, EyeOff, Loader2, Target, TrendingUp, WalletCards } from "lucide-react";
+import { BarChart3, Eye, EyeOff, Loader2, Sparkles, Target, TrendingUp } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type AuthMode = "login" | "register";
@@ -56,43 +56,37 @@ export function LoginForm() {
   }
 
   const bullets = [
-    { icon: BarChart3, title: "Disponible real", desc: "Calculado restando presupuestos reservados, metas y deudas próximas." },
-    { icon: Target, title: "Control total", desc: "Presupuestos, metas de ahorro, gastos fijos y deudas en un solo lugar." },
-    { icon: TrendingUp, title: "Tendencias claras", desc: "Gráficos de tendencia mensual para entender tus hábitos financieros." },
+    { icon: BarChart3, title: "Disponible real", desc: "Tu margen después de reservas, metas, deudas y compromisos próximos." },
+    { icon: Target, title: "Plan con intención", desc: "Cada peso importante queda asignado antes de diluirse en movimientos chicos." },
+    { icon: TrendingUp, title: "Patrones claros", desc: "Señales mensuales para entender qué cambió y dónde conviene mirar." },
   ];
 
   return (
     <div className="flex min-h-screen bg-background">
       {/* ── Panel izquierdo (solo desktop) ── */}
-      <div className="relative hidden flex-col justify-center overflow-hidden border-r border-border bg-gradient-to-br from-[hsl(228,22%,8%)] to-[hsl(250,25%,10%)] px-16 py-16 lg:flex lg:w-[58%]">
-        {/* Glow orbs */}
-        <div className="pointer-events-none absolute -left-20 -top-20 h-96 w-96 rounded-full bg-[radial-gradient(circle,rgba(124,58,237,.18)_0%,transparent_70%)]" />
-        <div className="pointer-events-none absolute bottom-[-60px] right-[60px] h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(99,102,241,.14)_0%,transparent_70%)]" />
-
+      <div className="relative hidden flex-col justify-center overflow-hidden border-r border-white/10 bg-zinc-950 px-16 py-16 lg:flex lg:w-[58%]">
         {/* Logo */}
         <div className="mb-14 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-lg shadow-violet-500/35">
-            <WalletCards className="h-5 w-5 text-white" aria-hidden="true" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] text-teal-100 shadow-[0_18px_55px_rgba(45,212,191,0.12)]">
+            <Sparkles className="h-5 w-5" aria-hidden="true" />
           </div>
           <span className="text-xl font-extrabold tracking-tight text-foreground">Financial OS</span>
         </div>
 
         {/* Tagline */}
-        <h1 className="mb-4 text-[44px] font-extrabold leading-[1.1] tracking-tight text-foreground">
-          Tu dinero,<br />
-          <span className="bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
-            bajo control real.
-          </span>
+        <h1 className="mb-4 text-[44px] font-semibold leading-[1.05] text-foreground">
+          Tu sistema financiero,<br />
+          <span className="v2-text-gradient">con lectura propia.</span>
         </h1>
         <p className="mb-14 max-w-md text-base leading-relaxed text-muted-foreground">
-          Entendé qué está pasando con tu dinero, qué cambió y qué conviene hacer hoy.
+          Entendé qué está pasando, qué cambió y cuál es el próximo movimiento razonable.
         </p>
 
         {/* Bullets */}
         <div className="space-y-6">
           {bullets.map(({ icon: Icon, title, desc }) => (
             <div key={title} className="flex gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-500/20 bg-violet-500/10 text-violet-400">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-teal-100">
                 <Icon className="h-5 w-5" aria-hidden="true" />
               </div>
               <div>
@@ -109,22 +103,22 @@ export function LoginForm() {
         <div className="fade-in w-full max-w-[420px]">
           {/* Logo mobile */}
           <div className="mb-9 flex flex-col items-center lg:hidden">
-            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-lg shadow-violet-500/35">
-              <WalletCards className="h-6 w-6 text-white" aria-hidden="true" />
+            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-[28px] border border-white/10 bg-white/[0.07] text-teal-100 shadow-[0_18px_55px_rgba(45,212,191,0.12)]">
+              <Sparkles className="h-6 w-6" aria-hidden="true" />
             </div>
             <p className="text-lg font-extrabold text-foreground">Financial OS</p>
           </div>
 
           {/* Tabs */}
-          <div className="mb-7 grid grid-cols-2 rounded-xl border border-border bg-card p-1">
+          <div className="mb-7 grid grid-cols-2 rounded-2xl border border-white/10 bg-white/[0.045] p-1">
             {(["login", "register"] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => { setMode(tab); setFieldErrors({}); setMessage(null); }}
-                className={`rounded-lg py-2.5 text-sm font-semibold transition-all duration-200 ${
+                className={`rounded-[14px] py-2.5 text-sm font-semibold transition-all duration-200 ${
                   mode === tab
-                    ? "bg-primary text-white shadow-md shadow-violet-500/35"
+                    ? "bg-white text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.10)]"
                     : "text-muted-foreground"
                 }`}
               >
@@ -144,7 +138,7 @@ export function LoginForm() {
                   name="name"
                   autoComplete="name"
                   placeholder="Tu nombre"
-                  className="h-[46px] w-full rounded-xl border border-border bg-card px-4 text-sm text-foreground outline-none transition-colors focus:border-primary"
+                  className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-foreground outline-none transition hover:bg-white/[0.07]"
                 />
                 {fieldErrors.name && <p className="mt-1.5 text-xs text-destructive">{fieldErrors.name}</p>}
               </div>
@@ -160,7 +154,7 @@ export function LoginForm() {
                 autoComplete="email"
                 placeholder="nombre@ejemplo.com"
                 required
-                className="h-[46px] w-full rounded-xl border border-border bg-card px-4 text-sm text-foreground outline-none transition-colors focus:border-primary"
+                className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-foreground outline-none transition hover:bg-white/[0.07]"
               />
               {fieldErrors.email && <p className="mt-1.5 text-xs text-destructive">{fieldErrors.email}</p>}
             </div>
@@ -176,7 +170,7 @@ export function LoginForm() {
                   autoComplete={mode === "login" ? "current-password" : "new-password"}
                   placeholder="••••••••"
                   required
-                  className="h-[46px] w-full rounded-xl border border-border bg-card px-4 pr-12 text-sm text-foreground outline-none transition-colors focus:border-primary"
+                  className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 pr-12 text-sm text-foreground outline-none transition hover:bg-white/[0.07]"
                 />
                 <button
                   type="button"
@@ -193,7 +187,7 @@ export function LoginForm() {
             </div>
 
             {message && (
-              <p className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">
                 {message}
               </p>
             )}
@@ -201,7 +195,7 @@ export function LoginForm() {
             <button
               type="submit"
               disabled={isLoading}
-              className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-bold text-white shadow-lg shadow-violet-500/35 transition-opacity disabled:cursor-not-allowed disabled:opacity-60"
+              className="v2-focus-ring mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.12)] transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isLoading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
               {isLoading ? "Procesando…" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}
@@ -213,7 +207,7 @@ export function LoginForm() {
                 <button
                   type="button"
                   onClick={() => { setMode("register"); setFieldErrors({}); setMessage(null); }}
-                  className="font-semibold text-primary"
+                  className="font-semibold text-teal-200"
                 >
                   Registrarse
                 </button>

@@ -47,8 +47,8 @@ export function GlobalProcessingIndicator() {
       }`}
       aria-hidden={!visible}
     >
-      <div className="flex min-w-[180px] flex-col items-center gap-3 rounded-2xl border border-border/80 bg-card/95 px-5 py-4 text-center shadow-2xl shadow-black/30 backdrop-blur">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/12 text-primary">
+      <div className="v2-card flex min-w-[180px] flex-col items-center gap-3 rounded-[var(--v2-radius-lg)] px-5 py-4 text-center shadow-2xl shadow-black/30">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-300/12 text-teal-100">
           <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
         </div>
         <div>

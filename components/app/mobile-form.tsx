@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,12 +22,8 @@ export function AppFormPanel({
   className,
   desktopAlwaysOpen = true,
 }: AppFormPanelProps) {
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useClientMounted();
   const mobilePanelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   useLockBodyScroll(isOpen);
 
@@ -66,6 +62,14 @@ export function AppFormPanel({
       {desktopPanel}
       {mobilePanel}
     </>
+  );
+}
+
+function useClientMounted() {
+  return useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
   );
 }
 
@@ -123,7 +127,7 @@ function appFormDesktopPanelClass(
   const { desktopAlwaysOpen = true } = options;
 
   return cn(
-    "hidden xl:h-auto xl:max-h-[calc(100dvh-8rem)] xl:min-h-0 xl:overflow-hidden xl:rounded-lg xl:border xl:shadow-sm",
+    "hidden xl:h-auto xl:max-h-[calc(100dvh-8rem)] xl:min-h-0 xl:overflow-hidden",
     isOpen || desktopAlwaysOpen ? "xl:flex xl:flex-col" : undefined,
     className,
   );
@@ -131,7 +135,7 @@ function appFormDesktopPanelClass(
 
 function appFormMobilePanelClass(className?: string) {
   return cn(
-    "fixed inset-0 z-[100] flex h-dvh max-h-dvh w-screen max-w-[100vw] touch-pan-y flex-col overflow-hidden overflow-x-hidden overscroll-none rounded-none border-x-0 border-y-0 bg-card pt-[env(safe-area-inset-top)] shadow-2xl animate-slide-up",
+    "fixed inset-0 z-[100] flex h-dvh max-h-dvh w-screen max-w-[100vw] touch-pan-y flex-col overflow-hidden overflow-x-hidden overscroll-none rounded-none border-x-0 border-y-0 bg-zinc-950/96 pt-[env(safe-area-inset-top)] shadow-2xl animate-slide-up",
     className,
   );
 }
@@ -148,7 +152,7 @@ export function appFormContentClass(isOpen: boolean, className?: string) {
 
 export function appFormHeaderClass(className?: string) {
   return cn(
-    "sticky top-0 z-20 shrink-0 border-b border-border bg-card/98 backdrop-blur supports-[backdrop-filter]:bg-card/90 xl:static xl:border-b-0 xl:bg-transparent xl:backdrop-blur-none",
+    "sticky top-0 z-20 shrink-0 border-b border-white/10 bg-zinc-950/92 backdrop-blur-xl xl:static xl:border-b-0 xl:bg-transparent xl:backdrop-blur-none",
     className,
   );
 }
@@ -171,7 +175,7 @@ export function MobileCreateFab({
     <Button
       type="button"
       size="icon"
-      className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] right-4 z-30 h-14 w-14 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 shadow-xl shadow-violet-500/30 hover:shadow-violet-500/50 xl:hidden"
+      className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] right-4 z-30 h-14 w-14 rounded-full bg-teal-300 text-zinc-950 shadow-[0_18px_55px_rgba(45,212,191,0.24)] hover:bg-teal-200 xl:hidden"
       onClick={onClick}
       aria-label={label}
     >

@@ -54,9 +54,9 @@ type NotificationsButtonProps = {
   panelClassName?: string;
 };
 
-const READ_STORAGE_KEY = "finance-control-read-notifications";
-const PUSHED_STORAGE_KEY = "finance-control-pushed-notifications";
-const PREFS_STORAGE_KEY = "finance-control-notification-preferences";
+const READ_STORAGE_KEY = "financial-os-read-notifications";
+const PUSHED_STORAGE_KEY = "financial-os-pushed-notifications";
+const PREFS_STORAGE_KEY = "financial-os-notification-preferences";
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
   browserPush: false,
@@ -134,7 +134,8 @@ export function NotificationsButton({ compact = false, className, panelClassName
   }, [loadSummary]);
 
   useEffect(() => {
-    setOpen(false);
+    const id = window.setTimeout(() => setOpen(false), 0);
+    return () => window.clearTimeout(id);
   }, [pathname]);
 
   useEffect(() => {
@@ -251,8 +252,8 @@ export function NotificationsButton({ compact = false, className, panelClassName
             onClick={() => setOpen(false)}
             style={{ touchAction: "none" }}
           />
-          <div className={cn("absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-xl border border-border bg-card shadow-2xl shadow-black/35", panelClassName)}>
-          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <div className={cn("v2-card absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-[var(--v2-radius-lg)] shadow-2xl shadow-black/35", panelClassName)}>
+          <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
             <div>
               <p className="text-sm font-semibold">Centro financiero</p>
               <p className="text-xs text-muted-foreground">
@@ -289,15 +290,15 @@ export function NotificationsButton({ compact = false, className, panelClassName
             </div>
           </div>
 
-          <div className="flex border-b border-border p-1">
+          <div className="flex border-b border-white/10 p-1">
             {(["alerts", "settings"] as const).map((item) => (
               <button
                 key={item}
                 type="button"
                 className={cn(
-                  "flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition",
+                  "flex-1 rounded-xl px-3 py-2 text-xs font-semibold transition",
                   tab === item
-                    ? "bg-secondary text-foreground"
+                    ? "bg-white/[0.08] text-teal-100"
                     : "text-muted-foreground hover:text-foreground",
                 )}
                 onClick={() => setTab(item)}
@@ -324,7 +325,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
                 )}
               </div>
 
-              <div className="grid gap-2 border-t border-border p-3 sm:grid-cols-2">
+              <div className="grid gap-2 border-t border-white/10 p-3 sm:grid-cols-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -363,7 +364,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
                 checked={preferences.rules.expenseLimit}
                 onChange={() => toggleRule("expenseLimit")}
               />
-              <div className="rounded-lg border border-border p-3">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
                 <label className="text-xs font-semibold text-muted-foreground" htmlFor="expense-limit">
                   Avisar cuando gastos superen
                 </label>
@@ -375,7 +376,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
                   step="5"
                   value={preferences.expenseLimitPercent}
                   onChange={(event) => updateExpenseLimit(event.target.value)}
-                  className="mt-2 w-full accent-violet-500"
+                  className="mt-2 w-full accent-teal-300"
                 />
               </div>
               <RuleToggle
@@ -419,7 +420,7 @@ function NotificationCard({
   return (
     <div
       className={cn(
-        "rounded-lg border p-3 transition",
+        "rounded-2xl border p-3 transition",
         isRead && "opacity-55",
         item.tone === "danger" && "border-rose-500/25 bg-rose-500/10",
         item.tone === "warning" && "border-amber-500/25 bg-amber-500/10",
@@ -444,7 +445,7 @@ function NotificationCard({
             {!isRead ? (
               <button
                 type="button"
-                className="text-[11px] font-semibold text-primary hover:text-primary/80"
+                className="text-[11px] font-semibold text-teal-200 hover:text-teal-100"
                 onClick={onRead}
               >
                 Leída
@@ -460,7 +461,7 @@ function NotificationCard({
 
 function EmptyNotifications() {
   return (
-    <div className="rounded-lg border border-border p-5 text-center">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 text-center">
       <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
         <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
       </div>
@@ -485,7 +486,7 @@ function PushStatus({
 }) {
   if (permission === "unsupported") {
     return (
-      <div className="rounded-lg border border-border p-3 text-xs text-muted-foreground">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-xs text-muted-foreground">
         Este navegador no soporta notificaciones del sistema.
       </div>
     );
@@ -493,7 +494,7 @@ function PushStatus({
 
   if (permission === "denied") {
     return (
-      <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 p-3 text-xs leading-5 text-muted-foreground">
+      <div className="rounded-2xl border border-rose-500/25 bg-rose-500/10 p-3 text-xs leading-5 text-muted-foreground">
         Las notificaciones están bloqueadas en el navegador. Activá el permiso desde la configuración
         del sitio para recibir push.
       </div>
@@ -501,7 +502,7 @@ function PushStatus({
   }
 
   return (
-    <div className="grid gap-2 rounded-lg border border-border p-3">
+    <div className="grid gap-2 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
       <div>
         <p className="text-sm font-semibold">
           {permission === "granted" && browserPush ? "Avisos del navegador activos" : "Avisos del navegador"}
@@ -537,12 +538,12 @@ function RuleToggle({
   onChange: () => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3">
+    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
       <input
         type="checkbox"
         checked={checked}
         onChange={onChange}
-        className="mt-1 h-4 w-4 accent-violet-500"
+        className="mt-1 h-4 w-4 accent-teal-300"
       />
       <span>
         <span className="block text-sm font-semibold">{label}</span>
