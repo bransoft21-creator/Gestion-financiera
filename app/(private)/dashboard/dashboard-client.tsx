@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import {
   AlertTriangle,
   ArrowDownCircle,
@@ -13,7 +14,6 @@ import {
   ExternalLink,
   HelpCircle,
   Lightbulb,
-  Loader2,
   Lock,
   Plus,
   ReceiptText,
@@ -25,11 +25,16 @@ import {
   Zap,
 } from "lucide-react";
 import { EmptyState } from "@/components/app/empty-state";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FinancialAiAnalysisCard } from "@/components/dashboard/financial-ai-analysis-card";
 import { FinanceMetricCard } from "@/components/finance/finance-metric-card";
-import { PremiumCard } from "@/components/ui-v2/premium-card";
+import {
+  PremiumCard,
+  PremiumCardContent,
+  PremiumCardDescription,
+  PremiumCardHeader,
+  PremiumCardTitle,
+} from "@/components/ui-v2/premium-card";
 import {
   ExpenseCategoryChart,
   type ExpenseCategoryChartItem,
@@ -125,7 +130,21 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-/* ── Animated counter ───────────────────────────────────────────────────── */
+/* ── Motion presets ──────────────────────────────────────────────────────── */
+
+const easeOut = [0.22, 1, 0.36, 1] as const;
+
+const staggerContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: easeOut } },
+};
+
+/* ── Animated counter ────────────────────────────────────────────────────── */
 
 function useCountUp(target: number, ms = 850) {
   const [val, setVal] = useState(0);
@@ -149,7 +168,62 @@ function useCountUp(target: number, ms = 850) {
   return val;
 }
 
-/* ── Hero card ──────────────────────────────────────────────────────────── */
+/* ── Dashboard skeleton ──────────────────────────────────────────────────── */
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Hero */}
+      <div className="v2-card-raised rounded-[var(--v2-radius-xl)] p-5 sm:p-7">
+        <div className="mb-4 flex gap-2">
+          <div className="h-6 w-24 animate-pulse rounded-full bg-white/10" />
+          <div className="h-6 w-20 animate-pulse rounded-full bg-white/[0.06]" />
+        </div>
+        <div className="h-8 w-3/5 animate-pulse rounded-full bg-white/10" />
+        <div className="mt-3 h-4 w-4/5 animate-pulse rounded-full bg-white/[0.06]" />
+        <div className="mt-6 h-14 w-44 animate-pulse rounded-full bg-white/10" />
+        <div className="mt-5 flex gap-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-7 w-24 animate-pulse rounded-full bg-white/[0.06]" />
+          ))}
+        </div>
+      </div>
+      {/* AI card */}
+      <div className="overflow-hidden rounded-[var(--v2-radius-xl)] border border-white/10 bg-white/[0.025] p-5">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 shrink-0 animate-pulse rounded-2xl bg-white/10" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3 w-36 animate-pulse rounded-full bg-white/10" />
+            <div className="h-3 w-52 animate-pulse rounded-full bg-white/[0.06]" />
+          </div>
+          <div className="h-9 w-28 animate-pulse rounded-2xl bg-white/10" />
+        </div>
+      </div>
+      {/* Metric cards */}
+      <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="v2-card rounded-[var(--v2-radius-lg)] p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 space-y-2.5">
+                <div className="h-2.5 w-14 animate-pulse rounded-full bg-white/10" />
+                <div className="h-7 w-20 animate-pulse rounded-full bg-white/10" />
+                <div className="h-2 w-28 animate-pulse rounded-full bg-white/[0.06]" />
+              </div>
+              <div className="h-11 w-11 shrink-0 animate-pulse rounded-2xl bg-white/10" />
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Lower sections */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="v2-card animate-pulse rounded-[var(--v2-radius-lg)] h-52" />
+        <div className="v2-card animate-pulse rounded-[var(--v2-radius-lg)] h-52" />
+      </div>
+    </div>
+  );
+}
+
+/* ── Hero card ───────────────────────────────────────────────────────────── */
 
 function HeroCard({
   metrics,
@@ -272,13 +346,13 @@ function FormulaPill({
       className="flex min-w-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 transition hover:bg-white/[0.07]"
       aria-label={label}
     >
-      <span className="text-xs text-white/50">{label}</span>
-      <span className="text-[13px] font-semibold tabular-nums" style={{ color }}>{formatMoney(value)}</span>
+      <span className="shrink-0 text-xs text-white/50">{label}</span>
+      <span className="max-w-[8rem] truncate text-[13px] font-semibold tabular-nums" style={{ color }}>{formatMoney(value)}</span>
     </Link>
   );
 }
 
-/* ── Monthly signals ───────────────────────────────────────────────────── */
+/* ── Monthly signals ─────────────────────────────────────────────────────── */
 
 const insightToneConfig = {
   default: {
@@ -329,12 +403,12 @@ function MonthlySignals({
   const primaryTone = insightToneConfig[signal.tone];
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">Señales del mes</CardTitle>
-        <CardDescription>Prioridades y próximos pasos.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <PremiumCard>
+      <PremiumCardHeader className="pb-2">
+        <PremiumCardTitle className="text-sm">Qué importa ahora</PremiumCardTitle>
+        <PremiumCardDescription>Señales clave para actuar hoy.</PremiumCardDescription>
+      </PremiumCardHeader>
+      <PremiumCardContent className="space-y-3">
         <div className={`rounded-2xl border p-3 ${primaryTone.shell}`}>
           <div className="flex items-start gap-2.5">
             <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl ${primaryTone.icon}`}>
@@ -342,7 +416,7 @@ function MonthlySignals({
             </div>
             <div className="min-w-0">
               <p className={`text-[11px] font-semibold uppercase tracking-wider ${primaryTone.label}`}>
-                Consejo
+                Atención
               </p>
               <h3 className="mt-0.5 text-sm font-bold tracking-tight">{signal.title}</h3>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">{signal.message}</p>
@@ -374,8 +448,8 @@ function MonthlySignals({
             </div>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </PremiumCardContent>
+    </PremiumCard>
   );
 }
 
@@ -411,22 +485,22 @@ function ExpenseTypeBreakdown({
     : "text-emerald-400";
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">Composición de gastos</CardTitle>
-        <CardDescription>Fijos, variables y extraordinarios del mes.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <PremiumCard>
+      <PremiumCardHeader className="pb-2">
+        <PremiumCardTitle className="text-sm">Distribución del gasto</PremiumCardTitle>
+        <PremiumCardDescription>Cómo se divide entre fijo, variable y lo inesperado.</PremiumCardDescription>
+      </PremiumCardHeader>
+      <PremiumCardContent className="space-y-3">
         {income > 0 && (
           <div className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Gastos fijos sobre ingresos
+              Presión de gastos fijos
             </p>
             <div className="mt-1 flex items-baseline gap-2">
               <span className={`text-2xl font-extrabold tabular-nums ${fixedRatioTextClass}`}>
                 {fixedToIncomeRatio}%
               </span>
-              <span className="text-xs text-muted-foreground">de tus ingresos son fijos</span>
+              <span className="text-xs text-muted-foreground">del ingreso comprometido en fijos</span>
             </div>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background/60">
               <div
@@ -463,8 +537,8 @@ function ExpenseTypeBreakdown({
         {total === 0 && (
           <p className="py-2 text-center text-xs text-muted-foreground">Sin gastos registrados este mes.</p>
         )}
-      </CardContent>
-    </Card>
+      </PremiumCardContent>
+    </PremiumCard>
   );
 }
 
@@ -497,25 +571,25 @@ function MonthProjection({ metrics }: { metrics: DashboardSummary["metrics"] }) 
   const narrative = buildNarrative(metrics);
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <PremiumCard>
+      <PremiumCardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-teal-300/12 text-teal-100">
             <TrendingUp className="h-4 w-4" aria-hidden="true" />
           </div>
           <div>
-            <CardTitle className="text-sm">Proyección de cierre</CardTitle>
-            <CardDescription>Estimación al fin del mes según tendencia actual.</CardDescription>
+            <PremiumCardTitle className="text-sm">Tendencia del mes</PremiumCardTitle>
+            <PremiumCardDescription>A este ritmo, así cierra tu mes.</PremiumCardDescription>
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      </PremiumCardHeader>
+      <PremiumCardContent className="space-y-4">
         {narrative && (
           <p className="text-sm leading-relaxed text-muted-foreground">{narrative}</p>
         )}
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Gastos proyectados</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Gasto al cierre</p>
             <p className={`mt-1 text-sm font-bold tabular-nums ${
               projection.projectedExpenses > metrics.income ? "text-rose-400" : "text-foreground"
             }`}>
@@ -523,7 +597,7 @@ function MonthProjection({ metrics }: { metrics: DashboardSummary["metrics"] }) 
             </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Balance estimado</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Saldo proyectado</p>
             <p className={`mt-1 text-sm font-bold tabular-nums ${
               projection.projectedBalance >= 0 ? "text-emerald-400" : "text-rose-400"
             }`}>
@@ -537,10 +611,12 @@ function MonthProjection({ metrics }: { metrics: DashboardSummary["metrics"] }) 
           día{projection.daysRemaining !== 1 ? "s" : ""} del mes · Ritmo actual:{" "}
           <span className="font-semibold text-foreground">{formatMoney(dailyRate)}</span>/día
         </p>
-      </CardContent>
-    </Card>
+      </PremiumCardContent>
+    </PremiumCard>
   );
 }
+
+/* ── Expense category explorer ───────────────────────────────────────────── */
 
 function ExpenseCategoryExplorer({
   expensesByCategory,
@@ -565,91 +641,91 @@ function ExpenseCategoryExplorer({
 
   return (
     <div ref={cardRef} className="scroll-mt-4">
-    <Card className="overflow-hidden">
-      <CardHeader>
-        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <div className="mb-2 inline-flex w-fit items-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/10 px-3 py-1 text-[11px] font-semibold text-teal-100">
-              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-              Mapa de consumo
+      <PremiumCard className="overflow-hidden">
+        <PremiumCardHeader>
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="mb-2 inline-flex w-fit items-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/10 px-3 py-1 text-[11px] font-semibold text-teal-100">
+                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                Mapa de consumo
+              </div>
+              <PremiumCardTitle>Por dónde va el dinero</PremiumCardTitle>
+              <PremiumCardDescription>Qué se llevó más y qué movimientos explican cada parte.</PremiumCardDescription>
             </div>
-            <CardTitle>Gastos por categoría</CardTitle>
-            <CardDescription>Qué se llevó más dinero y qué movimientos explican cada parte.</CardDescription>
+            <div className="rounded-2xl border border-white/10 bg-zinc-950/70 px-3 py-2 text-right">
+              <p className="text-[10px] font-semibold uppercase text-zinc-500">Total leído</p>
+              <p className="mt-0.5 text-sm font-semibold tabular-nums text-white">{formatMoney(totalExpenses)}</p>
+            </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-zinc-950/70 px-3 py-2 text-right">
-            <p className="text-[10px] font-semibold uppercase text-zinc-500">Total leído</p>
-            <p className="mt-0.5 text-sm font-semibold tabular-nums text-white">{formatMoney(totalExpenses)}</p>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {expensesByCategory.length === 0 ? (
-          <EmptyState
-            icon={ReceiptText}
-            title="Sin gastos este mes"
-            description="Los gastos agrupados aparecerán al registrar transacciones."
-          />
-        ) : (
-          <div className="mx-auto grid w-full max-w-[940px] gap-5 xl:max-w-none xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.78fr)] xl:items-start">
-            <div className="min-w-0 space-y-4">
-              <div className="rounded-[26px] border border-white/[0.12] bg-zinc-950/70 p-4 shadow-inner shadow-black/20">
-                <ExpenseCategoryChart
-                  data={expensesByCategory}
-                  activeCategoryId={selectedExpenseCategoryId ?? undefined}
-                  onSelectCategory={onSelectCategory}
-                />
+        </PremiumCardHeader>
+        <PremiumCardContent>
+          {expensesByCategory.length === 0 ? (
+            <EmptyState
+              icon={ReceiptText}
+              title="Sin gastos este mes"
+              description="Los gastos agrupados aparecerán al registrar transacciones."
+            />
+          ) : (
+            <div className="mx-auto grid w-full max-w-[940px] gap-5 xl:max-w-none xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.78fr)] xl:items-start">
+              <div className="min-w-0 space-y-4">
+                <div className="rounded-[var(--v2-radius-xl)] border border-white/10 bg-zinc-950/70 p-4 shadow-inner shadow-black/20">
+                  <ExpenseCategoryChart
+                    data={expensesByCategory}
+                    activeCategoryId={selectedExpenseCategoryId ?? undefined}
+                    onSelectCategory={onSelectCategory}
+                  />
+                </div>
+
+                {/* Mobile: swap entre lista y detalle */}
+                <div className="xl:hidden">
+                  {selectedExpenseCategoryId && selectedExpenseCategory ? (
+                    <ExpenseCategoryDetailPanel
+                      category={selectedExpenseCategory}
+                      color={selectedChartItem?.color}
+                      onClose={() => onSelectCategory(selectedExpenseCategoryId)}
+                    />
+                  ) : (
+                    <div className="grid gap-2">
+                      {expensesByCategory.map((item) => (
+                        <ExpenseCategoryOption
+                          key={item.id}
+                          item={item}
+                          totalExpenses={totalExpenses}
+                          isActive={false}
+                          onClick={() => onSelectCategory(item.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Desktop: siempre muestra la lista */}
+                <div className="hidden xl:grid xl:gap-2">
+                  {expensesByCategory.map((item) => (
+                    <ExpenseCategoryOption
+                      key={item.id}
+                      item={item}
+                      totalExpenses={totalExpenses}
+                      isActive={selectedExpenseCategoryId === item.id}
+                      onClick={() => onSelectCategory(item.id)}
+                    />
+                  ))}
+                </div>
               </div>
 
-              {/* Mobile: swap entre lista y detalle para no crecer el panel */}
-              <div className="xl:hidden">
-                {selectedExpenseCategoryId && selectedExpenseCategory ? (
+              <div className="hidden xl:block">
+                {selectedExpenseCategory ? (
                   <ExpenseCategoryDetailPanel
                     category={selectedExpenseCategory}
                     color={selectedChartItem?.color}
-                    onClose={() => onSelectCategory(selectedExpenseCategoryId)}
+                    elevated
                   />
-                ) : (
-                  <div className="grid gap-2">
-                    {expensesByCategory.map((item) => (
-                      <ExpenseCategoryOption
-                        key={item.id}
-                        item={item}
-                        totalExpenses={totalExpenses}
-                        isActive={false}
-                        onClick={() => onSelectCategory(item.id)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Desktop: siempre muestra la lista */}
-              <div className="hidden xl:grid xl:gap-2">
-                {expensesByCategory.map((item) => (
-                  <ExpenseCategoryOption
-                    key={item.id}
-                    item={item}
-                    totalExpenses={totalExpenses}
-                    isActive={selectedExpenseCategoryId === item.id}
-                    onClick={() => onSelectCategory(item.id)}
-                  />
-                ))}
+                ) : null}
               </div>
             </div>
-
-            <div className="hidden xl:block">
-              {selectedExpenseCategory ? (
-                <ExpenseCategoryDetailPanel
-                  category={selectedExpenseCategory}
-                  color={selectedChartItem?.color}
-                  elevated
-                />
-              ) : null}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          )}
+        </PremiumCardContent>
+      </PremiumCard>
     </div>
   );
 }
@@ -719,7 +795,7 @@ function ExpenseCategoryDetailPanel({
   onClose?: () => void;
 }) {
   return (
-    <div className={`rounded-[26px] border border-white/[0.14] bg-zinc-950 p-4 ${elevated ? "shadow-[0_24px_80px_rgba(0,0,0,0.42)]" : ""}`}>
+    <div className={`rounded-[var(--v2-radius-xl)] border border-white/[0.14] bg-zinc-950 p-4 ${elevated ? "shadow-[0_24px_80px_rgba(0,0,0,0.42)]" : ""}`}>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="mb-2 flex items-center gap-2">
@@ -747,7 +823,7 @@ function ExpenseCategoryDetailPanel({
         <p className="shrink-0 text-right text-base font-semibold tabular-nums text-white">{formatMoney(category.total)}</p>
       </div>
 
-      <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
+      <div className="space-y-2 pr-1 xl:max-h-[360px] xl:overflow-y-auto">
         {category.items.map((item) => (
           <Link
             key={item.id}
@@ -783,7 +859,7 @@ function RecentTransactions({ transactions }: { transactions: DashboardSummary["
         return (
           <div key={tx.id}
             className={`flex items-center gap-3 py-2.5 ${i < transactions.length - 1 ? "border-b border-white/[0.05]" : ""}`}>
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${isIncome ? "bg-emerald-500/13 text-emerald-400" : "bg-rose-500/13 text-rose-400"}`}>
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isIncome ? "bg-emerald-500/13 text-emerald-400" : "bg-rose-500/13 text-rose-400"}`}>
               {isIncome
                 ? <ArrowUpCircle className="h-[17px] w-[17px]" aria-hidden="true" />
                 : <ArrowDownCircle className="h-[17px] w-[17px]" aria-hidden="true" />}
@@ -806,7 +882,7 @@ function RecentTransactions({ transactions }: { transactions: DashboardSummary["
   );
 }
 
-/* ── Main component ─────────────────────────────────────────────────────── */
+/* ── Main component ──────────────────────────────────────────────────────── */
 
 export function DashboardClient() {
   const now = new Date();
@@ -830,7 +906,6 @@ export function DashboardClient() {
         if (!response.ok) { setError(payload.error ?? "No se pudo cargar el dashboard."); return; }
         setSummary(payload.data ?? null);
 
-        // Captura silenciosa del mes anterior al abrir el mes actual
         if (isCurrentMonth) {
           const prevMonth = month === 1 ? 12 : month - 1;
           const prevYear = month === 1 ? year - 1 : year;
@@ -863,17 +938,24 @@ export function DashboardClient() {
   const monthNav = (
     <div className="mb-6 grid gap-3 sm:flex sm:items-center">
       <div className="flex items-center gap-3 sm:flex-1">
-        <button type="button" onClick={navigatePrev}
-          className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-border bg-secondary text-muted-foreground transition-colors hover:bg-border hover:text-foreground"
-          aria-label="Mes anterior">
+        <button
+          type="button"
+          onClick={navigatePrev}
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-muted-foreground transition-colors hover:bg-white/[0.10] hover:text-foreground"
+          aria-label="Mes anterior"
+        >
           <ArrowLeftCircle className="h-4 w-4" aria-hidden="true" />
         </button>
         <h2 className="flex-1 text-center text-[17px] font-bold text-foreground">
           {MONTH_NAMES[month - 1]} {year}
         </h2>
-        <button type="button" onClick={navigateNext} disabled={isCurrentMonth}
-          className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-border bg-secondary text-muted-foreground transition-colors hover:bg-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
-          aria-label="Mes siguiente">
+        <button
+          type="button"
+          onClick={navigateNext}
+          disabled={isCurrentMonth}
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-muted-foreground transition-colors hover:bg-white/[0.10] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
+          aria-label="Mes siguiente"
+        >
           <ArrowRightCircle className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
@@ -890,12 +972,7 @@ export function DashboardClient() {
     return (
       <>
         {monthNav}
-        <Card>
-          <CardContent className="flex h-72 items-center justify-center text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-            Cargando métricas financieras
-          </CardContent>
-        </Card>
+        <DashboardSkeleton />
       </>
     );
   }
@@ -904,13 +981,13 @@ export function DashboardClient() {
     return (
       <>
         {monthNav}
-        <Card>
-          <CardContent className="flex h-72 flex-col items-center justify-center p-8 text-center">
+        <PremiumCard>
+          <PremiumCardContent className="flex h-72 flex-col items-center justify-center p-8 text-center">
             <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />
             <h2 className="mt-4 text-lg font-semibold">No se pudo cargar el dashboard</h2>
             <p className="mt-2 text-sm text-muted-foreground">{error}</p>
-          </CardContent>
-        </Card>
+          </PremiumCardContent>
+        </PremiumCard>
       </>
     );
   }
@@ -942,68 +1019,90 @@ export function DashboardClient() {
     <div className="fade-in">
       {monthNav}
 
-      {/* Hero card */}
+      {/* 1. Hero — disponible real del mes */}
       <HeroCard metrics={metrics} year={year} month={month} usdBalance={usdBalance} />
 
-      <section className="mx-auto mb-6 grid w-full gap-3.5 sm:grid-cols-2 xl:grid-cols-5">
-        <Link href="/transactions?type=INCOME" className="block min-w-0">
-          <FinanceMetricCard
-            label="Entró"
-            value={formatMoney(metrics.income)}
-            detail="Ingresos del mes"
-            icon={ArrowUpCircle}
-            tone="positive"
-            trend="up"
-            trendLabel="Base para tu plan mensual"
-          />
-        </Link>
-        <Link href="/transactions?type=EXPENSE" className="block min-w-0">
-          <FinanceMetricCard
-            label="Salió"
-            value={formatMoney(metrics.expenses)}
-            detail="Gastos registrados"
-            icon={ArrowDownCircle}
-            tone="danger"
-            trend="down"
-            trendLabel={`${metrics.spendingRate}% del ingreso consumido`}
-          />
-        </Link>
-        <Link href="/budgets" className="block min-w-0">
-          <FinanceMetricCard
-            label="Reservado"
-            value={formatMoney(metrics.remainingReservedBudget)}
-            detail="Presupuesto pendiente"
-            icon={Lock}
-            tone="warning"
-            trendLabel="Dinero protegido para categorías"
-          />
-        </Link>
-        <Link href="/recurring" className="block min-w-0">
-          <FinanceMetricCard
-            label="Compromisos"
-            value={formatMoney(metrics.upcomingObligations)}
-            detail="Recurrentes, metas y deuda"
-            icon={CreditCard}
-            tone={metrics.upcomingObligations === 0 ? "positive" : "warning"}
-            trendLabel={metrics.upcomingObligations === 0 ? "Sin presión pendiente" : "Todavía impactan el cierre"}
-          />
-        </Link>
-        <Link href="/accounts" className="block min-w-0 sm:col-span-2 xl:col-span-1">
-          <FinanceMetricCard
-            label="Dólares"
-            value={formatMoney(usdBalance?.amount ?? 0, "USD")}
-            detail={`${usdBalance?.accountCount ?? 0} cuenta${(usdBalance?.accountCount ?? 0) !== 1 ? "s" : ""} en USD`}
-            icon={Wallet}
-            tone="info"
-            trendLabel="Saldo separado por moneda"
-          />
-        </Link>
-      </section>
-
+      {/* 2. Financial Copilot — protagonista, posición central */}
       <FinancialAiAnalysisCard month={selectedMonth} />
 
-      {/* Expense type breakdown + projection */}
-      <section className="mx-auto mb-6 grid w-full gap-5 lg:grid-cols-2">
+      {/* 3. Métricas del mes con stagger */}
+      <motion.section
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+        className="mx-auto mb-6 grid w-full gap-3.5 sm:grid-cols-2 xl:grid-cols-5"
+      >
+        <motion.div variants={fadeUp} className="min-w-0">
+          <Link href="/transactions?type=INCOME" className="block">
+            <FinanceMetricCard
+              label="Entró"
+              value={formatMoney(metrics.income)}
+              detail="Ingresos del mes"
+              icon={ArrowUpCircle}
+              tone="positive"
+              trend="up"
+              trendLabel="Base para tu plan mensual"
+            />
+          </Link>
+        </motion.div>
+        <motion.div variants={fadeUp} className="min-w-0">
+          <Link href="/transactions?type=EXPENSE" className="block">
+            <FinanceMetricCard
+              label="Salió"
+              value={formatMoney(metrics.expenses)}
+              detail="Gastos registrados"
+              icon={ArrowDownCircle}
+              tone="danger"
+              trend="down"
+              trendLabel={`${metrics.spendingRate}% del ingreso consumido`}
+            />
+          </Link>
+        </motion.div>
+        <motion.div variants={fadeUp} className="min-w-0">
+          <Link href="/budgets" className="block">
+            <FinanceMetricCard
+              label="Reservado"
+              value={formatMoney(metrics.remainingReservedBudget)}
+              detail="Presupuesto pendiente"
+              icon={Lock}
+              tone="warning"
+              trendLabel="Dinero protegido para categorías"
+            />
+          </Link>
+        </motion.div>
+        <motion.div variants={fadeUp} className="min-w-0">
+          <Link href="/recurring" className="block">
+            <FinanceMetricCard
+              label="Compromisos"
+              value={formatMoney(metrics.upcomingObligations)}
+              detail="Recurrentes, metas y deuda"
+              icon={CreditCard}
+              tone={metrics.upcomingObligations === 0 ? "positive" : "warning"}
+              trendLabel={metrics.upcomingObligations === 0 ? "Sin presión pendiente" : "Todavía impactan el cierre"}
+            />
+          </Link>
+        </motion.div>
+        <motion.div variants={fadeUp} className="min-w-0 sm:col-span-2 xl:col-span-1">
+          <Link href="/accounts" className="block">
+            <FinanceMetricCard
+              label="Dólares"
+              value={formatMoney(usdBalance?.amount ?? 0, "USD")}
+              detail={`${usdBalance?.accountCount ?? 0} cuenta${(usdBalance?.accountCount ?? 0) !== 1 ? "s" : ""} en USD`}
+              icon={Wallet}
+              tone="info"
+              trendLabel="Saldo separado por moneda"
+            />
+          </Link>
+        </motion.div>
+      </motion.section>
+
+      {/* 4. Distribución del gasto + tendencia del mes */}
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: easeOut, delay: 0.1 }}
+        className="mx-auto mb-6 grid w-full gap-5 lg:grid-cols-2"
+      >
         <ExpenseTypeBreakdown
           expensesByType={metrics.expensesByType}
           total={metrics.expenses}
@@ -1011,10 +1110,15 @@ export function DashboardClient() {
           fixedToIncomeRatio={metrics.fixedToIncomeRatio}
         />
         <MonthProjection metrics={metrics} />
-      </section>
+      </motion.section>
 
-      {/* Charts row */}
-      <section className="mx-auto mb-6 grid w-full gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+      {/* 5. Mapa de consumo + señales + mini-cards */}
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: easeOut, delay: 0.15 }}
+        className="mx-auto mb-6 grid w-full gap-5 lg:grid-cols-[1.2fr_0.8fr]"
+      >
         <ExpenseCategoryExplorer
           expensesByCategory={expensesByCategory}
           selectedExpenseCategory={selectedExpenseCategory}
@@ -1023,51 +1127,59 @@ export function DashboardClient() {
           onSelectCategory={handleExpenseCategorySelect}
         />
 
-        {/* Signals + financial summary */}
         <div className="flex flex-col gap-5">
           <MonthlySignals insights={insights} alerts={alerts} />
 
-          {/* Savings & metas summary */}
           <div className="grid grid-cols-2 gap-3.5">
-            <Link href="/goals" className="v2-card rounded-2xl p-4 transition hover:-translate-y-0.5 hover:border-white/20">
-              <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400">
-                <Wallet className="h-4 w-4" aria-hidden="true" />
-              </div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ahorro est.</p>
-              <p className="mt-1 text-base font-bold text-emerald-400 tabular-nums">
-                {formatMoney(metrics.estimatedSavings)}
-              </p>
+            <Link href="/goals" className="block min-w-0">
+              <PremiumCard interactive className="p-4">
+                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400">
+                  <Wallet className="h-4 w-4" aria-hidden="true" />
+                </div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ahorro est.</p>
+                <p className="mt-1 text-base font-bold text-emerald-400 tabular-nums">
+                  {formatMoney(metrics.estimatedSavings)}
+                </p>
+              </PremiumCard>
             </Link>
-            <Link href="/debts" className="v2-card rounded-2xl p-4 transition hover:-translate-y-0.5 hover:border-white/20">
-              <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-2xl bg-teal-300/12 text-teal-100">
-                <Sparkles className="h-4 w-4" aria-hidden="true" />
-              </div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Deuda total</p>
-              <p className="mt-1 text-base font-bold text-muted-foreground tabular-nums">
-                {formatMoney(metrics.totalOutstandingDebt)}
-              </p>
+            <Link href="/debts" className="block min-w-0">
+              <PremiumCard interactive className="p-4">
+                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-2xl bg-white/[0.08] text-zinc-300">
+                  <CreditCard className="h-4 w-4" aria-hidden="true" />
+                </div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Deuda total</p>
+                <p className="mt-1 text-base font-bold text-muted-foreground tabular-nums">
+                  {formatMoney(metrics.totalOutstandingDebt)}
+                </p>
+              </PremiumCard>
             </Link>
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* Recent transactions */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <CardTitle>Últimas transacciones</CardTitle>
-              <CardDescription>Movimientos recientes del mes.</CardDescription>
+      {/* 6. Movimientos recientes */}
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: easeOut, delay: 0.2 }}
+      >
+        <PremiumCard>
+          <PremiumCardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <PremiumCardTitle>Movimientos recientes</PremiumCardTitle>
+                <PremiumCardDescription>Lo último que pasó en tus cuentas.</PremiumCardDescription>
+              </div>
+              <Button asChild size="sm" variant="secondary" className="h-8 shrink-0">
+                <Link href="/transactions">Ver todas</Link>
+              </Button>
             </div>
-            <Button asChild size="sm" variant="secondary" className="h-8 shrink-0">
-              <Link href="/transactions">Ver todas</Link>
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <RecentTransactions transactions={latestTransactions} />
-        </CardContent>
-      </Card>
+          </PremiumCardHeader>
+          <PremiumCardContent>
+            <RecentTransactions transactions={latestTransactions} />
+          </PremiumCardContent>
+        </PremiumCard>
+      </motion.div>
     </div>
   );
 }
