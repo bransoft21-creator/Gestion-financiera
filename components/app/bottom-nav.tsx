@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { MouseEvent } from "react";
 import { useState } from "react";
 import {
   BarChart3,
@@ -38,6 +39,13 @@ export function BottomNav() {
   const [moreOpen, setMoreOpen] = useState(false);
 
   const isMoreActive = moreNavItems.some((item) => pathname === item.href);
+
+  function handleBottomNavClick(event: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (href !== "/dashboard" || pathname !== "/dashboard") return;
+
+    event.preventDefault();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   return (
     <>
@@ -113,6 +121,7 @@ export function BottomNav() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={(event) => handleBottomNavClick(event, item.href)}
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 transition-all duration-150",
                   isActive

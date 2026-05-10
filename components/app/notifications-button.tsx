@@ -5,12 +5,16 @@ import { usePathname } from "next/navigation";
 import {
   AlertTriangle,
   Bell,
+  BellOff,
   BellRing,
   Check,
   CheckCircle2,
   Loader2,
+  Radio,
   RefreshCw,
   Settings2,
+  ShieldCheck,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -99,6 +103,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
   const hasImportantUnread = notifications.some(
     (item) => !readIds.has(item.id) && (item.tone === "danger" || item.tone === "warning"),
   );
+  const activeRuleCount = Object.values(preferences.rules).filter(Boolean).length;
 
   const loadSummary = useCallback(async () => {
     setIsLoading(true);
@@ -252,14 +257,14 @@ export function NotificationsButton({ compact = false, className, panelClassName
             onClick={() => setOpen(false)}
             style={{ touchAction: "none" }}
           />
-          <div className={cn("v2-card absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(380px,calc(100vw-24px))] overflow-hidden rounded-[var(--v2-radius-lg)] shadow-2xl shadow-black/35", panelClassName)}>
+          <div className={cn("v2-card absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(420px,calc(100vw-24px))] overflow-hidden rounded-[var(--v2-radius-lg)] shadow-2xl shadow-black/35", panelClassName)}>
           <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
             <div>
               <p className="text-sm font-semibold">Centro financiero</p>
               <p className="text-xs text-muted-foreground">
                 {permission === "granted" && preferences.browserPush
-                  ? "Avisos del navegador activos"
-                  : "Alertas en la app"}
+                  ? `${activeRuleCount} reglas activas + navegador`
+                  : `${activeRuleCount} reglas activas en la app`}
               </p>
             </div>
             <div className="flex items-center gap-1">
@@ -345,58 +350,70 @@ export function NotificationsButton({ compact = false, className, panelClassName
               </div>
             </>
           ) : (
-            <div className="max-h-[360px] space-y-3 overflow-y-auto p-3">
+            <div className="max-h-[430px] space-y-3 overflow-y-auto p-3">
               <PushStatus
                 permission={permission}
                 browserPush={preferences.browserPush}
+                activeRuleCount={activeRuleCount}
                 onEnable={enableBrowserPush}
                 onDisable={disableBrowserPush}
               />
-              <RuleToggle
-                label="Disponible real negativo"
-                description="Avisar cuando reservas y obligaciones dejan saldo negativo."
-                checked={preferences.rules.realAvailable}
-                onChange={() => toggleRule("realAvailable")}
-              />
-              <RuleToggle
-                label="Gastos cerca del límite"
-                description={`Avisar cuando gastos superan ${preferences.expenseLimitPercent}% de ingresos.`}
-                checked={preferences.rules.expenseLimit}
-                onChange={() => toggleRule("expenseLimit")}
-              />
-              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-                <label className="text-xs font-semibold text-muted-foreground" htmlFor="expense-limit">
-                  Avisar cuando gastos superen
-                </label>
-                <input
-                  id="expense-limit"
-                  type="range"
-                  min="50"
-                  max="100"
-                  step="5"
-                  value={preferences.expenseLimitPercent}
-                  onChange={(event) => updateExpenseLimit(event.target.value)}
-                  className="mt-2 w-full accent-teal-300"
-                />
-              </div>
-              <RuleToggle
-                label="Obligaciones del mes"
-                description="Recurrentes, metas y pagos de deuda próximos."
-                checked={preferences.rules.obligations}
-                onChange={() => toggleRule("obligations")}
-              />
-              <RuleToggle
-                label="Presupuesto reservado"
-                description="Dinero separado para categorías pendientes."
-                checked={preferences.rules.budgetReserve}
-                onChange={() => toggleRule("budgetReserve")}
-              />
-              <RuleToggle
-                label="Deuda activa"
-                description="Avisar si hay deuda activa total registrada."
-                checked={preferences.rules.debt}
-                onChange={() => toggleRule("debt")}
-              />
+              <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">Señales que querés recibir</p>
+                    <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                      Elegí qué merece interrumpirte y qué puede esperar.
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-teal-300/20 bg-teal-300/10 px-2.5 py-1 text-[11px] font-semibold text-teal-100">
+                    {activeRuleCount}/5
+                  </span>
+                </div>
+
+                <div className="grid gap-2">
+                  <RuleToggle
+                    label="Disponible real negativo"
+                    description="Reservas y obligaciones dejan el mes sin margen."
+                    checked={preferences.rules.realAvailable}
+                    tone="danger"
+                    onChange={() => toggleRule("realAvailable")}
+                  />
+                  <RuleToggle
+                    label="Gastos cerca del límite"
+                    description={`Cuando superan ${preferences.expenseLimitPercent}% de ingresos.`}
+                    checked={preferences.rules.expenseLimit}
+                    tone="warning"
+                    onChange={() => toggleRule("expenseLimit")}
+                  />
+                  <ExpenseLimitSlider
+                    value={preferences.expenseLimitPercent}
+                    onChange={updateExpenseLimit}
+                    disabled={!preferences.rules.expenseLimit}
+                  />
+                  <RuleToggle
+                    label="Obligaciones del mes"
+                    description="Recurrentes, metas y deuda próximos."
+                    checked={preferences.rules.obligations}
+                    tone="warning"
+                    onChange={() => toggleRule("obligations")}
+                  />
+                  <RuleToggle
+                    label="Presupuesto reservado"
+                    description="Dinero separado para categorías pendientes."
+                    checked={preferences.rules.budgetReserve}
+                    tone="info"
+                    onChange={() => toggleRule("budgetReserve")}
+                  />
+                  <RuleToggle
+                    label="Deuda activa"
+                    description="Saldo total de compromisos todavía abiertos."
+                    checked={preferences.rules.debt}
+                    tone="neutral"
+                    onChange={() => toggleRule("debt")}
+                  />
+                </div>
+              </section>
             </div>
           )}
         </div>
@@ -476,51 +493,115 @@ function EmptyNotifications() {
 function PushStatus({
   permission,
   browserPush,
+  activeRuleCount,
   onEnable,
   onDisable,
 }: {
   permission: NotificationPermission | "unsupported";
   browserPush: boolean;
+  activeRuleCount: number;
   onEnable: () => void;
   onDisable: () => void;
 }) {
+  const isEnabled = permission === "granted" && browserPush;
+
   if (permission === "unsupported") {
     return (
-      <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-xs text-muted-foreground">
-        Este navegador no soporta notificaciones del sistema.
+      <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+        <div className="flex gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-zinc-300">
+            <BellOff className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold">Avisos no disponibles</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Este navegador no permite notificaciones del sistema. Las alertas quedan dentro de la app.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (permission === "denied") {
     return (
-      <div className="rounded-2xl border border-rose-500/25 bg-rose-500/10 p-3 text-xs leading-5 text-muted-foreground">
-        Las notificaciones están bloqueadas en el navegador. Activá el permiso desde la configuración
-        del sitio para recibir push.
+      <div className="rounded-2xl border border-rose-500/25 bg-rose-500/10 p-4">
+        <div className="flex gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-300/12 text-rose-100">
+            <BellOff className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-rose-100">Permiso bloqueado</p>
+            <p className="mt-1 text-xs leading-5 text-zinc-300">
+              Activá el permiso desde la configuración del sitio para recibir avisos del navegador.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-2 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-      <div>
-        <p className="text-sm font-semibold">
-          {permission === "granted" && browserPush ? "Avisos del navegador activos" : "Avisos del navegador"}
-        </p>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          Aparecen si la app está abierta en el navegador y surge una alerta nueva.
-        </p>
-      </div>
-      <div className="grid gap-2">
-        {permission === "granted" && browserPush ? (
-          <Button type="button" variant="outline" size="sm" onClick={onDisable}>
-            Pausar avisos
-          </Button>
-        ) : (
-          <Button type="button" size="sm" onClick={onEnable}>
-            Activar avisos
-          </Button>
-        )}
+    <div className={cn(
+      "overflow-hidden rounded-2xl border p-4",
+      isEnabled
+        ? "border-teal-300/20 bg-teal-300/[0.08]"
+        : "border-white/10 bg-white/[0.035]",
+    )}>
+      <div className="flex gap-3">
+        <div className={cn(
+          "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border",
+          isEnabled
+            ? "border-teal-300/20 bg-teal-300/10 text-teal-100"
+            : "border-white/10 bg-white/[0.06] text-zinc-300",
+        )}>
+          {isEnabled ? <Radio className="h-5 w-5" aria-hidden="true" /> : <BellRing className="h-5 w-5" aria-hidden="true" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold">
+                {isEnabled ? "Canal de avisos activo" : "Canal de avisos en pausa"}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {isEnabled
+                  ? `Te avisamos en el navegador cuando aparezca una señal crítica entre tus ${activeRuleCount} reglas.`
+                  : "Las señales quedan visibles en la app hasta que actives avisos del navegador."}
+              </p>
+            </div>
+            <span className={cn(
+              "shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase",
+              isEnabled ? "bg-teal-300/15 text-teal-100" : "bg-white/[0.07] text-zinc-400",
+            )}>
+              {isEnabled ? "Activo" : "Pausado"}
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-2xl border border-white/10 bg-black/10 p-2.5">
+              <p className="text-[10px] font-semibold uppercase text-zinc-500">Modo</p>
+              <p className="mt-1 truncate text-xs font-semibold text-zinc-100">
+                {isEnabled ? "Navegador + app" : "Solo app"}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/10 p-2.5">
+              <p className="text-[10px] font-semibold uppercase text-zinc-500">Reglas</p>
+              <p className="mt-1 text-xs font-semibold text-zinc-100">{activeRuleCount} activas</p>
+            </div>
+          </div>
+          <div className="mt-3">
+            {isEnabled ? (
+              <Button type="button" variant="outline" size="sm" className="w-full" onClick={onDisable}>
+                <BellOff className="h-4 w-4" aria-hidden="true" />
+                Pausar avisos del navegador
+              </Button>
+            ) : (
+              <Button type="button" size="sm" className="w-full" onClick={onEnable}>
+                <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                Activar avisos del navegador
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -530,26 +611,96 @@ function RuleToggle({
   label,
   description,
   checked,
+  tone,
   onChange,
 }: {
   label: string;
   description: string;
   checked: boolean;
+  tone: "danger" | "warning" | "info" | "neutral";
   onChange: () => void;
 }) {
+  const toneClass = {
+    danger: "bg-rose-300/12 text-rose-100",
+    warning: "bg-amber-300/12 text-amber-100",
+    info: "bg-sky-300/12 text-sky-100",
+    neutral: "bg-zinc-300/10 text-zinc-200",
+  }[tone];
+
   return (
-    <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+    <label className={cn(
+      "flex cursor-pointer items-center gap-3 rounded-2xl border p-3 transition",
+      checked
+        ? "border-white/14 bg-white/[0.06]"
+        : "border-white/8 bg-black/10 opacity-70 hover:opacity-100",
+    )}>
+      <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl", toneClass)}>
+        <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold">{label}</span>
+        <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{description}</span>
+      </span>
       <input
         type="checkbox"
         checked={checked}
         onChange={onChange}
-        className="mt-1 h-4 w-4 accent-teal-300"
+        className="sr-only"
       />
-      <span>
-        <span className="block text-sm font-semibold">{label}</span>
-        <span className="mt-1 block text-xs leading-5 text-muted-foreground">{description}</span>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "relative h-6 w-10 shrink-0 rounded-full border transition",
+          checked ? "border-teal-300/30 bg-teal-300/25" : "border-white/10 bg-white/[0.08]",
+        )}
+      >
+        <span className={cn(
+          "absolute top-1 h-4 w-4 rounded-full bg-white transition",
+          checked ? "left-5" : "left-1",
+        )} />
       </span>
     </label>
+  );
+}
+
+function ExpenseLimitSlider({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: number;
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className={cn(
+      "rounded-2xl border border-white/10 bg-black/10 p-3 transition",
+      disabled && "opacity-45",
+    )}>
+      <div className="flex items-center justify-between gap-3">
+        <label className="text-xs font-semibold text-muted-foreground" htmlFor="expense-limit">
+          Umbral de gasto
+        </label>
+        <span className="rounded-full border border-white/10 bg-white/[0.06] px-2 py-1 text-[11px] font-semibold text-zinc-100">
+          {value}%
+        </span>
+      </div>
+      <input
+        id="expense-limit"
+        type="range"
+        min="50"
+        max="100"
+        step="5"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-3 w-full accent-teal-300 disabled:cursor-not-allowed"
+      />
+      <div className="mt-1 flex justify-between text-[10px] font-medium text-zinc-600">
+        <span>50%</span>
+        <span>100%</span>
+      </div>
+    </div>
   );
 }
 
