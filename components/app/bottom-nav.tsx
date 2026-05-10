@@ -14,6 +14,7 @@ import {
   Landmark,
   Menu,
   RefreshCw,
+  ScanLine,
   Sparkles,
   TrendingUp,
   X,
@@ -28,6 +29,7 @@ const bottomNavItems = [
 ] as const;
 
 const moreNavItems = [
+  { href: "/smart-import", label: "Smart Import", icon: ScanLine },
   { href: "/accounts",   label: "Dinero",       icon: Landmark },
   { href: "/categories", label: "Lenguaje",     icon: FolderTree },
   { href: "/debts",      label: "Presión",      icon: CreditCard },
