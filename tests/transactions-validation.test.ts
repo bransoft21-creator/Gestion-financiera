@@ -37,6 +37,22 @@ describe("transaction validation", () => {
     assert.equal(adjustment.type, "ADJUSTMENT");
   });
 
+  it("treats blank optional transaction metadata as omitted", () => {
+    const parsed = createTransactionSchema.parse({
+      ...base,
+      type: "EXPENSE",
+      expenseType: null,
+      paymentMethod: "",
+      installmentNumber: null,
+      totalInstallments: "",
+    });
+
+    assert.equal(parsed.expenseType, undefined);
+    assert.equal(parsed.paymentMethod, undefined);
+    assert.equal(parsed.installmentNumber, undefined);
+    assert.equal(parsed.totalInstallments, undefined);
+  });
+
   it("keeps amount 0 invalid with a field-level issue", () => {
     const parsed = createTransactionSchema.safeParse({
       ...base,

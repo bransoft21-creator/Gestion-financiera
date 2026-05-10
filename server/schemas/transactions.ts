@@ -11,6 +11,15 @@ const transactionOriginValues = Object.values(TransactionOrigin) as [Transaction
 const paymentMethodValues = Object.values(PaymentMethod) as [PaymentMethod, ...PaymentMethod[]];
 const transactionDateSchema = z.preprocess(transactionDateFromInput, z.date());
 const filterDateSchema = z.preprocess(argentinaDayStartFromInput, z.date());
+const optionalEnumSchema = <T extends [string, ...string[]]>(values: T) =>
+  z.preprocess(
+    (value) => value === "" || value === null ? undefined : value,
+    z.enum(values).optional(),
+  );
+const optionalPositiveIntSchema = z.preprocess(
+  (value) => value === "" || value === null ? undefined : value,
+  z.coerce.number().int().positive().optional(),
+);
 
 const createTransactionBaseSchema = z.object({
   householdId: z.string().min(1),
@@ -27,12 +36,12 @@ const createTransactionBaseSchema = z.object({
   transferAmount: moneySchema().optional(),
   description: z.string().trim().max(160).optional(),
   notes: z.string().trim().max(1000).optional(),
-  expenseType: z.enum(expenseTypeValues).optional(),
+  expenseType: optionalEnumSchema(expenseTypeValues),
   origin: z.enum(transactionOriginValues).default(TransactionOrigin.MANUAL),
-  paymentMethod: z.enum(paymentMethodValues).optional(),
+  paymentMethod: optionalEnumSchema(paymentMethodValues),
   isInstallment: z.boolean().default(false),
-  installmentNumber: z.coerce.number().int().positive().optional(),
-  totalInstallments: z.coerce.number().int().positive().optional(),
+  installmentNumber: optionalPositiveIntSchema,
+  totalInstallments: optionalPositiveIntSchema,
   isRecurring: z.boolean().default(false),
   occurredAt: transactionDateSchema,
 });

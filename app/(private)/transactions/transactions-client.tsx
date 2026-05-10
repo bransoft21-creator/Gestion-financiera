@@ -157,6 +157,9 @@ const transactionOriginLabels: Record<TransactionOrigin, string> = {
   MERCADO_PAGO: "Mercado Pago",
 };
 
+const optionalEnumField = <T extends [string, ...string[]]>(values: T) =>
+  z.preprocess((value) => value === "" ? undefined : value, z.enum(values).optional());
+
 const formSchema = z.object({
   type: z.enum(transactionTypes as [TransactionType, ...TransactionType[]]),
   accountId: z.string().min(1, "Seleccioná una cuenta."),
@@ -167,8 +170,8 @@ const formSchema = z.object({
   occurredAt: z.string().min(1, "Seleccioná una fecha."),
   description: z.string().trim().min(2, "Agregá una descripción.").max(160),
   notes: z.string().trim().max(1000).optional(),
-  expenseType: z.enum(["FIXED", "VARIABLE", "EXTRAORDINARY"] as [ExpenseType, ...ExpenseType[]]).optional(),
-  paymentMethod: z.enum(["CASH", "DEBIT", "CREDIT", "TRANSFER"] as [PaymentMethod, ...PaymentMethod[]]).optional(),
+  expenseType: optionalEnumField(["FIXED", "VARIABLE", "EXTRAORDINARY"]),
+  paymentMethod: optionalEnumField(["CASH", "DEBIT", "CREDIT", "TRANSFER"]),
   isInstallment: z.boolean().default(false),
   installmentNumber: z.coerce.number().int().positive().optional(),
   totalInstallments: z.coerce.number().int().positive().optional(),
@@ -353,6 +356,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
       const type = data.type as TransactionType;
       const isNonBasicEdit = !!editingTransactionId && !isSupportedFormTransactionType(type);
+      const isEditing = Boolean(editingTransactionId);
 
       const isExpenseOrIncome = type === "EXPENSE" || type === "INCOME";
       const body = isNonBasicEdit
@@ -374,11 +378,19 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             occurredAt: data.occurredAt,
             description: data.description,
             notes: editingTransactionId ? ((data.notes as string) ?? "") : (data.notes as string) || undefined,
-            expenseType: type === "EXPENSE" ? ((data.expenseType as string) || null) : null,
-            paymentMethod: isExpenseOrIncome ? ((data.paymentMethod as string) || null) : null,
+            expenseType: type === "EXPENSE"
+              ? optionalPayloadValue(data.expenseType, isEditing)
+              : optionalPayloadValue(undefined, isEditing),
+            paymentMethod: isExpenseOrIncome
+              ? optionalPayloadValue(data.paymentMethod, isEditing)
+              : optionalPayloadValue(undefined, isEditing),
             isInstallment: isExpenseOrIncome ? Boolean(data.isInstallment) : false,
-            installmentNumber: isExpenseOrIncome && data.isInstallment ? (data.installmentNumber as number | undefined) : null,
-            totalInstallments: isExpenseOrIncome && data.isInstallment ? (data.totalInstallments as number | undefined) : null,
+            installmentNumber: isExpenseOrIncome && data.isInstallment
+              ? optionalPayloadValue(data.installmentNumber, isEditing)
+              : optionalPayloadValue(undefined, isEditing),
+            totalInstallments: isExpenseOrIncome && data.isInstallment
+              ? optionalPayloadValue(data.totalInstallments, isEditing)
+              : optionalPayloadValue(undefined, isEditing),
             isRecurring: isExpenseOrIncome ? Boolean(data.isRecurring) : false,
           };
 
@@ -1075,6 +1087,10 @@ function getPreferredArsBankAccount(accounts: AccountOption[]) {
     accounts.find((account) => account.currency === "ARS") ??
     accounts[0]
   );
+}
+
+function optionalPayloadValue(value: unknown, shouldClearWithNull: boolean) {
+  return value === "" || value == null ? (shouldClearWithNull ? null : undefined) : value;
 }
 
 function Field({
