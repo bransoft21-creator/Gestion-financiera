@@ -357,7 +357,6 @@ export function SmartImportClient({ householdId, accounts, categories }: Props) 
         accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
         className="sr-only"
         onChange={handleInputChange}
-        capture="environment"
       />
 
       <AnimatePresence mode="wait">
