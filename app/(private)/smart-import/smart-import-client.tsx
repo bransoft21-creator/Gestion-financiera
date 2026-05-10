@@ -1165,8 +1165,8 @@ function CandidateCard({
       variant={c.selected ? "default" : "quiet"}
       className={cn("transition-all duration-200", !c.selected && "opacity-50")}
     >
-      <PremiumCardContent className="p-4 sm:p-5">
-        <div className="flex items-start gap-3">
+      <PremiumCardContent className="p-4">
+        <div className="flex gap-3">
           {/* Checkbox */}
           <button
             type="button"
@@ -1182,8 +1182,8 @@ function CandidateCard({
             {c.selected && <CheckCircle2 className="h-3.5 w-3.5" />}
           </button>
 
-          <div className="min-w-0 flex-1 space-y-3">
-            {/* Badges row */}
+          <div className="min-w-0 flex-1 space-y-2.5">
+            {/* Badges */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span
                 className={cn(
@@ -1217,7 +1217,7 @@ function CandidateCard({
               )}
             </div>
 
-            {/* Description input */}
+            {/* Description — full width */}
             <input
               type="text"
               value={c.editDescription}
@@ -1227,31 +1227,31 @@ function CandidateCard({
               className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-teal-400/40 focus:bg-white/[0.07]"
             />
 
-            {/* Amount + date */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-zinc-600">
-                  {c.currency === "USD" ? "USD" : "$"}
-                </span>
-                <input
-                  type="number"
-                  value={c.editAmount}
-                  onChange={(e) => onPatch({ editAmount: e.target.value })}
-                  step="0.01"
-                  min="0.01"
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2 pl-10 pr-3 text-sm font-semibold tabular-nums text-white outline-none focus:border-teal-400/40 focus:bg-white/[0.07]"
-                />
-              </div>
+            {/* Amount — full width, prominent */}
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-500">
+                {c.currency === "USD" ? "USD" : "$"}
+              </span>
               <input
-                type="date"
-                value={c.editDate}
-                onChange={(e) => onPatch({ editDate: e.target.value })}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-teal-400/40 focus:bg-white/[0.07] [color-scheme:dark]"
+                type="number"
+                value={c.editAmount}
+                onChange={(e) => onPatch({ editAmount: e.target.value })}
+                step="0.01"
+                min="0.01"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-12 pr-3 text-base font-bold tabular-nums text-white outline-none focus:border-teal-400/40 focus:bg-white/[0.07]"
               />
             </div>
 
-            {/* Account + Category */}
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {/* Date — full width, no overflow */}
+            <input
+              type="date"
+              value={c.editDate}
+              onChange={(e) => onPatch({ editDate: e.target.value })}
+              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-teal-400/40 focus:bg-white/[0.07] [color-scheme:dark]"
+            />
+
+            {/* Account + Category — 2 cols, compact selects */}
+            <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <label className="text-[10px] font-semibold uppercase tracking-wide text-zinc-600">
                   Cuenta
@@ -1259,7 +1259,7 @@ function CandidateCard({
                 <select
                   value={c.editAccountId}
                   onChange={(e) => onPatch({ editAccountId: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-teal-400/40 [&>option]:bg-zinc-900"
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-xs text-white outline-none focus:border-teal-400/40 [&>option]:bg-zinc-900"
                 >
                   <option value="">Sin cuenta</option>
                   {accounts.map((a) => (
@@ -1276,7 +1276,7 @@ function CandidateCard({
                 <select
                   value={c.editCategoryId}
                   onChange={(e) => onPatch({ editCategoryId: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-teal-400/40 [&>option]:bg-zinc-900"
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-xs text-white outline-none focus:border-teal-400/40 [&>option]:bg-zinc-900"
                 >
                   <option value="">Sin categoría</option>
                   {expenseCategories.map((cat) => (
