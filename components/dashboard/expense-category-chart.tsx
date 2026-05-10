@@ -16,8 +16,12 @@ type ExpenseCategoryChartProps = {
 };
 
 export function ExpenseCategoryChart({ data, activeCategoryId, onSelectCategory }: ExpenseCategoryChartProps) {
+  const activeItem = data.find((item) => item.id === activeCategoryId) ?? data[0];
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  const activePercent = activeItem && total > 0 ? Math.round((activeItem.value / total) * 100) : 0;
+
   return (
-    <div className="h-[260px] w-full">
+    <div className="relative h-[260px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
@@ -39,14 +43,32 @@ export function ExpenseCategoryChart({ data, activeCategoryId, onSelectCategory 
                 key={entry.id}
                 fill={entry.color}
                 opacity={!activeCategoryId || activeCategoryId === entry.id ? 1 : 0.45}
-                stroke={activeCategoryId === entry.id ? "hsl(var(--foreground))" : "hsl(var(--background))"}
+                stroke={activeCategoryId === entry.id ? "hsl(var(--v2-text))" : "hsl(var(--v2-bg))"}
+                strokeWidth={activeCategoryId === entry.id ? 3 : 2}
                 style={{ cursor: onSelectCategory ? "pointer" : "default" }}
               />
             ))}
           </Pie>
-          <Tooltip formatter={(value, name) => [formatMoney(Number(value)), String(name)]} />
+          <Tooltip
+            formatter={(value, name) => [formatMoney(Number(value)), String(name)]}
+            contentStyle={{
+              background: "hsl(var(--v2-surface-raised))",
+              border: "1px solid hsl(var(--v2-border-strong))",
+              borderRadius: 16,
+              color: "hsl(var(--v2-text))",
+              boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
+            }}
+          />
         </PieChart>
       </ResponsiveContainer>
+      {activeItem ? (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="flex h-[104px] w-[104px] flex-col items-center justify-center rounded-full border border-white/10 bg-zinc-950/88 text-center shadow-[0_18px_55px_rgba(0,0,0,0.35)] backdrop-blur">
+            <span className="text-2xl font-semibold tabular-nums text-white">{activePercent}%</span>
+            <span className="mt-0.5 max-w-[76px] truncate text-[10px] font-medium text-zinc-500">{activeItem.name}</span>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

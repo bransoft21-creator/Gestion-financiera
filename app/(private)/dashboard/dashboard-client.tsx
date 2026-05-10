@@ -9,6 +9,7 @@ import {
   ArrowRightCircle,
   ArrowUpCircle,
   CreditCard,
+  ExternalLink,
   HelpCircle,
   Lightbulb,
   Loader2,
@@ -522,6 +523,198 @@ function MonthProjection({ metrics }: { metrics: DashboardSummary["metrics"] }) 
   );
 }
 
+function ExpenseCategoryExplorer({
+  expensesByCategory,
+  selectedExpenseCategory,
+  selectedExpenseCategoryId,
+  totalExpenses,
+  onSelectCategory,
+}: {
+  expensesByCategory: ExpenseCategoryChartItem[];
+  selectedExpenseCategory?: DashboardSummary["expenseCategoryDetails"][number];
+  selectedExpenseCategoryId: string | null;
+  totalExpenses: number;
+  onSelectCategory: (categoryId: string) => void;
+}) {
+  const selectedChartItem = expensesByCategory.find((item) => item.id === selectedExpenseCategoryId);
+
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader>
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="mb-2 inline-flex w-fit items-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/10 px-3 py-1 text-[11px] font-semibold text-teal-100">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              Mapa de consumo
+            </div>
+            <CardTitle>Gastos por categoría</CardTitle>
+            <CardDescription>Qué se llevó más dinero y qué movimientos explican cada parte.</CardDescription>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-zinc-950/70 px-3 py-2 text-right">
+            <p className="text-[10px] font-semibold uppercase text-zinc-500">Total leído</p>
+            <p className="mt-0.5 text-sm font-semibold tabular-nums text-white">{formatMoney(totalExpenses)}</p>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {expensesByCategory.length === 0 ? (
+          <EmptyState
+            icon={ReceiptText}
+            title="Sin gastos este mes"
+            description="Los gastos agrupados aparecerán al registrar transacciones."
+          />
+        ) : (
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.78fr)] xl:items-start">
+            <div className="min-w-0 space-y-4">
+              <div className="rounded-[26px] border border-white/[0.12] bg-zinc-950/70 p-4 shadow-inner shadow-black/20">
+                <ExpenseCategoryChart
+                  data={expensesByCategory}
+                  activeCategoryId={selectedExpenseCategoryId ?? undefined}
+                  onSelectCategory={onSelectCategory}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                {expensesByCategory.map((item) => (
+                  <div key={item.id} className="space-y-2">
+                    <ExpenseCategoryOption
+                      item={item}
+                      totalExpenses={totalExpenses}
+                      isActive={selectedExpenseCategoryId === item.id}
+                      onClick={() => onSelectCategory(item.id)}
+                    />
+                    {selectedExpenseCategoryId === item.id && selectedExpenseCategory ? (
+                      <div className="xl:hidden">
+                        <ExpenseCategoryDetailPanel
+                          category={selectedExpenseCategory}
+                          color={selectedChartItem?.color}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="hidden xl:block">
+              {selectedExpenseCategory ? (
+                <ExpenseCategoryDetailPanel
+                  category={selectedExpenseCategory}
+                  color={selectedChartItem?.color}
+                  elevated
+                />
+              ) : null}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ExpenseCategoryOption({
+  item,
+  totalExpenses,
+  isActive,
+  onClick,
+}: {
+  item: ExpenseCategoryChartItem;
+  totalExpenses: number;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const percentage = totalExpenses > 0 ? Math.round((item.value / totalExpenses) * 100) : 0;
+
+  return (
+    <button
+      type="button"
+      className={`group w-full rounded-2xl border p-3 text-left transition ${
+        isActive
+          ? "border-teal-300/25 bg-teal-300/[0.08] shadow-[0_18px_55px_rgba(45,212,191,0.08)]"
+          : "border-white/10 bg-zinc-950/55 hover:border-white/20 hover:bg-zinc-900/75"
+      }`}
+      onClick={onClick}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="flex min-w-0 items-center gap-3">
+          <span
+            className="h-10 w-1.5 shrink-0 rounded-full shadow-[0_0_24px_currentColor]"
+            style={{ backgroundColor: item.color, color: item.color }}
+          />
+          <span className="min-w-0">
+            <span className={`block truncate text-sm font-semibold ${isActive ? "text-white" : "text-zinc-200"}`}>
+              {item.name}
+            </span>
+            <span className="mt-1 block text-xs text-zinc-500">{percentage}% del gasto del mes</span>
+          </span>
+        </span>
+        <span className="shrink-0 text-right">
+          <span className="block text-sm font-semibold tabular-nums text-white">{formatMoney(item.value)}</span>
+          <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${isActive ? "bg-teal-300/15 text-teal-100" : "bg-white/[0.06] text-zinc-500"}`}>
+            Ver detalle
+          </span>
+        </span>
+      </div>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${percentage}%`, backgroundColor: item.color }}
+        />
+      </div>
+    </button>
+  );
+}
+
+function ExpenseCategoryDetailPanel({
+  category,
+  color,
+  elevated = false,
+}: {
+  category: DashboardSummary["expenseCategoryDetails"][number];
+  color?: string;
+  elevated?: boolean;
+}) {
+  return (
+    <div className={`rounded-[26px] border border-white/[0.14] bg-zinc-950 p-4 ${elevated ? "shadow-[0_24px_80px_rgba(0,0,0,0.42)]" : ""}`}>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="mb-2 flex items-center gap-2">
+            <span
+              className="h-3 w-3 shrink-0 rounded-full"
+              style={{ backgroundColor: color ?? "hsl(var(--v2-brand))" }}
+            />
+            <p className="text-[11px] font-semibold uppercase text-zinc-500">Movimientos de categoría</p>
+          </div>
+          <h3 className="truncate text-lg font-semibold text-white">{category.name}</h3>
+          <p className="mt-1 text-xs text-zinc-500">
+            {category.items.length} movimiento{category.items.length !== 1 ? "s" : ""} explican este total.
+          </p>
+        </div>
+        <p className="shrink-0 text-right text-base font-semibold tabular-nums text-white">{formatMoney(category.total)}</p>
+      </div>
+
+      <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
+        {category.items.map((item) => (
+          <Link
+            key={item.id}
+            href={`/transactions?categoryId=${category.id}`}
+            className="group flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-zinc-900 px-3 py-2.5 transition hover:border-white/20 hover:bg-zinc-800"
+          >
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium text-zinc-100">{item.description ?? "Sin descripción"}</span>
+              <span className="mt-0.5 block truncate text-[11px] text-zinc-500">{item.account.name} · {formatDate(item.occurredAt)}</span>
+            </span>
+            <span className="flex shrink-0 items-center gap-2">
+              <span className="text-xs font-semibold tabular-nums text-rose-300">-{formatMoney(item.amount, item.currency as "ARS" | "USD")}</span>
+              <ExternalLink className="h-3.5 w-3.5 text-zinc-600 transition group-hover:text-zinc-300" aria-hidden="true" />
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ── Recent transactions ─────────────────────────────────────────────────── */
 
 function RecentTransactions({ transactions }: { transactions: DashboardSummary["latestTransactions"] }) {
@@ -753,76 +946,13 @@ export function DashboardClient() {
 
       {/* Charts row */}
       <section className="mb-6 grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-        {/* Expense donut */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Gastos por categoría</CardTitle>
-            <CardDescription>Suma real de gastos del mes.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {expensesByCategory.length === 0 ? (
-              <EmptyState icon={ReceiptText} title="Sin gastos este mes"
-                description="Los gastos agrupados aparecerán al registrar transacciones." />
-            ) : (
-              <>
-                <div className="grid gap-4 md:grid-cols-[1fr_220px] md:items-center">
-                  <ExpenseCategoryChart
-                    data={expensesByCategory}
-                    activeCategoryId={selectedExpenseCategoryId ?? undefined}
-                    onSelectCategory={setSelectedExpenseCategoryPreference}
-                  />
-                  <div className="space-y-2">
-                    {expensesByCategory.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className={`flex w-full items-center justify-between gap-2 rounded-2xl px-2 py-1.5 text-left text-sm transition hover:bg-white/[0.06] ${selectedExpenseCategoryId === item.id ? "bg-white/[0.08]" : ""}`}
-                        onClick={() => setSelectedExpenseCategoryPreference(item.id)}
-                      >
-                        <span className="flex min-w-0 items-center gap-2">
-                          <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: item.color }} />
-                          <span className="truncate text-muted-foreground">{item.name}</span>
-                        </span>
-                        <span className="shrink-0 text-right">
-                          <span className="block font-semibold tabular-nums">{formatMoney(item.value)}</span>
-                          <span className="block text-[10px] text-muted-foreground">
-                            {metrics.expenses > 0 ? Math.round((item.value / metrics.expenses) * 100) : 0}%
-                          </span>
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {selectedExpenseCategory ? (
-                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-3">
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold">{selectedExpenseCategory.name}</p>
-                        <p className="text-xs text-muted-foreground">{selectedExpenseCategory.items.length} movimiento{selectedExpenseCategory.items.length !== 1 ? "s" : ""}</p>
-                      </div>
-                      <p className="shrink-0 text-sm font-bold tabular-nums">{formatMoney(selectedExpenseCategory.total)}</p>
-                    </div>
-                    <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
-                      {selectedExpenseCategory.items.map((item) => (
-                        <Link
-                          key={item.id}
-                          href={`/transactions?categoryId=${selectedExpenseCategory.id}`}
-                          className="flex items-center justify-between gap-3 rounded-2xl px-2 py-1.5 transition hover:bg-white/[0.06]"
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate text-xs font-medium">{item.description ?? "Sin descripción"}</span>
-                            <span className="block truncate text-[11px] text-muted-foreground">{item.account.name} · {formatDate(item.occurredAt)}</span>
-                          </span>
-                          <span className="shrink-0 text-xs font-semibold tabular-nums text-rose-400">-{formatMoney(item.amount, item.currency as "ARS" | "USD")}</span>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <ExpenseCategoryExplorer
+          expensesByCategory={expensesByCategory}
+          selectedExpenseCategory={selectedExpenseCategory}
+          selectedExpenseCategoryId={selectedExpenseCategoryId}
+          totalExpenses={metrics.expenses}
+          onSelectCategory={setSelectedExpenseCategoryPreference}
+        />
 
         {/* Signals + financial summary */}
         <div className="flex flex-col gap-5">
