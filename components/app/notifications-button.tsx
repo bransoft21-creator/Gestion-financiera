@@ -326,7 +326,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
 
           {tab === "alerts" ? (
             <>
-            <div className="max-h-[360px] space-y-2 overflow-y-auto bg-zinc-950 p-3">
+            <div className={cn("space-y-2 bg-zinc-950 p-3", !embedded && "max-h-[360px] overflow-y-auto")}>
                 {notifications.length === 1 && notifications[0].id === "all-good" ? (
                   <EmptyNotifications />
                 ) : (
@@ -361,7 +361,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
               </div>
             </>
           ) : (
-            <div className="max-h-[430px] space-y-3 overflow-y-auto bg-zinc-950 p-3">
+            <div className={cn("space-y-3 bg-zinc-950 p-3", !embedded && "max-h-[430px] overflow-y-auto")}>
               <PushStatus
                 permission={permission}
                 browserPush={preferences.browserPush}
