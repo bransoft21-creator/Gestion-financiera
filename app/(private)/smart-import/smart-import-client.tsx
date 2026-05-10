@@ -792,7 +792,7 @@ function ReviewView({
   const allSelected = candidates.length > 0 && selectedCount === candidates.length;
 
   return (
-    <div className="space-y-4 pb-28 sm:pb-6">
+    <div className="space-y-4 pb-[220px] sm:pb-6">
       {/* Global warnings */}
       {metadata.warnings.length > 0 && (
         <div className="rounded-2xl border border-amber-400/20 bg-amber-400/[0.07] p-4">
@@ -867,7 +867,7 @@ function ReviewView({
       </div>
 
       {/* Mobile sticky bottom bar */}
-      <div className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-20 px-4 sm:hidden">
+      <div className="fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 px-4 sm:hidden">
         <div
           className="rounded-2xl border border-white/10 p-3 shadow-2xl"
           style={{
