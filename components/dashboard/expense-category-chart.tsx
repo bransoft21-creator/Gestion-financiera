@@ -16,7 +16,7 @@ type ExpenseCategoryChartProps = {
 };
 
 export function ExpenseCategoryChart({ data, activeCategoryId, onSelectCategory }: ExpenseCategoryChartProps) {
-  const activeItem = data.find((item) => item.id === activeCategoryId) ?? data[0];
+  const activeItem = data.find((item) => item.id === activeCategoryId);
   const total = data.reduce((sum, item) => sum + item.value, 0);
   const activePercent = activeItem && total > 0 ? Math.round((activeItem.value / total) * 100) : 0;
 
@@ -61,14 +61,14 @@ export function ExpenseCategoryChart({ data, activeCategoryId, onSelectCategory 
           />
         </PieChart>
       </ResponsiveContainer>
-      {activeItem ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="flex h-[104px] w-[104px] flex-col items-center justify-center rounded-full border border-white/10 bg-zinc-950/88 text-center shadow-[0_18px_55px_rgba(0,0,0,0.35)] backdrop-blur">
-            <span className="text-2xl font-semibold tabular-nums text-white">{activePercent}%</span>
-            <span className="mt-0.5 max-w-[76px] truncate text-[10px] font-medium text-zinc-500">{activeItem.name}</span>
-          </div>
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="flex h-[104px] w-[104px] flex-col items-center justify-center rounded-full border border-white/10 bg-zinc-950/88 text-center shadow-[0_18px_55px_rgba(0,0,0,0.35)] backdrop-blur">
+          <span className={`${activeItem ? "text-2xl" : "max-w-[86px] truncate text-sm"} font-semibold tabular-nums text-white`}>
+            {activeItem ? `${activePercent}%` : formatMoney(total)}
+          </span>
+          <span className="mt-0.5 max-w-[76px] truncate text-[10px] font-medium text-zinc-500">{activeItem?.name ?? "Total"}</span>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }

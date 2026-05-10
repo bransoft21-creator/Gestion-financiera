@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Bell,
   CircleDollarSign,
   CreditCard,
   FolderTree,
@@ -19,6 +20,7 @@ export const navItems = [
   { href: "/goals",         label: "Futuro",         icon: Sparkles },
   { href: "/debts",         label: "Presión",        icon: CreditCard },
   { href: "/recurring",     label: "Compromisos",    icon: RefreshCw },
+  { href: "/notifications", label: "Avisos",         icon: Bell },
   { href: "/reports",       label: "Patrones",       icon: TrendingUp },
 ] as const;
 

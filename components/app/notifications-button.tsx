@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   AlertTriangle,
@@ -56,6 +57,7 @@ type NotificationsButtonProps = {
   compact?: boolean;
   className?: string;
   panelClassName?: string;
+  embedded?: boolean;
 };
 
 const READ_STORAGE_KEY = "financial-os-read-notifications";
@@ -82,7 +84,7 @@ function formatMoney(value: number) {
   }).format(value);
 }
 
-export function NotificationsButton({ compact = false, className, panelClassName }: NotificationsButtonProps) {
+export function NotificationsButton({ compact = false, className, panelClassName, embedded = false }: NotificationsButtonProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const [tab, setTab] = useState<"alerts" | "settings">("alerts");
@@ -212,10 +214,13 @@ export function NotificationsButton({ compact = false, className, panelClassName
     updatePreferences({ ...preferences, browserPush: false });
   }
 
+  const showPanel = embedded || open;
+
   return (
-    <div className="relative">
+    <div className={embedded ? "w-full" : "relative"}>
+      {!embedded ? (
       <Button
-        type="button"
+        asChild
         variant={compact ? "ghost" : "secondary"}
         size={compact ? "icon" : "sm"}
         className={cn(
@@ -224,40 +229,46 @@ export function NotificationsButton({ compact = false, className, panelClassName
           !compact && "rounded-full bg-secondary/70 px-3 text-muted-foreground hover:text-foreground",
           className,
         )}
-        onClick={() => setOpen((value) => !value)}
         aria-label="Notificaciones"
-        aria-expanded={open}
         title="Notificaciones"
       >
-        {hasImportantUnread ? (
-          <BellRing className="h-4 w-4 text-amber-400" aria-hidden="true" />
-        ) : (
-          <Bell className="h-4 w-4" aria-hidden="true" />
-        )}
-        {compact ? null : "Notificaciones"}
-        {unreadCount > 0 ? (
-          <span
-            className={cn(
-              "rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-black",
-              compact && "absolute -right-0.5 -top-0.5 min-w-4 px-1",
-              !compact && "ml-[-4px]",
-            )}
-          >
-            {unreadCount}
-          </span>
-        ) : null}
+        <Link href="/notifications">
+          {hasImportantUnread ? (
+            <BellRing className="h-4 w-4 text-amber-400" aria-hidden="true" />
+          ) : (
+            <Bell className="h-4 w-4" aria-hidden="true" />
+          )}
+          {compact ? null : "Avisos"}
+          {unreadCount > 0 ? (
+            <span
+              className={cn(
+                "rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-black",
+                compact && "absolute -right-0.5 -top-0.5 min-w-4 px-1",
+                !compact && "ml-[-4px]",
+              )}
+            >
+              {unreadCount}
+            </span>
+          ) : null}
+        </Link>
       </Button>
+      ) : null}
 
-      {open ? (
+      {showPanel ? (
         <>
           {/* Backdrop mobile: cierra al tocar fuera, bloquea scroll sin tocar body */}
-          <div
+          {!embedded ? <div
             className="fixed inset-0 z-[69] lg:hidden"
             aria-hidden="true"
             onClick={() => setOpen(false)}
             style={{ touchAction: "none" }}
-          />
-          <div className={cn("absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(420px,calc(100vw-24px))] overflow-hidden rounded-[var(--v2-radius-lg)] border border-white/[0.14] bg-zinc-950 shadow-2xl shadow-black/60", panelClassName)}>
+          /> : null}
+          <div className={cn(
+            embedded
+              ? "w-full overflow-hidden rounded-[var(--v2-radius-lg)] border border-white/[0.14] bg-zinc-950 shadow-2xl shadow-black/40"
+              : "absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(420px,calc(100vw-24px))] overflow-hidden rounded-[var(--v2-radius-lg)] border border-white/[0.14] bg-zinc-950 shadow-2xl shadow-black/60",
+            panelClassName,
+          )}>
           <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-950 px-4 py-3">
             <div>
               <p className="text-sm font-semibold">Centro financiero</p>

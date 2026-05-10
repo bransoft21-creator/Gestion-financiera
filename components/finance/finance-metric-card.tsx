@@ -24,6 +24,14 @@ const toneConfig = {
   info: "bg-sky-300/12 text-sky-100",
 } as const;
 
+const toneShellConfig = {
+  neutral: "bg-white/[0.035]",
+  positive: "border-emerald-300/16 bg-emerald-300/[0.045]",
+  warning: "border-amber-300/16 bg-amber-300/[0.045]",
+  danger: "border-rose-300/16 bg-rose-300/[0.045]",
+  info: "border-sky-300/16 bg-sky-300/[0.045]",
+} as const;
+
 export function FinanceMetricCard({
   label,
   value,
@@ -37,7 +45,7 @@ export function FinanceMetricCard({
   const TrendIcon = trend === "down" ? ArrowDownRight : ArrowUpRight;
 
   return (
-    <PremiumCard interactive className={cn("p-4 sm:p-5", className)}>
+    <PremiumCard interactive className={cn("p-4 sm:p-5", toneShellConfig[tone], className)}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="truncate text-xs font-semibold uppercase text-zinc-500">{label}</p>

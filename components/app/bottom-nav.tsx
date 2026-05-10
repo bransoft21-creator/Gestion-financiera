@@ -6,6 +6,7 @@ import type { MouseEvent } from "react";
 import { useState } from "react";
 import {
   BarChart3,
+  Bell,
   CircleDollarSign,
   CreditCard,
   FolderTree,
@@ -31,6 +32,7 @@ const moreNavItems = [
   { href: "/categories", label: "Lenguaje",     icon: FolderTree },
   { href: "/debts",      label: "Presión",      icon: CreditCard },
   { href: "/recurring",  label: "Compromisos",  icon: RefreshCw },
+  { href: "/notifications", label: "Avisos",    icon: Bell },
   { href: "/reports",    label: "Patrones",     icon: TrendingUp },
 ] as const;
 

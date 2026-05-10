@@ -51,6 +51,11 @@ type DashboardSummary = {
     savingsRate: number;
     spendingRate: number;
     totalOutstandingDebt: number;
+    accountBalances: Array<{
+      currency: "ARS" | "USD" | string;
+      amount: number;
+      accountCount: number;
+    }>;
     expensesByType: {
       fixed: number;
       variable: number;
@@ -564,7 +569,7 @@ function ExpenseCategoryExplorer({
             description="Los gastos agrupados aparecerán al registrar transacciones."
           />
         ) : (
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.78fr)] xl:items-start">
+          <div className="mx-auto grid w-full max-w-[940px] gap-5 xl:max-w-none xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.78fr)] xl:items-start">
             <div className="min-w-0 space-y-4">
               <div className="rounded-[26px] border border-white/[0.12] bg-zinc-950/70 p-4 shadow-inner shadow-black/20">
                 <ExpenseCategoryChart
@@ -651,7 +656,7 @@ function ExpenseCategoryOption({
         <span className="shrink-0 text-right">
           <span className="block text-sm font-semibold tabular-nums text-white">{formatMoney(item.value)}</span>
           <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${isActive ? "bg-teal-300/15 text-teal-100" : "bg-white/[0.06] text-zinc-500"}`}>
-            Ver detalle
+            {isActive ? "Cerrar" : "Ver detalle"}
           </span>
         </span>
       </div>
@@ -875,9 +880,14 @@ export function DashboardClient() {
   const selectedExpenseCategoryId = selectedExpenseCategoryPreference
     && expensesByCategory.some((category) => category.id === selectedExpenseCategoryPreference)
     ? selectedExpenseCategoryPreference
-    : expensesByCategory[0]?.id ?? null;
+    : null;
   const selectedExpenseCategory = expenseCategoryDetails.find((category) => category.id === selectedExpenseCategoryId)
-    ?? expenseCategoryDetails[0];
+    ?? undefined;
+  const usdBalance = metrics.accountBalances.find((balance) => balance.currency === "USD");
+
+  function handleExpenseCategorySelect(categoryId: string) {
+    setSelectedExpenseCategoryPreference((current) => current === categoryId ? null : categoryId);
+  }
 
   return (
     <div className="fade-in">
@@ -886,7 +896,7 @@ export function DashboardClient() {
       {/* Hero card */}
       <HeroCard metrics={metrics} year={year} month={month} />
 
-      <section className="mb-6 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="mx-auto mb-6 grid w-full gap-3.5 sm:grid-cols-2 xl:grid-cols-5">
         <Link href="/transactions?type=INCOME" className="block min-w-0">
           <FinanceMetricCard
             label="Entró"
@@ -929,12 +939,22 @@ export function DashboardClient() {
             trendLabel={metrics.upcomingObligations === 0 ? "Sin presión pendiente" : "Todavía impactan el cierre"}
           />
         </Link>
+        <Link href="/accounts" className="block min-w-0 sm:col-span-2 xl:col-span-1">
+          <FinanceMetricCard
+            label="Dólares"
+            value={formatMoney(usdBalance?.amount ?? 0, "USD")}
+            detail={`${usdBalance?.accountCount ?? 0} cuenta${(usdBalance?.accountCount ?? 0) !== 1 ? "s" : ""} en USD`}
+            icon={Wallet}
+            tone="info"
+            trendLabel="Saldo separado por moneda"
+          />
+        </Link>
       </section>
 
       <FinancialAiAnalysisCard month={selectedMonth} />
 
       {/* Expense type breakdown + projection */}
-      <section className="mb-6 grid gap-5 lg:grid-cols-2">
+      <section className="mx-auto mb-6 grid w-full gap-5 lg:grid-cols-2">
         <ExpenseTypeBreakdown
           expensesByType={metrics.expensesByType}
           total={metrics.expenses}
@@ -945,13 +965,13 @@ export function DashboardClient() {
       </section>
 
       {/* Charts row */}
-      <section className="mb-6 grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+      <section className="mx-auto mb-6 grid w-full gap-5 lg:grid-cols-[1.2fr_0.8fr]">
         <ExpenseCategoryExplorer
           expensesByCategory={expensesByCategory}
           selectedExpenseCategory={selectedExpenseCategory}
           selectedExpenseCategoryId={selectedExpenseCategoryId}
           totalExpenses={metrics.expenses}
-          onSelectCategory={setSelectedExpenseCategoryPreference}
+          onSelectCategory={handleExpenseCategorySelect}
         />
 
         {/* Signals + financial summary */}

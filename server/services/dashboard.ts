@@ -48,6 +48,7 @@ export async function getDashboardSummary(
     recurringExpenses,
     activeGoals,
     upcomingDebts,
+    accounts,
   ] = await Promise.all([
     prisma.transaction.findMany({
       where: {
@@ -106,6 +107,10 @@ export async function getDashboardSummary(
       },
       select: { minimumPayment: true, outstandingAmount: true },
     }),
+    prisma.account.findMany({
+      where: { householdId, deletedAt: null, isArchived: false },
+      select: { currency: true, currentBalance: true },
+    }),
   ]);
 
   const income = sumTransactionsByType(monthTransactions, TransactionType.INCOME);
@@ -157,6 +162,7 @@ export async function getDashboardSummary(
         projectedBalance: Math.round(projectedBalance),
         projectedRealAvailable: Math.round(projectedBalance - health.upcomingObligations),
       },
+      accountBalances: getAccountBalancesByCurrency(accounts),
     },
     expensesByCategory,
     expenseCategoryDetails,
@@ -212,6 +218,20 @@ function getExpensesByType(transactions: DashboardTransaction[]) {
     },
     { fixed: 0, variable: 0, extraordinary: 0, unclassified: 0 },
   );
+}
+
+function getAccountBalancesByCurrency(
+  accounts: Array<{ currency: string; currentBalance: Prisma.Decimal | number }>,
+) {
+  const totals = accounts.reduce((acc, account) => {
+    const current = acc.get(account.currency) ?? { currency: account.currency, amount: 0, accountCount: 0 };
+    current.amount += toFiniteNumber(account.currentBalance);
+    current.accountCount += 1;
+    acc.set(account.currency, current);
+    return acc;
+  }, new Map<string, { currency: string; amount: number; accountCount: number }>());
+
+  return Array.from(totals.values()).sort((a, b) => a.currency.localeCompare(b.currency));
 }
 
 function getExpenseTotalsByCategoryId(transactions: DashboardTransaction[]) {
