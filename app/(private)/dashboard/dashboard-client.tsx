@@ -8,6 +8,7 @@ import {
   ArrowLeftCircle,
   ArrowRightCircle,
   ArrowUpCircle,
+  ChevronLeft,
   CreditCard,
   ExternalLink,
   HelpCircle,
@@ -579,24 +580,39 @@ function ExpenseCategoryExplorer({
                 />
               </div>
 
-              <div className="grid gap-2">
-                {expensesByCategory.map((item) => (
-                  <div key={item.id} className="space-y-2">
-                    <ExpenseCategoryOption
-                      item={item}
-                      totalExpenses={totalExpenses}
-                      isActive={selectedExpenseCategoryId === item.id}
-                      onClick={() => onSelectCategory(item.id)}
-                    />
-                    {selectedExpenseCategoryId === item.id && selectedExpenseCategory ? (
-                      <div className="xl:hidden">
-                        <ExpenseCategoryDetailPanel
-                          category={selectedExpenseCategory}
-                          color={selectedChartItem?.color}
-                        />
-                      </div>
-                    ) : null}
+              {/* Mobile: swap entre lista y detalle para no crecer el panel */}
+              <div className="xl:hidden">
+                {selectedExpenseCategoryId && selectedExpenseCategory ? (
+                  <ExpenseCategoryDetailPanel
+                    category={selectedExpenseCategory}
+                    color={selectedChartItem?.color}
+                    onClose={() => onSelectCategory(selectedExpenseCategoryId)}
+                  />
+                ) : (
+                  <div className="grid gap-2">
+                    {expensesByCategory.map((item) => (
+                      <ExpenseCategoryOption
+                        key={item.id}
+                        item={item}
+                        totalExpenses={totalExpenses}
+                        isActive={false}
+                        onClick={() => onSelectCategory(item.id)}
+                      />
+                    ))}
                   </div>
+                )}
+              </div>
+
+              {/* Desktop: siempre muestra la lista */}
+              <div className="hidden xl:grid xl:gap-2">
+                {expensesByCategory.map((item) => (
+                  <ExpenseCategoryOption
+                    key={item.id}
+                    item={item}
+                    totalExpenses={totalExpenses}
+                    isActive={selectedExpenseCategoryId === item.id}
+                    onClick={() => onSelectCategory(item.id)}
+                  />
                 ))}
               </div>
             </div>
@@ -674,16 +690,28 @@ function ExpenseCategoryDetailPanel({
   category,
   color,
   elevated = false,
+  onClose,
 }: {
   category: DashboardSummary["expenseCategoryDetails"][number];
   color?: string;
   elevated?: boolean;
+  onClose?: () => void;
 }) {
   return (
     <div className={`rounded-[26px] border border-white/[0.14] bg-zinc-950 p-4 ${elevated ? "shadow-[0_24px_80px_rgba(0,0,0,0.42)]" : ""}`}>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="mb-2 flex items-center gap-2">
+            {onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="mr-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-zinc-400 transition hover:bg-white/[0.14] hover:text-white"
+                aria-label="Volver a categorías"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            ) : null}
             <span
               className="h-3 w-3 shrink-0 rounded-full"
               style={{ backgroundColor: color ?? "hsl(var(--v2-brand))" }}
