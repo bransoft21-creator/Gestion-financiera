@@ -543,8 +543,15 @@ function ExpenseCategoryExplorer({
   onSelectCategory: (categoryId: string) => void;
 }) {
   const selectedChartItem = expensesByCategory.find((item) => item.id === selectedExpenseCategoryId);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!selectedExpenseCategoryId) return;
+    cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedExpenseCategoryId]);
 
   return (
+    <div ref={cardRef} className="scroll-mt-4">
     <Card className="overflow-hidden">
       <CardHeader>
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -630,6 +637,7 @@ function ExpenseCategoryExplorer({
         )}
       </CardContent>
     </Card>
+    </div>
   );
 }
 
