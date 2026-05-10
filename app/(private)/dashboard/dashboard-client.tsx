@@ -155,10 +155,12 @@ function HeroCard({
   metrics,
   year,
   month,
+  usdBalance,
 }: {
   metrics: DashboardSummary["metrics"];
   year: number;
   month: number;
+  usdBalance?: { amount: number; accountCount: number };
 }) {
   const animated = useCountUp(metrics.realAvailable);
   const isPositive = metrics.realAvailable >= 0;
@@ -236,6 +238,17 @@ function HeroCard({
               {formatMoney(metrics.projection.projectedRealAvailable)}
             </p>
           </div>
+          {usdBalance && usdBalance.accountCount > 0 ? (
+            <div className="col-span-2 rounded-2xl border border-sky-300/16 bg-sky-300/[0.045] p-4 lg:col-span-1">
+              <p className="text-[11px] font-semibold uppercase text-zinc-500">Dólares</p>
+              <p className="mt-1 text-sm font-semibold tabular-nums text-sky-100">
+                {formatMoney(usdBalance.amount, "USD")}
+              </p>
+              <p className="mt-0.5 text-[10px] text-zinc-500">
+                {usdBalance.accountCount} cuenta{usdBalance.accountCount !== 1 ? "s" : ""} en USD
+              </p>
+            </div>
+          ) : null}
         </div>
       </div>
     </PremiumCard>
@@ -930,7 +943,7 @@ export function DashboardClient() {
       {monthNav}
 
       {/* Hero card */}
-      <HeroCard metrics={metrics} year={year} month={month} />
+      <HeroCard metrics={metrics} year={year} month={month} usdBalance={usdBalance} />
 
       <section className="mx-auto mb-6 grid w-full gap-3.5 sm:grid-cols-2 xl:grid-cols-5">
         <Link href="/transactions?type=INCOME" className="block min-w-0">
