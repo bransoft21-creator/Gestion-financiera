@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
+  type LucideIcon,
   AlertTriangle,
   ArrowDownCircle,
   ArrowLeftCircle,
@@ -24,10 +25,10 @@ import {
   Wallet,
   Zap,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/app/empty-state";
 import { Button } from "@/components/ui/button";
 import { FinancialAiAnalysisCard } from "@/components/dashboard/financial-ai-analysis-card";
-import { FinanceMetricCard } from "@/components/finance/finance-metric-card";
 import {
   PremiumCard,
   PremiumCardContent,
@@ -200,8 +201,8 @@ function DashboardSkeleton() {
         </div>
       </div>
       {/* Metric cards */}
-      <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="v2-card rounded-[var(--v2-radius-lg)] p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 space-y-2.5">
@@ -350,6 +351,254 @@ function FormulaPill({
       <span className="max-w-[8rem] truncate text-[13px] font-semibold tabular-nums" style={{ color }}>{formatMoney(value)}</span>
     </Link>
   );
+}
+
+/* ── Financial Insight Cards ─────────────────────────────────────────────── */
+
+type InsightCardTone = "positive" | "warning" | "danger" | "neutral" | "info";
+type InsightSignalTone = "positive" | "warning" | "neutral";
+
+const insightCardShellConfig: Record<InsightCardTone, string> = {
+  positive: "border-emerald-300/16 bg-emerald-300/[0.045]",
+  warning:  "border-amber-300/16 bg-amber-300/[0.045]",
+  danger:   "border-rose-300/16 bg-rose-300/[0.045]",
+  neutral:  "",
+  info:     "border-sky-300/16 bg-sky-300/[0.045]",
+};
+
+const insightCardIconConfig: Record<InsightCardTone, string> = {
+  positive: "bg-emerald-300/12 text-emerald-100",
+  warning:  "bg-amber-300/12 text-amber-100",
+  danger:   "bg-rose-300/12 text-rose-100",
+  neutral:  "bg-white/[0.08] text-zinc-100",
+  info:     "bg-sky-300/12 text-sky-100",
+};
+
+const insightSignalTextConfig: Record<InsightSignalTone, string> = {
+  positive: "text-emerald-400",
+  warning:  "text-amber-400",
+  neutral:  "text-zinc-500",
+};
+
+function FinancialInsightCard({
+  label,
+  value,
+  icon: Icon,
+  cardTone = "neutral",
+  insight,
+  insightTone = "neutral",
+  href,
+}: {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  cardTone?: InsightCardTone;
+  insight: string;
+  insightTone?: InsightSignalTone;
+  href: string;
+}) {
+  return (
+    <Link href={href} className="block min-w-0">
+      <PremiumCard
+        interactive
+        className={cn("flex h-full flex-col p-4 sm:p-5", insightCardShellConfig[cardTone])}
+      >
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{label}</p>
+          <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-xl", insightCardIconConfig[cardTone])}>
+            <Icon className="h-4 w-4" aria-hidden="true" />
+          </div>
+        </div>
+        <p className="truncate text-[26px] font-semibold leading-none tabular-nums text-white sm:text-3xl">{value}</p>
+        <div className="mt-3 flex-1 border-t border-white/[0.06] pt-3">
+          <p className={cn("text-xs leading-5", insightSignalTextConfig[insightTone])}>{insight}</p>
+        </div>
+      </PremiumCard>
+    </Link>
+  );
+}
+
+type HealthSignal = { label: string; tone: "positive" | "warning" };
+
+function buildHealthSignals(metrics: DashboardSummary["metrics"]): HealthSignal[] {
+  const signals: HealthSignal[] = [];
+  if (metrics.savingsRate >= 20) {
+    signals.push({ label: `Ahorrás ${metrics.savingsRate}%`, tone: "positive" });
+  } else if (metrics.savingsRate < 0) {
+    signals.push({ label: "Mes en déficit", tone: "warning" });
+  }
+  if (metrics.fixedToIncomeRatio < 35 && metrics.income > 0) {
+    signals.push({ label: "Fijos controlados", tone: "positive" });
+  } else if (metrics.fixedToIncomeRatio >= 55 && metrics.income > 0) {
+    signals.push({ label: `${metrics.fixedToIncomeRatio}% en fijos`, tone: "warning" });
+  }
+  if (metrics.upcomingObligations === 0 && metrics.income > 0) {
+    signals.push({ label: "Sin presión pendiente", tone: "positive" });
+  }
+  if (metrics.projection.projectedExpenses > metrics.income * 1.05 && metrics.income > 0) {
+    signals.push({ label: "Proyección supera ingresos", tone: "warning" });
+  }
+  return signals;
+}
+
+function FinancialHealthStrip({ metrics }: { metrics: DashboardSummary["metrics"] }) {
+  const signals = buildHealthSignals(metrics);
+  if (!signals.length) return null;
+
+  return (
+    <div className="mx-auto mb-6 flex w-full flex-wrap gap-2">
+      {signals.map((signal) => (
+        <div
+          key={signal.label}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium",
+            signal.tone === "positive"
+              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+              : "border-amber-500/20 bg-amber-500/10 text-amber-300",
+          )}
+        >
+          <span
+            className={cn(
+              "h-1.5 w-1.5 shrink-0 rounded-full",
+              signal.tone === "positive" ? "bg-emerald-400" : "bg-amber-400",
+            )}
+          />
+          {signal.label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function getIncomeInsight(metrics: DashboardSummary["metrics"]): {
+  insight: string;
+  insightTone: InsightSignalTone;
+  cardTone: InsightCardTone;
+} {
+  if (metrics.savingsRate >= 20) {
+    return {
+      insight: `Tasa de ahorro del ${metrics.savingsRate}%. Vas por buen camino.`,
+      insightTone: "positive",
+      cardTone: "positive",
+    };
+  }
+  if (metrics.savingsRate >= 5) {
+    return {
+      insight: `Ahorrás un ${metrics.savingsRate}% del ingreso. Hay espacio para mejorar.`,
+      insightTone: "neutral",
+      cardTone: "neutral",
+    };
+  }
+  if (metrics.savingsRate < 0) {
+    return {
+      insight: "Gastás más de lo que entra. El mes necesita ajuste.",
+      insightTone: "warning",
+      cardTone: "danger",
+    };
+  }
+  return {
+    insight: "Base del mes. Todo lo demás se mide desde este número.",
+    insightTone: "neutral",
+    cardTone: "neutral",
+  };
+}
+
+function getExpensesInsight(metrics: DashboardSummary["metrics"]): {
+  insight: string;
+  insightTone: InsightSignalTone;
+  cardTone: InsightCardTone;
+} {
+  if (metrics.spendingRate === 0) {
+    return { insight: "Sin gastos registrados aún este mes.", insightTone: "neutral", cardTone: "neutral" };
+  }
+  if (metrics.spendingRate >= 100) {
+    return {
+      insight: `${metrics.spendingRate}% del ingreso consumido. Superaste el límite del mes.`,
+      insightTone: "warning",
+      cardTone: "danger",
+    };
+  }
+  if (metrics.spendingRate >= 85) {
+    return {
+      insight: `${metrics.spendingRate}% gastado. Margen muy ajustado para lo que queda.`,
+      insightTone: "warning",
+      cardTone: "warning",
+    };
+  }
+  if (metrics.spendingRate >= 65) {
+    return {
+      insight: `${metrics.spendingRate}% del ingreso utilizado. Monitoreá el ritmo.`,
+      insightTone: "neutral",
+      cardTone: "neutral",
+    };
+  }
+  return {
+    insight: `Solo el ${metrics.spendingRate}% del ingreso utilizado. Vas con margen.`,
+    insightTone: "positive",
+    cardTone: "neutral",
+  };
+}
+
+function getReservedInsight(metrics: DashboardSummary["metrics"]): {
+  insight: string;
+  insightTone: InsightSignalTone;
+  cardTone: InsightCardTone;
+} {
+  if (metrics.remainingReservedBudget === 0) {
+    return {
+      insight: "Sin presupuesto pendiente. Tus categorías están al día.",
+      insightTone: "positive",
+      cardTone: "positive",
+    };
+  }
+  const reservedRatio = metrics.income > 0
+    ? Math.round((metrics.remainingReservedBudget / metrics.income) * 100)
+    : 0;
+  if (reservedRatio >= 30) {
+    return {
+      insight: `El ${reservedRatio}% del ingreso está bloqueado en presupuestos activos.`,
+      insightTone: "warning",
+      cardTone: "warning",
+    };
+  }
+  return {
+    insight: "Dinero comprometido para categorías con presupuesto activo.",
+    insightTone: "neutral",
+    cardTone: "neutral",
+  };
+}
+
+function getObligationsInsight(metrics: DashboardSummary["metrics"]): {
+  insight: string;
+  insightTone: InsightSignalTone;
+  cardTone: InsightCardTone;
+} {
+  if (metrics.upcomingObligations === 0) {
+    return {
+      insight: "Sin compromisos pendientes. El mes puede cerrar limpio.",
+      insightTone: "positive",
+      cardTone: "positive",
+    };
+  }
+  if (metrics.realAvailable < 0) {
+    return {
+      insight: "El disponible real ya es negativo antes de cubrir los compromisos.",
+      insightTone: "warning",
+      cardTone: "danger",
+    };
+  }
+  if (metrics.upcomingObligations > metrics.realAvailable * 0.5) {
+    return {
+      insight: "Los compromisos consumen más de la mitad del disponible real.",
+      insightTone: "warning",
+      cardTone: "warning",
+    };
+  }
+  return {
+    insight: "Compromisos cubiertos por el disponible actual. Sin tensión.",
+    insightTone: "neutral",
+    cardTone: "neutral",
+  };
 }
 
 /* ── Monthly signals ─────────────────────────────────────────────────────── */
@@ -1015,6 +1264,11 @@ export function DashboardClient() {
     setSelectedExpenseCategoryPreference((current) => current === categoryId ? null : categoryId);
   }
 
+  const incomeInsight = getIncomeInsight(metrics);
+  const expensesInsight = getExpensesInsight(metrics);
+  const reservedInsight = getReservedInsight(metrics);
+  const obligationsInsight = getObligationsInsight(metrics);
+
   return (
     <div className="fade-in">
       {monthNav}
@@ -1025,76 +1279,59 @@ export function DashboardClient() {
       {/* 2. Financial Copilot — protagonista, posición central */}
       <FinancialAiAnalysisCard month={selectedMonth} />
 
-      {/* 3. Métricas del mes con stagger */}
+      {/* 3. Financial Insight Cards — copilot-driven */}
       <motion.section
         variants={staggerContainer}
         initial="hidden"
         animate="visible"
-        className="mx-auto mb-6 grid w-full gap-3.5 sm:grid-cols-2 xl:grid-cols-5"
+        className="mx-auto mb-3 grid w-full gap-4 sm:grid-cols-2 xl:grid-cols-4"
       >
         <motion.div variants={fadeUp} className="min-w-0">
-          <Link href="/transactions?type=INCOME" className="block">
-            <FinanceMetricCard
-              label="Entró"
-              value={formatMoney(metrics.income)}
-              detail="Ingresos del mes"
-              icon={ArrowUpCircle}
-              tone="positive"
-              trend="up"
-              trendLabel="Base para tu plan mensual"
-            />
-          </Link>
+          <FinancialInsightCard
+            label="Ingresos"
+            value={formatMoney(metrics.income)}
+            icon={ArrowUpCircle}
+            cardTone={incomeInsight.cardTone}
+            insight={incomeInsight.insight}
+            insightTone={incomeInsight.insightTone}
+            href="/transactions?type=INCOME"
+          />
         </motion.div>
         <motion.div variants={fadeUp} className="min-w-0">
-          <Link href="/transactions?type=EXPENSE" className="block">
-            <FinanceMetricCard
-              label="Salió"
-              value={formatMoney(metrics.expenses)}
-              detail="Gastos registrados"
-              icon={ArrowDownCircle}
-              tone="danger"
-              trend="down"
-              trendLabel={`${metrics.spendingRate}% del ingreso consumido`}
-            />
-          </Link>
+          <FinancialInsightCard
+            label="Gastos"
+            value={formatMoney(metrics.expenses)}
+            icon={ArrowDownCircle}
+            cardTone={expensesInsight.cardTone}
+            insight={expensesInsight.insight}
+            insightTone={expensesInsight.insightTone}
+            href="/transactions?type=EXPENSE"
+          />
         </motion.div>
         <motion.div variants={fadeUp} className="min-w-0">
-          <Link href="/budgets" className="block">
-            <FinanceMetricCard
-              label="Reservado"
-              value={formatMoney(metrics.remainingReservedBudget)}
-              detail="Presupuesto pendiente"
-              icon={Lock}
-              tone="warning"
-              trendLabel="Dinero protegido para categorías"
-            />
-          </Link>
+          <FinancialInsightCard
+            label="Reservado"
+            value={formatMoney(metrics.remainingReservedBudget)}
+            icon={Lock}
+            cardTone={reservedInsight.cardTone}
+            insight={reservedInsight.insight}
+            insightTone={reservedInsight.insightTone}
+            href="/budgets"
+          />
         </motion.div>
         <motion.div variants={fadeUp} className="min-w-0">
-          <Link href="/recurring" className="block">
-            <FinanceMetricCard
-              label="Compromisos"
-              value={formatMoney(metrics.upcomingObligations)}
-              detail="Recurrentes, metas y deuda"
-              icon={CreditCard}
-              tone={metrics.upcomingObligations === 0 ? "positive" : "warning"}
-              trendLabel={metrics.upcomingObligations === 0 ? "Sin presión pendiente" : "Todavía impactan el cierre"}
-            />
-          </Link>
-        </motion.div>
-        <motion.div variants={fadeUp} className="min-w-0 sm:col-span-2 xl:col-span-1">
-          <Link href="/accounts" className="block">
-            <FinanceMetricCard
-              label="Dólares"
-              value={formatMoney(usdBalance?.amount ?? 0, "USD")}
-              detail={`${usdBalance?.accountCount ?? 0} cuenta${(usdBalance?.accountCount ?? 0) !== 1 ? "s" : ""} en USD`}
-              icon={Wallet}
-              tone="info"
-              trendLabel="Saldo separado por moneda"
-            />
-          </Link>
+          <FinancialInsightCard
+            label="Compromisos"
+            value={formatMoney(metrics.upcomingObligations)}
+            icon={CreditCard}
+            cardTone={obligationsInsight.cardTone}
+            insight={obligationsInsight.insight}
+            insightTone={obligationsInsight.insightTone}
+            href="/recurring"
+          />
         </motion.div>
       </motion.section>
+      <FinancialHealthStrip metrics={metrics} />
 
       {/* 4. Distribución del gasto + tendencia del mes */}
       <motion.section
