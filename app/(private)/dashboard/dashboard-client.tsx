@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   type LucideIcon,
   AlertTriangle,
@@ -1250,6 +1250,7 @@ export function DashboardClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeContext] = useState(() => getTimeContext());
+  const shouldReduceMotion = useReducedMotion();
 
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
 
@@ -1404,11 +1405,11 @@ export function DashboardClient() {
       {/* 3. Financial Insight Cards — layout editorial asimétrico */}
       <motion.section
         variants={staggerContainer}
-        initial="hidden"
+        initial={shouldReduceMotion ? "visible" : "hidden"}
         animate="visible"
         className="mx-auto mb-6 grid w-full gap-4 sm:grid-cols-2 xl:grid-cols-[1.4fr_1fr_1fr_1fr]"
       >
-        <motion.div variants={fadeUp} className="min-w-0">
+        <motion.div variants={shouldReduceMotion ? undefined : fadeUp} className="min-w-0">
           <FinancialInsightCard
             featured
             label="Ingresos"
@@ -1420,7 +1421,7 @@ export function DashboardClient() {
             href="/transactions?type=INCOME"
           />
         </motion.div>
-        <motion.div variants={fadeUp} className="min-w-0">
+        <motion.div variants={shouldReduceMotion ? undefined : fadeUp} className="min-w-0">
           <FinancialInsightCard
             label="Gastos"
             value={formatMoney(metrics.expenses)}
@@ -1431,7 +1432,7 @@ export function DashboardClient() {
             href="/transactions?type=EXPENSE"
           />
         </motion.div>
-        <motion.div variants={fadeUp} className="min-w-0">
+        <motion.div variants={shouldReduceMotion ? undefined : fadeUp} className="min-w-0">
           <FinancialInsightCard
             label="Reservado"
             value={formatMoney(metrics.remainingReservedBudget)}
@@ -1442,7 +1443,7 @@ export function DashboardClient() {
             href="/budgets"
           />
         </motion.div>
-        <motion.div variants={fadeUp} className="min-w-0">
+        <motion.div variants={shouldReduceMotion ? undefined : fadeUp} className="min-w-0">
           <FinancialInsightCard
             label="Compromisos"
             value={formatMoney(metrics.upcomingObligations)}
@@ -1458,9 +1459,9 @@ export function DashboardClient() {
 
       {/* 4. Distribución del gasto + tendencia del mes */}
       <motion.section
-        variants={sectionReveal}
-        initial="hidden"
-        animate="visible"
+        variants={shouldReduceMotion ? undefined : sectionReveal}
+        initial={shouldReduceMotion ? false : "hidden"}
+        animate={shouldReduceMotion ? false : "visible"}
         transition={{ delay: 0.08 }}
         className="mx-auto mb-10 grid w-full gap-5 sm:mb-12 lg:grid-cols-2"
       >
@@ -1475,9 +1476,9 @@ export function DashboardClient() {
 
       {/* 5. Mapa de consumo + señales + contexto */}
       <motion.section
-        variants={sectionReveal}
-        initial="hidden"
-        animate="visible"
+        variants={shouldReduceMotion ? undefined : sectionReveal}
+        initial={shouldReduceMotion ? false : "hidden"}
+        animate={shouldReduceMotion ? false : "visible"}
         transition={{ delay: 0.14 }}
         className="mx-auto mb-10 grid w-full gap-5 sm:mb-12 lg:grid-cols-[1.2fr_0.8fr]"
       >
@@ -1517,9 +1518,9 @@ export function DashboardClient() {
 
       {/* 6. Movimientos recientes — stream, no tabla */}
       <motion.div
-        variants={sectionReveal}
-        initial="hidden"
-        animate="visible"
+        variants={shouldReduceMotion ? undefined : sectionReveal}
+        initial={shouldReduceMotion ? false : "hidden"}
+        animate={shouldReduceMotion ? false : "visible"}
         transition={{ delay: 0.2 }}
       >
         <PremiumCard>

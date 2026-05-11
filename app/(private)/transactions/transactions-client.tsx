@@ -40,7 +40,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ActionButton } from "@/components/ui-v2/action-button";
-import { PremiumCard, PremiumCardContent, PremiumCardHeader } from "@/components/ui-v2/premium-card";
+import { PremiumCard, PremiumCardContent, PremiumCardDescription, PremiumCardHeader, PremiumCardTitle } from "@/components/ui-v2/premium-card";
 
 type TransactionType =
   | "INCOME"
@@ -943,13 +943,13 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
           <PremiumCardHeader>
             <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <CardTitle>Feed de movimientos</CardTitle>
-                <CardDescription>
+                <PremiumCardTitle>Feed de movimientos</PremiumCardTitle>
+                <PremiumCardDescription>
                   {transactions.length} movimiento{transactions.length !== 1 ? "s" : ""} ·{" "}
                   <span className={totalAmount >= 0 ? "text-emerald-400" : "text-rose-400"}>
                     {totalAmount >= 0 ? "+" : ""}{formatMoneyBalance(totalAmount)}
                   </span>
-                </CardDescription>
+                </PremiumCardDescription>
               </div>
               <Button
                 type="button"

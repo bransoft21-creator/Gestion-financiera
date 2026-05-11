@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   AlertCircle,
   AlertTriangle,
@@ -645,6 +645,7 @@ function FilePreviewState({
 
 function ProcessingView() {
   const [currentStep, setCurrentStep] = useState(0);
+  const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (currentStep >= PROCESSING_STEPS.length - 1) return;
@@ -655,18 +656,14 @@ function ProcessingView() {
   return (
     <div className="flex min-h-[520px] flex-col items-center justify-center gap-14">
       <div className="relative">
+        <div className="absolute inset-0 rounded-full bg-teal-400/20 blur-3xl" />
         <motion.div
-          animate={{ scale: [1, 1.4, 1], opacity: [0.25, 0.08, 0.25] }}
-          transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute inset-0 rounded-full bg-teal-400/25 blur-3xl"
-        />
-        <motion.div
-          animate={{ scale: [1, 1.1, 1] }}
+          animate={shouldReduceMotion ? {} : { scale: [1, 1.1, 1] }}
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           className="relative flex h-28 w-28 items-center justify-center rounded-full border border-teal-400/20 bg-teal-400/[0.07] shadow-[0_0_80px_rgba(45,212,191,0.18)]"
         >
           <motion.div
-            animate={{ rotate: 360 }}
+            animate={shouldReduceMotion ? {} : { rotate: 360 }}
             transition={{ duration: 3.5, repeat: Infinity, ease: "linear" }}
           >
             <Sparkles className="h-12 w-12 text-teal-300" />
@@ -750,6 +747,7 @@ function ReviewView({
   onReset: () => void;
 }) {
   const [activeFilter, setActiveFilter] = useState<CandidateFilter>("all");
+  const shouldReduceMotion = useReducedMotion();
 
   const filterCounts = useMemo(
     () => ({
@@ -836,10 +834,10 @@ function ReviewView({
           {displayedCandidates.map((c, i) => (
             <motion.div
               key={c.id}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
+              animate={shouldReduceMotion ? false : { opacity: 1, y: 0 }}
               transition={{
-                delay: i * 0.06,
+                delay: Math.min(i * 0.05, 0.3),
                 duration: 0.32,
                 ease: v2MotionTokens.easeOut,
               }}
