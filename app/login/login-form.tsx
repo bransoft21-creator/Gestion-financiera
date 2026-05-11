@@ -11,6 +11,38 @@ function getPasswordRecoveryRedirectUrl() {
   return `${baseUrl.replace(/\/$/, "")}/auth/reset-password`;
 }
 
+function humanizeAuthError(raw: string): string {
+  const msg = raw.toLowerCase();
+  if (msg.includes("invalid login credentials") || msg.includes("invalid credentials")) {
+    return "Email o contraseña incorrectos. Revisá los datos e intentá de nuevo.";
+  }
+  if (msg.includes("email already registered") || msg.includes("user already registered") || msg.includes("already registered")) {
+    return "Ya existe una cuenta con ese email. Podés iniciar sesión directamente.";
+  }
+  if (msg.includes("email not confirmed")) {
+    return "Confirmá tu email antes de entrar. Revisá tu bandeja de entrada.";
+  }
+  if (msg.includes("password should be at least") || msg.includes("weak password") || msg.includes("should be at least")) {
+    return "La contraseña es muy corta. Usá al menos 6 caracteres.";
+  }
+  if (msg.includes("email rate limit") || msg.includes("rate limit")) {
+    return "Enviamos muchos correos en poco tiempo. Esperá unos minutos e intentá de nuevo.";
+  }
+  if (msg.includes("too many requests") || msg.includes("too many")) {
+    return "Demasiados intentos. Esperá unos minutos antes de volver a intentar.";
+  }
+  if (msg.includes("network") || msg.includes("fetch") || msg.includes("failed to fetch")) {
+    return "Error de conexión. Verificá tu internet e intentá de nuevo.";
+  }
+  if (msg.includes("expired") || msg.includes("token has expired")) {
+    return "El enlace expiró. Solicitá uno nuevo desde el login.";
+  }
+  if (msg.includes("signup") && msg.includes("disabled")) {
+    return "El registro no está disponible en este momento.";
+  }
+  return "Algo salió mal. Intentá de nuevo en un momento.";
+}
+
 export function LoginForm() {
   const [mode, setMode] = useState<AuthMode>("login");
   const [isLoading, setIsLoading] = useState(false);
@@ -48,7 +80,7 @@ export function LoginForm() {
           : await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
 
       if (result.error) {
-        setMessage(result.error.message);
+        setMessage(humanizeAuthError(result.error.message));
         setIsLoading(false);
         return;
       }
@@ -155,7 +187,7 @@ export function LoginForm() {
                 <button
                   key={tab}
                   type="button"
-                  onClick={() => { setMode(tab); setFieldErrors({}); setMessage(null); }}
+                  onClick={() => { setMode(tab); setFieldErrors({}); setMessage(null); setShowPassword(false); }}
                   className={`rounded-[14px] py-2.5 text-sm font-semibold transition-all duration-200 ${
                     mode === tab
                       ? "bg-white text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.10)]"
@@ -170,7 +202,7 @@ export function LoginForm() {
             <div className="mb-7">
               <button
                 type="button"
-                onClick={() => { setMode("login"); setFieldErrors({}); setMessage(null); }}
+                onClick={() => { setMode("login"); setFieldErrors({}); setMessage(null); setShowPassword(false); }}
                 className="mb-5 flex items-center gap-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground"
               >
                 <ArrowLeft className="h-4 w-4" aria-hidden="true" />
@@ -216,7 +248,7 @@ export function LoginForm() {
               </button>
             </form>
           ) : (
-            <form className="space-y-5" onSubmit={handleSubmit}>
+            <form key={mode} className="space-y-5" onSubmit={handleSubmit}>
             {mode === "register" && (
               <div>
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -278,7 +310,7 @@ export function LoginForm() {
               <div className="flex justify-end">
                 <button
                   type="button"
-                  onClick={() => { setMode("forgot"); setFieldErrors({}); setMessage(null); }}
+                  onClick={() => { setMode("forgot"); setFieldErrors({}); setMessage(null); setShowPassword(false); }}
                   className="text-sm font-semibold text-teal-200 transition hover:text-teal-100"
                 >
                   Olvidé mi contraseña
@@ -306,7 +338,7 @@ export function LoginForm() {
                 ¿No tenés cuenta?{" "}
                 <button
                   type="button"
-                  onClick={() => { setMode("register"); setFieldErrors({}); setMessage(null); }}
+                  onClick={() => { setMode("register"); setFieldErrors({}); setMessage(null); setShowPassword(false); }}
                   className="font-semibold text-teal-200"
                 >
                   Registrarse

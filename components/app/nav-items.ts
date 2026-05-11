@@ -14,18 +14,18 @@ import {
 } from "lucide-react";
 
 export const navItems = [
-  { href: "/dashboard",     label: "Hoy",            icon: Gauge },
-  { href: "/transactions",  label: "Movimientos",    icon: CircleDollarSign },
-  { href: "/smart-import",  label: "Smart Import",   icon: ScanLine },
-  { href: "/accounts",      label: "Dinero",         icon: Landmark },
-  { href: "/categories",    label: "Lenguaje",       icon: FolderTree },
-  { href: "/budgets",       label: "Plan",           icon: BarChart3 },
-  { href: "/goals",         label: "Futuro",         icon: Sparkles },
-  { href: "/debts",         label: "Presión",        icon: CreditCard },
-  { href: "/recurring",     label: "Compromisos",    icon: RefreshCw },
-  { href: "/notifications", label: "Avisos",         icon: Bell },
-  { href: "/reports",       label: "Patrones",       icon: TrendingUp },
-  { href: "/profile",       label: "Mi perfil",      icon: User },
+  { href: "/dashboard",     label: "Hoy",              icon: Gauge },
+  { href: "/transactions",  label: "Movimientos",      icon: CircleDollarSign },
+  { href: "/smart-import",  label: "Smart Import",     icon: ScanLine },
+  { href: "/accounts",      label: "Dinero",           icon: Landmark },
+  { href: "/categories",    label: "Categorías",       icon: FolderTree },
+  { href: "/budgets",       label: "Presupuesto",      icon: BarChart3 },
+  { href: "/goals",         label: "Metas",            icon: Sparkles },
+  { href: "/debts",         label: "Deudas",           icon: CreditCard },
+  { href: "/recurring",     label: "Recurrentes",      icon: RefreshCw },
+  { href: "/notifications", label: "Avisos",           icon: Bell },
+  { href: "/reports",       label: "Patrones",         icon: TrendingUp },
+  { href: "/profile",       label: "Mi perfil",        icon: User },
 ] as const;
 
 export const investmentsNavItem = {

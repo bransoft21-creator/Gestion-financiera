@@ -1162,7 +1162,7 @@ function BriefingMetric({ label, value, className }: { label: string; value: str
   return (
     <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.045] p-3">
       <p className="truncate text-[11px] font-semibold uppercase text-zinc-500">{label}</p>
-      <p className={`mt-1 truncate text-sm font-semibold tabular-nums sm:text-base ${className ?? "text-zinc-100"}`}>{value}</p>
+      <p className={`mt-1 break-words text-xs font-semibold tabular-nums leading-tight sm:text-sm ${className ?? "text-zinc-100"}`}>{value}</p>
     </div>
   );
 }

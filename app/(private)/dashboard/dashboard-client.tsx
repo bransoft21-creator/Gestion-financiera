@@ -10,6 +10,7 @@ import {
   ArrowLeftCircle,
   ArrowRightCircle,
   ArrowUpCircle,
+  ChevronDown,
   ChevronLeft,
   CreditCard,
   ExternalLink,
@@ -25,6 +26,7 @@ import {
   Wallet,
   Zap,
 } from "lucide-react";
+import { SensitiveAmount } from "@/components/app/sensitive-amount";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/app/empty-state";
 import { Button } from "@/components/ui/button";
@@ -210,6 +212,65 @@ function getTimeContext(): TimeContext {
   return { greeting, timeOfDay, isWeekend };
 }
 
+/* ── Section collapse ────────────────────────────────────────────────────── */
+
+function useSectionCollapse(id: string, defaultExpanded = true) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const stored = window.localStorage.getItem(`dashboard-section-${id}`);
+      if (stored !== null) setExpanded(stored === "true");
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [id]);
+
+  function toggle() {
+    setExpanded((current) => {
+      const next = !current;
+      window.localStorage.setItem(`dashboard-section-${id}`, String(next));
+      return next;
+    });
+  }
+
+  return { expanded, toggle };
+}
+
+function SectionCollapseButton({
+  title,
+  summary,
+  expanded,
+  onToggle,
+}: {
+  title: string;
+  summary?: string;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="mb-3 flex items-center justify-between">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-600">{title}</span>
+        {!expanded && summary ? (
+          <span className="truncate text-[11px] text-zinc-600">— {summary}</span>
+        ) : null}
+      </div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-zinc-500 transition hover:bg-white/[0.08] hover:text-zinc-300"
+        aria-label={expanded ? `Colapsar ${title}` : `Expandir ${title}`}
+        aria-expanded={expanded}
+      >
+        <ChevronDown
+          className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? "" : "-rotate-90"}`}
+          aria-hidden="true"
+        />
+      </button>
+    </div>
+  );
+}
+
 /* ── Dashboard skeleton ──────────────────────────────────────────────────── */
 
 function DashboardSkeleton() {
@@ -355,7 +416,7 @@ function HeroCard({
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">{statusText}</p>
           <p className={`mt-6 text-[42px] font-semibold leading-none tracking-tight tabular-nums sm:text-[56px] ${isPositive ? "text-emerald-100" : "text-rose-100"}`}>
-            {formatMoney(animated)}
+            <SensitiveAmount value={formatMoney(animated)} />
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-white/50">
             <FormulaPill label="Ingresos" value={metrics.income} color="#34d399" href="/transactions?type=INCOME" />
@@ -402,14 +463,14 @@ function HeroCard({
           <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
             <p className="text-[11px] font-semibold uppercase text-zinc-500">Cierre estimado</p>
             <p className={`mt-1 text-sm font-semibold tabular-nums ${metrics.projection.projectedRealAvailable >= 0 ? "text-zinc-100" : "text-rose-100"}`}>
-              {formatMoney(metrics.projection.projectedRealAvailable)}
+              <SensitiveAmount value={formatMoney(metrics.projection.projectedRealAvailable)} />
             </p>
           </div>
           {usdBalance && usdBalance.accountCount > 0 ? (
             <div className="col-span-2 rounded-2xl border border-sky-300/16 bg-sky-300/[0.045] p-4 lg:col-span-1">
               <p className="text-[11px] font-semibold uppercase text-zinc-500">Dólares</p>
               <p className="mt-1 text-sm font-semibold tabular-nums text-sky-100">
-                {formatMoney(usdBalance.amount, "USD")}
+                <SensitiveAmount value={formatMoney(usdBalance.amount, "USD")} />
               </p>
               <p className="mt-0.5 text-[10px] text-zinc-500">
                 {usdBalance.accountCount} cuenta{usdBalance.accountCount !== 1 ? "s" : ""} en USD
@@ -517,7 +578,7 @@ function FinancialInsightCard({
             ? "text-[32px] sm:text-[36px] xl:text-[40px]"
             : "text-[26px] sm:text-3xl",
         )}>
-          {value}
+          <SensitiveAmount value={value} />
         </p>
         <div className="mt-3 flex-1 border-t border-white/[0.06] pt-3">
           <p className={cn("text-xs leading-5", insightSignalTextConfig[insightTone])}>{insight}</p>
@@ -851,7 +912,7 @@ function ExpenseTypeBreakdown({
         {income > 0 && (
           <div className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Presión de gastos fijos
+              Fijos del ingreso
             </p>
             <div className="mt-1 flex items-baseline gap-2">
               <span className={`text-2xl font-extrabold tabular-nums ${fixedRatioTextClass}`}>
@@ -1230,7 +1291,7 @@ function RecentTransactions({ transactions }: { transactions: DashboardSummary["
               </p>
             </div>
             <p className={`shrink-0 text-[13px] font-semibold tabular-nums ${isIncome ? "text-emerald-400" : "text-zinc-400"}`}>
-              {isIncome ? "+" : "−"}{formatMoney(tx.amount, tx.currency)}
+              <SensitiveAmount value={`${isIncome ? "+" : "−"}${formatMoney(tx.amount, tx.currency)}`} />
             </p>
           </div>
         );
@@ -1251,6 +1312,9 @@ export function DashboardClient() {
   const [error, setError] = useState<string | null>(null);
   const [timeContext] = useState(() => getTimeContext());
   const shouldReduceMotion = useReducedMotion();
+  const sectionDistribucion = useSectionCollapse("distribucion", true);
+  const sectionMapa = useSectionCollapse("mapa", true);
+  const sectionMovimientos = useSectionCollapse("movimientos", true);
 
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
 
@@ -1445,7 +1509,7 @@ export function DashboardClient() {
         </motion.div>
         <motion.div variants={shouldReduceMotion ? undefined : fadeUp} className="min-w-0">
           <FinancialInsightCard
-            label="Compromisos"
+            label="Obligaciones"
             value={formatMoney(metrics.upcomingObligations)}
             icon={CreditCard}
             cardTone={obligationsInsight.cardTone}
@@ -1457,83 +1521,111 @@ export function DashboardClient() {
       </motion.section>
       <FinancialHealthStrip metrics={metrics} />
 
-      {/* 4. Distribución del gasto + tendencia del mes */}
+      {/* 4. Distribución del gasto + tendencia del mes — colapsable */}
       <motion.section
         variants={shouldReduceMotion ? undefined : sectionReveal}
         initial={shouldReduceMotion ? false : "hidden"}
         animate={shouldReduceMotion ? false : "visible"}
         transition={{ delay: 0.08 }}
-        className="mx-auto mb-10 grid w-full gap-5 sm:mb-12 lg:grid-cols-2"
+        className="mx-auto mb-8 w-full sm:mb-10"
       >
-        <ExpenseTypeBreakdown
-          expensesByType={metrics.expensesByType}
-          total={metrics.expenses}
-          income={metrics.income}
-          fixedToIncomeRatio={metrics.fixedToIncomeRatio}
+        <SectionCollapseButton
+          title="Distribución"
+          summary={`${metrics.fixedToIncomeRatio}% en fijos · ${formatMoney(metrics.expenses)} gastados`}
+          expanded={sectionDistribucion.expanded}
+          onToggle={sectionDistribucion.toggle}
         />
-        <MonthProjection metrics={metrics} />
+        {sectionDistribucion.expanded && (
+          <div className="grid gap-5 lg:grid-cols-2">
+            <ExpenseTypeBreakdown
+              expensesByType={metrics.expensesByType}
+              total={metrics.expenses}
+              income={metrics.income}
+              fixedToIncomeRatio={metrics.fixedToIncomeRatio}
+            />
+            <MonthProjection metrics={metrics} />
+          </div>
+        )}
       </motion.section>
 
-      {/* 5. Mapa de consumo + señales + contexto */}
+      {/* 5. Mapa de consumo + señales + contexto — colapsable */}
       <motion.section
         variants={shouldReduceMotion ? undefined : sectionReveal}
         initial={shouldReduceMotion ? false : "hidden"}
         animate={shouldReduceMotion ? false : "visible"}
         transition={{ delay: 0.14 }}
-        className="mx-auto mb-10 grid w-full gap-5 sm:mb-12 lg:grid-cols-[1.2fr_0.8fr]"
+        className="mx-auto mb-8 w-full sm:mb-10"
       >
-        <ExpenseCategoryExplorer
-          expensesByCategory={expensesByCategory}
-          selectedExpenseCategory={selectedExpenseCategory}
-          selectedExpenseCategoryId={selectedExpenseCategoryId}
-          totalExpenses={metrics.expenses}
-          onSelectCategory={handleExpenseCategorySelect}
+        <SectionCollapseButton
+          title="Mapa de consumo"
+          summary={`${expensesByCategory.length} categorías`}
+          expanded={sectionMapa.expanded}
+          onToggle={sectionMapa.toggle}
         />
+        {sectionMapa.expanded && (
+          <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+            <ExpenseCategoryExplorer
+              expensesByCategory={expensesByCategory}
+              selectedExpenseCategory={selectedExpenseCategory}
+              selectedExpenseCategoryId={selectedExpenseCategoryId}
+              totalExpenses={metrics.expenses}
+              onSelectCategory={handleExpenseCategorySelect}
+            />
 
-        <div className="flex flex-col gap-4">
-          <MonthlySignals insights={insights} alerts={alerts} />
+            <div className="flex flex-col gap-4">
+              <MonthlySignals insights={insights} alerts={alerts} />
 
-          <div className="grid grid-cols-2 gap-3">
-            <Link href="/goals" className="block min-w-0">
-              <PremiumCard interactive className="p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Ahorro est.</p>
-                <p className="mt-2 text-lg font-bold tabular-nums text-emerald-400">
-                  {formatMoney(metrics.estimatedSavings)}
-                </p>
-                <p className="mt-1 text-[10px] text-zinc-600">este mes →</p>
-              </PremiumCard>
-            </Link>
-            <Link href="/debts" className="block min-w-0">
-              <PremiumCard interactive className="p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Deuda total</p>
-                <p className="mt-2 text-lg font-bold tabular-nums text-zinc-400">
-                  {formatMoney(metrics.totalOutstandingDebt)}
-                </p>
-                <p className="mt-1 text-[10px] text-zinc-600">ver compromisos →</p>
-              </PremiumCard>
-            </Link>
+              <div className="grid grid-cols-2 gap-3">
+                <Link href="/goals" className="block min-w-0">
+                  <PremiumCard interactive className="p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Ahorro est.</p>
+                    <p className="mt-2 text-lg font-bold tabular-nums text-emerald-400">
+                      <SensitiveAmount value={formatMoney(metrics.estimatedSavings)} />
+                    </p>
+                    <p className="mt-1 text-[10px] text-zinc-600">este mes →</p>
+                  </PremiumCard>
+                </Link>
+                <Link href="/debts" className="block min-w-0">
+                  <PremiumCard interactive className="p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Deuda total</p>
+                    <p className="mt-2 text-lg font-bold tabular-nums text-zinc-400">
+                      <SensitiveAmount value={formatMoney(metrics.totalOutstandingDebt)} />
+                    </p>
+                    <p className="mt-1 text-[10px] text-zinc-600">ver deudas →</p>
+                  </PremiumCard>
+                </Link>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </motion.section>
 
-      {/* 6. Movimientos recientes — stream, no tabla */}
+      {/* 6. Movimientos recientes — colapsable */}
       <motion.div
         variants={shouldReduceMotion ? undefined : sectionReveal}
         initial={shouldReduceMotion ? false : "hidden"}
         animate={shouldReduceMotion ? false : "visible"}
         transition={{ delay: 0.2 }}
       >
-        <PremiumCard>
-          <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
-            <h3 className="text-sm font-semibold text-white">Movimientos recientes</h3>
-            <Button asChild size="sm" variant="ghost" className="h-7 shrink-0 px-2 text-xs text-zinc-600 hover:bg-transparent hover:text-zinc-200">
-              <Link href="/transactions">Ver todas →</Link>
-            </Button>
-          </div>
-          <PremiumCardContent>
-            <RecentTransactions transactions={latestTransactions} />
-          </PremiumCardContent>
-        </PremiumCard>
+        <SectionCollapseButton
+          title="Movimientos recientes"
+          summary={`${latestTransactions.length} movimiento${latestTransactions.length !== 1 ? "s" : ""}`}
+          expanded={sectionMovimientos.expanded}
+          onToggle={sectionMovimientos.toggle}
+        />
+        {sectionMovimientos.expanded && (
+          <PremiumCard>
+            <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
+              <h3 className="text-sm font-semibold text-white">Movimientos recientes</h3>
+              <Button asChild size="sm" variant="ghost" className="h-7 shrink-0 px-2 text-xs text-zinc-600 hover:bg-transparent hover:text-zinc-200">
+                <Link href="/transactions">Ver todas →</Link>
+              </Button>
+            </div>
+            <PremiumCardContent>
+              <RecentTransactions transactions={latestTransactions} />
+            </PremiumCardContent>
+          </PremiumCard>
+        )}
       </motion.div>
     </div>
   );

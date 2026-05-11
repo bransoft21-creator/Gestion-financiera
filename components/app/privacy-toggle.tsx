@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { dispatchHideAmountsChange } from "@/hooks/use-hide-amounts";
 
 const STORAGE_KEY = "finance-control-hide-amounts";
 
@@ -30,6 +31,7 @@ export function PrivacyToggle({ compact = false, className }: PrivacyToggleProps
     setHidden(next);
     window.localStorage.setItem(STORAGE_KEY, String(next));
     document.documentElement.dataset.hideAmounts = String(next);
+    dispatchHideAmountsChange(next);
   }
 
   const Icon = hidden ? EyeOff : Eye;

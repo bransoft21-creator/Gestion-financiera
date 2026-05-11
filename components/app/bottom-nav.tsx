@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import type { MouseEvent } from "react";
 import { useState } from "react";
 import {
@@ -22,39 +22,32 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { LogoutDialog } from "./logout-dialog";
 
 const bottomNavItems = [
   { href: "/dashboard",    label: "Hoy",          icon: Gauge },
   { href: "/transactions", label: "Movimientos",  icon: CircleDollarSign },
-  { href: "/budgets",      label: "Plan",         icon: BarChart3 },
-  { href: "/goals",        label: "Futuro",       icon: Sparkles },
+  { href: "/budgets",      label: "Presupuesto",  icon: BarChart3 },
+  { href: "/goals",        label: "Metas",        icon: Sparkles },
 ] as const;
 
 const moreNavItems = [
   { href: "/smart-import", label: "Smart Import", icon: ScanLine },
-  { href: "/accounts",   label: "Dinero",       icon: Landmark },
-  { href: "/categories", label: "Lenguaje",     icon: FolderTree },
-  { href: "/debts",      label: "Presión",      icon: CreditCard },
-  { href: "/recurring",  label: "Compromisos",  icon: RefreshCw },
-  { href: "/notifications", label: "Avisos",    icon: Bell },
-  { href: "/reports",    label: "Patrones",     icon: TrendingUp },
-  { href: "/profile",    label: "Mi perfil",    icon: User },
+  { href: "/accounts",     label: "Dinero",       icon: Landmark },
+  { href: "/categories",   label: "Categorías",   icon: FolderTree },
+  { href: "/debts",        label: "Deudas",       icon: CreditCard },
+  { href: "/recurring",    label: "Recurrentes",  icon: RefreshCw },
+  { href: "/notifications", label: "Avisos",      icon: Bell },
+  { href: "/reports",      label: "Patrones",     icon: TrendingUp },
+  { href: "/profile",      label: "Mi perfil",    icon: User },
 ] as const;
 
 export function BottomNav() {
   const pathname = usePathname();
-  const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   const isMoreActive = moreNavItems.some((item) => pathname === item.href);
-
-  async function handleLogout() {
-    const supabase = createSupabaseBrowserClient();
-    await supabase.auth.signOut();
-    router.replace("/login");
-    router.refresh();
-  }
 
   function handleBottomNavClick(event: MouseEvent<HTMLAnchorElement>, href: string) {
     if (href !== "/dashboard" || pathname !== "/dashboard") return;
@@ -65,6 +58,8 @@ export function BottomNav() {
 
   return (
     <>
+      <LogoutDialog open={logoutOpen} onClose={() => setLogoutOpen(false)} />
+
       {/* Overlay */}
       {moreOpen && (
         <div
@@ -120,7 +115,7 @@ export function BottomNav() {
           <div className="mt-1 border-t border-white/10 pt-1">
             <button
               type="button"
-              onClick={() => { setMoreOpen(false); void handleLogout(); }}
+              onClick={() => { setMoreOpen(false); setLogoutOpen(true); }}
               className="flex h-12 w-full items-center gap-3 rounded-2xl px-4 text-[14px] font-medium text-rose-300 transition-all duration-150 hover:bg-rose-400/10 hover:text-rose-200"
             >
               <LogOut className="h-5 w-5 shrink-0" aria-hidden="true" />
