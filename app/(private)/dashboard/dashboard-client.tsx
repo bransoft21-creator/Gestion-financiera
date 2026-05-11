@@ -133,16 +133,21 @@ function formatDate(value: string) {
 
 /* ── Motion presets ──────────────────────────────────────────────────────── */
 
-const easeOut = [0.22, 1, 0.36, 1] as const;
+const easeOut = [0.16, 1, 0.3, 1] as const;
 
 const staggerContainer = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+  visible: { transition: { staggerChildren: 0.09, delayChildren: 0.02 } },
 };
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 14 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: easeOut } },
+  hidden: { opacity: 0, y: 12, filter: "blur(4px)" },
+  visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.48, ease: easeOut } },
+};
+
+const sectionReveal = {
+  hidden: { opacity: 0, y: 20, filter: "blur(6px)" },
+  visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.55, ease: easeOut } },
 };
 
 /* ── Animated counter ────────────────────────────────────────────────────── */
@@ -224,6 +229,29 @@ function DashboardSkeleton() {
   );
 }
 
+/* ── Ambient signal ──────────────────────────────────────────────────────── */
+
+function AmbientSignal({ text }: { text: string }) {
+  return (
+    <div className="mb-8 flex items-center gap-3 sm:mb-10">
+      <span className="h-px flex-1 bg-white/[0.04]" aria-hidden="true" />
+      <p className="shrink-0 text-[11px] italic tracking-wide text-zinc-600">{text}</p>
+      <span className="h-px flex-1 bg-white/[0.04]" aria-hidden="true" />
+    </div>
+  );
+}
+
+function getAmbientHint(metrics: DashboardSummary["metrics"]): string | null {
+  if (metrics.income === 0) return null;
+  const { savingsRate, fixedToIncomeRatio, upcomingObligations, projection } = metrics;
+  if (projection.daysRemaining <= 5) return "El mes cierra pronto — buen momento para una última revisión.";
+  if (savingsRate >= 20) return `Ahorrás ${savingsRate}% este mes. Vas por buen camino.`;
+  if (upcomingObligations === 0 && savingsRate >= 0) return "Sin compromisos pendientes. El mes puede cerrar limpio.";
+  if (fixedToIncomeRatio < 35) return "Los gastos fijos están tranquilos.";
+  if (savingsRate < 0) return "El disponible real es negativo. El mes pide atención.";
+  return "Tu dinero está hablando. Esto es lo más importante del mes.";
+}
+
 /* ── Hero card ───────────────────────────────────────────────────────────── */
 
 function HeroCard({
@@ -244,7 +272,7 @@ function HeroCard({
     : "Tu mes necesita atención: el disponible real queda por debajo de cero.";
 
   return (
-    <PremiumCard variant="raised" className="relative mb-6 overflow-hidden p-5 sm:p-7">
+    <PremiumCard variant="raised" className="relative mb-8 overflow-hidden p-5 sm:mb-10 sm:p-7">
       <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(45,212,191,.18)_0%,transparent_68%)]" />
       <div className="pointer-events-none absolute bottom-[-8rem] left-[-6rem] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,.12)_0%,transparent_68%)]" />
 
@@ -388,6 +416,7 @@ function FinancialInsightCard({
   insight,
   insightTone = "neutral",
   href,
+  featured = false,
 }: {
   label: string;
   value: string;
@@ -396,20 +425,36 @@ function FinancialInsightCard({
   insight: string;
   insightTone?: InsightSignalTone;
   href: string;
+  featured?: boolean;
 }) {
   return (
-    <Link href={href} className="block min-w-0">
+    <Link href={href} className="block min-w-0 h-full">
       <PremiumCard
         interactive
-        className={cn("flex h-full flex-col p-4 sm:p-5", insightCardShellConfig[cardTone])}
+        className={cn(
+          "flex h-full flex-col",
+          featured ? "p-5 sm:p-6" : "p-4 sm:p-5",
+          insightCardShellConfig[cardTone],
+        )}
       >
         <div className="mb-3 flex items-center justify-between gap-2">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{label}</p>
-          <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-xl", insightCardIconConfig[cardTone])}>
-            <Icon className="h-4 w-4" aria-hidden="true" />
+          <div className={cn(
+            "flex shrink-0 items-center justify-center rounded-xl",
+            featured ? "h-9 w-9" : "h-8 w-8",
+            insightCardIconConfig[cardTone],
+          )}>
+            <Icon className={featured ? "h-[18px] w-[18px]" : "h-4 w-4"} aria-hidden="true" />
           </div>
         </div>
-        <p className="truncate text-[26px] font-semibold leading-none tabular-nums text-white sm:text-3xl">{value}</p>
+        <p className={cn(
+          "truncate font-semibold leading-none tabular-nums text-white",
+          featured
+            ? "text-[32px] sm:text-[36px] xl:text-[40px]"
+            : "text-[26px] sm:text-3xl",
+        )}>
+          {value}
+        </p>
         <div className="mt-3 flex-1 border-t border-white/[0.06] pt-3">
           <p className={cn("text-xs leading-5", insightSignalTextConfig[insightTone])}>{insight}</p>
         </div>
@@ -446,21 +491,21 @@ function FinancialHealthStrip({ metrics }: { metrics: DashboardSummary["metrics"
   if (!signals.length) return null;
 
   return (
-    <div className="mx-auto mb-6 flex w-full flex-wrap gap-2">
+    <div className="mb-10 flex flex-wrap gap-1.5 sm:mb-12">
       {signals.map((signal) => (
         <div
           key={signal.label}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium",
+            "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-medium",
             signal.tone === "positive"
-              ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
-              : "border-amber-500/20 bg-amber-500/10 text-amber-300",
+              ? "border-emerald-500/12 bg-emerald-500/[0.07] text-emerald-500"
+              : "border-amber-500/12 bg-amber-500/[0.07] text-amber-500",
           )}
         >
           <span
             className={cn(
-              "h-1.5 w-1.5 shrink-0 rounded-full",
-              signal.tone === "positive" ? "bg-emerald-400" : "bg-amber-400",
+              "h-1 w-1 shrink-0 rounded-full",
+              signal.tone === "positive" ? "bg-emerald-500" : "bg-amber-500",
             )}
           />
           {signal.label}
@@ -652,51 +697,50 @@ function MonthlySignals({
   const primaryTone = insightToneConfig[signal.tone];
 
   return (
-    <PremiumCard>
-      <PremiumCardHeader className="pb-2">
-        <PremiumCardTitle className="text-sm">Qué importa ahora</PremiumCardTitle>
-        <PremiumCardDescription>Señales clave para actuar hoy.</PremiumCardDescription>
-      </PremiumCardHeader>
-      <PremiumCardContent className="space-y-3">
-        <div className={`rounded-2xl border p-3 ${primaryTone.shell}`}>
-          <div className="flex items-start gap-2.5">
+    <PremiumCard className="flex h-full flex-col">
+      <PremiumCardContent className="flex h-full flex-col space-y-3 pt-5 sm:pt-6">
+        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
+          <Lightbulb className="h-3 w-3 shrink-0" aria-hidden="true" />
+          Lo que importa hoy
+        </div>
+        <div className={`flex-1 rounded-2xl border p-4 ${primaryTone.shell}`}>
+          <div className="flex items-start gap-3">
             <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl ${primaryTone.icon}`}>
               <Lightbulb className="h-4 w-4" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <p className={`text-[11px] font-semibold uppercase tracking-wider ${primaryTone.label}`}>
-                Atención
-              </p>
-              <h3 className="mt-0.5 text-sm font-bold tracking-tight">{signal.title}</h3>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">{signal.message}</p>
-              <Button asChild size="sm" variant="secondary" className="mt-3 h-8">
-                <Link href={signal.href}>{signal.actionLabel}</Link>
+              <h3 className="text-sm font-semibold leading-tight text-white">{signal.title}</h3>
+              <p className="mt-1.5 text-xs leading-5 text-zinc-400">{signal.message}</p>
+              <Button asChild size="sm" variant="ghost" className="mt-2 h-7 px-0 text-xs text-zinc-500 hover:bg-transparent hover:text-white">
+                <Link href={signal.href}>{signal.actionLabel} →</Link>
               </Button>
             </div>
           </div>
         </div>
 
-        <div className="space-y-2">
-          {secondary.slice(0, 2).map((insight) => {
-            const tone = insightToneConfig[insight.tone];
-            return (
-              <Link
-                key={`${insight.title}-${insight.href}`}
-                href={insight.href}
-                className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-xs text-muted-foreground transition hover:border-white/20 hover:bg-white/[0.06]"
-              >
-                <Sparkles className={`h-3.5 w-3.5 shrink-0 ${tone.label}`} aria-hidden="true" />
-                <span className="truncate font-medium">{insight.title}</span>
-              </Link>
-            );
-          })}
-          {alerts.slice(0, 2).map((alert) => (
-            <div key={alert} className="flex gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-2">
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
-              <p className="text-xs leading-5 text-muted-foreground">{alert}</p>
-            </div>
-          ))}
-        </div>
+        {secondary.length > 0 && (
+          <div className="space-y-1">
+            {secondary.slice(0, 2).map((insight) => {
+              const tone = insightToneConfig[insight.tone];
+              return (
+                <Link
+                  key={`${insight.title}-${insight.href}`}
+                  href={insight.href}
+                  className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-xs text-zinc-600 transition hover:bg-white/[0.04] hover:text-zinc-300"
+                >
+                  <Sparkles className={`h-3 w-3 shrink-0 ${tone.label}`} aria-hidden="true" />
+                  <span className="truncate">{insight.title}</span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+        {alerts.slice(0, 1).map((alert) => (
+          <div key={alert} className="flex gap-2 rounded-xl border border-amber-500/12 bg-amber-500/[0.07] px-3 py-2">
+            <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-500" aria-hidden="true" />
+            <p className="text-xs leading-5 text-zinc-500">{alert}</p>
+          </div>
+        ))}
       </PremiumCardContent>
     </PremiumCard>
   );
@@ -1107,21 +1151,21 @@ function RecentTransactions({ transactions }: { transactions: DashboardSummary["
         const isIncome = tx.type === "INCOME";
         return (
           <div key={tx.id}
-            className={`flex items-center gap-3 py-2.5 ${i < transactions.length - 1 ? "border-b border-white/[0.05]" : ""}`}>
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${isIncome ? "bg-emerald-500/13 text-emerald-400" : "bg-rose-500/13 text-rose-400"}`}>
+            className={`flex items-center gap-3 py-3 ${i < transactions.length - 1 ? "border-b border-white/[0.04]" : ""}`}>
+            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${isIncome ? "bg-emerald-500/10 text-emerald-400" : "bg-white/[0.06] text-zinc-400"}`}>
               {isIncome
-                ? <ArrowUpCircle className="h-[17px] w-[17px]" aria-hidden="true" />
-                : <ArrowDownCircle className="h-[17px] w-[17px]" aria-hidden="true" />}
+                ? <ArrowUpCircle className="h-[15px] w-[15px]" aria-hidden="true" />
+                : <ArrowDownCircle className="h-[15px] w-[15px]" aria-hidden="true" />}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold text-foreground">
+              <p className="truncate text-[13px] font-medium text-zinc-100">
                 {tx.description ?? "Sin descripción"}
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[11px] text-zinc-600">
                 {tx.category?.name ?? "Sin categoría"} · {formatDate(tx.occurredAt)}
               </p>
             </div>
-            <p className={`shrink-0 text-[13px] font-bold tabular-nums ${isIncome ? "text-emerald-400" : "text-rose-400"}`}>
+            <p className={`shrink-0 text-[13px] font-semibold tabular-nums ${isIncome ? "text-emerald-400" : "text-zinc-400"}`}>
               {isIncome ? "+" : "−"}{formatMoney(tx.amount, tx.currency)}
             </p>
           </div>
@@ -1269,6 +1313,8 @@ export function DashboardClient() {
   const reservedInsight = getReservedInsight(metrics);
   const obligationsInsight = getObligationsInsight(metrics);
 
+  const ambientHint = getAmbientHint(metrics);
+
   return (
     <div className="fade-in">
       {monthNav}
@@ -1276,18 +1322,22 @@ export function DashboardClient() {
       {/* 1. Hero — disponible real del mes */}
       <HeroCard metrics={metrics} year={year} month={month} usdBalance={usdBalance} />
 
+      {/* Ambient signal — puente contextual entre Hero y Copilot */}
+      {ambientHint && <AmbientSignal text={ambientHint} />}
+
       {/* 2. Financial Copilot — protagonista, posición central */}
       <FinancialAiAnalysisCard month={selectedMonth} />
 
-      {/* 3. Financial Insight Cards — copilot-driven */}
+      {/* 3. Financial Insight Cards — layout editorial asimétrico */}
       <motion.section
         variants={staggerContainer}
         initial="hidden"
         animate="visible"
-        className="mx-auto mb-3 grid w-full gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="mx-auto mb-6 grid w-full gap-4 sm:grid-cols-2 xl:grid-cols-[1.4fr_1fr_1fr_1fr]"
       >
         <motion.div variants={fadeUp} className="min-w-0">
           <FinancialInsightCard
+            featured
             label="Ingresos"
             value={formatMoney(metrics.income)}
             icon={ArrowUpCircle}
@@ -1335,10 +1385,11 @@ export function DashboardClient() {
 
       {/* 4. Distribución del gasto + tendencia del mes */}
       <motion.section
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: easeOut, delay: 0.1 }}
-        className="mx-auto mb-6 grid w-full gap-5 lg:grid-cols-2"
+        variants={sectionReveal}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.08 }}
+        className="mx-auto mb-10 grid w-full gap-5 sm:mb-12 lg:grid-cols-2"
       >
         <ExpenseTypeBreakdown
           expensesByType={metrics.expensesByType}
@@ -1349,12 +1400,13 @@ export function DashboardClient() {
         <MonthProjection metrics={metrics} />
       </motion.section>
 
-      {/* 5. Mapa de consumo + señales + mini-cards */}
+      {/* 5. Mapa de consumo + señales + contexto */}
       <motion.section
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: easeOut, delay: 0.15 }}
-        className="mx-auto mb-6 grid w-full gap-5 lg:grid-cols-[1.2fr_0.8fr]"
+        variants={sectionReveal}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.14 }}
+        className="mx-auto mb-10 grid w-full gap-5 sm:mb-12 lg:grid-cols-[1.2fr_0.8fr]"
       >
         <ExpenseCategoryExplorer
           expensesByCategory={expensesByCategory}
@@ -1364,54 +1416,46 @@ export function DashboardClient() {
           onSelectCategory={handleExpenseCategorySelect}
         />
 
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-4">
           <MonthlySignals insights={insights} alerts={alerts} />
 
-          <div className="grid grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-2 gap-3">
             <Link href="/goals" className="block min-w-0">
               <PremiumCard interactive className="p-4">
-                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400">
-                  <Wallet className="h-4 w-4" aria-hidden="true" />
-                </div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ahorro est.</p>
-                <p className="mt-1 text-base font-bold text-emerald-400 tabular-nums">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Ahorro est.</p>
+                <p className="mt-2 text-lg font-bold tabular-nums text-emerald-400">
                   {formatMoney(metrics.estimatedSavings)}
                 </p>
+                <p className="mt-1 text-[10px] text-zinc-600">este mes →</p>
               </PremiumCard>
             </Link>
             <Link href="/debts" className="block min-w-0">
               <PremiumCard interactive className="p-4">
-                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-2xl bg-white/[0.08] text-zinc-300">
-                  <CreditCard className="h-4 w-4" aria-hidden="true" />
-                </div>
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Deuda total</p>
-                <p className="mt-1 text-base font-bold text-muted-foreground tabular-nums">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Deuda total</p>
+                <p className="mt-2 text-lg font-bold tabular-nums text-zinc-400">
                   {formatMoney(metrics.totalOutstandingDebt)}
                 </p>
+                <p className="mt-1 text-[10px] text-zinc-600">ver compromisos →</p>
               </PremiumCard>
             </Link>
           </div>
         </div>
       </motion.section>
 
-      {/* 6. Movimientos recientes */}
+      {/* 6. Movimientos recientes — stream, no tabla */}
       <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: easeOut, delay: 0.2 }}
+        variants={sectionReveal}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.2 }}
       >
         <PremiumCard>
-          <PremiumCardHeader>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <PremiumCardTitle>Movimientos recientes</PremiumCardTitle>
-                <PremiumCardDescription>Lo último que pasó en tus cuentas.</PremiumCardDescription>
-              </div>
-              <Button asChild size="sm" variant="secondary" className="h-8 shrink-0">
-                <Link href="/transactions">Ver todas</Link>
-              </Button>
-            </div>
-          </PremiumCardHeader>
+          <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
+            <h3 className="text-sm font-semibold text-white">Movimientos recientes</h3>
+            <Button asChild size="sm" variant="ghost" className="h-7 shrink-0 px-2 text-xs text-zinc-600 hover:bg-transparent hover:text-zinc-200">
+              <Link href="/transactions">Ver todas →</Link>
+            </Button>
+          </div>
           <PremiumCardContent>
             <RecentTransactions transactions={latestTransactions} />
           </PremiumCardContent>

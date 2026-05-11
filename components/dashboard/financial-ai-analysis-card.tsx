@@ -337,7 +337,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
   const statusLabel = isStale ? "Hay movimientos nuevos" : isCached ? "Informe guardado" : analysis ? "Actualizado" : "Listo para analizar";
 
   return (
-    <section className="mb-7 overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.16),transparent_31%),radial-gradient(circle_at_82%_12%,rgba(251,191,36,0.12),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))] p-1 shadow-[0_30px_120px_rgba(0,0,0,0.38)]">
+    <section className="mb-8 overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.16),transparent_31%),radial-gradient(circle_at_82%_12%,rgba(251,191,36,0.12),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))] p-1 shadow-[0_30px_120px_rgba(0,0,0,0.38)] sm:mb-10">
       <div className="rounded-[24px] bg-background/78 px-4 py-4 backdrop-blur-xl sm:px-6 sm:py-6">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
