@@ -1377,7 +1377,15 @@ export function DashboardClient() {
     return (
       <>
         {monthNav}
-        <EmptyState icon={ReceiptText} title="Todavía no hay datos para este mes" description="Cuando registres movimientos, toda la información aparece acá." />
+        <EmptyState
+          icon={ReceiptText}
+          title="Tu historia financiera empieza acá."
+          description="Importá un resumen o agregá tu primer movimiento para que la app empiece a darte contexto."
+          actions={[
+            { label: "Smart Import", href: "/smart-import", primary: true },
+            { label: "Agregar movimiento", href: "/transactions?new=1" },
+          ]}
+        />
       </>
     );
   }

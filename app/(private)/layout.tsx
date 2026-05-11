@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app/app-shell";
+import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function PrivateLayout({
@@ -14,6 +15,15 @@ export default async function PrivateLayout({
 
   if (!user) {
     redirect("/login");
+  }
+
+  const profile = await prisma.userProfile.findUnique({
+    where: { supabaseId: user.id },
+    select: { onboardingCompletedAt: true },
+  });
+
+  if (!profile || !profile.onboardingCompletedAt) {
+    redirect("/onboarding");
   }
 
   return (
