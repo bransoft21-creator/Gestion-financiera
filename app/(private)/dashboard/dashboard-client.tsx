@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import {
-  type LucideIcon,
   AlertTriangle,
   ArrowDownCircle,
   ArrowLeftCircle,
@@ -12,18 +11,15 @@ import {
   ArrowUpCircle,
   ChevronDown,
   ChevronLeft,
-  CreditCard,
   ExternalLink,
   HelpCircle,
   Lightbulb,
-  Lock,
   Plus,
   ReceiptText,
   Repeat,
   ShoppingCart,
   Sparkles,
   TrendingUp,
-  Wallet,
   Zap,
 } from "lucide-react";
 import { SensitiveAmount } from "@/components/app/sensitive-amount";
@@ -136,16 +132,6 @@ function formatDate(value: string) {
 /* ── Motion presets ──────────────────────────────────────────────────────── */
 
 const easeOut = [0.16, 1, 0.3, 1] as const;
-
-const staggerContainer = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.09, delayChildren: 0.02 } },
-};
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 12, filter: "blur(4px)" },
-  visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.48, ease: easeOut } },
-};
 
 const sectionReveal = {
   hidden: { opacity: 0, y: 20, filter: "blur(6px)" },
@@ -506,85 +492,50 @@ function FormulaPill({
   );
 }
 
-/* ── Financial Insight Cards ─────────────────────────────────────────────── */
+/* ── Financial metrics ───────────────────────────────────────────────────── */
 
 type InsightCardTone = "positive" | "warning" | "danger" | "neutral" | "info";
 type InsightSignalTone = "positive" | "warning" | "neutral";
 
-const insightCardShellConfig: Record<InsightCardTone, string> = {
-  positive: "border-emerald-300/16 bg-emerald-300/[0.045]",
-  warning:  "border-amber-300/16 bg-amber-300/[0.045]",
-  danger:   "border-rose-300/16 bg-rose-300/[0.045]",
-  neutral:  "",
-  info:     "border-sky-300/16 bg-sky-300/[0.045]",
-};
-
-const insightCardIconConfig: Record<InsightCardTone, string> = {
-  positive: "bg-emerald-300/12 text-emerald-100",
-  warning:  "bg-amber-300/12 text-amber-100",
-  danger:   "bg-rose-300/12 text-rose-100",
-  neutral:  "bg-white/[0.08] text-zinc-100",
-  info:     "bg-sky-300/12 text-sky-100",
-};
-
-const insightSignalTextConfig: Record<InsightSignalTone, string> = {
+const metricAmountColor: Record<InsightCardTone, string> = {
   positive: "text-emerald-400",
-  warning:  "text-amber-400",
-  neutral:  "text-zinc-500",
+  warning: "text-amber-400",
+  danger: "text-rose-400",
+  neutral: "text-zinc-100",
+  info: "text-sky-400",
 };
 
-function FinancialInsightCard({
-  label,
-  value,
-  icon: Icon,
-  cardTone = "neutral",
-  insight,
-  insightTone = "neutral",
-  href,
-  featured = false,
+const metricDotColor: Record<InsightCardTone, string> = {
+  positive: "bg-emerald-500",
+  warning: "bg-amber-500",
+  danger: "bg-rose-500",
+  neutral: "bg-zinc-600",
+  info: "bg-sky-500",
+};
+
+function MetricStrip({
+  items,
 }: {
-  label: string;
-  value: string;
-  icon: LucideIcon;
-  cardTone?: InsightCardTone;
-  insight: string;
-  insightTone?: InsightSignalTone;
-  href: string;
-  featured?: boolean;
+  items: Array<{ label: string; value: string; tone: InsightCardTone; href: string }>;
 }) {
   return (
-    <Link href={href} className="block min-w-0 h-full">
-      <PremiumCard
-        interactive
-        className={cn(
-          "flex h-full flex-col",
-          featured ? "p-5 sm:p-6" : "p-4 sm:p-5",
-          insightCardShellConfig[cardTone],
-        )}
-      >
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{label}</p>
-          <div className={cn(
-            "flex shrink-0 items-center justify-center rounded-xl",
-            featured ? "h-9 w-9" : "h-8 w-8",
-            insightCardIconConfig[cardTone],
-          )}>
-            <Icon className={featured ? "h-[18px] w-[18px]" : "h-4 w-4"} aria-hidden="true" />
+    <div className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.05] sm:grid-cols-4">
+      {items.map((item) => (
+        <Link
+          key={item.label}
+          href={item.href}
+          className="flex flex-col gap-1.5 bg-zinc-950 px-4 py-3.5 transition hover:bg-zinc-900"
+        >
+          <div className="flex items-center gap-1.5">
+            <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", metricDotColor[item.tone])} />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">{item.label}</span>
           </div>
-        </div>
-        <p className={cn(
-          "truncate font-semibold leading-none tabular-nums text-white",
-          featured
-            ? "text-[32px] sm:text-[36px] xl:text-[40px]"
-            : "text-[26px] sm:text-3xl",
-        )}>
-          <SensitiveAmount value={value} />
-        </p>
-        <div className="mt-3 flex-1 border-t border-white/[0.06] pt-3">
-          <p className={cn("text-xs leading-5", insightSignalTextConfig[insightTone])}>{insight}</p>
-        </div>
-      </PremiumCard>
-    </Link>
+          <p className={cn("truncate text-sm font-semibold tabular-nums", metricAmountColor[item.tone])}>
+            <SensitiveAmount value={item.value} />
+          </p>
+        </Link>
+      ))}
+    </div>
   );
 }
 
@@ -1466,59 +1417,13 @@ export function DashboardClient() {
       {/* 2. Financial Copilot — protagonista, posición central */}
       <FinancialAiAnalysisCard month={selectedMonth} />
 
-      {/* 3. Financial Insight Cards — layout editorial asimétrico */}
-      <motion.section
-        variants={staggerContainer}
-        initial={shouldReduceMotion ? "visible" : "hidden"}
-        animate="visible"
-        className="mx-auto mb-6 grid w-full gap-4 sm:grid-cols-2 xl:grid-cols-[1.4fr_1fr_1fr_1fr]"
-      >
-        <motion.div variants={shouldReduceMotion ? undefined : fadeUp} className="min-w-0">
-          <FinancialInsightCard
-            featured
-            label="Ingresos"
-            value={formatMoney(metrics.income)}
-            icon={ArrowUpCircle}
-            cardTone={incomeInsight.cardTone}
-            insight={incomeInsight.insight}
-            insightTone={incomeInsight.insightTone}
-            href="/transactions?type=INCOME"
-          />
-        </motion.div>
-        <motion.div variants={shouldReduceMotion ? undefined : fadeUp} className="min-w-0">
-          <FinancialInsightCard
-            label="Gastos"
-            value={formatMoney(metrics.expenses)}
-            icon={ArrowDownCircle}
-            cardTone={expensesInsight.cardTone}
-            insight={expensesInsight.insight}
-            insightTone={expensesInsight.insightTone}
-            href="/transactions?type=EXPENSE"
-          />
-        </motion.div>
-        <motion.div variants={shouldReduceMotion ? undefined : fadeUp} className="min-w-0">
-          <FinancialInsightCard
-            label="Reservado"
-            value={formatMoney(metrics.remainingReservedBudget)}
-            icon={Lock}
-            cardTone={reservedInsight.cardTone}
-            insight={reservedInsight.insight}
-            insightTone={reservedInsight.insightTone}
-            href="/budgets"
-          />
-        </motion.div>
-        <motion.div variants={shouldReduceMotion ? undefined : fadeUp} className="min-w-0">
-          <FinancialInsightCard
-            label="Obligaciones"
-            value={formatMoney(metrics.upcomingObligations)}
-            icon={CreditCard}
-            cardTone={obligationsInsight.cardTone}
-            insight={obligationsInsight.insight}
-            insightTone={obligationsInsight.insightTone}
-            href="/recurring"
-          />
-        </motion.div>
-      </motion.section>
+      {/* 3. Métricas del mes — strip compacto */}
+      <MetricStrip items={[
+        { label: "Ingresos", value: formatMoney(metrics.income), tone: incomeInsight.cardTone, href: "/transactions?type=INCOME" },
+        { label: "Gastos", value: formatMoney(metrics.expenses), tone: expensesInsight.cardTone, href: "/transactions?type=EXPENSE" },
+        { label: "Reservado", value: formatMoney(metrics.remainingReservedBudget), tone: reservedInsight.cardTone, href: "/budgets" },
+        { label: "Obligaciones", value: formatMoney(metrics.upcomingObligations), tone: obligationsInsight.cardTone, href: "/recurring" },
+      ]} />
       <FinancialHealthStrip metrics={metrics} />
 
       {/* 4. Distribución del gasto + tendencia del mes — colapsable */}
