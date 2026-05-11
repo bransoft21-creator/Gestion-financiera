@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   CalendarDays,
   CheckCircle2,
@@ -592,9 +592,10 @@ function GoalsBriefing({
 }) {
   const state = getGoalState(summary, goalCount);
   const monthlyText = formatCommitments(summary.monthlyCommitments);
+  const shouldReduceMotion = useReducedMotion();
 
   return (
-    <motion.div {...cardMotion}>
+    <motion.div {...(shouldReduceMotion ? { initial: false } : cardMotion)}>
       <PremiumCard variant="raised" className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_18%_0%,rgba(52,211,153,0.18),transparent_36%),radial-gradient(circle_at_82%_0%,rgba(96,165,250,0.14),transparent_34%)]" />
         <PremiumCardContent className="relative p-5 sm:p-6">
@@ -769,11 +770,12 @@ function GoalCard({
   const remaining = Math.max(goal.targetAmount - goal.currentAmount, 0);
   const impactsDashboard = goal.status === "ACTIVE" && goal.requiredMonthlyAmount != null;
   const canContribute = goal.status === "ACTIVE" && goal.currentAmount < goal.targetAmount && accounts.length > 0;
+  const shouldReduceMotion = useReducedMotion();
 
   return (
     <motion.article
       layout
-      {...cardMotion}
+      {...(shouldReduceMotion ? { initial: false } : cardMotion)}
       className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.035] p-4 transition duration-200 hover:border-white/[0.16] hover:bg-white/[0.055] sm:p-5"
     >
       <div className="flex items-start justify-between gap-4">
@@ -857,7 +859,7 @@ function GoalCard({
       <AnimatePresence initial={false}>
         {isContribOpen ? (
           <motion.div
-            {...cardMotion}
+            {...(shouldReduceMotion ? { initial: false } : cardMotion)}
             className="mt-4 space-y-3 rounded-[1.5rem] border border-emerald-300/20 bg-emerald-300/10 p-4"
           >
             <p className="text-xs font-semibold uppercase text-emerald-100">Registrar aporte</p>
@@ -968,21 +970,22 @@ function DeleteGoalDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const shouldReduceMotion = useReducedMotion();
   return (
     <AnimatePresence>
       {goal ? (
         <motion.div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-xl sm:items-center"
-          initial={{ opacity: 0 }}
+          initial={shouldReduceMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
           <motion.div
             className="w-full max-w-md"
-            initial={{ opacity: 0, y: 24, scale: 0.98 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 24, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.98 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            transition={shouldReduceMotion ? undefined : { duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
           >
             <PremiumCard variant="raised">
               <PremiumCardHeader>

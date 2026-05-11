@@ -32,9 +32,9 @@ import {
   PremiumCard,
   PremiumCardContent,
   PremiumCardDescription,
+  PremiumCardHeader,
   PremiumCardTitle,
 } from "@/components/ui-v2/premium-card";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type TrendPoint = {
   label: string;
@@ -272,11 +272,11 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
 
           {/* Income vs Expenses chart */}
           <PremiumCard>
-            <CardHeader>
+            <PremiumCardHeader>
               <PremiumCardTitle>Ingresos vs Gastos</PremiumCardTitle>
               <PremiumCardDescription>Comparación mensual para identificar tendencias.</PremiumCardDescription>
-            </CardHeader>
-            <CardContent>
+            </PremiumCardHeader>
+            <PremiumCardContent>
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={report.trend} barCategoryGap="30%">
@@ -311,16 +311,16 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </CardContent>
+            </PremiumCardContent>
           </PremiumCard>
 
           {/* Savings rate chart */}
           <PremiumCard>
-            <CardHeader>
+            <PremiumCardHeader>
               <PremiumCardTitle>Tasa de ahorro</PremiumCardTitle>
               <PremiumCardDescription>Porcentaje mensual: ingresos menos gastos sobre ingresos.</PremiumCardDescription>
-            </CardHeader>
-            <CardContent>
+            </PremiumCardHeader>
+            <PremiumCardContent>
               <div className="h-[240px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={report.trend}>
@@ -358,19 +358,19 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            </CardContent>
+            </PremiumCardContent>
           </PremiumCard>
 
           {/* Categories */}
           {hasCategories ? (
             <div className="grid gap-6 xl:grid-cols-2">
               {/* Pie chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Distribución por categoría</CardTitle>
-                  <CardDescription>Participación de cada categoría en el gasto del período.</CardDescription>
-                </CardHeader>
-                <CardContent>
+              <PremiumCard>
+                <PremiumCardHeader>
+                  <PremiumCardTitle>Distribución por categoría</PremiumCardTitle>
+                  <PremiumCardDescription>Participación de cada categoría en el gasto del período.</PremiumCardDescription>
+                </PremiumCardHeader>
+                <PremiumCardContent>
                   <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
                     <div className="h-[200px] w-full max-w-[200px] shrink-0">
                       <ResponsiveContainer width="100%" height="100%">
@@ -415,16 +415,16 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                       ))}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </PremiumCardContent>
+              </PremiumCard>
 
               {/* Bars */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Top categorías de gasto</CardTitle>
-                  <CardDescription>Monto acumulado en el período seleccionado.</CardDescription>
-                </CardHeader>
-                <CardContent>
+              <PremiumCard>
+                <PremiumCardHeader>
+                  <PremiumCardTitle>Top categorías de gasto</PremiumCardTitle>
+                  <PremiumCardDescription>Monto acumulado en el período seleccionado.</PremiumCardDescription>
+                </PremiumCardHeader>
+                <PremiumCardContent>
                   <div className="space-y-3.5">
                     {report.topCategories.map((cat) => (
                       <div key={cat.categoryId} className="space-y-1.5">
@@ -449,24 +449,24 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
+                </PremiumCardContent>
+              </PremiumCard>
             </div>
           ) : (
-            <Card>
-              <CardContent className="flex h-32 items-center justify-center">
+            <PremiumCard>
+              <PremiumCardContent className="flex h-32 items-center justify-center">
                 <p className="text-sm text-muted-foreground">Sin gastos por categoría en el período.</p>
-              </CardContent>
-            </Card>
+              </PremiumCardContent>
+            </PremiumCard>
           )}
 
           {/* Savings bars */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Ahorro neto por mes</CardTitle>
-              <CardDescription>Saldo disponible (ingresos − gastos) para cada mes del período.</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <PremiumCard>
+            <PremiumCardHeader>
+              <PremiumCardTitle>Ahorro neto por mes</PremiumCardTitle>
+              <PremiumCardDescription>Saldo disponible (ingresos − gastos) para cada mes del período.</PremiumCardDescription>
+            </PremiumCardHeader>
+            <PremiumCardContent>
               <div className="flex gap-3 overflow-x-auto pb-1">
                 {(() => {
                   const max = Math.max(...report.trend.map((d) => d.savings));
@@ -498,8 +498,8 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                   });
                 })()}
               </div>
-            </CardContent>
-          </Card>
+            </PremiumCardContent>
+          </PremiumCard>
         </>
       )}
 
@@ -545,20 +545,20 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
   }));
 
   return (
-    <div className="space-y-6 border-t border-border pt-6">
+    <div className="space-y-6 border-t border-white/[0.07] pt-6">
       <div>
-        <h2 className="text-base font-semibold">Historial de patrimonio</h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">
+        <h2 className="text-base font-semibold text-white">Historial de patrimonio</h2>
+        <p className="mt-0.5 text-sm leading-6 text-zinc-400">
           Snapshot mensual capturado al cierre de cada período. Refleja el dinero disponible real y la deuda total en ese momento.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Disponible real por mes</CardTitle>
-          <CardDescription>Evolución del dinero disponible real (ingresos − gastos − reservas − obligaciones) al cierre de cada mes.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <PremiumCard>
+        <PremiumCardHeader>
+          <PremiumCardTitle>Disponible real por mes</PremiumCardTitle>
+          <PremiumCardDescription>Evolución del dinero disponible real (ingresos − gastos − reservas − obligaciones) al cierre de cada mes.</PremiumCardDescription>
+        </PremiumCardHeader>
+        <PremiumCardContent>
           <div className="h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
@@ -579,16 +579,16 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </CardContent>
-      </Card>
+        </PremiumCardContent>
+      </PremiumCard>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Ingresos vs Gastos histórico</CardTitle>
-            <CardDescription>Comparación mensual acumulada desde el primer snapshot.</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <PremiumCard>
+          <PremiumCardHeader>
+            <PremiumCardTitle>Ingresos vs Gastos histórico</PremiumCardTitle>
+            <PremiumCardDescription>Comparación mensual acumulada desde el primer snapshot.</PremiumCardDescription>
+          </PremiumCardHeader>
+          <PremiumCardContent>
             <div className="h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} barCategoryGap="30%">
@@ -604,15 +604,15 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
+          </PremiumCardContent>
+        </PremiumCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Deuda total al cierre</CardTitle>
-            <CardDescription>Saldo pendiente de deudas activas registrado en cada snapshot.</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <PremiumCard>
+          <PremiumCardHeader>
+            <PremiumCardTitle>Deuda total al cierre</PremiumCardTitle>
+            <PremiumCardDescription>Saldo pendiente de deudas activas registrado en cada snapshot.</PremiumCardDescription>
+          </PremiumCardHeader>
+          <PremiumCardContent>
             <div className="h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
@@ -633,16 +633,16 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
+          </PremiumCardContent>
+        </PremiumCard>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Detalle por mes</CardTitle>
-          <CardDescription>Tabla completa de métricas capturadas en cada snapshot.</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <PremiumCard>
+        <PremiumCardHeader>
+          <PremiumCardTitle>Detalle por mes</PremiumCardTitle>
+          <PremiumCardDescription>Tabla completa de métricas capturadas en cada snapshot.</PremiumCardDescription>
+        </PremiumCardHeader>
+        <PremiumCardContent>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -671,8 +671,8 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
               </tbody>
             </table>
           </div>
-        </CardContent>
-      </Card>
+        </PremiumCardContent>
+      </PremiumCard>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   AlertTriangle,
   CalendarClock,
@@ -606,9 +606,10 @@ function DebtBriefing({
   onCreate: () => void;
 }) {
   const state = getDebtState(summary, debtCount);
+  const shouldReduceMotion = useReducedMotion();
 
   return (
-    <motion.div {...cardMotion}>
+    <motion.div {...(shouldReduceMotion ? { initial: false } : cardMotion)}>
       <PremiumCard variant="raised" className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_18%_0%,rgba(251,113,133,0.16),transparent_36%),radial-gradient(circle_at_82%_0%,rgba(251,191,36,0.13),transparent_34%)]" />
         <PremiumCardContent className="relative p-5 sm:p-6">
@@ -716,6 +717,7 @@ function DebtCard({
   onQuickPayAmountChange: (value: string) => void;
   onQuickPayConfirm: () => void;
 }) {
+  const shouldReduceMotion = useReducedMotion();
   const [displayWidth, setDisplayWidth] = useState(0);
   const mounted = useRef(false);
 
@@ -735,7 +737,7 @@ function DebtCard({
   return (
     <motion.article
       layout
-      {...cardMotion}
+      {...(shouldReduceMotion ? { initial: false } : cardMotion)}
       className={`rounded-[1.75rem] border bg-white/[0.035] p-4 transition duration-200 hover:-translate-y-0.5 hover:bg-white/[0.055] sm:p-5 ${
         urgent ? "border-rose-300/25 shadow-[0_18px_55px_rgba(244,63,94,0.08)]" : "border-white/[0.08]"
       }`}
@@ -806,7 +808,7 @@ function DebtCard({
 
       <AnimatePresence initial={false}>
         {isQuickPayOpen ? (
-          <motion.div {...cardMotion} className="mt-4 space-y-3 rounded-[1.5rem] border border-emerald-300/20 bg-emerald-300/10 p-4">
+          <motion.div {...(shouldReduceMotion ? { initial: false } : cardMotion)} className="mt-4 space-y-3 rounded-[1.5rem] border border-emerald-300/20 bg-emerald-300/10 p-4">
             <p className="text-xs font-semibold uppercase text-emerald-100">Registrar pago</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
@@ -903,21 +905,22 @@ function DeleteDebtDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const shouldReduceMotion = useReducedMotion();
   return (
     <AnimatePresence>
       {debt ? (
         <motion.div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-xl sm:items-center"
-          initial={{ opacity: 0 }}
+          initial={shouldReduceMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
           <motion.div
             className="w-full max-w-md"
-            initial={{ opacity: 0, y: 24, scale: 0.98 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 24, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.98 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            transition={shouldReduceMotion ? undefined : { duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
           >
             <PremiumCard variant="raised">
               <PremiumCardHeader>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Bell,
   CalendarClock,
@@ -36,6 +36,7 @@ import { moneySchema } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Frequency = "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
 type CurrencyCode = "ARS" | "USD";
@@ -564,17 +565,18 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
 }
 
 function RecurringBriefing({ summary, isLoading, onCreate }: { summary: RecurringSummary; isLoading: boolean; onCreate: () => void }) {
+  const shouldReduceMotion = useReducedMotion();
   return (
-    <motion.div {...cardMotion}>
+    <motion.div {...(shouldReduceMotion ? { initial: false } : cardMotion)}>
       <PremiumCard variant="raised" className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_18%_0%,rgba(244,114,182,0.14),transparent_36%),radial-gradient(circle_at_82%_0%,rgba(45,212,191,0.13),transparent_34%)]" />
         <PremiumCardContent className="relative p-5 sm:p-6">
           {isLoading ? (
             <div className="space-y-5">
-              <div className="h-5 w-40 rounded-full bg-white/10" />
-              <div className="h-8 w-80 max-w-full rounded-full bg-white/10" />
+              <Skeleton className="h-5 w-40 rounded-full bg-white/10" />
+              <Skeleton className="h-8 w-80 max-w-full rounded-full bg-white/10" />
               <div className="grid gap-3 sm:grid-cols-3">
-                {[1, 2, 3].map((item) => <div key={item} className="h-20 rounded-3xl bg-white/10" />)}
+                {[1, 2, 3].map((item) => <Skeleton key={item} className="h-20 rounded-3xl bg-white/10" />)}
               </div>
             </div>
           ) : (
@@ -644,11 +646,12 @@ function RecurringEmptyState({ onCreate }: { onCreate: () => void }) {
 }
 
 function DeleteRecurringDialog({ item, isDeleting, onCancel, onConfirm }: { item: RecurringItem | null; isDeleting: boolean; onCancel: () => void; onConfirm: () => void }) {
+  const shouldReduceMotion = useReducedMotion();
   return (
     <AnimatePresence>
       {item ? (
-        <motion.div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-xl sm:items-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <motion.div className="w-full max-w-md" initial={{ opacity: 0, y: 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.98 }}>
+        <motion.div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-xl sm:items-center" initial={shouldReduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div className="w-full max-w-md" initial={shouldReduceMotion ? false : { opacity: 0, y: 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.98 }}>
             <PremiumCard variant="raised">
               <PremiumCardHeader>
                 <PremiumCardTitle>Eliminar {item.name}</PremiumCardTitle>
@@ -694,6 +697,7 @@ function RecurringRow({
   onDelete: () => void;
   onPay: () => void;
 }) {
+  const shouldReduceMotion = useReducedMotion();
   const frequencyLabels: Record<Frequency, string> = {
     WEEKLY: "Semanal",
     BIWEEKLY: "Quincenal",
@@ -705,7 +709,7 @@ function RecurringRow({
   return (
     <motion.article
       layout
-      {...cardMotion}
+      {...(shouldReduceMotion ? { initial: false } : cardMotion)}
       className={`rounded-[1.75rem] border border-white/[0.08] bg-white/[0.035] p-4 transition duration-200 hover:border-white/[0.16] hover:bg-white/[0.055] sm:p-5 ${!item.isActive ? "opacity-55" : ""}`}
     >
       <div className="flex min-w-0 items-start gap-3">
