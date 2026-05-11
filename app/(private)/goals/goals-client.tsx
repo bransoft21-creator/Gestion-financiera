@@ -36,6 +36,7 @@ import {
   appFormHeaderClass,
 } from "@/components/app/mobile-form";
 import { formatArgentinaDateInput } from "@/lib/dates";
+import { onMoneyKeyDown } from "@/lib/input-utils";
 import { moneySchema, optionalMoneySchema, parseMoneyInput } from "@/lib/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -399,6 +400,7 @@ export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
             <form className="space-y-4 pb-5" onSubmit={handleSubmit}>
               <Field label="Nombre" error={errors.name}>
                 <Input
+                  maxLength={100}
                   value={form.name}
                   onChange={(event) => updateForm("name", event.target.value)}
                   placeholder="Ej. Fondo de emergencia"
@@ -420,6 +422,7 @@ export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
                 <Field label="Objetivo" error={errors.targetAmount}>
                   <Input
                     inputMode="decimal"
+                    onKeyDown={onMoneyKeyDown}
                     value={form.targetAmount}
                     onChange={(event) => updateForm("targetAmount", event.target.value)}
                     className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white"
@@ -431,6 +434,7 @@ export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
                 <Field label="Actual" error={errors.currentAmount}>
                   <Input
                     inputMode="decimal"
+                    onKeyDown={onMoneyKeyDown}
                     value={form.currentAmount}
                     onChange={(event) => updateForm("currentAmount", event.target.value)}
                     className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white"
@@ -439,6 +443,7 @@ export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
                 <Field label="Aporte mensual" error={errors.requiredMonthlyAmount}>
                   <Input
                     inputMode="decimal"
+                    onKeyDown={onMoneyKeyDown}
                     value={form.requiredMonthlyAmount}
                     onChange={(event) => updateForm("requiredMonthlyAmount", event.target.value)}
                     className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white"
@@ -473,6 +478,7 @@ export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
               <Field label="Notas" error={errors.notes}>
                 <textarea
                   className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
+                  maxLength={1000}
                   value={form.notes}
                   onChange={(event) => updateForm("notes", event.target.value)}
                   placeholder="Qué significa este hito para vos..."
@@ -883,6 +889,7 @@ function GoalCard({
                 <label className="text-xs font-medium text-zinc-400">Monto ({goal.currency})</label>
                 <Input
                   inputMode="decimal"
+                  onKeyDown={onMoneyKeyDown}
                   value={quickContribAmount}
                   onChange={(event) => onContribAmountChange(event.target.value)}
                   placeholder="0"

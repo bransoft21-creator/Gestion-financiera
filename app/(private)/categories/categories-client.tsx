@@ -244,7 +244,7 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
           <PremiumCardContent className="px-4 pb-4">
           <form className="space-y-4" onSubmit={handleSubmit}>
             <Field label="Nombre" error={errors.name}>
-              <Input className={inputClass} value={form.name} onChange={(event) => updateForm("name", event.target.value)} />
+              <Input className={inputClass} maxLength={80} value={form.name} onChange={(event) => updateForm("name", event.target.value)} />
             </Field>
 
             <Field label="Tipo" error={errors.type}>

@@ -34,6 +34,7 @@ import {
   appFormHeaderClass,
 } from "@/components/app/mobile-form";
 import { formatArgentinaDateInput } from "@/lib/dates";
+import { onIntegerKeyDown, onMoneyKeyDown } from "@/lib/input-utils";
 import { moneySchema, optionalMoneySchema, parseMoneyInput } from "@/lib/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -436,11 +437,11 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
           <div className={appFormContentClass(isFormOpen, "px-5 sm:px-6")}>
             <form className="space-y-4 pb-5" onSubmit={handleSubmit}>
               <Field label="Nombre" error={errors.name}>
-                <Input className={inputClass} value={form.name} onChange={(e) => updateForm("name", e.target.value)} placeholder="Ej: Préstamo personal banco" />
+                <Input className={inputClass} maxLength={100} value={form.name} onChange={(e) => updateForm("name", e.target.value)} placeholder="Ej: Préstamo personal banco" />
               </Field>
 
               <Field label="Acreedor / entidad" error={errors.lender}>
-                <Input className={inputClass} value={form.lender} onChange={(e) => updateForm("lender", e.target.value)} placeholder="Opcional" />
+                <Input className={inputClass} maxLength={100} value={form.lender} onChange={(e) => updateForm("lender", e.target.value)} placeholder="Opcional" />
               </Field>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -465,19 +466,19 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Monto original" error={errors.originalAmount}>
-                  <Input className={inputClass} inputMode="decimal" value={form.originalAmount} onChange={(e) => updateForm("originalAmount", e.target.value)} placeholder="0" />
+                  <Input className={inputClass} inputMode="decimal" onKeyDown={onMoneyKeyDown} value={form.originalAmount} onChange={(e) => updateForm("originalAmount", e.target.value)} placeholder="0" />
                 </Field>
                 <Field label="Saldo pendiente" error={errors.outstandingAmount}>
-                  <Input className={inputClass} inputMode="decimal" value={form.outstandingAmount} onChange={(e) => updateForm("outstandingAmount", e.target.value)} placeholder="0" />
+                  <Input className={inputClass} inputMode="decimal" onKeyDown={onMoneyKeyDown} value={form.outstandingAmount} onChange={(e) => updateForm("outstandingAmount", e.target.value)} placeholder="0" />
                 </Field>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Pago mínimo" error={errors.minimumPayment}>
-                  <Input className={inputClass} inputMode="decimal" value={form.minimumPayment} onChange={(e) => updateForm("minimumPayment", e.target.value)} placeholder="Opcional" />
+                  <Input className={inputClass} inputMode="decimal" onKeyDown={onMoneyKeyDown} value={form.minimumPayment} onChange={(e) => updateForm("minimumPayment", e.target.value)} placeholder="Opcional" />
                 </Field>
                 <Field label="Tasa de interés (%)" error={errors.interestRate}>
-                  <Input className={inputClass} inputMode="decimal" value={form.interestRate} onChange={(e) => updateForm("interestRate", e.target.value)} placeholder="Opcional" />
+                  <Input className={inputClass} inputMode="decimal" onKeyDown={onMoneyKeyDown} value={form.interestRate} onChange={(e) => updateForm("interestRate", e.target.value)} placeholder="Opcional" />
                 </Field>
               </div>
 
@@ -486,12 +487,12 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
                   <Input className={inputClass} type="date" value={form.nextDueDate} onChange={(e) => updateForm("nextDueDate", e.target.value)} />
                 </Field>
                 <Field label="Día de vencimiento" error={errors.dueDay}>
-                  <Input className={inputClass} inputMode="numeric" value={form.dueDay} onChange={(e) => updateForm("dueDay", e.target.value)} placeholder="Ej: 15" />
+                  <Input className={inputClass} inputMode="numeric" onKeyDown={onIntegerKeyDown} value={form.dueDay} onChange={(e) => updateForm("dueDay", e.target.value)} placeholder="Ej: 15" />
                 </Field>
               </div>
 
               <Field label="Notas" error={errors.notes}>
-                <textarea className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600" value={form.notes} onChange={(e) => updateForm("notes", e.target.value)} placeholder="Detalle opcional" />
+                <textarea className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600" maxLength={1000} value={form.notes} onChange={(e) => updateForm("notes", e.target.value)} placeholder="Detalle opcional" />
               </Field>
 
               {message ? (
@@ -835,6 +836,7 @@ function DebtCard({
                 <label className="text-xs font-medium text-zinc-400">Monto ({debt.currency})</label>
                 <Input
                   inputMode="decimal"
+                  onKeyDown={onMoneyKeyDown}
                   value={quickPayAmount}
                   onChange={(e) => onQuickPayAmountChange(e.target.value)}
                   placeholder="0"

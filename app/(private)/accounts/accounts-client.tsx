@@ -29,6 +29,7 @@ import {
   appFormContentClass,
   appFormHeaderClass,
 } from "@/components/app/mobile-form";
+import { onMoneyKeyDown } from "@/lib/input-utils";
 import { moneySchema, optionalMoneySchema } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -278,6 +279,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
             <Field label="Nombre" error={errors.name}>
               <Input
                 className={inputClass}
+                maxLength={80}
                 value={form.name}
                 onChange={(e) => updateForm("name", e.target.value)}
                 placeholder="Ej: Cuenta Galicia, Efectivo, Visa"
@@ -314,6 +316,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
                 <Input
                   className={inputClass}
                   inputMode="decimal"
+                  onKeyDown={onMoneyKeyDown}
                   value={form.openingBalance}
                   onChange={(e) => updateForm("openingBalance", e.target.value)}
                   placeholder="0"
@@ -326,6 +329,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
                 <Input
                   className={inputClass}
                   inputMode="decimal"
+                  onKeyDown={onMoneyKeyDown}
                   value={form.creditLimit}
                   onChange={(e) => updateForm("creditLimit", e.target.value)}
                   placeholder="Opcional"

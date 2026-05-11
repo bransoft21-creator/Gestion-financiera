@@ -33,6 +33,7 @@ import {
   appFormHeaderClass,
 } from "@/components/app/mobile-form";
 import { formatArgentinaDateInput } from "@/lib/dates";
+import { onMoneyKeyDown } from "@/lib/input-utils";
 import { moneySchema } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -417,7 +418,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
         <div className={appFormContentClass(isFormOpen, "px-5 sm:px-6")}>
           <form className="space-y-4 pb-5" onSubmit={handleSubmit}>
             <Field label="Nombre" error={errors.name}>
-              <Input className={inputClass} value={form.name} onChange={(e) => updateForm("name", e.target.value)} placeholder="Ej: Netflix, Alquiler, Gym" />
+              <Input className={inputClass} maxLength={100} value={form.name} onChange={(e) => updateForm("name", e.target.value)} placeholder="Ej: Netflix, Alquiler, Gym" />
             </Field>
 
             <div className="grid gap-3 sm:grid-cols-[104px_1fr]">
@@ -428,7 +429,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
                 </select>
               </Field>
               <Field label="Monto" error={errors.amount}>
-                <Input className={inputClass} inputMode="decimal" value={form.amount} onChange={(e) => updateForm("amount", e.target.value)} placeholder="0" />
+                <Input className={inputClass} inputMode="decimal" onKeyDown={onMoneyKeyDown} value={form.amount} onChange={(e) => updateForm("amount", e.target.value)} placeholder="0" />
               </Field>
             </div>
 
@@ -462,7 +463,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
             </Field>
 
             <Field label="Notas" error={errors.notes}>
-              <textarea className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600" value={form.notes} onChange={(e) => updateForm("notes", e.target.value)} placeholder="Detalle opcional" />
+              <textarea className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600" maxLength={1000} value={form.notes} onChange={(e) => updateForm("notes", e.target.value)} placeholder="Detalle opcional" />
             </Field>
 
             {message ? <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">{message}</p> : null}

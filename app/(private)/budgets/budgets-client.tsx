@@ -27,6 +27,7 @@ import {
   PremiumCardHeader,
   PremiumCardTitle,
 } from "@/components/ui-v2/premium-card";
+import { onMoneyKeyDown } from "@/lib/input-utils";
 import { moneySchema } from "@/lib/money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -360,6 +361,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
                     <Field label="Monto" error={errors.plannedAmount}>
                       <Input
                         inputMode="decimal"
+                        onKeyDown={onMoneyKeyDown}
                         value={form.plannedAmount}
                         onChange={(event) => updateForm("plannedAmount", event.target.value)}
                         placeholder="0"

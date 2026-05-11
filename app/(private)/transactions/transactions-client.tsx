@@ -32,6 +32,7 @@ import {
   appFormHeaderClass,
 } from "@/components/app/mobile-form";
 import { formatArgentinaDateInput } from "@/lib/dates";
+import { onIntegerKeyDown, onMoneyKeyDown } from "@/lib/input-utils";
 import { moneySchema } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -698,6 +699,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               <Field label="Monto" error={formErrors.amount?.message}>
                 <Input
                   inputMode="decimal"
+                  onKeyDown={onMoneyKeyDown}
                   {...register("amount")}
                   placeholder="0"
                 />
@@ -713,6 +715,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
 
             <Field label="Descripción" error={formErrors.description?.message}>
               <Input
+                maxLength={160}
                 {...register("description")}
                 placeholder="Ej: Compra supermercado"
               />
@@ -721,6 +724,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
             <Field label="Notas" error={formErrors.notes?.message}>
               <textarea
                 className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                maxLength={1000}
                 {...register("notes")}
                 placeholder="Detalle opcional"
               />
@@ -781,6 +785,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                         type="number"
                         min={1}
                         inputMode="numeric"
+                        onKeyDown={onIntegerKeyDown}
                         {...register("installmentNumber")}
                         placeholder="Ej: 1"
                       />
@@ -790,6 +795,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                         type="number"
                         min={1}
                         inputMode="numeric"
+                        onKeyDown={onIntegerKeyDown}
                         {...register("totalInstallments")}
                         placeholder="Ej: 12"
                       />
