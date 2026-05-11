@@ -643,35 +643,44 @@ async function requestOpenAiAnalysis(input: ReturnType<typeof buildCompactMonthl
     throw new ApiError(503, "OPENAI_API_KEY no está configurada.");
   }
 
-  const response = await fetch(OPENAI_RESPONSES_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL,
-      input: [
-        {
-          role: "system",
-          content:
-            "Sos un analista financiero para una app de finanzas personales en Argentina. Respondé en español rioplatense, con tono claro, prudente y accionable. No inventes datos. No des asesoramiento financiero regulado; basate solo en el resumen, las métricas, la comparación y las señales recibidas. Usá obligatoriamente las métricas calculadas por backend cuando menciones ahorro, gastos fijos, movilidad, tarjeta de crédito, proyección de cierre, gastos repetidos, transacciones de alto impacto o cambios contra el mes anterior. Si comparison.available es false, tenés prohibido inventar comparaciones contra el mes anterior.",
-        },
-        {
-          role: "user",
-          content: `Analizá este resumen mensual compacto. Las métricas y la comparación incluidas ya fueron calculadas por backend y son la fuente de verdad: no las recalcules ni inventes datos faltantes. Usá la comparación para detectar mejoras, deterioros, categorías que subieron o bajaron, cambios en ahorro, uso de tarjeta y movilidad. Si comparison.available es false, indicá que no hay base comparativa suficiente y no inventes tendencias. Si una métrica está en 0 por falta de ingresos o gastos, explicalo con prudencia. Devolvé solo el JSON solicitado:\n${JSON.stringify(input)}`,
-        },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "monthly_financial_analysis",
-          strict: true,
-          schema: analysisSchema,
-        },
+  let response: Response;
+  try {
+    response = await fetch(OPENAI_RESPONSES_URL, {
+      method: "POST",
+      signal: AbortSignal.timeout(30_000),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
       },
-    }),
-  });
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL,
+        input: [
+          {
+            role: "system",
+            content:
+              "Sos un analista financiero para una app de finanzas personales en Argentina. Respondé en español rioplatense, con tono claro, prudente y accionable. No inventes datos. No des asesoramiento financiero regulado; basate solo en el resumen, las métricas, la comparación y las señales recibidas. Usá obligatoriamente las métricas calculadas por backend cuando menciones ahorro, gastos fijos, movilidad, tarjeta de crédito, proyección de cierre, gastos repetidos, transacciones de alto impacto o cambios contra el mes anterior. Si comparison.available es false, tenés prohibido inventar comparaciones contra el mes anterior.",
+          },
+          {
+            role: "user",
+            content: `Analizá este resumen mensual compacto. Las métricas y la comparación incluidas ya fueron calculadas por backend y son la fuente de verdad: no las recalcules ni inventes datos faltantes. Usá la comparación para detectar mejoras, deterioros, categorías que subieron o bajaron, cambios en ahorro, uso de tarjeta y movilidad. Si comparison.available es false, indicá que no hay base comparativa suficiente y no inventes tendencias. Si una métrica está en 0 por falta de ingresos o gastos, explicalo con prudencia. Devolvé solo el JSON solicitado:\n${JSON.stringify(input)}`,
+          },
+        ],
+        text: {
+          format: {
+            type: "json_schema",
+            name: "monthly_financial_analysis",
+            strict: true,
+            schema: analysisSchema,
+          },
+        },
+      }),
+    });
+  } catch (err) {
+    if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      throw new ApiError(504, "El análisis tardó demasiado. Intentá nuevamente.");
+    }
+    throw err;
+  }
 
   if (!response.ok) {
     const apiError = await readOpenAiError(response);

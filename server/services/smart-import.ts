@@ -289,28 +289,37 @@ async function requestOpenAi(userContent: unknown[]): Promise<AiOutput> {
 
   const model = process.env.OPENAI_MODEL ?? DEFAULT_MODEL;
 
-  const res = await fetch(OPENAI_RESPONSES_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      input: [
-        { role: "system", content: systemPrompt() },
-        { role: "user", content: userContent },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "smart_import",
-          strict: true,
-          schema: aiSchema,
-        },
+  let res: Response;
+  try {
+    res = await fetch(OPENAI_RESPONSES_URL, {
+      method: "POST",
+      signal: AbortSignal.timeout(30_000),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
       },
-    }),
-  });
+      body: JSON.stringify({
+        model,
+        input: [
+          { role: "system", content: systemPrompt() },
+          { role: "user", content: userContent },
+        ],
+        text: {
+          format: {
+            type: "json_schema",
+            name: "smart_import",
+            strict: true,
+            schema: aiSchema,
+          },
+        },
+      }),
+    });
+  } catch (err) {
+    if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      throw new ApiError(504, "El análisis tardó demasiado. Intentá con un archivo más pequeño.");
+    }
+    throw err;
+  }
 
   if (!res.ok) {
     if (res.status === 401) throw new ApiError(503, "Error de autenticación con OpenAI.");

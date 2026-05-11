@@ -853,7 +853,7 @@ function CopilotEmptyState({
           {isForbidden ? <ShieldAlert className="h-6 w-6" aria-hidden="true" /> : error ? <AlertTriangle className="h-6 w-6" aria-hidden="true" /> : <Sparkles className="h-6 w-6" aria-hidden="true" />}
         </div>
         <h2 className="text-balance text-3xl font-semibold leading-tight text-white">
-          {isForbidden ? "La IA todavía no está habilitada." : error ? "No pudimos traer tu lectura." : "Brandon, descubramos qué importa hoy."}
+          {isForbidden ? "La IA todavía no está habilitada." : error ? "No pudimos traer tu lectura." : "Descubramos qué importa hoy."}
         </h2>
         <p className="mt-4 text-sm leading-6 text-zinc-400">
           {isForbidden
@@ -1099,7 +1099,7 @@ function buildHeroNarrative(
 
   if (score >= 78 && metrics.savingsRate > 0) {
     return {
-      title: "Brandon, este es tu mes.",
+      title: "Este es tu mes.",
       subtitle: "Tu dinero se ve estable y la lectura detecta margen para cerrar con ahorro sin hacer movimientos dramáticos.",
       tone: "emerald" as InsightTone,
       trend,
@@ -1108,7 +1108,7 @@ function buildHeroNarrative(
 
   if (metrics.mobilityRate >= 18) {
     return {
-      title: "Brandon, el auto está hablando fuerte.",
+      title: "El auto está hablando fuerte.",
       subtitle: "La movilidad está ocupando demasiado espacio en el mes. No es alarma total, pero sí una señal que conviene mirar hoy.",
       tone: "amber" as InsightTone,
       trend,
@@ -1117,7 +1117,7 @@ function buildHeroNarrative(
 
   if (metrics.projectedMonthEndExpense > metrics.income && metrics.income > 0) {
     return {
-      title: "Brandon, bajemos un cambio.",
+      title: "Bajemos un cambio.",
       subtitle: "Si el ritmo sigue igual, el cierre puede quedar por encima de tus ingresos. Todavía estás a tiempo de corregirlo.",
       tone: "rose" as InsightTone,
       trend,
@@ -1125,7 +1125,7 @@ function buildHeroNarrative(
   }
 
   return {
-    title: "Brandon, esto es lo que deberías saber hoy.",
+    title: "Esto es lo que deberías saber hoy.",
     subtitle: analysis.summary,
     tone: getScoreTone(score),
     trend,

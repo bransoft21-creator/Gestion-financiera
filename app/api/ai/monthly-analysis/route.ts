@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   try {
     const { userProfile } = await getCurrentUser();
     if (!isAiEnabled(userProfile.email)) {
-      throw new ForbiddenError("La funcionalidad de IA solo está habilitada para el usuario autorizado.");
+      throw new ForbiddenError("Funcionalidad no disponible.");
     }
 
     const household = await getPrimaryHousehold(userProfile.id);
