@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart3, Eye, EyeOff, Loader2, Sparkles, Target, TrendingUp } from "lucide-react";
+import { ArrowLeft, BarChart3, Eye, EyeOff, Loader2, Sparkles, Target, TrendingUp } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-type AuthMode = "login" | "register";
+type AuthMode = "login" | "register" | "forgot";
+
+function getPasswordRecoveryRedirectUrl() {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+  return `${baseUrl.replace(/\/$/, "")}/auth/reset-password`;
+}
 
 export function LoginForm() {
   const [mode, setMode] = useState<AuthMode>("login");
@@ -51,6 +56,41 @@ export function LoginForm() {
       window.location.href = "/dashboard";
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Error inesperado. Intentá de nuevo.");
+      setIsLoading(false);
+    }
+  }
+
+  async function handleForgotPassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage(null);
+    setFieldErrors({});
+
+    const formData = new FormData(event.currentTarget);
+    const email = ((formData.get("email") as string) ?? "").trim();
+
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setFieldErrors({ email: "Ingresá un email válido." });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: getPasswordRecoveryRedirectUrl(),
+      });
+
+      if (error) {
+        setMessage("No pudimos enviar el correo. Revisá el email e intentá de nuevo.");
+        setIsLoading(false);
+        return;
+      }
+
+      setMessage("Te enviamos un enlace para cambiar tu contraseña.");
+      setIsLoading(false);
+    } catch {
+      setMessage("No pudimos enviar el correo. Intentá de nuevo en un momento.");
       setIsLoading(false);
     }
   }
@@ -109,26 +149,74 @@ export function LoginForm() {
             <p className="text-lg font-extrabold text-foreground">Financial OS</p>
           </div>
 
-          {/* Tabs */}
-          <div className="mb-7 grid grid-cols-2 rounded-2xl border border-white/10 bg-white/[0.045] p-1">
-            {(["login", "register"] as const).map((tab) => (
+          {mode !== "forgot" ? (
+            <div className="mb-7 grid grid-cols-2 rounded-2xl border border-white/10 bg-white/[0.045] p-1">
+              {(["login", "register"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => { setMode(tab); setFieldErrors({}); setMessage(null); }}
+                  className={`rounded-[14px] py-2.5 text-sm font-semibold transition-all duration-200 ${
+                    mode === tab
+                      ? "bg-white text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.10)]"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {tab === "login" ? "Iniciar sesión" : "Crear cuenta"}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="mb-7">
               <button
-                key={tab}
                 type="button"
-                onClick={() => { setMode(tab); setFieldErrors({}); setMessage(null); }}
-                className={`rounded-[14px] py-2.5 text-sm font-semibold transition-all duration-200 ${
-                  mode === tab
-                    ? "bg-white text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.10)]"
-                    : "text-muted-foreground"
-                }`}
+                onClick={() => { setMode("login"); setFieldErrors({}); setMessage(null); }}
+                className="mb-5 flex items-center gap-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground"
               >
-                {tab === "login" ? "Iniciar sesión" : "Crear cuenta"}
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                Volver al login
               </button>
-            ))}
-          </div>
+              <h1 className="text-2xl font-semibold text-foreground">Recuperar contraseña</h1>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Te vamos a enviar un enlace seguro para crear una contraseña nueva.
+              </p>
+            </div>
+          )}
 
-          {/* Form */}
-          <form className="space-y-5" onSubmit={handleSubmit}>
+          {mode === "forgot" ? (
+            <form className="space-y-5" onSubmit={handleForgotPassword}>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Email
+                </label>
+                <input
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="nombre@ejemplo.com"
+                  required
+                  className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-foreground outline-none transition hover:bg-white/[0.07]"
+                />
+                {fieldErrors.email && <p className="mt-1.5 text-xs text-destructive">{fieldErrors.email}</p>}
+              </div>
+
+              {message && (
+                <p className="rounded-2xl border border-teal-300/20 bg-teal-400/10 p-3 text-sm text-teal-50">
+                  {message}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="v2-focus-ring mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.12)] transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                {isLoading ? "Enviando..." : "Enviar enlace"}
+              </button>
+            </form>
+          ) : (
+            <form className="space-y-5" onSubmit={handleSubmit}>
             {mode === "register" && (
               <div>
                 <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -186,6 +274,18 @@ export function LoginForm() {
               {fieldErrors.password && <p className="mt-1.5 text-xs text-destructive">{fieldErrors.password}</p>}
             </div>
 
+            {mode === "login" && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setMode("forgot"); setFieldErrors({}); setMessage(null); }}
+                  className="text-sm font-semibold text-teal-200 transition hover:text-teal-100"
+                >
+                  Olvidé mi contraseña
+                </button>
+              </div>
+            )}
+
             {message && (
               <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">
                 {message}
@@ -214,6 +314,7 @@ export function LoginForm() {
               </p>
             )}
           </form>
+          )}
 
           <p className="mt-8 text-center text-[11px] text-muted-foreground/40">
             Financial OS · Copilot financiero personal

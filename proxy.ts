@@ -16,6 +16,10 @@ const PRIVATE_PREFIXES = [
   "/reports",
 ];
 
+const PUBLIC_AUTH_PATHS = [
+  "/auth/reset-password",
+];
+
 // ---------------------------------------------------------------------------
 // Simple in-memory rate limiter (per Edge instance)
 // Protects against basic abuse within a warm Vercel Edge instance.
@@ -52,6 +56,7 @@ function isRateLimited(key: string): boolean {
 // ---------------------------------------------------------------------------
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isPublicAuthPath = PUBLIC_AUTH_PATHS.some((path) => pathname.startsWith(path));
 
   // --- Rate limit API routes ---
   if (pathname.startsWith("/api/")) {
@@ -98,7 +103,7 @@ export async function proxy(request: NextRequest) {
   // --- Route protection ---
   const isPrivate = PRIVATE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
-  if (isPrivate && !user) {
+  if (isPrivate && !user && !isPublicAuthPath) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
