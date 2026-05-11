@@ -10,6 +10,7 @@ import {
   ScanLine,
   Sparkles,
   TrendingUp,
+  User,
 } from "lucide-react";
 
 export const navItems = [
@@ -24,6 +25,7 @@ export const navItems = [
   { href: "/recurring",     label: "Compromisos",    icon: RefreshCw },
   { href: "/notifications", label: "Avisos",         icon: Bell },
   { href: "/reports",       label: "Patrones",       icon: TrendingUp },
+  { href: "/profile",       label: "Mi perfil",      icon: User },
 ] as const;
 
 export const investmentsNavItem = {

@@ -343,7 +343,15 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
                 {editingAccountId ? "Guardar cambios" : "Crear lugar"}
               </ActionButton>
               {editingAccountId ? (
-                <ActionButton type="button" variant="glass" className="w-full" onClick={resetForm}>
+                <ActionButton
+                  type="button"
+                  variant="glass"
+                  className="w-full"
+                  onClick={() => {
+                    resetForm();
+                    setIsFormOpen(false);
+                  }}
+                >
                   <X className="h-4 w-4" aria-hidden="true" />
                   Cancelar
                 </ActionButton>

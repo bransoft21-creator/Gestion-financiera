@@ -32,6 +32,7 @@ import {
   appFormContentClass,
   appFormHeaderClass,
 } from "@/components/app/mobile-form";
+import { formatArgentinaDateInput } from "@/lib/dates";
 import { moneySchema } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -118,14 +119,11 @@ const formSchema = z.object({
   }
 });
 
-const defaultForm: FormState = {
+const defaultForm: Omit<FormState, "nextDueDate" | "currency" | "accountId"> = {
   name: "",
-  currency: "ARS",
   amount: "",
   frequency: "MONTHLY",
-  nextDueDate: "",
   endDate: "",
-  accountId: "",
   categoryId: "",
   notes: "",
 };
@@ -146,6 +144,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
     ...defaultForm,
     currency: defaultAccount?.currency ?? "ARS",
     accountId: defaultAccount?.id ?? "",
+    nextDueDate: formatArgentinaDateInput(),
   });
   const [items, setItems] = useState<RecurringItem[]>([]);
   const [upcomingCount, setUpcomingCount] = useState(0);
@@ -474,7 +473,15 @@ export function RecurringExpensesClient({ householdId, accounts, categories }: R
                 {editingId ? "Guardar cambios" : "Crear gasto fijo"}
               </ActionButton>
               {editingId ? (
-                <ActionButton type="button" variant="glass" className="w-full" onClick={resetForm}>
+                <ActionButton
+                  type="button"
+                  variant="glass"
+                  className="w-full"
+                  onClick={() => {
+                    resetForm();
+                    setIsFormOpen(false);
+                  }}
+                >
                   <X className="h-4 w-4" aria-hidden="true" />
                   Cancelar
                 </ActionButton>

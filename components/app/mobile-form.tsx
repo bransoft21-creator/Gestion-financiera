@@ -23,6 +23,7 @@ export function AppFormPanel({
   desktopAlwaysOpen = true,
 }: AppFormPanelProps) {
   const isMounted = useClientMounted();
+  const isXl = useIsXl();
   const mobilePanelRef = useRef<HTMLDivElement>(null);
 
   useLockBodyScroll(isOpen);
@@ -35,15 +36,20 @@ export function AppFormPanel({
     }
   }, [isOpen]);
 
+  // Render children ONLY in the desktop card on xl screens, and ONLY in the
+  // mobile portal on smaller screens. This prevents react-hook-form from
+  // registering the same field twice, which caused refs to be hijacked by the
+  // hidden panel, making form values invisible to RHF on submit.
   const desktopPanel = (
     <Card className={appFormDesktopPanelClass(isOpen, className, { desktopAlwaysOpen })}>
-      {children}
+      {isXl ? children : null}
     </Card>
   );
+
   const mobilePanel =
-    isMounted && isOpen
+    isMounted && isOpen && !isXl
       ? createPortal(
-          <div className="xl:hidden" ref={mobilePanelRef}>
+          <div ref={mobilePanelRef}>
             <MobileFormOverlay isOpen={isOpen} onClose={onClose} />
             <Card
               aria-modal
@@ -69,6 +75,18 @@ function useClientMounted() {
   return useSyncExternalStore(
     () => () => undefined,
     () => true,
+    () => false,
+  );
+}
+
+function useIsXl(): boolean {
+  return useSyncExternalStore(
+    (callback) => {
+      const mq = window.matchMedia("(min-width: 1280px)");
+      mq.addEventListener("change", callback);
+      return () => mq.removeEventListener("change", callback);
+    },
+    () => window.matchMedia("(min-width: 1280px)").matches,
     () => false,
   );
 }

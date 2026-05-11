@@ -286,13 +286,15 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
   }, [search]);
 
   useEffect(() => {
+    // Only process ?new=1 once on mount to prevent unexpected form resets
+    // when searchParams change due to navigation or URL updates.
     if (searchParams.get("new") === "1") {
       resetForm();
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsFormOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, []);
 
   async function loadTransactions(
     nextFilters = filters,

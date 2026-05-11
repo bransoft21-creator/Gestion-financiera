@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { MouseEvent } from "react";
 import { useState } from "react";
 import {
@@ -12,14 +12,17 @@ import {
   FolderTree,
   Gauge,
   Landmark,
+  LogOut,
   Menu,
   RefreshCw,
   ScanLine,
   Sparkles,
   TrendingUp,
+  User,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 const bottomNavItems = [
   { href: "/dashboard",    label: "Hoy",          icon: Gauge },
@@ -36,13 +39,22 @@ const moreNavItems = [
   { href: "/recurring",  label: "Compromisos",  icon: RefreshCw },
   { href: "/notifications", label: "Avisos",    icon: Bell },
   { href: "/reports",    label: "Patrones",     icon: TrendingUp },
+  { href: "/profile",    label: "Mi perfil",    icon: User },
 ] as const;
 
 export function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
 
   const isMoreActive = moreNavItems.some((item) => pathname === item.href);
+
+  async function handleLogout() {
+    const supabase = createSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    router.replace("/login");
+    router.refresh();
+  }
 
   function handleBottomNavClick(event: MouseEvent<HTMLAnchorElement>, href: string) {
     if (href !== "/dashboard" || pathname !== "/dashboard") return;
@@ -105,6 +117,16 @@ export function BottomNav() {
               </Link>
             );
           })}
+          <div className="mt-1 border-t border-white/10 pt-1">
+            <button
+              type="button"
+              onClick={() => { setMoreOpen(false); void handleLogout(); }}
+              className="flex h-12 w-full items-center gap-3 rounded-2xl px-4 text-[14px] font-medium text-rose-300 transition-all duration-150 hover:bg-rose-400/10 hover:text-rose-200"
+            >
+              <LogOut className="h-5 w-5 shrink-0" aria-hidden="true" />
+              <span>Cerrar sesión</span>
+            </button>
+          </div>
         </div>
       </div>
 

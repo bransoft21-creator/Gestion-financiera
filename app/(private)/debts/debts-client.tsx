@@ -506,7 +506,15 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
                   {editingDebtId ? "Guardar cambios" : "Registrar"}
                 </ActionButton>
                 {editingDebtId ? (
-                  <ActionButton type="button" variant="glass" className="w-full" onClick={resetForm}>
+                  <ActionButton
+                    type="button"
+                    variant="glass"
+                    className="w-full"
+                    onClick={() => {
+                      resetForm();
+                      setIsFormOpen(false);
+                    }}
+                  >
                     <X className="h-4 w-4" aria-hidden="true" />
                     Cancelar
                   </ActionButton>
