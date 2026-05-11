@@ -174,6 +174,42 @@ function useCountUp(target: number, ms = 850) {
   return val;
 }
 
+/* ── Time-aware context ──────────────────────────────────────────────────── */
+
+type TimeOfDay = "morning" | "afternoon" | "evening" | "night";
+
+type TimeContext = {
+  greeting: string;
+  timeOfDay: TimeOfDay;
+  isWeekend: boolean;
+};
+
+function getTimeContext(): TimeContext {
+  const now = new Date();
+  const hour = now.getHours();
+  const day = now.getDay();
+  const isWeekend = day === 0 || day === 6;
+
+  let timeOfDay: TimeOfDay;
+  let greeting: string;
+
+  if (hour >= 6 && hour < 13) {
+    timeOfDay = "morning";
+    greeting = "Buen día, Brandon.";
+  } else if (hour >= 13 && hour < 20) {
+    timeOfDay = "afternoon";
+    greeting = "Buenas tardes.";
+  } else if (hour >= 20 && hour < 23) {
+    timeOfDay = "evening";
+    greeting = "Buenas noches.";
+  } else {
+    timeOfDay = "night";
+    greeting = "Todo en calma.";
+  }
+
+  return { greeting, timeOfDay, isWeekend };
+}
+
 /* ── Dashboard skeleton ──────────────────────────────────────────────────── */
 
 function DashboardSkeleton() {
@@ -231,25 +267,53 @@ function DashboardSkeleton() {
 
 /* ── Ambient signal ──────────────────────────────────────────────────────── */
 
-function AmbientSignal({ text }: { text: string }) {
+function AmbientSignal({ text, celebratory = false }: { text: string; celebratory?: boolean }) {
   return (
     <div className="mb-8 flex items-center gap-3 sm:mb-10">
-      <span className="h-px flex-1 bg-white/[0.04]" aria-hidden="true" />
-      <p className="shrink-0 text-[11px] italic tracking-wide text-zinc-600">{text}</p>
-      <span className="h-px flex-1 bg-white/[0.04]" aria-hidden="true" />
+      <span
+        className={`h-px flex-1 ${celebratory ? "bg-emerald-500/[0.12]" : "bg-white/[0.04]"}`}
+        aria-hidden="true"
+      />
+      <p className={`shrink-0 text-[11px] italic tracking-wide ${celebratory ? "text-emerald-500/70" : "text-zinc-600"}`}>
+        {text}
+      </p>
+      <span
+        className={`h-px flex-1 ${celebratory ? "bg-emerald-500/[0.12]" : "bg-white/[0.04]"}`}
+        aria-hidden="true"
+      />
     </div>
   );
 }
 
-function getAmbientHint(metrics: DashboardSummary["metrics"]): string | null {
-  if (metrics.income === 0) return null;
+function getAmbientHint(
+  metrics: DashboardSummary["metrics"],
+  timeCtx: TimeContext,
+  isCurrentMonth: boolean,
+): string | null {
+  if (metrics.income === 0 && metrics.expenses === 0) {
+    return isCurrentMonth ? "Este mes todavía está en blanco. Todo empieza desde acá." : null;
+  }
+
   const { savingsRate, fixedToIncomeRatio, upcomingObligations, projection } = metrics;
-  if (projection.daysRemaining <= 5) return "El mes cierra pronto — buen momento para una última revisión.";
-  if (savingsRate >= 20) return `Ahorrás ${savingsRate}% este mes. Vas por buen camino.`;
+
+  if (isCurrentMonth) {
+    if (projection.daysRemaining <= 3) return "El mes está cerrando. Un último vistazo.";
+    if (projection.daysRemaining <= 7) return "El mes está en su tramo final.";
+    if (timeCtx.isWeekend && timeCtx.timeOfDay === "morning") {
+      return "Los fines de semana suelen mover más los gastos. Buen momento para revisar.";
+    }
+    if (timeCtx.timeOfDay === "morning" && savingsRate >= 15) return "Tu situación viene estable. Buen arranque.";
+    if (timeCtx.timeOfDay === "night") return "Todo lo que importa hoy está resumido acá.";
+  }
+
+  if (savingsRate >= 25) return `Guardás el ${savingsRate}% del ingreso este mes. Viene sólido.`;
+  if (savingsRate >= 15) return `El ${savingsRate}% va al ahorro. Ritmo positivo.`;
   if (upcomingObligations === 0 && savingsRate >= 0) return "Sin compromisos pendientes. El mes puede cerrar limpio.";
-  if (fixedToIncomeRatio < 35) return "Los gastos fijos están tranquilos.";
+  if (fixedToIncomeRatio < 35 && metrics.income > 0) return "Los gastos fijos están tranquilos este mes.";
+  if (fixedToIncomeRatio >= 55 && metrics.income > 0) return "Los fijos están pesando. Vale revisarlos antes de fin de mes.";
   if (savingsRate < 0) return "El disponible real es negativo. El mes pide atención.";
-  return "Tu dinero está hablando. Esto es lo más importante del mes.";
+
+  return "Todo lo que importa está resumido acá.";
 }
 
 /* ── Hero card ───────────────────────────────────────────────────────────── */
@@ -529,7 +593,7 @@ function getIncomeInsight(metrics: DashboardSummary["metrics"]): {
   }
   if (metrics.savingsRate >= 5) {
     return {
-      insight: `Ahorrás un ${metrics.savingsRate}% del ingreso. Hay espacio para mejorar.`,
+      insight: `El ${metrics.savingsRate}% va al ahorro. Hay margen para crecer.`,
       insightTone: "neutral",
       cardTone: "neutral",
     };
@@ -554,7 +618,7 @@ function getExpensesInsight(metrics: DashboardSummary["metrics"]): {
   cardTone: InsightCardTone;
 } {
   if (metrics.spendingRate === 0) {
-    return { insight: "Sin gastos registrados aún este mes.", insightTone: "neutral", cardTone: "neutral" };
+    return { insight: "El mes todavía está en blanco.", insightTone: "neutral", cardTone: "neutral" };
   }
   if (metrics.spendingRate >= 100) {
     return {
@@ -572,13 +636,13 @@ function getExpensesInsight(metrics: DashboardSummary["metrics"]): {
   }
   if (metrics.spendingRate >= 65) {
     return {
-      insight: `${metrics.spendingRate}% del ingreso utilizado. Monitoreá el ritmo.`,
+      insight: `${metrics.spendingRate}% del ingreso en movimiento. Ritmo activo.`,
       insightTone: "neutral",
       cardTone: "neutral",
     };
   }
   return {
-    insight: `Solo el ${metrics.spendingRate}% del ingreso utilizado. Vas con margen.`,
+    insight: `Vas con margen. El ${metrics.spendingRate}% del ingreso en movimiento.`,
     insightTone: "positive",
     cardTone: "neutral",
   };
@@ -828,7 +892,7 @@ function ExpenseTypeBreakdown({
           );
         })}
         {total === 0 && (
-          <p className="py-2 text-center text-xs text-muted-foreground">Sin gastos registrados este mes.</p>
+          <p className="py-2 text-center text-xs text-muted-foreground">Este mes todavía está tranquilo por acá.</p>
         )}
       </PremiumCardContent>
     </PremiumCard>
@@ -955,8 +1019,8 @@ function ExpenseCategoryExplorer({
           {expensesByCategory.length === 0 ? (
             <EmptyState
               icon={ReceiptText}
-              title="Sin gastos este mes"
-              description="Los gastos agrupados aparecerán al registrar transacciones."
+              title="El mes todavía está en blanco"
+              description="Tu mapa de consumo empieza a construirse cuando registrás el primer gasto."
             />
           ) : (
             <div className="mx-auto grid w-full max-w-[940px] gap-5 xl:max-w-none xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.78fr)] xl:items-start">
@@ -1142,7 +1206,7 @@ function ExpenseCategoryDetailPanel({
 
 function RecentTransactions({ transactions }: { transactions: DashboardSummary["latestTransactions"] }) {
   if (!transactions.length) return (
-    <EmptyState icon={ReceiptText} title="Sin transacciones recientes" description="Registrá la primera transacción del mes." />
+    <EmptyState icon={ReceiptText} title="Todavía no hay movimientos" description="Cuando registrés el primero, tu timeline financiero empieza a construirse." />
   );
 
   return (
@@ -1185,6 +1249,7 @@ export function DashboardClient() {
   const [selectedExpenseCategoryPreference, setSelectedExpenseCategoryPreference] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [timeContext] = useState(() => getTimeContext());
 
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
 
@@ -1229,35 +1294,42 @@ export function DashboardClient() {
   }
 
   const monthNav = (
-    <div className="mb-6 grid gap-3 sm:flex sm:items-center">
-      <div className="flex items-center gap-3 sm:flex-1">
-        <button
-          type="button"
-          onClick={navigatePrev}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-muted-foreground transition-colors hover:bg-white/[0.10] hover:text-foreground"
-          aria-label="Mes anterior"
-        >
-          <ArrowLeftCircle className="h-4 w-4" aria-hidden="true" />
-        </button>
-        <h2 className="flex-1 text-center text-[17px] font-bold text-foreground">
-          {MONTH_NAMES[month - 1]} {year}
-        </h2>
-        <button
-          type="button"
-          onClick={navigateNext}
-          disabled={isCurrentMonth}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-muted-foreground transition-colors hover:bg-white/[0.10] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
-          aria-label="Mes siguiente"
-        >
-          <ArrowRightCircle className="h-4 w-4" aria-hidden="true" />
-        </button>
+    <div className="mb-6">
+      {isCurrentMonth && (
+        <p className="mb-3 text-[11px] tracking-wide text-zinc-600" suppressHydrationWarning>
+          {timeContext.greeting}
+        </p>
+      )}
+      <div className="grid gap-3 sm:flex sm:items-center">
+        <div className="flex items-center gap-3 sm:flex-1">
+          <button
+            type="button"
+            onClick={navigatePrev}
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-muted-foreground transition-colors hover:bg-white/[0.10] hover:text-foreground"
+            aria-label="Mes anterior"
+          >
+            <ArrowLeftCircle className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <h2 className="flex-1 text-center text-[17px] font-bold text-foreground">
+            {MONTH_NAMES[month - 1]} {year}
+          </h2>
+          <button
+            type="button"
+            onClick={navigateNext}
+            disabled={isCurrentMonth}
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-muted-foreground transition-colors hover:bg-white/[0.10] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
+            aria-label="Mes siguiente"
+          >
+            <ArrowRightCircle className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+        <Button asChild size="sm" className="h-9 w-full sm:w-auto">
+          <Link href="/transactions?new=1">
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Nueva transacción
+          </Link>
+        </Button>
       </div>
-      <Button asChild size="sm" className="h-9 w-full sm:w-auto">
-        <Link href="/transactions?new=1">
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Nueva transacción
-        </Link>
-      </Button>
     </div>
   );
 
@@ -1277,7 +1349,7 @@ export function DashboardClient() {
         <PremiumCard>
           <PremiumCardContent className="flex h-72 flex-col items-center justify-center p-8 text-center">
             <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />
-            <h2 className="mt-4 text-lg font-semibold">No se pudo cargar el dashboard</h2>
+            <h2 className="mt-4 text-lg font-semibold">No pudimos traer tu información</h2>
             <p className="mt-2 text-sm text-muted-foreground">{error}</p>
           </PremiumCardContent>
         </PremiumCard>
@@ -1289,7 +1361,7 @@ export function DashboardClient() {
     return (
       <>
         {monthNav}
-        <EmptyState icon={ReceiptText} title="Sin datos disponibles" description="No se pudo obtener información del dashboard." />
+        <EmptyState icon={ReceiptText} title="Todavía no hay datos para este mes" description="Cuando registres movimientos, toda la información aparece acá." />
       </>
     );
   }
@@ -1313,7 +1385,8 @@ export function DashboardClient() {
   const reservedInsight = getReservedInsight(metrics);
   const obligationsInsight = getObligationsInsight(metrics);
 
-  const ambientHint = getAmbientHint(metrics);
+  const ambientHint = getAmbientHint(metrics, timeContext, isCurrentMonth);
+  const isCelebratoryMonth = isCurrentMonth && metrics.savingsRate >= 20;
 
   return (
     <div className="fade-in">
@@ -1323,7 +1396,7 @@ export function DashboardClient() {
       <HeroCard metrics={metrics} year={year} month={month} usdBalance={usdBalance} />
 
       {/* Ambient signal — puente contextual entre Hero y Copilot */}
-      {ambientHint && <AmbientSignal text={ambientHint} />}
+      {ambientHint && <AmbientSignal text={ambientHint} celebratory={isCelebratoryMonth} />}
 
       {/* 2. Financial Copilot — protagonista, posición central */}
       <FinancialAiAnalysisCard month={selectedMonth} />

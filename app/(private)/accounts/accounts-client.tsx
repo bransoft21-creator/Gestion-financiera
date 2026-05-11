@@ -407,8 +407,8 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
             ) : activeAccounts.length === 0 ? (
               <EmptyState
                 icon={Wallet}
-                title="Sin cuentas"
-                description="Agregá tu primera cuenta para comenzar a registrar movimientos."
+                title="Todavía no hay cuentas."
+                description="Agregá una cuenta para que el sistema empiece a leer tus finanzas."
               />
             ) : (
               <div className="grid gap-3">

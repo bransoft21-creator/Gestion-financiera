@@ -347,8 +347,8 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
           {categories.length === 0 ? (
             <EmptyState
               icon={FolderTree}
-              title="Sin categorías"
-              description="Creá categorías para clasificar ingresos, gastos, deudas, metas e inversiones."
+              title="Todavía no hay categorías."
+              description="Las categorías dan sentido a cada movimiento. Creá la primera."
             />
           ) : (
             <div className="grid gap-1.5 md:grid-cols-2">

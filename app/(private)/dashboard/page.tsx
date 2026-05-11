@@ -5,8 +5,8 @@ export default function DashboardPage() {
   return (
     <V2PageShell
       eyebrow="Financial Operating System"
-      title="Qué deberías saber hoy"
-      description="Una lectura clara de tu mes: señales importantes, presión financiera y próximos movimientos."
+      title="Tu mes en perspectiva"
+      description="Señales importantes, presión financiera y lo que viene."
     >
       <DashboardClient />
     </V2PageShell>

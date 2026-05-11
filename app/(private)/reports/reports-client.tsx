@@ -231,8 +231,8 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
           <PremiumCardContent>
             <EmptyState
               icon={TrendingUp}
-              title="Sin datos suficientes"
-              description="Registrá transacciones para ver la evolución mensual de tus finanzas."
+              title="Todavía no hay historial."
+              description="La evolución mensual aparece acá cuando hay movimientos en al menos dos meses."
             />
           </PremiumCardContent>
         </PremiumCard>
