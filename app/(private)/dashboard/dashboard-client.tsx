@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/app/empty-state";
 import { Button } from "@/components/ui/button";
 import { FinancialAiAnalysisCard } from "@/components/dashboard/financial-ai-analysis-card";
+import { WeeklyReflectionCard } from "@/components/dashboard/weekly-reflection-card";
 import {
   PremiumCard,
   PremiumCardContent,
@@ -1424,6 +1425,9 @@ export function DashboardClient() {
 
       {/* 2. Financial Copilot — protagonista, posición central */}
       <FinancialAiAnalysisCard month={selectedMonth} />
+
+      {/* Pulso semanal — solo para el mes actual, costo mínimo */}
+      {isCurrentMonth && <WeeklyReflectionCard />}
 
       {/* 3. Métricas del mes — strip compacto */}
       <MetricStrip items={[
