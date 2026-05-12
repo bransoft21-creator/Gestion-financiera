@@ -274,7 +274,7 @@ export function ActivityCenter() {
   const pendingCount = items.filter((i) => !i.readAt && !i.resolvedAt && !i.dismissedAt).length;
 
   return (
-    <div className="space-y-5">
+    <div data-tutorial="activity-center" className="space-y-5">
       {/* Filter tabs + actions */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Tabs */}

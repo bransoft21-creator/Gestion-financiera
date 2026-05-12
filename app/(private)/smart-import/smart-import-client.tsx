@@ -559,6 +559,7 @@ function UploadZone({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <motion.div
+        data-tutorial="smart-import-dropzone"
         animate={{
           borderColor: isDragging ? "rgba(45,212,191,0.5)" : "rgba(255,255,255,0.08)",
           backgroundColor: isDragging ? "rgba(45,212,191,0.04)" : "rgba(255,255,255,0.01)",

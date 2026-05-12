@@ -947,7 +947,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
           ) : null}
         </PremiumCard>
 
-        <PremiumCard>
+        <PremiumCard data-tutorial="transactions-feed">
           <PremiumCardHeader>
             <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">

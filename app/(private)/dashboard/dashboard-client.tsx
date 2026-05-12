@@ -402,7 +402,7 @@ function HeroCard({
     : "Tu mes necesita atención: el disponible real queda por debajo de cero.";
 
   return (
-    <PremiumCard variant="raised" className="relative mb-8 overflow-hidden p-5 sm:mb-10 sm:p-7">
+    <PremiumCard data-tutorial="dashboard-hero" variant="raised" className="relative mb-8 overflow-hidden p-5 sm:mb-10 sm:p-7">
       <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(45,212,191,.18)_0%,transparent_68%)]" />
       <div className="pointer-events-none absolute bottom-[-8rem] left-[-6rem] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,.12)_0%,transparent_68%)]" />
 

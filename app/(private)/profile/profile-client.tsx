@@ -47,7 +47,7 @@ export function ProfileClient({
           <div className="space-y-4">
 
             {/* Identity card */}
-            <PremiumCard variant="raised" className="relative overflow-hidden">
+            <PremiumCard data-tutorial="profile-summary" variant="raised" className="relative overflow-hidden">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_20%_0%,rgba(45,212,191,0.12),transparent_40%),radial-gradient(circle_at_80%_0%,rgba(96,165,250,0.10),transparent_38%)]" />
               <PremiumCardContent className="relative p-6 sm:p-8">
                 <div className="flex items-start gap-5">
