@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isAiEnabled } from "@/lib/feature-flags";
 import { ProfileClient } from "./profile-client";
 
 export default async function ProfilePage() {
@@ -12,10 +13,19 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
+  const avatarUrl =
+    typeof user.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null;
+
+  const provider =
+    typeof user.app_metadata?.provider === "string" ? user.app_metadata.provider : "email";
+
   return (
     <ProfileClient
       userEmail={user.email ?? null}
       userName={getDisplayName(user.user_metadata)}
+      avatarUrl={avatarUrl}
+      provider={provider}
+      isAiEnabled={user.email ? isAiEnabled(user.email) : false}
     />
   );
 }

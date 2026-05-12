@@ -11,9 +11,16 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-...(process.env.NODE_ENV === "development" && {
+  ...(process.env.NODE_ENV === "development" && {
     allowedDevOrigins: ["192.168.0.9"],
   }),
+
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "*.googleusercontent.com" },
+    ],
+  },
 
   async headers() {
     return [

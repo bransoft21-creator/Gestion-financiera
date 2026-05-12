@@ -4,7 +4,11 @@ import { getCurrentUser } from "@/server/auth/current-user";
 import { isAiEnabled } from "@/lib/feature-flags";
 import { OnboardingClient } from "./onboarding-client";
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ replay?: string }>;
+}) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -14,12 +18,19 @@ export default async function OnboardingPage() {
     redirect("/login");
   }
 
-  // Creates profile + household + default accounts/categories if this is the first visit
   const { userProfile } = await getCurrentUser();
+  const params = await searchParams;
+  const isReplay = params.replay === "1";
 
-  if (userProfile.onboardingCompletedAt) {
+  // En modo replay un usuario existente puede volver a ver el tutorial sin gates
+  if (userProfile.onboardingCompletedAt && !isReplay) {
     redirect("/dashboard");
   }
 
-  return <OnboardingClient canSmartImport={isAiEnabled(userProfile.email)} />;
+  return (
+    <OnboardingClient
+      canSmartImport={isAiEnabled(userProfile.email)}
+      replayMode={isReplay}
+    />
+  );
 }

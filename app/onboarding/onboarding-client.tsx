@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  ArrowLeft,
   ArrowRight,
   BarChart3,
   Check,
@@ -92,7 +93,13 @@ const stepVariants = {
 
 type Step = 0 | 1 | 2;
 
-export function OnboardingClient({ canSmartImport }: { canSmartImport: boolean }) {
+export function OnboardingClient({
+  canSmartImport,
+  replayMode = false,
+}: {
+  canSmartImport: boolean;
+  replayMode?: boolean;
+}) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(0);
   const [selectedGoals, setSelectedGoals] = useState<Set<string>>(new Set());
@@ -112,6 +119,13 @@ export function OnboardingClient({ canSmartImport }: { canSmartImport: boolean }
   async function completeOnboarding(path: string) {
     if (pendingPath) return;
     setPendingPath(path);
+
+    // En replay no llamamos a la API — el onboarding ya está completado
+    if (replayMode) {
+      router.push(path);
+      return;
+    }
+
     try {
       const res = await fetch("/api/onboarding/complete", { method: "POST" });
       if (res.ok) {
@@ -134,6 +148,18 @@ export function OnboardingClient({ canSmartImport }: { canSmartImport: boolean }
         <div className="absolute -right-48 -top-48 h-[500px] w-[500px] rounded-full bg-[radial-gradient(circle,rgba(45,212,191,.09)_0%,transparent_65%)]" />
         <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,.06)_0%,transparent_65%)]" />
       </div>
+
+      {/* Botón Volver — solo en modo replay */}
+      {replayMode && (
+        <button
+          type="button"
+          onClick={() => router.push("/profile")}
+          className="absolute left-5 top-8 flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-zinc-300"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Volver
+        </button>
+      )}
 
       {/* Step indicator — shown from step 1 */}
       {step > 0 && (

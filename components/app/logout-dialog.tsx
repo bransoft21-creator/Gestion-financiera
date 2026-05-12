@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Loader2, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -27,9 +28,12 @@ export function LogoutDialog({ open, onClose }: LogoutDialogProps) {
     }
   }
 
-  if (!open) return null;
+  // open is always false on initial render (controlled by user interaction),
+  // so typeof document check prevents portal call during SSR without needing a mounted state
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  // Portal to document.body escapes any stacking context (CSS transforms, backdrop-filter, etc.)
+  return createPortal(
     <div
       className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center"
       role="dialog"
@@ -45,7 +49,7 @@ export function LogoutDialog({ open, onClose }: LogoutDialogProps) {
       />
 
       {/* Panel */}
-      <div className="relative w-full max-w-sm rounded-t-[28px] border border-white/10 bg-zinc-950 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.55)] sm:rounded-[28px]">
+      <div className="relative w-full max-w-sm rounded-t-[28px] border border-white/10 bg-zinc-950 p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[0_24px_80px_rgba(0,0,0,0.55)] sm:rounded-[28px] sm:pb-6">
         <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-300/20 bg-rose-400/[0.12] text-rose-200">
           <LogOut className="h-5 w-5" aria-hidden="true" />
         </div>
@@ -74,6 +78,7 @@ export function LogoutDialog({ open, onClose }: LogoutDialogProps) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
