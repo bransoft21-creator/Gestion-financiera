@@ -230,7 +230,7 @@ async function callPdfFile(buffer: Buffer, userProfileId: string): Promise<AiOut
     {
       type: "input_file",
       filename: "resumen-banco.pdf",
-      file_data: buffer.toString("base64"),
+      file_data: `data:application/pdf;base64,${buffer.toString("base64")}`,
     },
     {
       type: "input_text",
@@ -429,18 +429,21 @@ async function requestOpenAi(userContent: unknown[], userProfileId: string): Pro
   }
 
   if (!res.ok) {
+    const providerError = await readOpenAiError(res);
     traceAi("OPENAI_SMART_IMPORT_FETCH_ERROR", {
       model,
       status: res.status,
+      code: providerError.code,
       user: traceUserId(userProfileId),
     });
     captureServerMessage("Smart Import provider error", "smart-import", {
       status: res.status,
+      code: providerError.code,
       model,
     });
     if (res.status === 401) throw new ApiError(503, "Error de autenticación con OpenAI.");
     if (res.status === 429) throw new ApiError(429, "El servicio de IA está saturado. Intentá en un momento.");
-    throw new ApiError(502, "No se pudo procesar el documento. Intentá nuevamente.");
+    throw new ApiError(providerError.status, providerError.message);
   }
 
   const payload = (await res.json()) as {
@@ -481,6 +484,47 @@ async function requestOpenAi(userContent: unknown[], userProfileId: string): Pro
   });
 
   return parsed;
+}
+
+async function readOpenAiError(response: Response) {
+  const fallback = {
+    status: 502,
+    message: "No se pudo procesar el documento. Intentá nuevamente.",
+    code: "unknown",
+  };
+
+  try {
+    const payload = (await response.json()) as {
+      error?: {
+        code?: string | null;
+        message?: string;
+        param?: string | null;
+        type?: string;
+      };
+    };
+    const code = payload.error?.code ?? payload.error?.type ?? "unknown";
+    const providerMessage = payload.error?.message ?? "";
+
+    if (response.status === 400 && code === "invalid_file") {
+      return {
+        status: 422,
+        message: "El PDF parece estar dañado, protegido o en un formato que no pudimos leer. Probá exportarlo de nuevo o subir un screenshot.",
+        code,
+      };
+    }
+
+    if (response.status === 400 && providerMessage.includes("file_data")) {
+      return {
+        status: 502,
+        message: "No se pudo enviar el PDF al servicio de IA. Intentá nuevamente.",
+        code,
+      };
+    }
+
+    return { ...fallback, code };
+  } catch {
+    return fallback;
+  }
 }
 
 function extractOutputText(output: unknown): string | null {
