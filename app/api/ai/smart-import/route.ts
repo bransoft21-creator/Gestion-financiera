@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/server/auth/current-user";
 import { analyzeFile } from "@/server/services/smart-import";
 import { getTransactionWorkspace } from "@/server/services/workspace";
 import { isAiEnabled } from "@/lib/feature-flags";
+import { assertAiQuota } from "@/server/services/ai-usage";
 
 export const runtime = "nodejs";
 
@@ -27,8 +28,10 @@ export async function POST(request: NextRequest) {
     const mimeType = file.type || "application/octet-stream";
 
     const { household, accounts, categories } = await getTransactionWorkspace(userProfile.id);
+    await assertAiQuota(userProfile.id, "ai.smart-import");
 
     const result = await analyzeFile(buffer, mimeType, {
+      userProfileId: userProfile.id,
       householdId: household.id,
       accounts,
       categories,

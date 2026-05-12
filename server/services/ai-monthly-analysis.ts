@@ -3,6 +3,8 @@ import { AccountType, PaymentMethod, Prisma, TransactionStatus, TransactionType 
 import { argentinaMonthRangeUtc, formatArgentinaDateInput } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/server/api/errors";
+import { logEvent } from "@/server/api/logging";
+import { estimateTextTokens, recordAiUsage } from "@/server/services/ai-usage";
 import { toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
 
@@ -212,7 +214,10 @@ export async function generateMonthlyFinancialAnalysis({
     };
   }
 
-  const analysis = await requestOpenAiAnalysis(compactInput);
+  const analysis = await requestOpenAiAnalysis(compactInput, {
+    userId: userProfileId,
+    endpoint: "ai.monthly-analysis",
+  });
 
   const saved = await prisma.aiFinancialAnalysis.upsert({
     where: { userId_month: { userId: userProfileId, month } },
@@ -637,11 +642,16 @@ function getRepeatedSmallExpenses(transactions: AnalysisTransaction[], totalInco
     .slice(0, 8);
 }
 
-async function requestOpenAiAnalysis(input: ReturnType<typeof buildCompactMonthlyInput>) {
+async function requestOpenAiAnalysis(
+  input: ReturnType<typeof buildCompactMonthlyInput>,
+  usage: { userId: string; endpoint: string },
+) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new ApiError(503, "OPENAI_API_KEY no está configurada.");
+    throw new ApiError(503, "El servicio de IA no está configurado.");
   }
+  const model = process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL;
+  const prompt = `Analizá este resumen mensual compacto. Las métricas y la comparación incluidas ya fueron calculadas por backend y son la fuente de verdad: no las recalcules ni inventes datos faltantes. Usá la comparación para detectar mejoras, deterioros, categorías que subieron o bajaron, cambios en ahorro, uso de tarjeta y movilidad. Si comparison.available es false, indicá que no hay base comparativa suficiente y no inventes tendencias. Si una métrica está en 0 por falta de ingresos o gastos, explicalo con prudencia. Devolvé solo el JSON solicitado:\n${JSON.stringify(input)}`;
 
   let response: Response;
   try {
@@ -653,7 +663,7 @@ async function requestOpenAiAnalysis(input: ReturnType<typeof buildCompactMonthl
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL,
+        model,
         input: [
           {
             role: "system",
@@ -662,7 +672,7 @@ async function requestOpenAiAnalysis(input: ReturnType<typeof buildCompactMonthl
           },
           {
             role: "user",
-            content: `Analizá este resumen mensual compacto. Las métricas y la comparación incluidas ya fueron calculadas por backend y son la fuente de verdad: no las recalcules ni inventes datos faltantes. Usá la comparación para detectar mejoras, deterioros, categorías que subieron o bajaron, cambios en ahorro, uso de tarjeta y movilidad. Si comparison.available es false, indicá que no hay base comparativa suficiente y no inventes tendencias. Si una métrica está en 0 por falta de ingresos o gastos, explicalo con prudencia. Devolvé solo el JSON solicitado:\n${JSON.stringify(input)}`,
+            content: prompt,
           },
         ],
         text: {
@@ -684,22 +694,40 @@ async function requestOpenAiAnalysis(input: ReturnType<typeof buildCompactMonthl
 
   if (!response.ok) {
     const apiError = await readOpenAiError(response);
-    console.error("OpenAI analysis error:", apiError);
+    logEvent("warn", "ai.monthly_analysis.provider_error", {
+      status: response.status,
+      mappedStatus: apiError.status,
+    });
     throw new ApiError(apiError.status, apiError.message);
   }
 
-  const payload = (await response.json()) as { output_text?: string; output?: unknown };
+  const payload = (await response.json()) as {
+    output_text?: string;
+    output?: unknown;
+    usage?: { input_tokens?: number; output_tokens?: number };
+  };
   const outputText = payload.output_text ?? extractResponsesText(payload.output);
 
   if (!outputText) {
     throw new ApiError(502, "La IA no devolvió un resultado válido.");
   }
 
+  let result: AiFinancialAnalysisResult;
   try {
-    return normalizeAnalysisResult(JSON.parse(outputText) as AiFinancialAnalysisResult);
+    result = normalizeAnalysisResult(JSON.parse(outputText) as AiFinancialAnalysisResult);
   } catch {
     throw new ApiError(502, "La IA devolvió un JSON inválido.");
   }
+
+  await recordAiUsage({
+    userId: usage.userId,
+    endpoint: usage.endpoint,
+    model,
+    inputTokens: payload.usage?.input_tokens ?? estimateTextTokens(prompt),
+    outputTokens: payload.usage?.output_tokens ?? estimateTextTokens(outputText),
+  });
+
+  return result;
 }
 
 function extractResponsesText(output: unknown) {
@@ -739,14 +767,14 @@ async function readOpenAiError(response: Response) {
     if (code === "insufficient_quota") {
       return {
         status: 402,
-        message: "La cuenta de OpenAI no tiene crédito disponible o alcanzó su límite mensual.",
+        message: "El servicio de IA alcanzó su límite de uso.",
       };
     }
 
     if (code === "invalid_api_key") {
       return {
-        status: 401,
-        message: "La API key de OpenAI no es válida. Revisá OPENAI_API_KEY.",
+        status: 503,
+        message: "El servicio de IA no está disponible.",
       };
     }
 

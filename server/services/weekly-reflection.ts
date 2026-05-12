@@ -109,6 +109,7 @@ export async function getOrGenerateWeeklyReflection(params: {
     weekendPct: currentMetrics.weekendPct,
     expensesChange: comparison.available ? comparison.expensesPct : null,
     signals: signals.map((s) => ({ label: s.label, severity: s.severity })),
+    usage: { userId: userProfileId, endpoint: "ai.weekly-reflection" },
   });
 
   // Persist reflection to cache

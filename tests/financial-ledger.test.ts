@@ -168,6 +168,23 @@ describe("financial ledger", () => {
     assert.equal(computeMonthlyDebtPayment({ minimumPayment: null, outstandingAmount: 8_000 }), 8_000);
   });
 
+  it("does not let over-budget categories or overpaid debt inflate available money", () => {
+    const health = computeFinancialHealth({
+      income: 100_000,
+      expenses: 120_000,
+      budgets: [{ plannedAmount: 50_000, spentAmount: 75_000 }],
+      recurringExpenses: [],
+      goals: [],
+      debts: [{ minimumPayment: 25_000, outstandingAmount: 10_000 }],
+      totalOutstandingDebt: 10_000,
+    });
+
+    assert.equal(health.remainingReservedBudget, 0);
+    assert.equal(health.upcomingDebtPayments, 10_000);
+    assert.equal(health.realAvailable, -30_000);
+    assert.equal(health.savingsRate, 0);
+  });
+
   it("computes partial debt payments and paid status", () => {
     assert.deepEqual(
       computeDebtPaymentResult({

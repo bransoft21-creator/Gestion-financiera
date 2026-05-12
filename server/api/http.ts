@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { ApiError, FieldApiError } from "./errors";
+import { logEvent } from "./logging";
 
 export function ok<T>(data: T, init?: ResponseInit) {
   return NextResponse.json({ data }, init);
@@ -53,11 +54,14 @@ export function handleApiError(error: unknown) {
     }
   }
 
-  console.error(error);
+  logEvent("error", "api.unhandled_error", {
+    name: error instanceof Error ? error.name : "UnknownError",
+    message: error instanceof Error ? error.message : "Unknown error",
+  });
 
   return NextResponse.json(
     {
-      error: "Internal server error",
+      error: "Ocurrió un error inesperado. Intentá nuevamente.",
     },
     { status: 500 },
   );

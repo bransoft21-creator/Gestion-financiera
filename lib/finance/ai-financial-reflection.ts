@@ -5,6 +5,7 @@
  */
 
 import type { Signal } from "./financial-signals";
+import { estimateTextTokens, recordAiUsage } from "@/server/services/ai-usage";
 
 export interface ReflectionInput {
   weekLabel: string;          // e.g. "5 al 11 de mayo"
@@ -15,6 +16,7 @@ export interface ReflectionInput {
   weekendPct: number;
   expensesChange: number | null;  // % vs previous week
   signals: Array<{ label: string; severity: Signal["severity"] }>;
+  usage?: { userId: string; endpoint: string };
 }
 
 export interface ReflectionInsight {
@@ -105,10 +107,11 @@ export async function generateWeeklyReflection(
 ): Promise<ReflectionResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error("OPENAI_API_KEY no está configurada.");
+    throw new Error("El servicio de IA no está configurado.");
   }
 
   const prompt = buildPrompt(input);
+  const model = process.env.OPENAI_MODEL ?? DEFAULT_MODEL;
 
   let response: Response;
   try {
@@ -120,7 +123,7 @@ export async function generateWeeklyReflection(
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL ?? DEFAULT_MODEL,
+        model,
         input: prompt,
         text: {
           format: {
@@ -144,7 +147,11 @@ export async function generateWeeklyReflection(
     throw new Error(`OpenAI error ${response.status}: ${body}`);
   }
 
-  const payload = (await response.json()) as { output_text?: string; output?: unknown };
+  const payload = (await response.json()) as {
+    output_text?: string;
+    output?: unknown;
+    usage?: { input_tokens?: number; output_tokens?: number };
+  };
   const outputText = payload.output_text ?? extractText(payload.output);
 
   if (!outputText) {
@@ -152,6 +159,15 @@ export async function generateWeeklyReflection(
   }
 
   const parsed = JSON.parse(outputText) as ReflectionResult;
+  if (input.usage) {
+    await recordAiUsage({
+      userId: input.usage.userId,
+      endpoint: input.usage.endpoint,
+      model,
+      inputTokens: payload.usage?.input_tokens ?? estimateTextTokens(prompt),
+      outputTokens: payload.usage?.output_tokens ?? estimateTextTokens(outputText),
+    });
+  }
   // Clamp to 3 insights
   return { insights: parsed.insights.slice(0, 3) };
 }

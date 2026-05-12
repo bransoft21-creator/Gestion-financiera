@@ -9,6 +9,7 @@ import {
 import { getPrimaryHousehold } from "@/server/services/workspace";
 import { ForbiddenError } from "@/server/api/errors";
 import { isAiEnabled } from "@/lib/feature-flags";
+import { assertAiQuota } from "@/server/services/ai-usage";
 
 export const runtime = "nodejs";
 
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
 
     const household = await getPrimaryHousehold(userProfile.id);
     const input = monthlyAnalysisSchema.parse(await request.json());
+    await assertAiQuota(userProfile.id, "ai.monthly-analysis");
 
     const analysis = await generateMonthlyFinancialAnalysis({
       userProfileId: userProfile.id,

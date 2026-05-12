@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/server/auth/current-user";
 import { ForbiddenError } from "@/server/api/errors";
 import { isAiEnabled } from "@/lib/feature-flags";
 import { getPrimaryHousehold } from "@/server/services/workspace";
+import { assertAiQuota } from "@/server/services/ai-usage";
 import {
   getOrGenerateWeeklyReflection,
   getSavedWeeklyReflection,
@@ -34,6 +35,7 @@ export async function POST() {
     }
 
     const household = await getPrimaryHousehold(userProfile.id);
+    await assertAiQuota(userProfile.id, "ai.weekly-reflection");
     const data = await getOrGenerateWeeklyReflection({
       userProfileId: userProfile.id,
       householdId: household.id,
