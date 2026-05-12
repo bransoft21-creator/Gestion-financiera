@@ -400,7 +400,7 @@ async function requestOpenAi(userContent: unknown[], userProfileId: string): Pro
     traceAi("OPENAI_SMART_IMPORT_FETCH_START", { model, user: traceUserId(userProfileId) });
     res = await fetch(OPENAI_RESPONSES_URL, {
       method: "POST",
-      signal: AbortSignal.timeout(40_000),
+      signal: AbortSignal.timeout(80_000),
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
@@ -423,7 +423,7 @@ async function requestOpenAi(userContent: unknown[], userProfileId: string): Pro
     });
   } catch (err) {
     if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
-      throw new ApiError(504, "El análisis tardó demasiado. Intentá con un archivo más pequeño.");
+      throw new ApiError(504, "El análisis del PDF tardó más de lo esperado. Probá nuevamente en unos minutos.");
     }
     throw err;
   }

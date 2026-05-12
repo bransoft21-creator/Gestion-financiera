@@ -102,7 +102,7 @@ const PROCESSING_STEPS = [
   "Preparando resultados…",
 ];
 
-const SMART_IMPORT_TIMEOUT_MS = 45_000;
+const SMART_IMPORT_TIMEOUT_MS = 90_000;
 const SMART_IMPORT_SLOW_MS = 12_000;
 
 // ---------------------------------------------------------------------------
@@ -250,7 +250,7 @@ export function SmartImportClient({ householdId, accounts, categories }: Props) 
       const message = wasAborted
         ? abortReason === "user_cancel"
           ? "Cancelamos la importación. Podés volver a intentarlo sin perder el archivo."
-          : "La importación tardó más de lo esperado. Podés volver a intentarlo sin perder el archivo."
+          : "El análisis del PDF tardó más de lo esperado. Podés volver a intentarlo sin perder el archivo."
         : err instanceof Error
           ? err.message
           : "No pudimos completar la importación esta vez.";
