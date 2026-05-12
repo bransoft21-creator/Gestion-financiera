@@ -6,14 +6,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   BarChart3,
-  Brain,
   Check,
   CircleDollarSign,
-  CreditCard,
-  FileSpreadsheet,
   ScanLine,
-  TrendingDown,
-  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ActionButton } from "@/components/ui-v2/action-button";
@@ -21,13 +16,57 @@ import { ActionButton } from "@/components/ui-v2/action-button";
 /* ── Goals ───────────────────────────────────────────────────────────────── */
 
 const GOALS = [
-  { id: "expenses", label: "Entender mis gastos", icon: BarChart3 },
-  { id: "save", label: "Ahorrar más", icon: TrendingDown },
-  { id: "debts", label: "Organizar deudas", icon: CreditCard },
-  { id: "control", label: "Control mensual", icon: Wallet },
-  { id: "excel", label: "Dejar el Excel", icon: FileSpreadsheet },
-  { id: "auto", label: "Automatizar el seguimiento", icon: Brain },
+  { id: "expenses", label: "Entender mis gastos" },
+  { id: "save", label: "Ahorrar más" },
+  { id: "debts", label: "Organizar deudas" },
+  { id: "control", label: "Control mensual" },
+  { id: "excel", label: "Dejar el Excel" },
+  { id: "auto", label: "Automatizar el seguimiento" },
 ];
+
+/* ── Start options (dynamic — respects feature flags) ────────────────────── */
+
+type StartOption = {
+  id: string;
+  path: string;
+  icon: typeof ScanLine;
+  label: string;
+  description: string;
+  featured: boolean;
+};
+
+function buildStartOptions(canSmartImport: boolean): StartOption[] {
+  return [
+    ...(canSmartImport
+      ? [
+          {
+            id: "import",
+            path: "/smart-import",
+            icon: ScanLine,
+            label: "Smart Import",
+            description: "Subí un resumen, screenshot o PDF. La IA extrae los datos sola.",
+            featured: true,
+          },
+        ]
+      : []),
+    {
+      id: "manual",
+      path: "/transactions?new=1",
+      icon: CircleDollarSign,
+      label: "Primer movimiento",
+      description: "Cargá tu primer ingreso o gasto ahora mismo.",
+      featured: false,
+    },
+    {
+      id: "explore",
+      path: "/dashboard",
+      icon: BarChart3,
+      label: "Solo explorar",
+      description: "Mirá cómo funciona antes de cargar nada.",
+      featured: false,
+    },
+  ];
+}
 
 /* ── Motion ──────────────────────────────────────────────────────────────── */
 
@@ -36,11 +75,15 @@ const easeOut = [0.16, 1, 0.3, 1] as const;
 const stepVariants = {
   hidden: { opacity: 0, y: 20, filter: "blur(8px)" },
   visible: {
-    opacity: 1, y: 0, filter: "blur(0px)",
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
     transition: { duration: 0.52, ease: easeOut },
   },
   exit: {
-    opacity: 0, y: -10, filter: "blur(4px)",
+    opacity: 0,
+    y: -10,
+    filter: "blur(4px)",
     transition: { duration: 0.22, ease: "easeIn" as const },
   },
 };
@@ -49,11 +92,13 @@ const stepVariants = {
 
 type Step = 0 | 1 | 2;
 
-export function OnboardingClient() {
+export function OnboardingClient({ canSmartImport }: { canSmartImport: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(0);
   const [selectedGoals, setSelectedGoals] = useState<Set<string>>(new Set());
-  const [isCompleting, setIsCompleting] = useState(false);
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
+
+  const startOptions = buildStartOptions(canSmartImport);
 
   function toggleGoal(id: string) {
     setSelectedGoals((prev) => {
@@ -64,26 +109,33 @@ export function OnboardingClient() {
     });
   }
 
-  async function completeOnboarding(redirectPath: string) {
-    if (isCompleting) return;
-    setIsCompleting(true);
+  async function completeOnboarding(path: string) {
+    if (pendingPath) return;
+    setPendingPath(path);
     try {
-      await fetch("/api/onboarding/complete", { method: "POST" });
-    } finally {
-      router.push(redirectPath);
+      const res = await fetch("/api/onboarding/complete", { method: "POST" });
+      if (res.ok) {
+        router.push(path);
+        // Don't reset pendingPath — component will unmount on navigation
+      } else if (res.status === 401) {
+        router.push("/login");
+      } else {
+        setPendingPath(null);
+      }
+    } catch {
+      setPendingPath(null);
     }
   }
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center px-5 py-16">
-
       {/* Ambient glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute -right-48 -top-48 h-[500px] w-[500px] rounded-full bg-[radial-gradient(circle,rgba(45,212,191,.09)_0%,transparent_65%)]" />
         <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,.06)_0%,transparent_65%)]" />
       </div>
 
-      {/* Step indicator */}
+      {/* Step indicator — shown from step 1 */}
       {step > 0 && (
         <div
           className="absolute top-8 left-0 right-0 flex justify-center gap-1.5"
@@ -97,7 +149,7 @@ export function OnboardingClient() {
             <span
               key={dot}
               className={cn(
-                "h-[3px] rounded-full transition-all duration-400",
+                "h-[3px] rounded-full transition-all duration-300",
                 step >= dot ? "w-7 bg-white/50" : "w-2 bg-white/12",
               )}
             />
@@ -105,11 +157,13 @@ export function OnboardingClient() {
         </div>
       )}
 
-      {/* Steps */}
+      {/* Content */}
       <div className="relative z-10 w-full max-w-[360px]">
         <AnimatePresence mode="wait">
           {step === 0 && (
-            <motion.div key="step-0" variants={stepVariants} initial="hidden" animate="visible" exit="exit">
+            // initial={false}: WelcomeStep owns its entrance via inner motion elements;
+            // parent only provides the exit animation
+            <motion.div key="step-0" variants={stepVariants} initial={false} animate="visible" exit="exit">
               <WelcomeStep onNext={() => setStep(1)} />
             </motion.div>
           )}
@@ -124,7 +178,11 @@ export function OnboardingClient() {
           )}
           {step === 2 && (
             <motion.div key="step-2" variants={stepVariants} initial="hidden" animate="visible" exit="exit">
-              <StartStep isCompleting={isCompleting} onSelect={completeOnboarding} />
+              <StartStep
+                options={startOptions}
+                pendingPath={pendingPath}
+                onSelect={completeOnboarding}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -141,7 +199,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
       <motion.p
         className="mb-10 text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-700"
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1, transition: { delay: 0.1, duration: 0.6 } }}
+        animate={{ opacity: 1, transition: { delay: 0.08, duration: 0.6 } }}
       >
         Financial OS
       </motion.p>
@@ -149,7 +207,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
       <motion.h1
         className="text-balance text-[44px] font-semibold leading-[1.1] tracking-tight text-white sm:text-[52px]"
         initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0, transition: { delay: 0.18, duration: 0.55, ease: [0.16, 1, 0.3, 1] } }}
+        animate={{ opacity: 1, y: 0, transition: { delay: 0.15, duration: 0.55, ease: easeOut } }}
       >
         Tu dinero,{" "}
         <span className="text-zinc-500">con perspectiva.</span>
@@ -158,7 +216,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
       <motion.p
         className="mx-auto mt-6 max-w-[280px] text-[15px] leading-relaxed text-zinc-500"
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1, transition: { delay: 0.32, duration: 0.5 } }}
+        animate={{ opacity: 1, transition: { delay: 0.28, duration: 0.5 } }}
       >
         Entendé en qué punto estás y hacia dónde vas. Una sola vista para todo.
       </motion.p>
@@ -166,7 +224,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
       <motion.div
         className="mt-10"
         initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0, transition: { delay: 0.44, duration: 0.45, ease: [0.16, 1, 0.3, 1] } }}
+        animate={{ opacity: 1, y: 0, transition: { delay: 0.38, duration: 0.45, ease: easeOut } }}
       >
         <ActionButton size="lg" className="min-w-[160px]" onClick={onNext}>
           Empezar
@@ -193,9 +251,7 @@ function GoalsStep({
       <h2 className="text-balance text-[26px] font-semibold leading-tight text-white">
         ¿Qué querés mejorar?
       </h2>
-      <p className="mt-2.5 text-sm text-zinc-500">
-        Elegí todo lo que aplique.
-      </p>
+      <p className="mt-2.5 text-sm text-zinc-500">Elegí todo lo que aplique.</p>
 
       <div className="mt-7 flex flex-wrap gap-2">
         {GOALS.map((goal) => {
@@ -213,9 +269,7 @@ function GoalsStep({
               )}
               aria-pressed={isSelected}
             >
-              {isSelected && (
-                <Check className="h-3 w-3 shrink-0 text-teal-300" aria-hidden="true" />
-              )}
+              {isSelected && <Check className="h-3 w-3 shrink-0 text-teal-300" aria-hidden="true" />}
               {goal.label}
             </button>
           );
@@ -241,48 +295,15 @@ function GoalsStep({
 
 /* ── Step 2 — Start ──────────────────────────────────────────────────────── */
 
-const START_OPTIONS = [
-  {
-    id: "import",
-    path: "/smart-import",
-    icon: ScanLine,
-    label: "Smart Import",
-    description: "Subí un resumen, screenshot o PDF. La IA extrae los datos sola.",
-    featured: true,
-  },
-  {
-    id: "manual",
-    path: "/transactions?new=1",
-    icon: CircleDollarSign,
-    label: "Primer movimiento",
-    description: "Cargá tu primer ingreso o gasto ahora mismo.",
-    featured: false,
-  },
-  {
-    id: "explore",
-    path: "/dashboard",
-    icon: BarChart3,
-    label: "Solo explorar",
-    description: "Mirá cómo funciona antes de cargar nada.",
-    featured: false,
-  },
-] as const;
-
 function StartStep({
-  isCompleting,
+  options,
+  pendingPath,
   onSelect,
 }: {
-  isCompleting: boolean;
+  options: ReturnType<typeof buildStartOptions>;
+  pendingPath: string | null;
   onSelect: (path: string) => void;
 }) {
-  const [selected, setSelected] = useState<string | null>(null);
-
-  function handleSelect(path: string) {
-    if (isCompleting) return;
-    setSelected(path);
-    onSelect(path);
-  }
-
   return (
     <div>
       <h2 className="text-balance text-[26px] font-semibold leading-tight text-white">
@@ -291,32 +312,34 @@ function StartStep({
       <p className="mt-2.5 text-sm text-zinc-500">Podés cambiar en cualquier momento.</p>
 
       <div className="mt-7 space-y-2.5">
-        {START_OPTIONS.map((option) => {
+        {options.map((option) => {
           const Icon = option.icon;
-          const isLoading = selected === option.path && isCompleting;
-          const isDisabled = isCompleting && selected !== option.path;
+          const isLoading = pendingPath === option.path;
+          const isDisabled = pendingPath !== null;
 
           return (
             <button
               key={option.id}
               type="button"
-              disabled={isCompleting}
-              onClick={() => handleSelect(option.path)}
+              disabled={isDisabled}
+              onClick={() => onSelect(option.path)}
               className={cn(
                 "group w-full rounded-2xl border p-4 text-left transition duration-150",
                 option.featured
                   ? "border-teal-300/20 bg-teal-300/[0.05] hover:border-teal-300/30 hover:bg-teal-300/[0.09]"
                   : "border-white/[0.07] bg-white/[0.025] hover:border-white/[0.13] hover:bg-white/[0.045]",
-                isDisabled && "opacity-40",
+                isDisabled && !isLoading && "opacity-40",
               )}
             >
               <div className="flex items-center gap-3.5">
-                <div className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                  option.featured
-                    ? "bg-teal-300/15 text-teal-100"
-                    : "bg-white/[0.06] text-zinc-400 group-hover:text-zinc-200",
-                )}>
+                <div
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                    option.featured
+                      ? "bg-teal-300/15 text-teal-100"
+                      : "bg-white/[0.06] text-zinc-400 group-hover:text-zinc-200",
+                  )}
+                >
                   {isLoading ? (
                     <div
                       className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
@@ -327,10 +350,12 @@ function StartStep({
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className={cn(
-                    "text-sm font-semibold",
-                    option.featured ? "text-teal-50" : "text-zinc-100",
-                  )}>
+                  <p
+                    className={cn(
+                      "text-sm font-semibold",
+                      option.featured ? "text-teal-50" : "text-zinc-100",
+                    )}
+                  >
                     {option.label}
                   </p>
                   <p className="mt-0.5 text-xs leading-5 text-zinc-600">{option.description}</p>
