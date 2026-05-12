@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { captureClientError, trackProductEvent } from "@/lib/observability/client";
 
 type AiFinancialAnalysis = {
   summary: string;
@@ -302,6 +303,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
 
     setIsLoading(true);
     setError(null);
+    trackProductEvent("ai_analysis_started", { route: "/dashboard" }, "ai");
 
     try {
       const response = await fetch("/api/ai/monthly-analysis", {
@@ -322,12 +324,20 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
 
       if (!response.ok || !payload.data || !nextAnalysis) {
         setError(payload.error ?? "No se pudo generar el análisis.");
+        trackProductEvent("ai_analysis_failed", { reason: "api_error" }, "ai");
         return;
       }
 
       applyPayload({ ...payload.data, analysis: nextAnalysis });
+      trackProductEvent(
+        "ai_analysis_succeeded",
+        { cached: Boolean(payload.data.cached), stale: Boolean(payload.data.stale) },
+        "ai",
+      );
       setIsOpen(true);
-    } catch {
+    } catch (err) {
+      captureClientError(err, "ai", { reason: "monthly_analysis_network" });
+      trackProductEvent("ai_analysis_failed", { reason: "network" }, "ai");
       setError("Error de red. Intentá nuevamente en unos segundos.");
     } finally {
       setIsLoading(false);

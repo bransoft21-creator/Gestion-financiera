@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { captureClientError, trackProductEvent } from "@/lib/observability/client";
 import type { ReflectionInsight } from "@/lib/finance/ai-financial-reflection";
 
 type ApiResponse = {
@@ -40,14 +41,20 @@ export function WeeklyReflectionCard() {
     try {
       const res = await fetch("/api/ai/weekly-reflection", { method: "POST" });
       if (res.status === 403) { setStatus("empty"); return; }
-      if (!res.ok) { setStatus("error"); return; }
+      if (!res.ok) {
+        trackProductEvent("weekly_reflection_failed", { reason: "api_error" }, "ai");
+        setStatus("error");
+        return;
+      }
       const json = (await res.json()) as ApiResponse;
       const d = json.data;
       if (!d || !d.hasData || d.insights.length === 0) { setStatus("empty"); return; }
       setInsights(d.insights);
       setWeekLabel(d.weekLabel);
       setStatus("done");
-    } catch {
+    } catch (err) {
+      captureClientError(err, "ai", { reason: "weekly_reflection" });
+      trackProductEvent("weekly_reflection_failed", { reason: "network" }, "ai");
       setStatus("error");
     }
   }, []);

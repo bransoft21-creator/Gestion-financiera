@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/server/auth/current-user";
-import { isAiEnabled } from "@/lib/feature-flags";
+import { isSmartImportEnabled } from "@/lib/feature-flags";
 import { OnboardingClient } from "./onboarding-client";
 
 export default async function OnboardingPage({
@@ -29,7 +29,7 @@ export default async function OnboardingPage({
 
   return (
     <OnboardingClient
-      canSmartImport={isAiEnabled(userProfile.email)}
+      canSmartImport={isSmartImportEnabled(userProfile.email)}
       replayMode={isReplay}
     />
   );

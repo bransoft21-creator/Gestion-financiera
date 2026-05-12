@@ -5,6 +5,7 @@
  */
 
 import type { Signal } from "./financial-signals";
+import { captureServerMessage } from "@/lib/observability/server";
 import { estimateTextTokens, recordAiUsage } from "@/server/services/ai-usage";
 
 export interface ReflectionInput {
@@ -143,8 +144,10 @@ export async function generateWeeklyReflection(
   }
 
   if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`OpenAI error ${response.status}: ${body}`);
+    captureServerMessage("Weekly reflection provider error", "ai", {
+      status: response.status,
+    });
+    throw new Error("No pudimos completar el análisis esta vez.");
   }
 
   const payload = (await response.json()) as {

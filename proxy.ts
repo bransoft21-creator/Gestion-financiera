@@ -122,6 +122,17 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isPublicAuthPath = PUBLIC_AUTH_PATHS.some((path) => pathname.startsWith(path));
 
+  if (
+    process.env.MAINTENANCE_MODE === "1" &&
+    !pathname.startsWith("/_next") &&
+    !pathname.startsWith("/api/analytics")
+  ) {
+    return NextResponse.json(
+      { error: "Estamos haciendo mantenimiento breve. Volvé a intentar en unos minutos." },
+      { status: 503, headers: { "Retry-After": "300" } },
+    );
+  }
+
   if (pathname.startsWith("/api/")) {
     if (!isSameOriginMutation(request)) {
       return NextResponse.json(

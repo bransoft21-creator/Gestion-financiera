@@ -3,7 +3,7 @@ import { AccountType, PaymentMethod, Prisma, TransactionStatus, TransactionType 
 import { argentinaMonthRangeUtc, formatArgentinaDateInput } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/server/api/errors";
-import { logEvent } from "@/server/api/logging";
+import { captureServerMessage } from "@/lib/observability/server";
 import { estimateTextTokens, recordAiUsage } from "@/server/services/ai-usage";
 import { toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
@@ -694,7 +694,7 @@ async function requestOpenAiAnalysis(
 
   if (!response.ok) {
     const apiError = await readOpenAiError(response);
-    logEvent("warn", "ai.monthly_analysis.provider_error", {
+    captureServerMessage("Monthly AI provider error", "ai", {
       status: response.status,
       mappedStatus: apiError.status,
     });

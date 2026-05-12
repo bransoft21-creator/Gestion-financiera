@@ -4,7 +4,7 @@ import { ForbiddenError } from "@/server/api/errors";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { createTransaction } from "@/server/services/transactions";
 import { importCandidatesSchema } from "@/server/schemas/smart-import";
-import { isAiEnabled } from "@/lib/feature-flags";
+import { isSmartImportEnabled } from "@/lib/feature-flags";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   try {
     const { userProfile } = await getCurrentUser();
 
-    if (!isAiEnabled(userProfile.email)) {
+    if (!isSmartImportEnabled(userProfile.email)) {
       throw new ForbiddenError("Funcionalidad no disponible.");
     }
 

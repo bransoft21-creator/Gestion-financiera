@@ -9,6 +9,7 @@ import {
   TransactionType,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { captureServerMessage } from "@/lib/observability/server";
 import { ApiError } from "@/server/api/errors";
 import { estimateTextTokens, recordAiUsage } from "@/server/services/ai-usage";
 
@@ -351,6 +352,10 @@ async function requestOpenAi(userContent: unknown[], userProfileId: string): Pro
   }
 
   if (!res.ok) {
+    captureServerMessage("Smart Import provider error", "smart-import", {
+      status: res.status,
+      model,
+    });
     if (res.status === 401) throw new ApiError(503, "Error de autenticación con OpenAI.");
     if (res.status === 429) throw new ApiError(429, "El servicio de IA está saturado. Intentá en un momento.");
     throw new ApiError(502, "No se pudo procesar el documento. Intentá nuevamente.");

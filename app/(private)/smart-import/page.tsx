@@ -2,7 +2,7 @@ import { ShieldAlert } from "lucide-react";
 import { getTransactionWorkspace } from "@/server/services/workspace";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { V2PageShell } from "@/components/layout/v2-page-shell";
-import { isAiEnabled } from "@/lib/feature-flags";
+import { isSmartImportEnabled } from "@/lib/feature-flags";
 import { SmartImportClient } from "./smart-import-client";
 
 export const metadata = { title: "Smart Import" };
@@ -10,7 +10,7 @@ export const metadata = { title: "Smart Import" };
 export default async function SmartImportPage() {
   const { userProfile } = await getCurrentUser();
 
-  if (!isAiEnabled(userProfile.email)) {
+  if (!isSmartImportEnabled(userProfile.email)) {
     return (
       <V2PageShell eyebrow="IA" title="Smart Import">
         <div className="overflow-hidden rounded-[24px] border border-white/10 bg-zinc-950/45 p-5 sm:p-7">

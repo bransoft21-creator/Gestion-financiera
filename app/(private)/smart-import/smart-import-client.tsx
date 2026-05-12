@@ -27,6 +27,7 @@ import { ActionButton } from "@/components/ui-v2/action-button";
 import { PremiumCard, PremiumCardContent } from "@/components/ui-v2/premium-card";
 import { V2PageShell } from "@/components/layout/v2-page-shell";
 import { v2MotionTokens } from "@/design-system/tokens";
+import { captureClientError, trackProductEvent } from "@/lib/observability/client";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -101,6 +102,9 @@ const PROCESSING_STEPS = [
   "Preparando resultados…",
 ];
 
+const SMART_IMPORT_TIMEOUT_MS = 45_000;
+const SMART_IMPORT_SLOW_MS = 12_000;
+
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
@@ -125,7 +129,10 @@ export function SmartImportClient({ householdId, accounts, categories }: Props) 
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [isSlowProcessing, setIsSlowProcessing] = useState(false);
   const previewUrlRef = useRef<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -145,6 +152,12 @@ export function SmartImportClient({ householdId, accounts, categories }: Props) 
       previewUrlRef.current = null;
     }
     setSelectedFile(file);
+    setLastError(null);
+    trackProductEvent(
+      "smart_import_file_selected",
+      { fileType: file.type || "unknown", fileSizeBucket: fileSizeBucket(file.size) },
+      "smart-import",
+    );
     if (file.type.startsWith("image/")) {
       const url = URL.createObjectURL(file);
       previewUrlRef.current = url;
@@ -166,13 +179,42 @@ export function SmartImportClient({ householdId, accounts, categories }: Props) 
 
   const processSelectedFile = useCallback(async () => {
     if (!selectedFile) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setLastError("No hay conexión. Volvé a intentar cuando estés online.");
+      toast.error("No hay conexión. Volvé a intentar cuando estés online.");
+      return;
+    }
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setLastError(null);
+    setIsSlowProcessing(false);
     setStep("processing");
+
+    const slowTimer = window.setTimeout(() => {
+      setIsSlowProcessing(true);
+      trackProductEvent("smart_import_slow", { fileType: selectedFile.type || "unknown" }, "smart-import");
+    }, SMART_IMPORT_SLOW_MS);
+    const timeoutTimer = window.setTimeout(() => {
+      controller.abort("timeout");
+    }, SMART_IMPORT_TIMEOUT_MS);
+
     try {
+      trackProductEvent(
+        "smart_import_started",
+        { fileType: selectedFile.type || "unknown", fileSizeBucket: fileSizeBucket(selectedFile.size) },
+        "smart-import",
+      );
       const form = new FormData();
       form.append("file", selectedFile);
       form.append("householdId", householdId);
 
-      const res = await fetch("/api/ai/smart-import", { method: "POST", body: form });
+      const res = await fetch("/api/ai/smart-import", {
+        method: "POST",
+        body: form,
+        signal: controller.signal,
+      });
       if (!res.ok) {
         const err = (await res.json()) as { error?: string };
         throw new Error(err.error ?? "Error al procesar el documento.");
@@ -196,12 +238,45 @@ export function SmartImportClient({ householdId, accounts, categories }: Props) 
 
       setCandidates(stateList);
       setMetadata(data.metadata);
+      trackProductEvent(
+        "smart_import_succeeded",
+        { candidateCount: stateList.length, status: data.metadata.warnings.length > 0 ? "partial" : "ok" },
+        "smart-import",
+      );
       setStep("review");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error desconocido.");
+      const wasAborted = controller.signal.aborted || (err instanceof DOMException && err.name === "AbortError");
+      const abortReason = controller.signal.reason;
+      const message = wasAborted
+        ? abortReason === "user_cancel"
+          ? "Cancelamos la importación. Podés volver a intentarlo sin perder el archivo."
+          : "La importación tardó más de lo esperado. Podés volver a intentarlo sin perder el archivo."
+        : err instanceof Error
+          ? err.message
+          : "No pudimos completar la importación esta vez.";
+      setLastError(message);
+      trackProductEvent(
+        wasAborted ? "smart_import_cancelled" : "smart_import_failed",
+        { reason: wasAborted ? String(abortReason ?? "timeout_or_cancel") : "request_failed" },
+        "smart-import",
+      );
+      if (!wasAborted) captureClientError(err, "smart-import", { reason: "process_failed" });
+      toast.error(message);
       setStep("upload");
+    } finally {
+      window.clearTimeout(slowTimer);
+      window.clearTimeout(timeoutTimer);
+      if (abortRef.current === controller) abortRef.current = null;
+      setIsSlowProcessing(false);
     }
   }, [selectedFile, householdId, accounts, today]);
+
+  const cancelProcessing = useCallback(() => {
+    abortRef.current?.abort("user_cancel");
+    trackProductEvent("smart_import_cancelled", { reason: "user_cancel" }, "smart-import");
+  }, []);
+
+  useEffect(() => () => abortRef.current?.abort("unmount"), []);
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -295,6 +370,8 @@ export function SmartImportClient({ householdId, accounts, categories }: Props) 
         })),
       };
 
+      trackProductEvent("smart_import_confirm_started", { selectedCount: toImport.length }, "smart-import");
+
       const res = await fetch("/api/transactions/import-candidates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -320,11 +397,23 @@ export function SmartImportClient({ householdId, accounts, categories }: Props) 
         toast.warning(`${created} transacciones guardadas. ${errors.length} tuvieron errores.`);
       }
 
+      trackProductEvent(
+        "smart_import_confirm_succeeded",
+        {
+          selectedCount: toImport.length,
+          createdCount: created,
+          errorCount: errors.length,
+          status: errors.length > 0 ? "partial" : "ok",
+        },
+        "smart-import",
+      );
       setImportedCount(created);
       setDiscardedCount(notSelected.length);
       setDuplicatesAvoided(dupsAvoided.length);
       setStep("done");
     } catch (err) {
+      trackProductEvent("smart_import_confirm_failed", { reason: "save_failed" }, "smart-import");
+      captureClientError(err, "smart-import", { reason: "confirm_failed" });
       toast.error(err instanceof Error ? err.message : "Error al guardar.");
       setStep("review");
     }
@@ -342,6 +431,8 @@ export function SmartImportClient({ householdId, accounts, categories }: Props) 
     setImportedCount(0);
     setDiscardedCount(0);
     setDuplicatesAvoided(0);
+    setLastError(null);
+    setIsSlowProcessing(false);
     setStep("upload");
   }, []);
 
@@ -375,13 +466,14 @@ export function SmartImportClient({ householdId, accounts, categories }: Props) 
               onClickUpload={() => fileInputRef.current?.click()}
               onAnalyze={processSelectedFile}
               onClearFile={handleClearFile}
+              lastError={lastError}
             />
           </FadeStep>
         )}
 
         {step === "processing" && (
           <FadeStep key="processing">
-            <ProcessingView />
+            <ProcessingView isSlow={isSlowProcessing} onCancel={cancelProcessing} />
           </FadeStep>
         )}
 
@@ -439,6 +531,7 @@ function UploadZone({
   onClickUpload,
   onAnalyze,
   onClearFile,
+  lastError,
 }: {
   selectedFile: File | null;
   filePreviewUrl: string | null;
@@ -449,6 +542,7 @@ function UploadZone({
   onClickUpload: () => void;
   onAnalyze: () => void;
   onClearFile: () => void;
+  lastError: string | null;
 }) {
   if (selectedFile) {
     return (
@@ -457,6 +551,7 @@ function UploadZone({
         previewUrl={filePreviewUrl}
         onAnalyze={onAnalyze}
         onClear={onClearFile}
+        lastError={lastError}
       />
     );
   }
@@ -559,6 +654,10 @@ function UploadZone({
         ))}
       </div>
 
+      {lastError && (
+        <RecoveryNotice message={lastError} onRetry={onClickUpload} actionLabel="Elegir archivo" />
+      )}
+
       <p className="text-center text-xs text-zinc-600">
         La IA nunca guarda automáticamente. Siempre revisás y confirmás antes de importar.
       </p>
@@ -575,11 +674,13 @@ function FilePreviewState({
   previewUrl,
   onAnalyze,
   onClear,
+  lastError,
 }: {
   file: File;
   previewUrl: string | null;
   onAnalyze: () => void;
   onClear: () => void;
+  lastError: string | null;
 }) {
   const isPDF = file.type === "application/pdf";
 
@@ -632,6 +733,8 @@ function FilePreviewState({
         <ArrowRight className="h-4 w-4" />
       </ActionButton>
 
+      {lastError && <RecoveryNotice message={lastError} onRetry={onAnalyze} actionLabel="Reintentar análisis" />}
+
       <p className="text-center text-xs text-zinc-600">
         La IA nunca guarda automáticamente. Siempre revisás y confirmás antes de importar.
       </p>
@@ -643,7 +746,7 @@ function FilePreviewState({
 // Processing view — cinematic sequential steps
 // ---------------------------------------------------------------------------
 
-function ProcessingView() {
+function ProcessingView({ isSlow, onCancel }: { isSlow: boolean; onCancel: () => void }) {
   const [currentStep, setCurrentStep] = useState(0);
   const shouldReduceMotion = useReducedMotion();
 
@@ -710,7 +813,20 @@ function ProcessingView() {
         })}
       </div>
 
-      <p className="text-xs text-zinc-600">Esto puede tomar unos segundos…</p>
+      <div className="space-y-3 text-center">
+        <p className="text-xs text-zinc-600">
+          {isSlow
+            ? "Está tardando más de lo normal. Podés cancelar y reintentar sin perder el archivo."
+            : "Esto puede tomar unos segundos…"}
+        </p>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-zinc-300 transition hover:bg-white/[0.08] hover:text-white"
+        >
+          Cancelar
+        </button>
+      </div>
     </div>
   );
 }
@@ -1506,6 +1622,34 @@ function ConfidenceBadge({ value }: { value: number }) {
   );
 }
 
+function RecoveryNotice({
+  message,
+  onRetry,
+  actionLabel,
+}: {
+  message: string;
+  onRetry: () => void;
+  actionLabel: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+          <p className="text-sm leading-5 text-amber-100">{message}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-amber-200/20 bg-amber-200/10 px-4 text-sm font-semibold text-amber-100 transition hover:bg-amber-200/15"
+        >
+          {actionLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Utilities
 // ---------------------------------------------------------------------------
@@ -1513,6 +1657,13 @@ function ConfidenceBadge({ value }: { value: number }) {
 function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileSizeBucket(bytes: number): string {
+  if (bytes < 500 * 1024) return "under_500kb";
+  if (bytes < 2 * 1024 * 1024) return "under_2mb";
+  if (bytes < 5 * 1024 * 1024) return "under_5mb";
+  return "large";
 }
 
 function typeLabel(type: TxType): string {

@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import withPWA from "@ducanh2912/next-pwa";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -21,6 +22,8 @@ const contentSecurityPolicy = [
     "https://api.openai.com",
     "https://*.supabase.co",
     "wss://*.supabase.co",
+    "https://*.sentry.io",
+    "https://*.ingest.sentry.io",
     "https://vitals.vercel-insights.com",
     "https://vercel.live",
     ...(isDev ? ["ws://localhost:*", "http://localhost:*"] : []),
@@ -70,10 +73,21 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPWA({
+const pwaConfig = withPWA({
   dest: "public",
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
   disable: process.env.NODE_ENV === "development",
 })(nextConfig);
+
+export default withSentryConfig(pwaConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.SENTRY_AUTH_TOKEN,
+  widenClientFileUpload: true,
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+});

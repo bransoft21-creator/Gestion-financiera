@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { captureClientError, trackProductEvent } from "@/lib/observability/client";
 
 export default function PrivateError({
   error,
@@ -12,8 +13,8 @@ export default function PrivateError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log to server monitoring (Sentry, etc.) when integrated
-    console.error("[app-error]", error.digest ?? error.message);
+    captureClientError(error, "dashboard", { reason: "private_route_error" });
+    trackProductEvent("app_error", { reason: "private_route_error" }, "dashboard");
   }, [error]);
 
   return (
@@ -23,9 +24,9 @@ export default function PrivateError({
       </div>
 
       <div className="space-y-2">
-        <h2 className="text-xl font-bold tracking-tight">Algo salió mal</h2>
+        <h2 className="text-xl font-bold tracking-tight">No pudimos cargar esta sección</h2>
         <p className="max-w-sm text-sm text-muted-foreground">
-          Ocurrió un error inesperado en esta página. Podés intentar recargarla o volver al inicio.
+          Reintentá sin perder tu sesión. Si vuelve a fallar, podés volver al dashboard.
         </p>
         {error.digest && (
           <p className="text-xs text-muted-foreground/50">Referencia: {error.digest}</p>

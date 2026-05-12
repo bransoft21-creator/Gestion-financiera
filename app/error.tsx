@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { captureClientError, trackProductEvent } from "@/lib/observability/client";
 
 export default function GlobalError({
   error,
@@ -11,7 +12,8 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[global-error]", error.digest ?? error.message);
+    captureClientError(error, "dashboard", { reason: "global_error" });
+    trackProductEvent("app_error", { reason: "global_error" }, "dashboard");
   }, [error]);
 
   return (
@@ -22,9 +24,9 @@ export default function GlobalError({
         </div>
 
         <div className="space-y-2">
-          <h2 className="text-xl font-bold">Error crítico</h2>
+          <h2 className="text-xl font-bold">No pudimos cargar esta vista</h2>
           <p className="max-w-sm text-sm text-white/60">
-            La aplicación encontró un error inesperado. Por favor recargá la página.
+            Podés reintentar ahora. Si vuelve a pasar, tus datos siguen protegidos.
           </p>
           {error.digest && (
             <p className="text-xs text-white/30">Referencia: {error.digest}</p>

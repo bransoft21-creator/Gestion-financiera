@@ -4,20 +4,25 @@ import { GlobalProcessingIndicator } from "./global-processing-indicator";
 import { LogoutButton } from "./logout-button";
 import { MobileHeader } from "./mobile-header";
 import { NotificationsButton } from "./notifications-button";
+import { OnlineStatusBanner } from "./online-status-banner";
 import { PageTransition } from "./page-transition";
 import { PrivacyToggle } from "./privacy-toggle";
 import { Sidebar } from "./sidebar";
+import { TelemetryProvider } from "./telemetry-provider";
 
 type AppShellProps = {
   children: React.ReactNode;
+  userId?: string | null;
   userName?: string | null;
   userEmail?: string | null;
 };
 
-export function AppShell({ children, userName, userEmail }: AppShellProps) {
+export function AppShell({ children, userId, userName, userEmail }: AppShellProps) {
   return (
     <div className="v2-shell min-h-screen bg-background">
+      <TelemetryProvider userId={userId} />
       <GlobalProcessingIndicator />
+      <OnlineStatusBanner />
       <MobileHeader userName={userName} />
       <div className="fixed right-5 top-4 z-30 hidden items-center gap-1 rounded-full border border-white/10 bg-zinc-950/72 p-1 shadow-lg shadow-black/20 backdrop-blur-xl lg:flex">
         <PrivacyToggle compact />

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { ApiError, FieldApiError } from "./errors";
-import { logEvent } from "./logging";
+import { captureServerError } from "@/lib/observability/server";
 
 export function ok<T>(data: T, init?: ResponseInit) {
   return NextResponse.json({ data }, init);
@@ -54,10 +54,7 @@ export function handleApiError(error: unknown) {
     }
   }
 
-  logEvent("error", "api.unhandled_error", {
-    name: error instanceof Error ? error.name : "UnknownError",
-    message: error instanceof Error ? error.message : "Unknown error",
-  });
+  captureServerError(error, "api");
 
   return NextResponse.json(
     {

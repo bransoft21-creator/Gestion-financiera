@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app/app-shell";
+import { safeUserId } from "@/lib/observability/user";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -19,7 +20,7 @@ export default async function PrivateLayout({
 
   const profile = await prisma.userProfile.findUnique({
     where: { supabaseId: user.id },
-    select: { onboardingCompletedAt: true },
+    select: { id: true, onboardingCompletedAt: true },
   });
 
   if (!profile || !profile.onboardingCompletedAt) {
@@ -27,7 +28,7 @@ export default async function PrivateLayout({
   }
 
   return (
-    <AppShell userEmail={user.email} userName={getDisplayName(user.user_metadata)}>{children}</AppShell>
+    <AppShell userId={safeUserId(profile.id)} userEmail={user.email} userName={getDisplayName(user.user_metadata)}>{children}</AppShell>
   );
 }
 

@@ -1,5 +1,32 @@
-export function isAiEnabled(_email: string): boolean {
-  return true;
+export function isAiEnabled(email: string): boolean {
+  if (isDisabled("AI")) return false;
+  return isInBetaAllowlist(email);
+}
+
+export function isSmartImportEnabled(email: string): boolean {
+  if (isDisabled("SMART_IMPORT")) return false;
+  return isAiEnabled(email);
+}
+
+export function isMaintenanceModeEnabled(): boolean {
+  return process.env.MAINTENANCE_MODE === "1";
+}
+
+function isDisabled(flag: "AI" | "SMART_IMPORT") {
+  return process.env[`DISABLE_${flag}`] === "1";
+}
+
+function isInBetaAllowlist(email: string) {
+  const allowlist = parseList(process.env.BETA_ALLOWLIST_EMAILS);
+  if (allowlist.length === 0) return true;
+  return allowlist.includes(email.toLowerCase());
+}
+
+function parseList(value: string | undefined) {
+  return (value ?? "")
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 export type AiAccessStatus = {
