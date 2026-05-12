@@ -169,6 +169,7 @@ model UserProfile {
   investmentAssets     InvestmentAsset[]       @relation("InvestmentAssetCreatedBy")
   investmentActivities InvestmentTransaction[] @relation("InvestmentTransactionCreatedBy")
   aiFinancialAnalyses  AiFinancialAnalysis[]
+  activityItems        ActivityItem[]
 }
 
 model Household {
@@ -462,6 +463,54 @@ model AiFinancialAnalysis {
 
   @@unique([userId, month])
   @@index([userId])
+}
+
+enum ActivityType {
+  SIGNAL
+  INSIGHT
+  SYSTEM
+  REMINDER
+}
+
+enum ActivityTone {
+  positive
+  neutral
+  warning
+}
+
+model ActivityItem {
+  id          String       @id @default(cuid())
+  userId      String
+
+  type        ActivityType
+  source      String       @default("system")
+  tone        ActivityTone @default(neutral)
+  priority    Int          @default(0)  // 1 = important
+
+  title       String
+  body        String
+  metadata    Json?
+
+  // Deduplication: unique per user+key so upsert never creates duplicates
+  dedupeKey   String
+  periodKey   String?      // "2025-W20", "2025-05", etc.
+
+  actionLabel String?
+  actionLink  String?
+
+  readAt      DateTime?
+  dismissedAt DateTime?
+  resolvedAt  DateTime?
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user UserProfile @relation(fields: [userId], references: [id])
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, dismissedAt])
+  @@index([userId, resolvedAt])
 }
 
 model InvestmentAccount {

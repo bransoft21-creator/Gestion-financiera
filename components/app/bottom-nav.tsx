@@ -37,7 +37,7 @@ const moreNavItems = [
   { href: "/categories",   label: "Categorías",   icon: FolderTree },
   { href: "/debts",        label: "Deudas",       icon: CreditCard },
   { href: "/recurring",    label: "Recurrentes",  icon: RefreshCw },
-  { href: "/notifications", label: "Avisos",      icon: Bell },
+  { href: "/notifications", label: "Actividad",   icon: Bell },
   { href: "/reports",      label: "Patrones",     icon: TrendingUp },
   { href: "/profile",      label: "Mi perfil",    icon: User },
 ] as const;

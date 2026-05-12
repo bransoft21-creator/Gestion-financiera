@@ -1,15 +1,15 @@
-import { NotificationsButton } from "@/components/app/notifications-button";
+import { ActivityCenter } from "@/components/app/activity-center";
 import { V2PageShell } from "@/components/layout/v2-page-shell";
 
 export default function NotificationsPage() {
   return (
     <V2PageShell
-      eyebrow="Centro de avisos"
-      title="Señales que merecen tu atención"
-      description="Configurá qué eventos financieros te interrumpen y revisá el estado del canal de avisos sin depender de un panel flotante."
+      eyebrow="Financial Activity Center"
+      title="Actividad financiera"
+      description="Señales, insights y recordatorios en un feed calmo para revisar tu dinero sin ruido."
     >
       <div className="mx-auto w-full max-w-3xl">
-        <NotificationsButton embedded />
+        <ActivityCenter />
       </div>
     </V2PageShell>
   );

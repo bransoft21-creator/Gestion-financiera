@@ -3,8 +3,9 @@
  * Coordinates: analytics → signals → cache check → AI → cache write.
  */
 
-import { Prisma } from "@prisma/client";
+import { ActivityTone, ActivityType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { upsertActivity } from "@/server/services/activity";
 import {
   getWeekWindow,
   getISOWeekKey,
@@ -110,7 +111,7 @@ export async function getOrGenerateWeeklyReflection(params: {
     signals: signals.map((s) => ({ label: s.label, severity: s.severity })),
   });
 
-  // Persist to cache
+  // Persist reflection to cache
   await prisma.aiFinancialAnalysis.upsert({
     where: { userId_month: { userId: userProfileId, month: weekKey } },
     create: {
@@ -124,6 +125,36 @@ export async function getOrGenerateWeeklyReflection(params: {
       result: reflectionResult as unknown as Prisma.InputJsonValue,
     },
   });
+
+  // Upsert to Activity Center (best-effort: never fails the main flow)
+  if (reflectionResult.insights.length > 0) {
+    const dominant = reflectionResult.insights[0];
+    const allText = reflectionResult.insights.map((i) => i.text).join(" · ");
+    const toneMap: Record<string, ActivityTone> = {
+      positive: ActivityTone.positive,
+      neutral: ActivityTone.neutral,
+      warning: ActivityTone.warning,
+    };
+    void upsertActivity({
+      userId: userProfileId,
+      type: ActivityType.INSIGHT,
+      source: "weekly-reflection",
+      tone: toneMap[dominant.tone] ?? ActivityTone.neutral,
+      priority: 0,
+      title: `Reflexión semanal · ${weekLabel}`,
+      body: allText,
+      metadata: {
+        insightCount: reflectionResult.insights.length,
+        cached: false,
+      },
+      dedupeKey: `insight-weekly-${weekKey}`,
+      periodKey: weekKey,
+      actionLabel: "Ver dashboard",
+      actionLink: "/dashboard",
+    }).catch(() => {
+      /* non-critical */
+    });
+  }
 
   return {
     insights: reflectionResult.insights,
