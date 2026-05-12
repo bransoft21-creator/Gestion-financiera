@@ -25,6 +25,7 @@ import {
   Zap,
 } from "lucide-react";
 import { SensitiveAmount } from "@/components/app/sensitive-amount";
+import { useUser } from "@/components/app/user-context";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/app/empty-state";
 import { Button } from "@/components/ui/button";
@@ -189,24 +190,25 @@ type TimeContext = {
   isWeekend: boolean;
 };
 
-function getTimeContext(): TimeContext {
+function getTimeContext(firstName?: string | null): TimeContext {
   const now = new Date();
   const hour = now.getHours();
   const day = now.getDay();
   const isWeekend = day === 0 || day === 6;
+  const name = firstName ? `, ${firstName}` : "";
 
   let timeOfDay: TimeOfDay;
   let greeting: string;
 
   if (hour >= 6 && hour < 13) {
     timeOfDay = "morning";
-    greeting = "Buen día, Brandon.";
+    greeting = `Buen día${name}.`;
   } else if (hour >= 13 && hour < 20) {
     timeOfDay = "afternoon";
-    greeting = "Buenas tardes.";
+    greeting = `Buenas tardes${name}.`;
   } else if (hour >= 20 && hour < 23) {
     timeOfDay = "evening";
-    greeting = "Buenas noches.";
+    greeting = `Buenas noches${name}.`;
   } else {
     timeOfDay = "night";
     greeting = "Todo en calma.";
@@ -1366,13 +1368,15 @@ function ActivityPreview() {
 
 export function DashboardClient() {
   const now = new Date();
+  const { userName } = useUser();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [selectedExpenseCategoryPreference, setSelectedExpenseCategoryPreference] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [timeContext] = useState(() => getTimeContext());
+  const firstName = userName?.split(" ")[0] ?? null;
+  const [timeContext] = useState(() => getTimeContext(firstName));
   const shouldReduceMotion = useReducedMotion();
   const sectionDistribucion = useSectionCollapse("distribucion", true);
   const sectionMapa = useSectionCollapse("mapa", true);

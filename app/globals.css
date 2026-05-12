@@ -142,8 +142,9 @@ html[data-hide-amounts="true"] .tabular-nums {
 
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
-  .fade-in, .slide-up { animation: none !important; }
+  .fade-in, .slide-up, .animate-page-fade, .animate-slide-up, .animate-fade-up { animation: none !important; }
   .stagger-in > * { animation-delay: 0ms !important; }
+  .animate-in { animation: none !important; }
 }
 
 @layer utilities {

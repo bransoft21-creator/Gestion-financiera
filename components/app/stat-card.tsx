@@ -74,7 +74,7 @@ export function StatCard({
     <Card
       className={cn(
         "relative overflow-hidden animate-in fade-in slide-in-from-bottom-3 duration-500",
-        href && "cursor-pointer transition hover:-translate-y-0.5 hover:border-primary/35",
+        href && "cursor-pointer transition duration-200 hover:-translate-y-0.5 hover:border-primary/35 active:scale-[0.985]",
         highlight && "border-teal-300/30 bg-teal-300/10",
       )}
       style={animationDelay !== undefined ? { animationDelay: `${animationDelay}ms` } : undefined}

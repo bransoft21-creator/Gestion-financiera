@@ -127,6 +127,7 @@ export function BottomNav() {
 
       {/* Bottom nav bar */}
       <nav
+        data-tutorial="nav-mobile"
         className="fixed inset-x-0 bottom-0 z-[120] border-t border-white/10 lg:hidden"
         style={{
           background: "rgba(5,8,15,.88)",
@@ -144,14 +145,20 @@ export function BottomNav() {
                 href={item.href}
                 onClick={(event) => handleBottomNavClick(event, item.href)}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 transition-all duration-150",
-                  isActive
-                    ? "bg-white/[0.08] text-teal-100"
-                    : "text-muted-foreground",
+                  "relative flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 transition-all duration-200 active:scale-95",
+                  isActive ? "text-teal-100" : "text-muted-foreground active:text-foreground",
                 )}
               >
+                {isActive && (
+                  <span className="absolute inset-x-2 top-0 h-[2px] rounded-b-full bg-teal-400/70 transition-all duration-200" />
+                )}
                 <Icon className="h-6 w-6" aria-hidden="true" />
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <span className={cn(
+                  "text-[10px] font-medium transition-colors duration-200",
+                  isActive ? "text-teal-300" : "",
+                )}>
+                  {item.label}
+                </span>
               </Link>
             );
           })}
@@ -161,12 +168,20 @@ export function BottomNav() {
             type="button"
             onClick={() => setMoreOpen(true)}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 transition-all duration-150",
-              isMoreActive || moreOpen ? "text-teal-100" : "text-muted-foreground",
+              "relative flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 transition-all duration-200 active:scale-95",
+              isMoreActive || moreOpen ? "text-teal-100" : "text-muted-foreground active:text-foreground",
             )}
           >
+            {(isMoreActive || moreOpen) && (
+              <span className="absolute inset-x-2 top-0 h-[2px] rounded-b-full bg-teal-400/70 transition-all duration-200" />
+            )}
             <Menu className="h-6 w-6" aria-hidden="true" />
-            <span className="text-[10px] font-medium">Más</span>
+            <span className={cn(
+              "text-[10px] font-medium transition-colors duration-200",
+              isMoreActive || moreOpen ? "text-teal-300" : "",
+            )}>
+              Más
+            </span>
           </button>
         </div>
       </nav>

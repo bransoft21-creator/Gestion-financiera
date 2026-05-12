@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { BookOpen, KeyRound, LogOut, Mail, Shield, Sparkles, User } from "lucide-react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ActionButton } from "@/components/ui-v2/action-button";
 import { PremiumCard, PremiumCardContent } from "@/components/ui-v2/premium-card";
 import { Badge } from "@/components/ui/badge";
 import { LogoutDialog } from "@/components/app/logout-dialog";
+import { useTutorial } from "@/components/app/tutorial";
 
 type ProfileClientProps = {
   userEmail: string | null;
@@ -25,7 +25,7 @@ export function ProfileClient({
   isAiEnabled = false,
 }: ProfileClientProps) {
   const [logoutOpen, setLogoutOpen] = useState(false);
-  const router = useRouter();
+  const { start: startTutorial } = useTutorial();
 
   const displayName = userName ?? "Mi cuenta";
   const initials = displayName
@@ -159,7 +159,7 @@ export function ProfileClient({
                   <ActionButton
                     variant="glass"
                     size="sm"
-                    onClick={() => router.push("/onboarding?replay=1")}
+                    onClick={startTutorial}
                   >
                     Ver tutorial
                   </ActionButton>

@@ -23,7 +23,7 @@ export function PremiumCard({
       className={cn(
         "min-w-0 text-foreground",
         variants[variant],
-        interactive && "transition duration-200 hover:-translate-y-0.5 hover:border-white/[0.18] hover:bg-white/[0.055]",
+        interactive && "cursor-pointer transition duration-200 hover:-translate-y-0.5 hover:border-white/[0.18] hover:bg-white/[0.055] active:scale-[0.985]",
         className,
       )}
       {...props}

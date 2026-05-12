@@ -18,7 +18,7 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
   const accountLabel = userEmail ?? "Hogar principal";
 
   return (
-    <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-zinc-950/74 shadow-[1px_0_34px_rgba(0,0,0,0.34)] backdrop-blur-xl lg:sticky lg:top-0 lg:flex">
+    <aside data-tutorial="nav-desktop" className="hidden h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-zinc-950/74 shadow-[1px_0_34px_rgba(0,0,0,0.34)] backdrop-blur-xl lg:sticky lg:top-0 lg:flex">
       {/* Logo */}
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-[18px]">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] text-teal-100 shadow-[0_10px_34px_rgba(45,212,191,0.12)]">

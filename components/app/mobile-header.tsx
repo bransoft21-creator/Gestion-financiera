@@ -30,8 +30,12 @@ export function MobileHeader({ userName }: MobileHeaderProps) {
           </span>
         </Link>
         <div className="flex shrink-0 items-center gap-0.5">
-          <PrivacyToggle compact />
-          <NotificationsButton compact panelClassName="fixed left-3 right-3 w-auto top-[calc(env(safe-area-inset-top)+3.5rem+8px)]" />
+          <span data-tutorial="privacy-toggle-mobile">
+            <PrivacyToggle compact />
+          </span>
+          <span data-tutorial="notifications-mobile">
+            <NotificationsButton compact panelClassName="fixed left-3 right-3 w-auto top-[calc(env(safe-area-inset-top)+3.5rem+8px)]" />
+          </span>
           <LogoutButton compact />
         </div>
       </div>
