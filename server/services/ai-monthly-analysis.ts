@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/server/api/errors";
 import { captureServerMessage } from "@/lib/observability/server";
 import { estimateTextTokens, recordAiUsage } from "@/server/services/ai-usage";
+import { traceAi, traceUserId } from "@/server/services/ai-trace";
 import { toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
 
@@ -202,6 +203,7 @@ export async function generateMonthlyFinancialAnalysis({
   });
 
   if (existing?.inputHash === inputHash) {
+    traceAi("AI_MONTHLY_CACHE_HIT", { user: traceUserId(userProfileId), month });
     return {
       analysis: existing.result as AiFinancialAnalysisResult,
       result: existing.result as AiFinancialAnalysisResult,
@@ -214,11 +216,14 @@ export async function generateMonthlyFinancialAnalysis({
     };
   }
 
+  traceAi("OPENAI_MONTHLY_REQUEST_START", { user: traceUserId(userProfileId), month });
   const analysis = await requestOpenAiAnalysis(compactInput, {
     userId: userProfileId,
     endpoint: "ai.monthly-analysis",
   });
+  traceAi("OPENAI_MONTHLY_RESPONSE_OK", { user: traceUserId(userProfileId), month });
 
+  traceAi("AI_MONTHLY_CACHE_WRITE_START", { user: traceUserId(userProfileId), month });
   const saved = await prisma.aiFinancialAnalysis.upsert({
     where: { userId_month: { userId: userProfileId, month } },
     create: {
@@ -232,6 +237,7 @@ export async function generateMonthlyFinancialAnalysis({
       result: analysis,
     },
   });
+  traceAi("AI_MONTHLY_CACHE_WRITE_OK", { user: traceUserId(userProfileId), month });
 
   return {
     analysis: saved.result as AiFinancialAnalysisResult,
@@ -648,6 +654,7 @@ async function requestOpenAiAnalysis(
 ) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
+    traceAi("OPENAI_MONTHLY_MISSING_KEY");
     throw new ApiError(503, "El servicio de IA no está configurado.");
   }
   const model = process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL;
@@ -655,6 +662,7 @@ async function requestOpenAiAnalysis(
 
   let response: Response;
   try {
+    traceAi("OPENAI_MONTHLY_FETCH_START", { model, user: traceUserId(usage.userId) });
     response = await fetch(OPENAI_RESPONSES_URL, {
       method: "POST",
       signal: AbortSignal.timeout(30_000),
@@ -693,6 +701,7 @@ async function requestOpenAiAnalysis(
   }
 
   if (!response.ok) {
+    traceAi("OPENAI_MONTHLY_FETCH_ERROR", { model, status: response.status, user: traceUserId(usage.userId) });
     const apiError = await readOpenAiError(response);
     captureServerMessage("Monthly AI provider error", "ai", {
       status: response.status,
@@ -707,6 +716,11 @@ async function requestOpenAiAnalysis(
     usage?: { input_tokens?: number; output_tokens?: number };
   };
   const outputText = payload.output_text ?? extractResponsesText(payload.output);
+  traceAi("OPENAI_MONTHLY_FETCH_OK", {
+    model,
+    hasOutput: Boolean(outputText),
+    user: traceUserId(usage.userId),
+  });
 
   if (!outputText) {
     throw new ApiError(502, "La IA no devolvió un resultado válido.");
@@ -719,6 +733,7 @@ async function requestOpenAiAnalysis(
     throw new ApiError(502, "La IA devolvió un JSON inválido.");
   }
 
+  traceAi("AI_MONTHLY_USAGE_WRITE_START", { user: traceUserId(usage.userId), endpoint: usage.endpoint });
   await recordAiUsage({
     userId: usage.userId,
     endpoint: usage.endpoint,
@@ -726,6 +741,7 @@ async function requestOpenAiAnalysis(
     inputTokens: payload.usage?.input_tokens ?? estimateTextTokens(prompt),
     outputTokens: payload.usage?.output_tokens ?? estimateTextTokens(outputText),
   });
+  traceAi("AI_MONTHLY_USAGE_WRITE_OK", { user: traceUserId(usage.userId), endpoint: usage.endpoint });
 
   return result;
 }

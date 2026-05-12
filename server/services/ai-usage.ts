@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/server/api/errors";
+import { traceAi, traceUserId } from "@/server/services/ai-trace";
 
 const DAILY_AI_CALL_LIMIT = Number(process.env.AI_DAILY_CALL_LIMIT ?? 25);
 const MONTHLY_AI_CALL_LIMIT = Number(process.env.AI_MONTHLY_CALL_LIMIT ?? 300);
@@ -20,6 +21,8 @@ const MODEL_PRICING_USD_PER_TOKEN: Record<string, { input: number; output: numbe
 };
 
 export async function assertAiQuota(userId: string, endpoint: string) {
+  traceAi("AI_QUOTA_START", { endpoint, user: traceUserId(userId) });
+
   const now = new Date();
   const dayStart = new Date(now);
   dayStart.setUTCHours(0, 0, 0, 0);
@@ -33,15 +36,31 @@ export async function assertAiQuota(userId: string, endpoint: string) {
 
   const endpointLimit = ENDPOINT_DAILY_LIMITS[endpoint] ?? DAILY_AI_CALL_LIMIT;
 
+  traceAi("AI_QUOTA_COUNTS", {
+    endpoint,
+    user: traceUserId(userId),
+    dayCalls: day.calls,
+    monthCalls: month.calls,
+    endpointDayCalls: endpointDay.calls,
+    dayCost: day.cost,
+    monthCost: month.cost,
+    endpointLimit,
+  });
+
   if (endpointDay.calls >= endpointLimit) {
+    traceAi("AI_QUOTA_BLOCKED_ENDPOINT", { endpoint, user: traceUserId(userId), endpointLimit });
     throw new ApiError(429, "Llegaste al límite diario para esta función de IA. Probá mañana.");
   }
   if (day.calls >= DAILY_AI_CALL_LIMIT || day.cost >= DAILY_AI_COST_LIMIT) {
+    traceAi("AI_QUOTA_BLOCKED_DAILY", { endpoint, user: traceUserId(userId) });
     throw new ApiError(429, "Llegaste al límite diario de IA. Probá mañana.");
   }
   if (month.calls >= MONTHLY_AI_CALL_LIMIT || month.cost >= MONTHLY_AI_COST_LIMIT) {
+    traceAi("AI_QUOTA_BLOCKED_MONTHLY", { endpoint, user: traceUserId(userId) });
     throw new ApiError(429, "Llegaste al límite mensual de IA.");
   }
+
+  traceAi("AI_QUOTA_OK", { endpoint, user: traceUserId(userId) });
 }
 
 export async function recordAiUsage(input: {
@@ -51,10 +70,16 @@ export async function recordAiUsage(input: {
   inputTokens?: number;
   outputTokens?: number;
 }) {
+  traceAi("AI_USAGE_CREATE_START", {
+    endpoint: input.endpoint,
+    model: input.model,
+    user: traceUserId(input.userId),
+  });
+
   const inputTokens = Math.max(0, Math.round(input.inputTokens ?? 0));
   const outputTokens = Math.max(0, Math.round(input.outputTokens ?? 0));
 
-  await prisma.aiUsage.create({
+  const usage = await prisma.aiUsage.create({
     data: {
       userId: input.userId,
       endpoint: input.endpoint,
@@ -63,6 +88,15 @@ export async function recordAiUsage(input: {
       outputTokens,
       estimatedCost: estimateAiCost(input.model, inputTokens, outputTokens),
     },
+  });
+
+  traceAi("AI_USAGE_CREATED", {
+    endpoint: input.endpoint,
+    model: input.model,
+    user: traceUserId(input.userId),
+    usageId: usage.id,
+    inputTokens,
+    outputTokens,
   });
 }
 

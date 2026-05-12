@@ -18,6 +18,7 @@ import {
   generateWeeklyReflection,
   type ReflectionResult,
 } from "@/lib/finance/ai-financial-reflection";
+import { traceAi, traceUserId } from "@/server/services/ai-trace";
 
 export interface WeeklyReflectionData {
   insights: ReflectionResult["insights"];
@@ -33,6 +34,7 @@ export async function getOrGenerateWeeklyReflection(params: {
   forceRegenerate?: boolean;
 }): Promise<WeeklyReflectionData> {
   const { userProfileId, householdId, forceRegenerate = false } = params;
+  traceAi("AI_WEEKLY_SERVICE_START", { user: traceUserId(userProfileId), household: householdId });
   const now = new Date();
 
   const currentWindow = getWeekWindow(now);
@@ -64,12 +66,18 @@ export async function getOrGenerateWeeklyReflection(params: {
     txQuery(currentWindow.start, currentWindow.end),
     txQuery(prevWindow.start, prevWindow.end),
   ]);
+  traceAi("AI_WEEKLY_TRANSACTIONS_OK", {
+    user: traceUserId(userProfileId),
+    currentCount: currentTxs.length,
+    previousCount: previousTxs.length,
+  });
 
   // Layer 1 — analytics
   const currentMetrics = computeWeeklyMetrics(currentTxs);
   const previousMetrics = computeWeeklyMetrics(previousTxs);
 
   if (!currentMetrics.hasData) {
+    traceAi("AI_WEEKLY_NO_DATA", { user: traceUserId(userProfileId), weekKey });
     return { insights: [], weekKey, weekLabel, cached: false, hasData: false };
   }
 
@@ -88,6 +96,7 @@ export async function getOrGenerateWeeklyReflection(params: {
     });
 
     if (cached && cached.inputHash === inputHash) {
+      traceAi("AI_WEEKLY_CACHE_HIT", { user: traceUserId(userProfileId), weekKey });
       const result = cached.result as unknown as ReflectionResult;
       return {
         insights: result.insights ?? [],
@@ -100,6 +109,7 @@ export async function getOrGenerateWeeklyReflection(params: {
   }
 
   // Layer 3 — AI narrative
+  traceAi("OPENAI_WEEKLY_REQUEST_START", { user: traceUserId(userProfileId), weekKey });
   const reflectionResult = await generateWeeklyReflection({
     weekLabel,
     totalExpenses: currentMetrics.totalExpenses,
@@ -111,8 +121,14 @@ export async function getOrGenerateWeeklyReflection(params: {
     signals: signals.map((s) => ({ label: s.label, severity: s.severity })),
     usage: { userId: userProfileId, endpoint: "ai.weekly-reflection" },
   });
+  traceAi("OPENAI_WEEKLY_RESPONSE_OK", {
+    user: traceUserId(userProfileId),
+    weekKey,
+    insights: reflectionResult.insights.length,
+  });
 
   // Persist reflection to cache
+  traceAi("AI_WEEKLY_CACHE_WRITE_START", { user: traceUserId(userProfileId), weekKey });
   await prisma.aiFinancialAnalysis.upsert({
     where: { userId_month: { userId: userProfileId, month: weekKey } },
     create: {
@@ -126,6 +142,7 @@ export async function getOrGenerateWeeklyReflection(params: {
       result: reflectionResult as unknown as Prisma.InputJsonValue,
     },
   });
+  traceAi("AI_WEEKLY_CACHE_WRITE_OK", { user: traceUserId(userProfileId), weekKey });
 
   // Upsert to Activity Center (best-effort: never fails the main flow)
   if (reflectionResult.insights.length > 0) {

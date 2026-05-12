@@ -7,6 +7,7 @@
 import type { Signal } from "./financial-signals";
 import { captureServerMessage } from "@/lib/observability/server";
 import { estimateTextTokens, recordAiUsage } from "@/server/services/ai-usage";
+import { traceAi, traceUserId } from "@/server/services/ai-trace";
 
 export interface ReflectionInput {
   weekLabel: string;          // e.g. "5 al 11 de mayo"
@@ -108,11 +109,16 @@ export async function generateWeeklyReflection(
 ): Promise<ReflectionResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
+    traceAi("OPENAI_WEEKLY_MISSING_KEY");
     throw new Error("El servicio de IA no está configurado.");
   }
 
   const prompt = buildPrompt(input);
   const model = process.env.OPENAI_MODEL ?? DEFAULT_MODEL;
+  traceAi("OPENAI_WEEKLY_FETCH_START", {
+    model,
+    user: input.usage ? traceUserId(input.usage.userId) : undefined,
+  });
 
   let response: Response;
   try {
@@ -144,6 +150,7 @@ export async function generateWeeklyReflection(
   }
 
   if (!response.ok) {
+    traceAi("OPENAI_WEEKLY_FETCH_ERROR", { model, status: response.status });
     captureServerMessage("Weekly reflection provider error", "ai", {
       status: response.status,
     });
@@ -156,6 +163,11 @@ export async function generateWeeklyReflection(
     usage?: { input_tokens?: number; output_tokens?: number };
   };
   const outputText = payload.output_text ?? extractText(payload.output);
+  traceAi("OPENAI_WEEKLY_FETCH_OK", {
+    model,
+    hasOutput: Boolean(outputText),
+    user: input.usage ? traceUserId(input.usage.userId) : undefined,
+  });
 
   if (!outputText) {
     throw new Error("La IA no devolvió resultado válido.");
@@ -163,12 +175,20 @@ export async function generateWeeklyReflection(
 
   const parsed = JSON.parse(outputText) as ReflectionResult;
   if (input.usage) {
+    traceAi("AI_WEEKLY_USAGE_WRITE_START", {
+      user: traceUserId(input.usage.userId),
+      endpoint: input.usage.endpoint,
+    });
     await recordAiUsage({
       userId: input.usage.userId,
       endpoint: input.usage.endpoint,
       model,
       inputTokens: payload.usage?.input_tokens ?? estimateTextTokens(prompt),
       outputTokens: payload.usage?.output_tokens ?? estimateTextTokens(outputText),
+    });
+    traceAi("AI_WEEKLY_USAGE_WRITE_OK", {
+      user: traceUserId(input.usage.userId),
+      endpoint: input.usage.endpoint,
     });
   }
   // Clamp to 3 insights

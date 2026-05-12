@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { captureServerMessage } from "@/lib/observability/server";
 import { ApiError } from "@/server/api/errors";
 import { estimateTextTokens, recordAiUsage } from "@/server/services/ai-usage";
+import { traceAi, traceUserId } from "@/server/services/ai-trace";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-4o-mini";
@@ -114,6 +115,12 @@ export async function analyzeFile(
     categories: WorkspaceCategory[];
   },
 ): Promise<SmartImportResult> {
+  traceAi("AI_SMART_IMPORT_SERVICE_START", {
+    user: traceUserId(workspace.userProfileId),
+    household: workspace.householdId,
+    mimeType,
+    bytes: buffer.length,
+  });
   if (buffer.length > MAX_FILE_BYTES) {
     throw new ApiError(413, "El archivo es demasiado grande. El máximo es 10 MB.");
   }
@@ -126,19 +133,45 @@ export async function analyzeFile(
   }
 
   const fileHash = createHash("sha256").update(buffer).digest("hex");
+  traceAi("AI_SMART_IMPORT_CACHE_LOOKUP_START", {
+    user: traceUserId(workspace.userProfileId),
+    household: workspace.householdId,
+    fileHash: fileHash.slice(0, 12),
+  });
   const cached = await prisma.smartImportCache.findUnique({
     where: { householdId_fileHash: { householdId: workspace.householdId, fileHash } },
   });
 
   if (cached) {
+    traceAi("AI_SMART_IMPORT_CACHE_HIT", {
+      user: traceUserId(workspace.userProfileId),
+      household: workspace.householdId,
+    });
     return cached.result as unknown as SmartImportResult;
   }
+  traceAi("AI_SMART_IMPORT_CACHE_MISS", {
+    user: traceUserId(workspace.userProfileId),
+    household: workspace.householdId,
+  });
 
+  traceAi("AI_SMART_IMPORT_PARSE_START", {
+    user: traceUserId(workspace.userProfileId),
+    kind: isImage ? "image" : "pdf",
+  });
   const raw = isImage
     ? await callVision(buffer, mimeType, workspace.userProfileId)
     : await callPdf(buffer, workspace.userProfileId);
+  traceAi("OPENAI_SMART_IMPORT_RESPONSE_OK", { user: traceUserId(workspace.userProfileId) });
 
   const result = await normalizeResult(raw, workspace);
+  traceAi("AI_SMART_IMPORT_NORMALIZE_OK", {
+    user: traceUserId(workspace.userProfileId),
+    candidates: result.candidates.length,
+  });
+  traceAi("AI_SMART_IMPORT_CACHE_WRITE_START", {
+    user: traceUserId(workspace.userProfileId),
+    household: workspace.householdId,
+  });
   await prisma.smartImportCache.upsert({
     where: { householdId_fileHash: { householdId: workspace.householdId, fileHash } },
     create: {
@@ -151,6 +184,10 @@ export async function analyzeFile(
       mimeType,
       result: result as unknown as Prisma.InputJsonValue,
     },
+  });
+  traceAi("AI_SMART_IMPORT_CACHE_WRITE_OK", {
+    user: traceUserId(workspace.userProfileId),
+    household: workspace.householdId,
   });
 
   return result;
@@ -192,13 +229,37 @@ async function callPdf(buffer: Buffer, userProfileId: string): Promise<AiOutput>
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
   try {
-    // pdf-parse ships CJS; dynamic import handles interop
     const mod = await import("pdf-parse");
-    type PdfParseFunc = (buf: Buffer) => Promise<{ text: string }>;
-    const pdfParse = ((mod as unknown as { default: unknown }).default ?? mod) as PdfParseFunc;
-    const data = await pdfParse(buffer);
-    return (data.text ?? "").slice(0, 12_000);
-  } catch {
+    type PdfParseV1 = (buf: Buffer) => Promise<{ text?: string }>;
+    type PdfParseV2 = new (input: { data: Buffer }) => {
+      getText: () => Promise<{ text?: string }>;
+      destroy?: () => Promise<void>;
+    };
+    const maybeDefault = (mod as unknown as { default?: unknown }).default;
+    const maybePdfParse = maybeDefault ?? (mod as unknown as { pdf?: unknown }).pdf;
+
+    if (typeof maybePdfParse === "function") {
+      const data = await (maybePdfParse as PdfParseV1)(buffer);
+      return (data.text ?? "").slice(0, 12_000);
+    }
+
+    const PDFParse = (mod as unknown as { PDFParse?: PdfParseV2 }).PDFParse;
+    if (typeof PDFParse !== "function") {
+      throw new TypeError("No compatible pdf-parse export found");
+    }
+
+    const parser = new PDFParse({ data: buffer });
+    try {
+      const data = await parser.getText();
+      return (data.text ?? "").slice(0, 12_000);
+    } finally {
+      await parser.destroy?.();
+    }
+  } catch (error) {
+    traceAi("AI_SMART_IMPORT_PDF_PARSE_ERROR", {
+      name: error instanceof Error ? error.name : "UnknownError",
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
     return "";
   }
 }
@@ -315,12 +376,16 @@ function userPrompt(): string {
 
 async function requestOpenAi(userContent: unknown[], userProfileId: string): Promise<AiOutput> {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new ApiError(503, "El servicio de IA no está configurado.");
+  if (!apiKey) {
+    traceAi("OPENAI_SMART_IMPORT_MISSING_KEY");
+    throw new ApiError(503, "El servicio de IA no está configurado.");
+  }
 
   const model = process.env.OPENAI_MODEL ?? DEFAULT_MODEL;
 
   let res: Response;
   try {
+    traceAi("OPENAI_SMART_IMPORT_FETCH_START", { model, user: traceUserId(userProfileId) });
     res = await fetch(OPENAI_RESPONSES_URL, {
       method: "POST",
       signal: AbortSignal.timeout(30_000),
@@ -352,6 +417,11 @@ async function requestOpenAi(userContent: unknown[], userProfileId: string): Pro
   }
 
   if (!res.ok) {
+    traceAi("OPENAI_SMART_IMPORT_FETCH_ERROR", {
+      model,
+      status: res.status,
+      user: traceUserId(userProfileId),
+    });
     captureServerMessage("Smart Import provider error", "smart-import", {
       status: res.status,
       model,
@@ -367,6 +437,11 @@ async function requestOpenAi(userContent: unknown[], userProfileId: string): Pro
     usage?: { input_tokens?: number; output_tokens?: number };
   };
   const text = payload.output_text ?? extractOutputText(payload.output);
+  traceAi("OPENAI_SMART_IMPORT_FETCH_OK", {
+    model,
+    hasOutput: Boolean(text),
+    user: traceUserId(userProfileId),
+  });
 
   if (!text) throw new ApiError(502, "La IA no devolvió un resultado válido.");
 
@@ -377,12 +452,20 @@ async function requestOpenAi(userContent: unknown[], userProfileId: string): Pro
     throw new ApiError(502, "La IA devolvió un formato inválido.");
   }
 
+  traceAi("AI_SMART_IMPORT_USAGE_WRITE_START", {
+    user: traceUserId(userProfileId),
+    endpoint: "ai.smart-import",
+  });
   await recordAiUsage({
     userId: userProfileId,
     endpoint: "ai.smart-import",
     model,
     inputTokens: payload.usage?.input_tokens ?? estimateTextTokens(userContent),
     outputTokens: payload.usage?.output_tokens ?? estimateTextTokens(text),
+  });
+  traceAi("AI_SMART_IMPORT_USAGE_WRITE_OK", {
+    user: traceUserId(userProfileId),
+    endpoint: "ai.smart-import",
   });
 
   return parsed;

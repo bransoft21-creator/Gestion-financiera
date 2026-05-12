@@ -3,6 +3,7 @@ import withPWA from "@ducanh2912/next-pwa";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const isDev = process.env.NODE_ENV === "development";
+const isPwaEnabled = process.env.ENABLE_PWA === "1";
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -75,10 +76,14 @@ const nextConfig: NextConfig = {
 
 const pwaConfig = withPWA({
   dest: "public",
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
+  cacheOnFrontEndNav: false,
+  aggressiveFrontEndNavCaching: false,
+  cacheStartUrl: false,
   reloadOnOnline: true,
-  disable: process.env.NODE_ENV === "development",
+  disable: isDev || !isPwaEnabled,
+  workboxOptions: {
+    runtimeCaching: [],
+  },
 })(nextConfig);
 
 export default withSentryConfig(pwaConfig, {
