@@ -3,7 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { LoginForm } from "./login-form";
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -17,5 +21,7 @@ export default async function LoginPage() {
     redirect(profile?.onboardingCompletedAt ? "/dashboard" : "/onboarding");
   }
 
-  return <LoginForm />;
+  const { error } = await searchParams;
+
+  return <LoginForm initialError={error} />;
 }
