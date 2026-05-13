@@ -348,7 +348,7 @@ const aiSchema = {
 
 function systemPrompt(): string {
   return [
-    "Sos un asistente de importación de gastos para Financial OS, una app de finanzas personales argentina.",
+    "Sos un asistente de importación de transacciones para Meridian, una app de finanzas personales argentina.",
     "Tu tarea: extraer TODAS las transacciones individuales del documento recibido.",
     "",
     "REGLAS ESTRICTAS:",

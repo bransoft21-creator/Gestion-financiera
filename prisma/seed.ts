@@ -16,11 +16,11 @@ const prisma = new PrismaClient({ adapter });
 
 const SYSTEM_USER = {
   supabaseId: "system-seed-user",
-  email: "system@finance-control.local",
-  fullName: "Finance Control System",
+  email: "system@meridian.local",
+  fullName: "Meridian System",
 };
 
-const SYSTEM_HOUSEHOLD_NAME = "Finance Control Base";
+const SYSTEM_HOUSEHOLD_NAME = "Meridian Base";
 
 const baseCategories = [
   { name: "Salario", type: CategoryType.INCOME, color: "#16a34a", icon: "briefcase" },
