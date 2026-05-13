@@ -224,7 +224,7 @@ export function ProfileClient({
             <PremiumCard>
               <PremiumCardContent className="p-5">
                 <p className="text-xs leading-5 text-zinc-500">
-                  Tus datos financieros son privados y están protegidos. Financial OS nunca comparte información con terceros.
+                  Tus datos financieros son privados y están protegidos. Meridian nunca comparte información con terceros.
                 </p>
               </PremiumCardContent>
             </PremiumCard>

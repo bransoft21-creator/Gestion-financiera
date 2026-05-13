@@ -233,7 +233,7 @@ export function TutorialSpotlight() {
           className="fixed inset-0 z-[250]"
           role="dialog"
           aria-modal
-          aria-label="Tutorial de Financial OS"
+          aria-label="Tutorial de Meridian"
         >
           {/* Clickable backdrop */}
           <motion.div

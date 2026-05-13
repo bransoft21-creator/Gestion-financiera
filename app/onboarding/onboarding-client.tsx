@@ -227,7 +227,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1, transition: { delay: 0.08, duration: 0.6 } }}
       >
-        Financial OS
+        Meridian
       </motion.p>
 
       <motion.h1

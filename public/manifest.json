@@ -1,10 +1,10 @@
 {
-  "name": "Financial OS",
-  "short_name": "Financial OS",
-  "description": "Tu sistema operativo financiero personal.",
+  "name": "Meridian",
+  "short_name": "Meridian",
+  "description": "Tu perspectiva financiera.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0A0B10",
+  "background_color": "#03070D",
   "theme_color": "#0F766E",
   "orientation": "portrait",
   "icons": [
@@ -19,6 +19,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/meridian-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }

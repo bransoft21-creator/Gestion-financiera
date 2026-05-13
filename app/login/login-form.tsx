@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, BarChart3, Eye, EyeOff, Loader2, Sparkles, Target, TrendingUp } from "lucide-react";
+import { ArrowLeft, BarChart3, Eye, EyeOff, Loader2, Target, TrendingUp } from "lucide-react";
+import { MeridianMark } from "@/components/brand/meridian-mark";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type AuthMode = "login" | "register" | "forgot";
@@ -244,11 +245,14 @@ export function LoginForm({ initialError }: LoginFormProps) {
     <div className="flex min-h-screen bg-background">
       {/* ── Panel izquierdo (solo desktop) ── */}
       <div className="relative hidden flex-col justify-center overflow-hidden border-r border-white/10 bg-zinc-950 px-16 py-16 lg:flex lg:w-[58%]">
-        <div className="mb-14 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] text-teal-100 shadow-[0_18px_55px_rgba(45,212,191,0.12)]">
-            <Sparkles className="h-5 w-5" aria-hidden="true" />
-          </div>
-          <span className="text-xl font-extrabold tracking-tight text-foreground">Financial OS</span>
+        <div className="mb-14">
+          <MeridianMark
+            size={20}
+            showContainer
+            containerSize={44}
+            showWordmark
+            wordmarkClassName="text-xl font-extrabold tracking-tight"
+          />
         </div>
 
         <h1 className="mb-4 text-[44px] font-semibold leading-[1.05] text-foreground">
@@ -279,10 +283,13 @@ export function LoginForm({ initialError }: LoginFormProps) {
         <div className="fade-in w-full max-w-[420px]">
           {/* Logo mobile */}
           <div className="mb-9 flex flex-col items-center lg:hidden">
-            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-[28px] border border-white/10 bg-white/[0.07] text-teal-100 shadow-[0_18px_55px_rgba(45,212,191,0.12)]">
-              <Sparkles className="h-6 w-6" aria-hidden="true" />
-            </div>
-            <p className="text-lg font-extrabold text-foreground">Financial OS</p>
+            <MeridianMark
+              size={24}
+              showContainer
+              containerSize={56}
+              containerClassName="mb-3 rounded-3xl shadow-[0_18px_55px_rgba(45,212,191,0.14)]"
+            />
+            <p className="text-lg font-extrabold text-foreground">meridian</p>
           </div>
 
           {/* ── Google button — visible in login + register, hidden in forgot ── */}
@@ -490,7 +497,7 @@ export function LoginForm({ initialError }: LoginFormProps) {
           )}
 
           <p className="mt-8 text-center text-[11px] text-muted-foreground/40">
-            Financial OS · Copilot financiero personal
+            meridian · Tu perspectiva financiera
           </p>
         </div>
       </div>

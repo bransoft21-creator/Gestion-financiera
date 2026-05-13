@@ -5,7 +5,7 @@ export const TUTORIAL_STEPS: TutorialStepDef[] = [
     id: "welcome",
     type: "overlay",
     route: "/dashboard",
-    title: "Bienvenido a Financial OS",
+    title: "Bienvenido a Meridian",
     description:
       "Te mostramos los elementos clave en menos de un minuto. Podés saltar en cualquier momento.",
   },

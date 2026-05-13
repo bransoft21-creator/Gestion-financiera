@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Bienvenido — Financial OS",
+  title: "Bienvenido — Meridian",
 };
 
 export default function OnboardingLayout({

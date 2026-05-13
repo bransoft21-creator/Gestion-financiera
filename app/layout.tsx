@@ -8,16 +8,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Financial OS",
-  description: "Tu sistema operativo financiero personal.",
+  title: "Meridian",
+  description: "Tu perspectiva financiera.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Financial OS",
-  },
-  icons: {
-    apple: "/icons/icon-192.png",
+    title: "Meridian",
   },
 };
 

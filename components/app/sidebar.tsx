@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sparkles, TrendingUp } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MeridianMark } from "@/components/brand/meridian-mark";
 import { navItems } from "./nav-items";
 import { LogoutButton } from "./logout-button";
 
@@ -21,12 +22,10 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
     <aside data-tutorial="nav-desktop" className="hidden h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-zinc-950/74 shadow-[1px_0_34px_rgba(0,0,0,0.34)] backdrop-blur-xl lg:sticky lg:top-0 lg:flex">
       {/* Logo */}
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-[18px]">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] text-teal-100 shadow-[0_10px_34px_rgba(45,212,191,0.12)]">
-          <Sparkles className="h-[17px] w-[17px]" aria-hidden="true" />
-        </div>
+        <MeridianMark size={17} showContainer containerSize={36} />
         <div>
-          <p className="text-[13px] font-bold leading-tight text-foreground">Financial OS</p>
-          <p className="text-[11px] leading-tight text-muted-foreground">Lectura diaria</p>
+          <p className="text-[13px] font-bold leading-tight text-foreground">meridian</p>
+          <p className="text-[11px] leading-tight text-muted-foreground">Perspectiva diaria</p>
         </div>
       </div>
 
