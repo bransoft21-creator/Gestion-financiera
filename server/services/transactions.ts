@@ -121,11 +121,12 @@ export async function createTransaction(
       );
 
       if (input.sharedHouseholdId) {
-        await createEqualSharedTransaction(tx, {
+        await createSharedTransaction(tx, {
           householdId: input.sharedHouseholdId,
           transactionId: transaction.id,
           paidByUserId: userProfileId,
           amount: transaction.amount,
+          splitConfig: input.splitConfig,
         });
       }
 
@@ -492,6 +493,7 @@ const transactionInclude = {
         select: {
           userId: true,
           amount: true,
+          percentage: true,
           status: true,
         },
       },
@@ -571,13 +573,17 @@ async function assertTransactionReferencesBelongToHousehold(
   }
 }
 
-async function createEqualSharedTransaction(
+async function createSharedTransaction(
   tx: Prisma.TransactionClient,
   input: {
     householdId: string;
     transactionId: string;
     paidByUserId: string;
     amount: Prisma.Decimal;
+    splitConfig?: {
+      mode: "EQUAL" | "PERCENTAGE" | "CUSTOM_AMOUNT";
+      participants?: Array<{ userId: string; value: number }>;
+    } | null;
   },
 ) {
   const household = await tx.household.findFirst({
@@ -603,26 +609,69 @@ async function createEqualSharedTransaction(
     },
   });
 
-  if (!household) {
-    throw new ForbiddenError("No tenés acceso a ese hogar compartido.");
-  }
+  if (!household) throw new ForbiddenError("No tenés acceso a ese hogar compartido.");
+  if (household.members.length < 2) throw new ApiError(400, "Invitá a otra persona antes de compartir gastos.");
 
-  if (household.members.length < 2) {
-    throw new ApiError(400, "Invitá a otra persona antes de compartir gastos.");
-  }
+  const mode = input.splitConfig?.mode ?? "EQUAL";
+  const activeUserIds = new Set(household.members.map((m) => m.userProfileId));
 
-  const share = input.amount.div(household.members.length).toDecimalPlaces(2);
+  type ParticipantData = { userId: string; amount: Prisma.Decimal; percentage: Prisma.Decimal | null };
+  let participants: ParticipantData[];
+
+  if (mode === "PERCENTAGE" && input.splitConfig?.participants?.length) {
+    for (const p of input.splitConfig.participants) {
+      if (!activeUserIds.has(p.userId)) {
+        throw new ApiError(400, "Uno de los participantes no pertenece al hogar.");
+      }
+    }
+    const sum = input.splitConfig.participants.reduce((acc, p) => acc + p.value, 0);
+    if (Math.abs(sum - 100) > 0.5) {
+      throw new FieldApiError(400, "Los porcentajes deben sumar 100%.", {
+        splitConfig: "Los porcentajes deben sumar 100%.",
+      });
+    }
+    participants = input.splitConfig.participants.map((p) => ({
+      userId: p.userId,
+      percentage: new Prisma.Decimal(p.value),
+      amount: input.amount.mul(p.value).div(100).toDecimalPlaces(2),
+    }));
+  } else if (mode === "CUSTOM_AMOUNT" && input.splitConfig?.participants?.length) {
+    for (const p of input.splitConfig.participants) {
+      if (!activeUserIds.has(p.userId)) {
+        throw new ApiError(400, "Uno de los participantes no pertenece al hogar.");
+      }
+    }
+    const sum = input.splitConfig.participants.reduce((acc, p) => acc + p.value, 0);
+    if (Math.abs(sum - Number(input.amount)) > 0.5) {
+      throw new FieldApiError(400, "Los montos deben sumar el total del gasto.", {
+        splitConfig: "Los montos deben sumar el total del gasto.",
+      });
+    }
+    participants = input.splitConfig.participants.map((p) => ({
+      userId: p.userId,
+      percentage: null,
+      amount: new Prisma.Decimal(p.value).toDecimalPlaces(2),
+    }));
+  } else {
+    const share = input.amount.div(household.members.length).toDecimalPlaces(2);
+    participants = household.members.map((m) => ({
+      userId: m.userProfileId,
+      amount: share,
+      percentage: null,
+    }));
+  }
 
   await tx.sharedTransaction.create({
     data: {
       householdId: input.householdId,
       transactionId: input.transactionId,
       paidByUserId: input.paidByUserId,
-      splitMode: "EQUAL",
+      splitMode: mode,
       participants: {
-        create: household.members.map((member) => ({
-          userId: member.userProfileId,
-          amount: share,
+        create: participants.map((p) => ({
+          userId: p.userId,
+          amount: p.amount,
+          percentage: p.percentage,
           status: "OPEN",
         })),
       },
@@ -640,6 +689,13 @@ async function syncSharedTransactionAfterUpdate(
     sharedTransaction?: {
       id: string;
       householdId: string;
+      splitMode: string;
+      participants: Array<{
+        userId: string;
+        amount: Prisma.Decimal;
+        percentage: Prisma.Decimal | null;
+        status: string;
+      }>;
     } | null;
   },
 ) {
@@ -657,31 +713,61 @@ async function syncSharedTransactionAfterUpdate(
     return;
   }
 
-  const household = await tx.household.findFirst({
-    where: {
-      id: shared.householdId,
-      kind: HouseholdKind.HOUSEHOLD,
-      deletedAt: null,
-    },
-    select: {
-      members: {
-        where: { status: HouseholdMemberStatus.ACTIVE, deletedAt: null },
-        select: { userProfileId: true },
+  type ParticipantData = { userId: string; amount: Prisma.Decimal; percentage: Prisma.Decimal | null };
+  let newParticipants: ParticipantData[];
+
+  if (shared.splitMode === "PERCENTAGE" && shared.participants.length > 0) {
+    newParticipants = shared.participants.map((p) => ({
+      userId: p.userId,
+      percentage: p.percentage,
+      amount: p.percentage
+        ? transaction.amount.mul(p.percentage).div(100).toDecimalPlaces(2)
+        : transaction.amount.div(shared.participants.length).toDecimalPlaces(2),
+    }));
+  } else if (shared.splitMode === "CUSTOM_AMOUNT" && shared.participants.length > 0) {
+    const oldTotal = shared.participants.reduce(
+      (acc, p) => acc.add(p.amount),
+      new Prisma.Decimal(0),
+    );
+    newParticipants = shared.participants.map((p) => ({
+      userId: p.userId,
+      percentage: null,
+      amount: oldTotal.greaterThan(0)
+        ? transaction.amount.mul(p.amount).div(oldTotal).toDecimalPlaces(2)
+        : transaction.amount.div(shared.participants.length).toDecimalPlaces(2),
+    }));
+  } else {
+    const household = await tx.household.findFirst({
+      where: {
+        id: shared.householdId,
+        kind: HouseholdKind.HOUSEHOLD,
+        deletedAt: null,
       },
-    },
-  });
+      select: {
+        members: {
+          where: { status: HouseholdMemberStatus.ACTIVE, deletedAt: null },
+          select: { userProfileId: true },
+        },
+      },
+    });
 
-  if (!household || household.members.length < 2) {
-    await tx.sharedTransactionParticipant.deleteMany({
-      where: { sharedTransactionId: shared.id },
-    });
-    await tx.sharedTransaction.delete({
-      where: { id: shared.id },
-    });
-    return;
+    if (!household || household.members.length < 2) {
+      await tx.sharedTransactionParticipant.deleteMany({
+        where: { sharedTransactionId: shared.id },
+      });
+      await tx.sharedTransaction.delete({
+        where: { id: shared.id },
+      });
+      return;
+    }
+
+    const share = transaction.amount.div(household.members.length).toDecimalPlaces(2);
+    newParticipants = household.members.map((member) => ({
+      userId: member.userProfileId,
+      amount: share,
+      percentage: null,
+    }));
   }
-
-  const share = transaction.amount.div(household.members.length).toDecimalPlaces(2);
 
   await tx.sharedTransactionParticipant.deleteMany({
     where: { sharedTransactionId: shared.id },
@@ -690,9 +776,10 @@ async function syncSharedTransactionAfterUpdate(
     where: { id: shared.id },
     data: {
       participants: {
-        create: household.members.map((member) => ({
-          userId: member.userProfileId,
-          amount: share,
+        create: newParticipants.map((p) => ({
+          userId: p.userId,
+          amount: p.amount,
+          percentage: p.percentage,
           status: "OPEN",
         })),
       },

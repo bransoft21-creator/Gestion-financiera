@@ -267,6 +267,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   const watchedIsInstallment = (useWatch({ control, name: "isInstallment" }) as boolean | undefined) ?? false;
   const watchedPaymentMethod = (useWatch({ control, name: "paymentMethod" }) as PaymentMethod | undefined);
   const watchedSharedHouseholdId = (useWatch({ control, name: "sharedHouseholdId" }) as string | undefined) ?? "";
+  const watchedAmountStr = (useWatch({ control, name: "amount" }) as string | undefined) ?? "";
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
   const pendingCreateRequestIdRef = useRef<string | null>(null);
@@ -281,6 +282,9 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   ));
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
   const [message, setMessage] = useState<string | null>(null);
+  type SplitMode = "EQUAL" | "PERCENTAGE" | "CUSTOM_AMOUNT";
+  const [splitMode, setSplitMode] = useState<SplitMode>("EQUAL");
+  const [splitValues, setSplitValues] = useState<Record<string, string>>({});
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -288,6 +292,20 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   const filteredCategories = useMemo(() => {
     return categories.filter((category) => isCategoryAllowedForType(category.type, watchedType));
   }, [categories, watchedType]);
+
+  const selectedHousehold = useMemo(
+    () => sharedHouseholds.find((h) => h.id === watchedSharedHouseholdId),
+    [sharedHouseholds, watchedSharedHouseholdId],
+  );
+  const splitTotal = useMemo(
+    () => Object.values(splitValues).reduce((sum, v) => sum + (parseFloat(v) || 0), 0),
+    [splitValues],
+  );
+  const splitIsValid = useMemo(() => {
+    if (splitMode === "EQUAL") return true;
+    if (splitMode === "PERCENTAGE") return Math.abs(splitTotal - 100) <= 0.5;
+    return Math.abs(splitTotal - (parseFloat(watchedAmountStr) || 0)) <= 0.5;
+  }, [splitMode, splitTotal, watchedAmountStr]);
 
   const groupedTransactions = useMemo(() => {
     return groupTransactionsByDate(transactions);
@@ -322,6 +340,21 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!selectedHousehold?.members.length || !watchedSharedHouseholdId) return;
+    const members = selectedHousehold.members;
+    const values: Record<string, string> = {};
+    if (splitMode === "PERCENTAGE") {
+      const equalPct = (100 / members.length).toFixed(1);
+      members.forEach((m) => { values[m.userProfileId] = equalPct; });
+    } else if (splitMode === "CUSTOM_AMOUNT") {
+      members.forEach((m) => { values[m.userProfileId] = ""; });
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSplitValues(values);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedSharedHouseholdId, splitMode]);
 
   async function loadTransactions(
     nextFilters = filters,
@@ -432,6 +465,16 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
             sharedHouseholdId: !editingTransactionId && type === "EXPENSE"
               ? ((data.sharedHouseholdId as string) || undefined)
               : undefined,
+            splitConfig:
+              !editingTransactionId && type === "EXPENSE" && (data.sharedHouseholdId as string) && splitMode !== "EQUAL"
+                ? {
+                    mode: splitMode,
+                    participants: (selectedHousehold?.members ?? []).map((m) => ({
+                      userId: m.userProfileId,
+                      value: parseFloat(splitValues[m.userProfileId] || "0"),
+                    })),
+                  }
+                : undefined,
           };
 
       const response = await fetch(url, {
@@ -536,6 +579,8 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
 
   function resetForm() {
     setEditingTransactionId(null);
+    setSplitMode("EQUAL");
+    setSplitValues({});
     reset({
       type: "EXPENSE",
       accountId: defaultAccount?.id ?? "",
@@ -849,25 +894,103 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                         className="mt-1 h-4 w-4 rounded border-input accent-primary"
                         checked={Boolean(watchedSharedHouseholdId)}
                         onChange={(event) => {
-                          setValue("sharedHouseholdId", event.target.checked ? sharedHouseholds[0]?.id ?? "" : "");
+                          setValue("sharedHouseholdId", event.target.checked ? (sharedHouseholds[0]?.id ?? "") : "");
+                          if (!event.target.checked) {
+                            setSplitMode("EQUAL");
+                            setSplitValues({});
+                          }
                         }}
                       />
                       <span className="min-w-0">
                         <span className="block font-semibold text-foreground">Compartido con hogar</span>
                         <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
-                          Divide este gasto en partes iguales entre los miembros activos.
+                          Distribuí este gasto entre los miembros del hogar.
                         </span>
                       </span>
                     </label>
+
                     {watchedSharedHouseholdId ? (
-                      <div className="mt-3">
-                        <select className={transactionSelectClass} {...register("sharedHouseholdId")}>
-                          {sharedHouseholds.map((household) => (
-                            <option key={household.id} value={household.id}>
-                              {household.name} · {household.members.length} miembros
-                            </option>
-                          ))}
-                        </select>
+                      <div className="mt-3 space-y-3">
+                        {sharedHouseholds.length > 1 ? (
+                          <select className={transactionSelectClass} {...register("sharedHouseholdId")}>
+                            {sharedHouseholds.map((household) => (
+                              <option key={household.id} value={household.id}>
+                                {household.name} · {household.members.length} miembros
+                              </option>
+                            ))}
+                          </select>
+                        ) : null}
+
+                        <div>
+                          <p className="mb-2 text-xs font-semibold text-muted-foreground">¿Cómo se reparte?</p>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {(
+                              [
+                                { value: "EQUAL", label: "Igual" },
+                                { value: "PERCENTAGE", label: "Por %" },
+                                { value: "CUSTOM_AMOUNT", label: "Por monto" },
+                              ] as const
+                            ).map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => setSplitMode(option.value)}
+                                className={`rounded-xl border px-2 py-2 text-xs font-semibold transition ${
+                                  splitMode === option.value
+                                    ? "border-teal-300/30 bg-teal-300/15 text-teal-100"
+                                    : "border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.07]"
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {splitMode === "EQUAL" && selectedHousehold ? (
+                          <p className="text-xs text-muted-foreground">
+                            {selectedHousehold.members.length} miembros · partes iguales.
+                          </p>
+                        ) : null}
+
+                        {splitMode !== "EQUAL" && selectedHousehold ? (
+                          <div className="space-y-2">
+                            {selectedHousehold.members.map((member) => (
+                              <div key={member.userProfileId} className="flex items-center gap-2">
+                                <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                                  {member.userProfile.fullName ?? member.userProfile.email}
+                                </span>
+                                <div className="relative">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={splitMode === "PERCENTAGE" ? 100 : undefined}
+                                    step={splitMode === "PERCENTAGE" ? "0.1" : "1"}
+                                    inputMode="decimal"
+                                    value={splitValues[member.userProfileId] ?? ""}
+                                    onChange={(e) =>
+                                      setSplitValues((prev) => ({
+                                        ...prev,
+                                        [member.userProfileId]: e.target.value,
+                                      }))
+                                    }
+                                    className={`v2-focus-ring h-9 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-base md:text-sm text-white outline-none ${splitMode === "PERCENTAGE" ? "w-24 pr-7" : "w-32"}`}
+                                  />
+                                  {splitMode === "PERCENTAGE" ? (
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                                  ) : null}
+                                </div>
+                              </div>
+                            ))}
+                            <div
+                              className={`rounded-xl px-3 py-2 text-xs font-semibold ${splitIsValid ? "bg-emerald-300/10 text-emerald-100" : "bg-amber-300/10 text-amber-200"}`}
+                            >
+                              {splitMode === "PERCENTAGE"
+                                ? `${splitTotal.toFixed(1)}% de 100%${splitIsValid ? " ✓" : " — debe sumar 100%"}`
+                                : `${splitTotal.toLocaleString("es-AR")} de ${parseFloat(watchedAmountStr || "0").toLocaleString("es-AR")}${splitIsValid ? " ✓" : " — debe sumar el total"}`}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>

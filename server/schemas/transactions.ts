@@ -21,6 +21,39 @@ const optionalPositiveIntSchema = z.preprocess(
   z.coerce.number().int().positive().optional(),
 );
 
+const splitParticipantSchema = z.object({
+  userId: z.string().min(1),
+  value: z.number().min(0),
+});
+
+const splitConfigSchema = z
+  .object({
+    mode: z.enum(["EQUAL", "PERCENTAGE", "CUSTOM_AMOUNT"]),
+    participants: z.array(splitParticipantSchema).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.mode !== "EQUAL") {
+      if (!data.participants || data.participants.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Se requieren participantes para este modo.",
+          path: ["participants"],
+        });
+        return;
+      }
+    }
+    if (data.mode === "PERCENTAGE" && data.participants) {
+      const sum = data.participants.reduce((acc, p) => acc + p.value, 0);
+      if (Math.abs(sum - 100) > 0.5) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Los porcentajes deben sumar 100%.",
+          path: ["participants"],
+        });
+      }
+    }
+  });
+
 const createTransactionBaseSchema = z.object({
   householdId: z.string().min(1),
   accountId: z.string().min(1),
@@ -46,6 +79,7 @@ const createTransactionBaseSchema = z.object({
   isRecurring: z.boolean().default(false),
   occurredAt: transactionDateSchema,
   sharedHouseholdId: z.string().min(1).optional(),
+  splitConfig: splitConfigSchema.optional(),
 });
 
 export const createTransactionSchema = createTransactionBaseSchema.superRefine((data, ctx) => {
@@ -135,3 +169,4 @@ export const listTransactionsSchema = z
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
 export type ListTransactionsInput = z.infer<typeof listTransactionsSchema>;
+export type SplitConfig = z.infer<typeof splitConfigSchema>;

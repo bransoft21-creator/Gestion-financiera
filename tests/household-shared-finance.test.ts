@@ -216,6 +216,56 @@ describe("household shared finance", () => {
     assert.equal(settlementAfterZero, null);
   });
 
+  it("calculates balance correctly for a 60/40 percentage split", () => {
+    const balances = calculateHouseholdMemberBalances({
+      members: [
+        { userId: "user-1", name: "Ana", email: "ana@example.com" },
+        { userId: "user-2", name: "Beto", email: "beto@example.com" },
+      ],
+      sharedTransactions: [
+        {
+          paidByUserId: "user-1",
+          amount: 50000,
+          participants: [
+            { userId: "user-1", amount: 30000 },
+            { userId: "user-2", amount: 20000 },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(balances.find((m) => m.userId === "user-1")?.balance, 20000);
+    assert.equal(balances.find((m) => m.userId === "user-2")?.balance, -20000);
+
+    const settlement = calculateHouseholdSettlement(balances);
+    assert.equal(settlement?.amount, 20000);
+    assert.equal(settlement?.fromName, "Beto");
+    assert.equal(settlement?.toName, "Ana");
+  });
+
+  it("calculates balance correctly for a 100/0 split — no settlement needed", () => {
+    const balances = calculateHouseholdMemberBalances({
+      members: [
+        { userId: "user-1", name: "Ana", email: "ana@example.com" },
+        { userId: "user-2", name: "Beto", email: "beto@example.com" },
+      ],
+      sharedTransactions: [
+        {
+          paidByUserId: "user-1",
+          amount: 30000,
+          participants: [
+            { userId: "user-1", amount: 30000 },
+            { userId: "user-2", amount: 0 },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(balances.find((m) => m.userId === "user-1")?.balance, 0);
+    assert.equal(balances.find((m) => m.userId === "user-2")?.balance, 0);
+    assert.equal(calculateHouseholdSettlement(balances), null);
+  });
+
   it("marks high shared spend without aggressive language", () => {
     const briefing = calculateHouseholdBriefing({
       household: { id: "home", name: "Casa" },

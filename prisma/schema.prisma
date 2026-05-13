@@ -38,6 +38,8 @@ enum HouseholdInviteStatus {
 
 enum SharedSplitMode {
   EQUAL
+  PERCENTAGE
+  CUSTOM_AMOUNT
 }
 
 enum SharedParticipantStatus {
@@ -396,6 +398,7 @@ model SharedTransactionParticipant {
   sharedTransactionId String
   userId              String
   amount              Decimal                 @db.Decimal(18, 2)
+  percentage          Decimal?                @db.Decimal(5,2)
   status              SharedParticipantStatus @default(OPEN)
 
   sharedTransaction SharedTransaction @relation(fields: [sharedTransactionId], references: [id])
