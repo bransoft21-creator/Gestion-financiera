@@ -1,4 +1,4 @@
-import { AccountType, CategoryType, CurrencyCode, HouseholdRole, HouseholdMemberStatus } from "@prisma/client";
+import { AccountType, CategoryType, CurrencyCode, HouseholdKind, HouseholdRole, HouseholdMemberStatus } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { createSupabaseServerClient } from "../../lib/supabase/server";
 import { UnauthorizedError } from "../api/errors";
@@ -86,6 +86,7 @@ export async function getCurrentUser() {
       status: HouseholdMemberStatus.ACTIVE,
       deletedAt: null,
       household: {
+        kind: HouseholdKind.PERSONAL,
         deletedAt: null,
       },
     },
@@ -96,6 +97,7 @@ export async function getCurrentUser() {
     await prisma.household.create({
       data: {
         name: "Mi hogar",
+        kind: HouseholdKind.PERSONAL,
         defaultCurrency: userProfile.currency,
         createdById: userProfile.id,
         members: {

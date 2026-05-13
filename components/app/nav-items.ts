@@ -5,6 +5,7 @@ import {
   CreditCard,
   FolderTree,
   Gauge,
+  Home,
   Landmark,
   RefreshCw,
   ScanLine,
@@ -16,6 +17,7 @@ import {
 export const navItems = [
   { href: "/dashboard",     label: "Hoy",              icon: Gauge },
   { href: "/transactions",  label: "Movimientos",      icon: CircleDollarSign },
+  { href: "/household",     label: "Hogar",            icon: Home },
   { href: "/smart-import",  label: "Smart Import",     icon: ScanLine },
   { href: "/accounts",      label: "Dinero",           icon: Landmark },
   { href: "/categories",    label: "Categorías",       icon: FolderTree },

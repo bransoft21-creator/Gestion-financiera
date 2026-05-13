@@ -29,6 +29,7 @@ const createTransactionBaseSchema = z.object({
   goalId: z.string().min(1).optional(),
   debtId: z.string().min(1).optional(),
   investmentTransactionId: z.string().min(1).optional(),
+  clientRequestId: z.string().trim().min(16).max(80).optional(),
   type: z.enum(transactionTypeValues),
   status: z.enum(transactionStatusValues).default(TransactionStatus.CONFIRMED),
   currency: z.enum(currencyValues).default(CurrencyCode.ARS),
@@ -44,6 +45,7 @@ const createTransactionBaseSchema = z.object({
   totalInstallments: optionalPositiveIntSchema,
   isRecurring: z.boolean().default(false),
   occurredAt: transactionDateSchema,
+  sharedHouseholdId: z.string().min(1).optional(),
 });
 
 export const createTransactionSchema = createTransactionBaseSchema.superRefine((data, ctx) => {
@@ -73,6 +75,13 @@ export const createTransactionSchema = createTransactionBaseSchema.superRefine((
       code: z.ZodIssueCode.custom,
       message: "goalId es requerido para contribuciones a meta",
       path: ["goalId"],
+    });
+  }
+  if (data.sharedHouseholdId && data.type !== TransactionType.EXPENSE) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Solo los gastos pueden compartirse con un hogar.",
+      path: ["sharedHouseholdId"],
     });
   }
 });

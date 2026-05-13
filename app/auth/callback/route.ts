@@ -11,6 +11,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  const nextPath = getSafeNextPath(searchParams.get("next"));
 
   // Use the canonical app URL so the redirect works correctly on Vercel
   // even behind a reverse-proxy (x-forwarded-host).
@@ -37,7 +38,12 @@ export async function GET(request: NextRequest) {
     select: { onboardingCompletedAt: true },
   });
 
-  const redirectPath = !profile || !profile.onboardingCompletedAt ? "/onboarding" : "/dashboard";
+  const redirectPath = nextPath ?? (!profile || !profile.onboardingCompletedAt ? "/onboarding" : "/dashboard");
 
   return NextResponse.redirect(new URL(redirectPath, baseUrl));
+}
+
+function getSafeNextPath(value: string | null) {
+  if (!value?.startsWith("/") || value.startsWith("//")) return null;
+  return value;
 }

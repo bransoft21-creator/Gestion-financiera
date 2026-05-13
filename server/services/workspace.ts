@@ -1,4 +1,4 @@
-import { AccountType, CategoryType, HouseholdMemberStatus } from "@prisma/client";
+import { AccountType, CategoryType, HouseholdKind, HouseholdMemberStatus } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { NotFoundError } from "../api/errors";
 
@@ -9,6 +9,7 @@ export async function getPrimaryHousehold(userProfileId: string) {
       status: HouseholdMemberStatus.ACTIVE,
       deletedAt: null,
       household: {
+        kind: HouseholdKind.PERSONAL,
         deletedAt: null,
       },
     },
@@ -55,7 +56,7 @@ export async function ensureDefaultAccount(householdId: string, userProfileId: s
 export async function getTransactionWorkspace(userProfileId: string) {
   const household = await getPrimaryHousehold(userProfileId);
 
-  const [accounts, categories] = await Promise.all([
+  const [accounts, categories, sharedHouseholds] = await Promise.all([
     prisma.account.findMany({
       where: {
         householdId: household.id,
@@ -74,6 +75,33 @@ export async function getTransactionWorkspace(userProfileId: string) {
       orderBy: [{ type: "asc" }, { name: "asc" }],
       select: { id: true, name: true, type: true },
     }),
+    prisma.household.findMany({
+      where: {
+        kind: HouseholdKind.HOUSEHOLD,
+        deletedAt: null,
+        members: {
+          some: {
+            userProfileId,
+            status: HouseholdMemberStatus.ACTIVE,
+            deletedAt: null,
+          },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+        members: {
+          where: { status: HouseholdMemberStatus.ACTIVE, deletedAt: null },
+          orderBy: { joinedAt: "asc" },
+          select: {
+            userProfileId: true,
+            userProfile: { select: { fullName: true, email: true } },
+          },
+        },
+      },
+    }),
   ]);
 
   if (accounts.length === 0) {
@@ -83,10 +111,10 @@ export async function getTransactionWorkspace(userProfileId: string) {
       orderBy: { name: "asc" },
       select: { id: true, name: true, type: true, currency: true },
     });
-    return { household, accounts: defaultAccounts, categories };
+    return { household, accounts: defaultAccounts, categories, sharedHouseholds };
   }
 
-  return { household, accounts, categories };
+  return { household, accounts, categories, sharedHouseholds };
 }
 
 export async function getCategoryWorkspace(userProfileId: string) {

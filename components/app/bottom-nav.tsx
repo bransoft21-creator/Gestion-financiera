@@ -11,6 +11,7 @@ import {
   CreditCard,
   FolderTree,
   Gauge,
+  Home,
   Landmark,
   LogOut,
   Menu,
@@ -27,12 +28,13 @@ import { LogoutDialog } from "./logout-dialog";
 const bottomNavItems = [
   { href: "/dashboard",    label: "Hoy",          icon: Gauge },
   { href: "/transactions", label: "Movimientos",  icon: CircleDollarSign },
-  { href: "/budgets",      label: "Presupuesto",  icon: BarChart3 },
+  { href: "/household",    label: "Hogar",        icon: Home },
   { href: "/goals",        label: "Metas",        icon: Sparkles },
 ] as const;
 
 const moreNavItems = [
   { href: "/smart-import", label: "Smart Import", icon: ScanLine },
+  { href: "/budgets",      label: "Presupuesto",  icon: BarChart3 },
   { href: "/accounts",     label: "Dinero",       icon: Landmark },
   { href: "/categories",   label: "Categorías",   icon: FolderTree },
   { href: "/debts",        label: "Deudas",       icon: CreditCard },

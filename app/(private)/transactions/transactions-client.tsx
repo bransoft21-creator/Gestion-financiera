@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Download,
   Filter,
+  Home,
   Loader2,
   Plus,
   ReceiptText,
@@ -101,12 +102,33 @@ type TransactionItem = {
     id: string;
     name: string;
   } | null;
+  sharedTransaction: {
+    id: string;
+    householdId: string;
+    household: {
+      id: string;
+      name: string;
+      avatar: string | null;
+    };
+  } | null;
 };
 
 type TransactionsClientProps = {
   householdId: string;
   accounts: AccountOption[];
   categories: CategoryOption[];
+  sharedHouseholds: Array<{
+    id: string;
+    name: string;
+    avatar: string | null;
+    members: Array<{
+      userProfileId: string;
+      userProfile: {
+        fullName: string | null;
+        email: string;
+      };
+    }>;
+  }>;
 };
 
 type Filters = {
@@ -181,6 +203,7 @@ const formSchema = z.object({
   installmentNumber: z.coerce.number().int().positive().optional(),
   totalInstallments: z.coerce.number().int().positive().optional(),
   isRecurring: z.boolean().default(false),
+  sharedHouseholdId: z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.type === "TRANSFER") {
     if (!data.transferAccountId) {
@@ -199,7 +222,7 @@ const formSchema = z.object({
   }
 });
 
-export function TransactionsClient({ householdId, accounts, categories }: TransactionsClientProps) {
+export function TransactionsClient({ householdId, accounts, categories, sharedHouseholds }: TransactionsClientProps) {
   const searchParams = useSearchParams();
   const defaultAccount = getPreferredArsBankAccount(accounts);
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
@@ -236,14 +259,17 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       installmentNumber: undefined as number | undefined,
       totalInstallments: undefined as number | undefined,
       isRecurring: false,
+      sharedHouseholdId: "",
     },
   });
   const watchedType = (useWatch({ control, name: "type" }) as TransactionType | undefined) ?? "EXPENSE";
   const watchedAccountId = (useWatch({ control, name: "accountId" }) as string | undefined) ?? "";
   const watchedIsInstallment = (useWatch({ control, name: "isInstallment" }) as boolean | undefined) ?? false;
   const watchedPaymentMethod = (useWatch({ control, name: "paymentMethod" }) as PaymentMethod | undefined);
+  const watchedSharedHouseholdId = (useWatch({ control, name: "sharedHouseholdId" }) as string | undefined) ?? "";
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
+  const pendingCreateRequestIdRef = useRef<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
@@ -366,6 +392,9 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       const isEditing = Boolean(editingTransactionId);
 
       const isExpenseOrIncome = type === "EXPENSE" || type === "INCOME";
+      const clientRequestId = editingTransactionId
+        ? undefined
+        : (pendingCreateRequestIdRef.current ??= crypto.randomUUID());
       const body = isNonBasicEdit
         ? {
             householdId,
@@ -376,6 +405,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
           }
         : {
             householdId,
+            clientRequestId,
             type,
             accountId: data.accountId,
             transferAccountId: type === "TRANSFER" ? ((data.transferAccountId as string) || undefined) : undefined,
@@ -399,6 +429,9 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
               ? optionalPayloadValue(data.totalInstallments, isEditing)
               : optionalPayloadValue(undefined, isEditing),
             isRecurring: isExpenseOrIncome ? Boolean(data.isRecurring) : false,
+            sharedHouseholdId: !editingTransactionId && type === "EXPENSE"
+              ? ((data.sharedHouseholdId as string) || undefined)
+              : undefined,
           };
 
       const response = await fetch(url, {
@@ -422,14 +455,17 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
         } else {
           setMessage(payload.error ?? "No se pudo guardar la transacción.");
         }
+        pendingCreateRequestIdRef.current = null;
         return;
       }
 
       toast.success(editingTransactionId ? "Transacción actualizada." : "Transacción guardada.");
+      pendingCreateRequestIdRef.current = null;
       resetForm();
       setIsFormOpen(false);
       await loadTransactions(filters, search);
     } catch {
+      pendingCreateRequestIdRef.current = null;
       setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setIsSaving(false);
@@ -494,6 +530,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       installmentNumber: transaction.installmentNumber ?? undefined,
       totalInstallments: transaction.totalInstallments ?? undefined,
       isRecurring: transaction.isRecurring,
+      sharedHouseholdId: transaction.sharedTransaction?.householdId ?? "",
     });
   }
 
@@ -515,6 +552,7 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
       installmentNumber: undefined,
       totalInstallments: undefined,
       isRecurring: false,
+      sharedHouseholdId: "",
     });
   }
 
@@ -800,6 +838,38 @@ export function TransactionsClient({ householdId, accounts, categories }: Transa
                         placeholder="Ej: 12"
                       />
                     </Field>
+                  </div>
+                ) : null}
+
+                {watchedType === "EXPENSE" && sharedHouseholds.length > 0 ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                    <label className="flex cursor-pointer items-start gap-3 text-sm">
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 rounded border-input accent-primary"
+                        checked={Boolean(watchedSharedHouseholdId)}
+                        onChange={(event) => {
+                          setValue("sharedHouseholdId", event.target.checked ? sharedHouseholds[0]?.id ?? "" : "");
+                        }}
+                      />
+                      <span className="min-w-0">
+                        <span className="block font-semibold text-foreground">Compartido con hogar</span>
+                        <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+                          Divide este gasto en partes iguales entre los miembros activos.
+                        </span>
+                      </span>
+                    </label>
+                    {watchedSharedHouseholdId ? (
+                      <div className="mt-3">
+                        <select className={transactionSelectClass} {...register("sharedHouseholdId")}>
+                          {sharedHouseholds.map((household) => (
+                            <option key={household.id} value={household.id}>
+                              {household.name} · {household.members.length} miembros
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </>
@@ -1329,6 +1399,12 @@ function TransactionCard({
             {transaction.status === "CANCELED" && (
               <Badge className="h-5 shrink-0 border-border bg-secondary px-2 text-[11px] text-muted-foreground line-through">Cancelada</Badge>
             )}
+            {transaction.sharedTransaction ? (
+              <Badge className="h-5 shrink-0 border-teal-300/20 bg-teal-300/10 px-2 text-[11px] text-teal-100">
+                <Home className="mr-1 h-3 w-3" aria-hidden="true" />
+                {transaction.sharedTransaction.household.name}
+              </Badge>
+            ) : null}
             <span className="inline-flex min-w-0 items-center gap-1 truncate rounded-md bg-secondary px-2 py-1 text-[11px] leading-none text-muted-foreground">
               <CalendarDays className="h-3 w-3" aria-hidden="true" />
               {formatDate(transaction.occurredAt)}

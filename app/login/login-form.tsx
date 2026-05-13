@@ -7,9 +7,11 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type AuthMode = "login" | "register" | "forgot";
 
-function getCallbackUrl() {
+function getCallbackUrl(nextPath?: string | null) {
   const base = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
-  return `${base.replace(/\/$/, "")}/auth/callback`;
+  const url = new URL("/auth/callback", base.replace(/\/$/, ""));
+  if (nextPath) url.searchParams.set("next", nextPath);
+  return url.toString();
 }
 
 function getPasswordRecoveryUrl() {
@@ -116,9 +118,10 @@ function GoogleLogo({ className }: { className?: string }) {
 
 type LoginFormProps = {
   initialError?: string;
+  nextPath?: string | null;
 };
 
-export function LoginForm({ initialError }: LoginFormProps) {
+export function LoginForm({ initialError, nextPath }: LoginFormProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -145,7 +148,7 @@ export function LoginForm({ initialError }: LoginFormProps) {
       const supabase = createSupabaseBrowserClient();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: getCallbackUrl() },
+        options: { redirectTo: getCallbackUrl(nextPath) },
       });
       if (error) {
         setMessage(humanizeAuthError(error.message));
@@ -193,7 +196,7 @@ export function LoginForm({ initialError }: LoginFormProps) {
         return;
       }
 
-      window.location.href = "/dashboard";
+      window.location.href = nextPath ?? "/dashboard";
     } catch (err) {
       setMessage(err instanceof Error ? humanizeAuthError(err.message) : "Error inesperado. Intentá de nuevo.");
       setIsLoading(false);

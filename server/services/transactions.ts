@@ -1,4 +1,4 @@
-import { Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { HouseholdKind, HouseholdMemberStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { nextArgentinaDayStart } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { ApiError, FieldApiError, ForbiddenError, NotFoundError } from "../api/errors";
@@ -29,6 +29,21 @@ export async function createTransaction(
 ) {
   await assertHouseholdAccess(userProfileId, input.householdId);
 
+  if (input.clientRequestId) {
+    const existing = await prisma.transaction.findUnique({
+      where: { clientRequestId: input.clientRequestId },
+      include: transactionInclude,
+    });
+
+    if (existing) {
+      if (existing.createdById !== userProfileId || existing.householdId !== input.householdId) {
+        throw new ForbiddenError("clientRequestId belongs to another workspace");
+      }
+
+      return existing;
+    }
+  }
+
   // Cross-field business rules (schema covers the simple cases; service covers
   // the merged-state cases that need current DB values in update/delete).
   if (input.type === TransactionType.TRANSFER && !input.transferAccountId) {
@@ -46,65 +61,94 @@ export async function createTransaction(
 
   await assertTransactionReferencesBelongToHousehold(input.householdId, input);
 
-  return prisma.$transaction(async (tx) => {
-    if (input.type === TransactionType.DEBT_PAYMENT) {
-      await assertDebtPaymentAllowed(tx, input);
+  try {
+    return await prisma.$transaction(async (tx) => {
+      if (input.type === TransactionType.DEBT_PAYMENT) {
+        await assertDebtPaymentAllowed(tx, input);
+      }
+
+      const transaction = await tx.transaction.create({
+        data: {
+          householdId: input.householdId,
+          createdById: userProfileId,
+          accountId: input.accountId,
+          transferAccountId: input.transferAccountId,
+          categoryId: input.categoryId,
+          goalId: input.goalId,
+          debtId: input.debtId,
+          investmentTransactionId: input.investmentTransactionId,
+          clientRequestId: input.clientRequestId,
+          type: input.type,
+          status: input.status,
+          currency: input.currency,
+          amount: input.amount,
+          transferAmount: input.transferAmount,
+          description: input.description,
+          notes: input.notes,
+          expenseType: input.expenseType,
+          origin: input.origin,
+          paymentMethod: input.paymentMethod,
+          isInstallment: input.isInstallment,
+          installmentNumber: input.installmentNumber,
+          totalInstallments: input.totalInstallments,
+          isRecurring: input.isRecurring,
+          occurredAt: input.occurredAt,
+        },
+        include: transactionInclude,
+      });
+
+      await applyBalanceDeltas(
+        tx,
+        computeTransactionBalanceDeltas({
+          type: transaction.type,
+          status: transaction.status,
+          accountId: transaction.accountId,
+          transferAccountId: transaction.transferAccountId,
+          amount: transaction.amount,
+          transferAmount: transaction.transferAmount,
+        }),
+      );
+
+      await applyLinkedEntityEffects(
+        tx,
+        computeTransactionLinkedEntityEffects({
+          type: transaction.type,
+          status: transaction.status,
+          debtId: transaction.debtId,
+          goalId: transaction.goalId,
+          amount: transaction.amount,
+        }),
+      );
+
+      if (input.sharedHouseholdId) {
+        await createEqualSharedTransaction(tx, {
+          householdId: input.sharedHouseholdId,
+          transactionId: transaction.id,
+          paidByUserId: userProfileId,
+          amount: transaction.amount,
+        });
+      }
+
+      return transaction;
+    });
+  } catch (error) {
+    if (
+      input.clientRequestId &&
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const existing = await prisma.transaction.findUnique({
+        where: { clientRequestId: input.clientRequestId },
+        include: transactionInclude,
+      });
+
+      if (existing && existing.createdById === userProfileId && existing.householdId === input.householdId) {
+        return existing;
+      }
     }
 
-    const transaction = await tx.transaction.create({
-      data: {
-        householdId: input.householdId,
-        createdById: userProfileId,
-        accountId: input.accountId,
-        transferAccountId: input.transferAccountId,
-        categoryId: input.categoryId,
-        goalId: input.goalId,
-        debtId: input.debtId,
-        investmentTransactionId: input.investmentTransactionId,
-        type: input.type,
-        status: input.status,
-        currency: input.currency,
-        amount: input.amount,
-        transferAmount: input.transferAmount,
-        description: input.description,
-        notes: input.notes,
-        expenseType: input.expenseType,
-        origin: input.origin,
-        paymentMethod: input.paymentMethod,
-        isInstallment: input.isInstallment,
-        installmentNumber: input.installmentNumber,
-        totalInstallments: input.totalInstallments,
-        isRecurring: input.isRecurring,
-        occurredAt: input.occurredAt,
-      },
-      include: transactionInclude,
-    });
-
-    await applyBalanceDeltas(
-      tx,
-      computeTransactionBalanceDeltas({
-        type: transaction.type,
-        status: transaction.status,
-        accountId: transaction.accountId,
-        transferAccountId: transaction.transferAccountId,
-        amount: transaction.amount,
-        transferAmount: transaction.transferAmount,
-      }),
-    );
-
-    await applyLinkedEntityEffects(
-      tx,
-      computeTransactionLinkedEntityEffects({
-        type: transaction.type,
-        status: transaction.status,
-        debtId: transaction.debtId,
-        goalId: transaction.goalId,
-        amount: transaction.amount,
-      }),
-    );
-
-    return transaction;
-  });
+    throw error;
+  }
 }
 
 export async function listTransactions(
@@ -283,6 +327,8 @@ export async function updateTransaction(
       }),
     );
 
+    await syncSharedTransactionAfterUpdate(tx, updated);
+
     return updated;
   });
 }
@@ -415,6 +461,8 @@ export async function deleteTransaction(
       ),
     );
 
+    await removeSharedTransactionForTransaction(tx, transactionId);
+
     // 2. Soft-delete the transaction.
     return tx.transaction.update({
       where: { id: transactionId },
@@ -433,6 +481,22 @@ const transactionInclude = {
   category: true,
   goal: true,
   debt: true,
+  sharedTransaction: {
+    select: {
+      id: true,
+      householdId: true,
+      paidByUserId: true,
+      splitMode: true,
+      household: { select: { id: true, name: true, avatar: true } },
+      participants: {
+        select: {
+          userId: true,
+          amount: true,
+          status: true,
+        },
+      },
+    },
+  },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -505,4 +569,152 @@ async function assertTransactionReferencesBelongToHousehold(
   if (input.investmentTransactionId && !investmentTransaction) {
     throw new ForbiddenError("Investment transaction does not belong to this household");
   }
+}
+
+async function createEqualSharedTransaction(
+  tx: Prisma.TransactionClient,
+  input: {
+    householdId: string;
+    transactionId: string;
+    paidByUserId: string;
+    amount: Prisma.Decimal;
+  },
+) {
+  const household = await tx.household.findFirst({
+    where: {
+      id: input.householdId,
+      kind: HouseholdKind.HOUSEHOLD,
+      deletedAt: null,
+      members: {
+        some: {
+          userProfileId: input.paidByUserId,
+          status: HouseholdMemberStatus.ACTIVE,
+          deletedAt: null,
+        },
+      },
+    },
+    select: {
+      id: true,
+      members: {
+        where: { status: HouseholdMemberStatus.ACTIVE, deletedAt: null },
+        select: { userProfileId: true },
+        orderBy: { joinedAt: "asc" },
+      },
+    },
+  });
+
+  if (!household) {
+    throw new ForbiddenError("No tenés acceso a ese hogar compartido.");
+  }
+
+  if (household.members.length < 2) {
+    throw new ApiError(400, "Invitá a otra persona antes de compartir gastos.");
+  }
+
+  const share = input.amount.div(household.members.length).toDecimalPlaces(2);
+
+  await tx.sharedTransaction.create({
+    data: {
+      householdId: input.householdId,
+      transactionId: input.transactionId,
+      paidByUserId: input.paidByUserId,
+      splitMode: "EQUAL",
+      participants: {
+        create: household.members.map((member) => ({
+          userId: member.userProfileId,
+          amount: share,
+          status: "OPEN",
+        })),
+      },
+    },
+  });
+}
+
+async function syncSharedTransactionAfterUpdate(
+  tx: Prisma.TransactionClient,
+  transaction: {
+    id: string;
+    type: TransactionType;
+    amount: Prisma.Decimal;
+    status: TransactionStatus;
+    sharedTransaction?: {
+      id: string;
+      householdId: string;
+    } | null;
+  },
+) {
+  const shared = transaction.sharedTransaction;
+
+  if (!shared) return;
+
+  if (transaction.type !== TransactionType.EXPENSE || transaction.status === TransactionStatus.CANCELED) {
+    await tx.sharedTransactionParticipant.deleteMany({
+      where: { sharedTransactionId: shared.id },
+    });
+    await tx.sharedTransaction.delete({
+      where: { id: shared.id },
+    });
+    return;
+  }
+
+  const household = await tx.household.findFirst({
+    where: {
+      id: shared.householdId,
+      kind: HouseholdKind.HOUSEHOLD,
+      deletedAt: null,
+    },
+    select: {
+      members: {
+        where: { status: HouseholdMemberStatus.ACTIVE, deletedAt: null },
+        select: { userProfileId: true },
+      },
+    },
+  });
+
+  if (!household || household.members.length < 2) {
+    await tx.sharedTransactionParticipant.deleteMany({
+      where: { sharedTransactionId: shared.id },
+    });
+    await tx.sharedTransaction.delete({
+      where: { id: shared.id },
+    });
+    return;
+  }
+
+  const share = transaction.amount.div(household.members.length).toDecimalPlaces(2);
+
+  await tx.sharedTransactionParticipant.deleteMany({
+    where: { sharedTransactionId: shared.id },
+  });
+  await tx.sharedTransaction.update({
+    where: { id: shared.id },
+    data: {
+      participants: {
+        create: household.members.map((member) => ({
+          userId: member.userProfileId,
+          amount: share,
+          status: "OPEN",
+        })),
+      },
+    },
+  });
+}
+
+async function removeSharedTransactionForTransaction(
+  tx: Prisma.TransactionClient,
+  transactionId: string,
+) {
+  const shared = await tx.sharedTransaction.findUnique({
+    where: { transactionId },
+    select: { id: true },
+  });
+
+  if (!shared) return;
+
+  await tx.sharedTransactionParticipant.deleteMany({
+    where: { sharedTransactionId: shared.id },
+  });
+  await tx.sharedTransaction.delete({
+    where: { id: shared.id },
+  });
 }

@@ -17,6 +17,7 @@ export default async function TransactionsPage() {
         householdId={workspace.household.id}
         accounts={workspace.accounts}
         categories={workspace.categories}
+        sharedHouseholds={workspace.sharedHouseholds}
       />
     </V2PageShell>
   );

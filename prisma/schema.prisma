@@ -18,10 +18,31 @@ enum HouseholdRole {
   VIEWER
 }
 
+enum HouseholdKind {
+  PERSONAL
+  HOUSEHOLD
+}
+
 enum HouseholdMemberStatus {
   INVITED
   ACTIVE
   REMOVED
+}
+
+enum HouseholdInviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum SharedSplitMode {
+  EQUAL
+}
+
+enum SharedParticipantStatus {
+  OPEN
+  SETTLED
 }
 
 enum AccountType {
@@ -158,9 +179,12 @@ model UserProfile {
 
   memberships          HouseholdMember[]
   createdHouseholds    Household[]             @relation("HouseholdCreatedBy")
+  householdInvitesSent HouseholdInvite[]        @relation("HouseholdInviteInvitedBy")
   accounts             Account[]               @relation("AccountCreatedBy")
   categories           Category[]              @relation("CategoryCreatedBy")
   transactions         Transaction[]           @relation("TransactionCreatedBy")
+  sharedTransactionsPaid SharedTransaction[]    @relation("SharedTransactionPaidBy")
+  sharedTransactionParticipants SharedTransactionParticipant[]
   budgets              Budget[]                @relation("BudgetCreatedBy")
   recurringExpenses    RecurringExpense[]      @relation("RecurringExpenseCreatedBy")
   goals                Goal[]                  @relation("GoalCreatedBy")
@@ -176,6 +200,8 @@ model UserProfile {
 model Household {
   id              String       @id @default(cuid())
   name            String
+  avatar          String?
+  kind            HouseholdKind @default(PERSONAL)
   defaultCurrency CurrencyCode @default(ARS)
   createdById     String
   createdAt       DateTime     @default(now())
@@ -184,9 +210,11 @@ model Household {
 
   createdBy              UserProfile             @relation("HouseholdCreatedBy", fields: [createdById], references: [id])
   members                HouseholdMember[]
+  invites                HouseholdInvite[]
   accounts               Account[]
   categories             Category[]
   transactions           Transaction[]
+  sharedTransactions     SharedTransaction[]
   budgets                Budget[]
   recurringExpenses      RecurringExpense[]
   goals                  Goal[]
@@ -216,6 +244,26 @@ model HouseholdMember {
 
   @@unique([householdId, userProfileId])
   @@index([userProfileId])
+}
+
+model HouseholdInvite {
+  id              String                @id @default(cuid())
+  householdId     String
+  email           String
+  tokenHash       String                @unique
+  expiresAt       DateTime
+  invitedById     String
+  status          HouseholdInviteStatus @default(PENDING)
+  acceptedAt      DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  household Household   @relation(fields: [householdId], references: [id])
+  invitedBy UserProfile @relation("HouseholdInviteInvitedBy", fields: [invitedById], references: [id])
+
+  @@index([householdId, status])
+  @@index([email])
+  @@index([expiresAt])
 }
 
 model Account {
@@ -283,6 +331,7 @@ model Transaction {
   goalId                    String?
   debtId                    String?
   investmentTransactionId   String?
+  clientRequestId           String?
   type                      TransactionType
   status                    TransactionStatus @default(CONFIRMED)
   currency                  CurrencyCode      @default(ARS)
@@ -310,6 +359,7 @@ model Transaction {
   goal                  Goal?                  @relation(fields: [goalId], references: [id])
   debt                  Debt?                  @relation(fields: [debtId], references: [id])
   investmentTransaction InvestmentTransaction? @relation("FinanceTransactionInvestmentTransaction", fields: [investmentTransactionId], references: [id])
+  sharedTransaction     SharedTransaction?
 
   @@index([householdId, occurredAt])
   @@index([accountId])
@@ -319,6 +369,38 @@ model Transaction {
   @@index([debtId])
   @@index([investmentTransactionId])
   @@index([createdById])
+  @@unique([clientRequestId])
+}
+
+model SharedTransaction {
+  id            String          @id @default(cuid())
+  householdId   String
+  transactionId String          @unique
+  paidByUserId  String
+  splitMode     SharedSplitMode @default(EQUAL)
+  createdAt     DateTime        @default(now())
+
+  household    Household                      @relation(fields: [householdId], references: [id])
+  transaction  Transaction                    @relation(fields: [transactionId], references: [id])
+  paidBy       UserProfile                    @relation("SharedTransactionPaidBy", fields: [paidByUserId], references: [id])
+  participants SharedTransactionParticipant[]
+
+  @@index([householdId, createdAt])
+  @@index([paidByUserId])
+}
+
+model SharedTransactionParticipant {
+  id                  String                  @id @default(cuid())
+  sharedTransactionId String
+  userId              String
+  amount              Decimal                 @db.Decimal(18, 2)
+  status              SharedParticipantStatus @default(OPEN)
+
+  sharedTransaction SharedTransaction @relation(fields: [sharedTransactionId], references: [id])
+  user              UserProfile       @relation(fields: [userId], references: [id])
+
+  @@unique([sharedTransactionId, userId])
+  @@index([userId, status])
 }
 
 model Budget {
