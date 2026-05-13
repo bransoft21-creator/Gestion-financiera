@@ -1,11 +1,13 @@
 import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import {
+  CurrencyCode,
   HouseholdInviteStatus,
   HouseholdKind,
   HouseholdMemberStatus,
   HouseholdRole,
   SharedParticipantStatus,
 } from "@prisma/client";
+import { argentinaMonthRangeUtc } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { ApiError, ForbiddenError, NotFoundError } from "../api/errors";
 
@@ -344,6 +346,103 @@ export async function getHouseholdBalance(userProfileId: string, householdId: st
   };
 }
 
+export async function getHouseholdBriefing(userProfileId: string, householdId: string, now = new Date()) {
+  await assertCollaborativeHouseholdAccess(userProfileId, householdId);
+
+  const { year, month } = getArgentinaMonthParts(now);
+  const { start: monthStart, end: nextMonthStart } = argentinaMonthRangeUtc(year, month);
+
+  const household = await prisma.household.findFirst({
+    where: { id: householdId, kind: HouseholdKind.HOUSEHOLD, deletedAt: null },
+    select: {
+      id: true,
+      name: true,
+      avatar: true,
+      members: {
+        where: { status: HouseholdMemberStatus.ACTIVE, deletedAt: null },
+        select: {
+          userProfileId: true,
+          userProfile: { select: { fullName: true, email: true, avatarUrl: true } },
+        },
+      },
+      sharedTransactions: {
+        where: {
+          transaction: {
+            deletedAt: null,
+            status: { not: "CANCELED" },
+            occurredAt: { gte: monthStart, lt: nextMonthStart },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          paidByUserId: true,
+          transaction: {
+            select: {
+              id: true,
+              amount: true,
+              currency: true,
+              description: true,
+              occurredAt: true,
+              category: { select: { id: true, name: true, color: true } },
+            },
+          },
+          paidBy: { select: { fullName: true, email: true } },
+          participants: {
+            where: { status: SharedParticipantStatus.OPEN },
+            select: {
+              userId: true,
+              amount: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!household) throw new NotFoundError("Household not found");
+
+  return calculateHouseholdBriefing({
+    household: {
+      id: household.id,
+      name: household.name,
+      avatar: household.avatar,
+    },
+    period: {
+      month,
+      year,
+      from: monthStart,
+      to: nextMonthStart,
+    },
+    members: household.members.map((member) => ({
+      userId: member.userProfileId,
+      name: member.userProfile.fullName ?? member.userProfile.email,
+      email: member.userProfile.email,
+      avatarUrl: member.userProfile.avatarUrl,
+    })),
+    sharedTransactions: household.sharedTransactions.map((shared) => ({
+      id: shared.id,
+      paidByUserId: shared.paidByUserId,
+      paidByName: shared.paidBy.fullName ?? shared.paidBy.email,
+      amount: Number(shared.transaction.amount),
+      currency: shared.transaction.currency,
+      description: shared.transaction.description,
+      occurredAt: shared.transaction.occurredAt,
+      category: shared.transaction.category
+        ? {
+            id: shared.transaction.category.id,
+            name: shared.transaction.category.name,
+            color: shared.transaction.category.color,
+          }
+        : null,
+      participants: shared.participants.map((participant) => ({
+        userId: participant.userId,
+        amount: Number(participant.amount),
+      })),
+    })),
+  });
+}
+
 export function calculateHouseholdMemberBalances(input: {
   members: Array<{ userId: string; name: string; email: string; avatarUrl?: string | null }>;
   sharedTransactions: Array<{
@@ -401,6 +500,171 @@ export function buildHouseholdSummary(
   return `${lead} ${settlement.fromName} debe ${formatArs(settlement.amount)}.`;
 }
 
+export type HouseholdBriefingStatus = "STABLE" | "NEEDS_BALANCE" | "LOW_ACTIVITY" | "HIGH_SPEND";
+
+export function calculateHouseholdBriefing(input: {
+  household: { id: string; name: string; avatar?: string | null };
+  period: { month: number; year: number; from: Date; to: Date };
+  members: Array<{ userId: string; name: string; email: string; avatarUrl?: string | null }>;
+  sharedTransactions: Array<{
+    id: string;
+    paidByUserId: string;
+    paidByName: string;
+    amount: number;
+    currency: CurrencyCode;
+    description: string | null;
+    occurredAt: Date;
+    category: { id: string; name: string; color?: string | null } | null;
+    participants: Array<{ userId: string; amount: number }>;
+  }>;
+}) {
+  const memberBalances = calculateHouseholdMemberBalances({
+    members: input.members,
+    sharedTransactions: input.sharedTransactions,
+  });
+  const settlement = calculateHouseholdSettlement(memberBalances);
+  const transactionCount = input.sharedTransactions.length;
+  const totalSharedAmount = roundMoney(
+    input.sharedTransactions.reduce((sum, transaction) => sum + transaction.amount, 0),
+  );
+  const pendingAmount = settlement?.amount ?? 0;
+  const topPayer = calculateTopPayer(input.sharedTransactions);
+  const topCategories = calculateTopCategories(input.sharedTransactions);
+  const status = getHouseholdBriefingStatus({
+    transactionCount,
+    totalSharedAmount,
+    pendingAmount,
+  });
+
+  return {
+    household: input.household,
+    period: input.period,
+    status,
+    tone: getBriefingTone(status),
+    title: getBriefingTitle(status),
+    summary: getBriefingSummary(status, {
+      topPayerName: topPayer?.name ?? null,
+      pendingAmount,
+    }),
+    metrics: {
+      totalSharedAmount,
+      transactionCount,
+      topPayer,
+      pendingAmount,
+      currency: CurrencyCode.ARS,
+    },
+    topCategories,
+    settlement,
+    memberBalances,
+    recentSharedTransactions: input.sharedTransactions.slice(0, 5).map((transaction) => ({
+      id: transaction.id,
+      description: transaction.description,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      occurredAt: transaction.occurredAt,
+      paidByName: transaction.paidByName,
+      categoryName: transaction.category?.name ?? null,
+    })),
+    ctas: [
+      { label: "Agregar gasto compartido", href: "/transactions?new=1", intent: "primary" },
+      { label: "Invitar miembro", href: "#invite-member", intent: "secondary" },
+      { label: "Ver movimientos", href: "/transactions", intent: "secondary" },
+    ],
+  };
+}
+
+function getHouseholdBriefingStatus(input: {
+  transactionCount: number;
+  totalSharedAmount: number;
+  pendingAmount: number;
+}): HouseholdBriefingStatus {
+  if (input.transactionCount < 2) return "LOW_ACTIVITY";
+  if (input.totalSharedAmount >= 250_000 || input.totalSharedAmount / input.transactionCount >= 75_000) {
+    return "HIGH_SPEND";
+  }
+  if (input.pendingAmount > 0) return "NEEDS_BALANCE";
+  return "STABLE";
+}
+
+function getBriefingTone(status: HouseholdBriefingStatus) {
+  if (status === "STABLE") return "emerald";
+  if (status === "NEEDS_BALANCE") return "amber";
+  if (status === "HIGH_SPEND") return "blue";
+  return "zinc";
+}
+
+function getBriefingTitle(status: HouseholdBriefingStatus) {
+  if (status === "STABLE") return "Estable";
+  if (status === "NEEDS_BALANCE") return "Pendiente por equilibrar";
+  if (status === "HIGH_SPEND") return "Gasto alto";
+  return "Poca actividad";
+}
+
+function getBriefingSummary(
+  status: HouseholdBriefingStatus,
+  input: { topPayerName: string | null; pendingAmount: number },
+) {
+  if (status === "STABLE") return "El hogar viene estable este mes.";
+  if (status === "LOW_ACTIVITY") return "Todavía no hay suficientes movimientos compartidos.";
+  if (status === "HIGH_SPEND") {
+    return input.topPayerName
+      ? `${input.topPayerName} cubrió más gastos compartidos. Conviene revisar el ritmo del mes.`
+      : "El gasto compartido viene más alto que lo habitual.";
+  }
+  return input.topPayerName
+    ? `${input.topPayerName} cubrió más gastos compartidos. Hay un saldo pendiente por equilibrar.`
+    : "Hay un saldo pendiente por equilibrar.";
+}
+
+function calculateTopPayer(
+  sharedTransactions: Array<{ paidByUserId: string; paidByName: string; amount: number }>,
+) {
+  const totals = new Map<string, { userId: string; name: string; amount: number }>();
+
+  sharedTransactions.forEach((transaction) => {
+    const current = totals.get(transaction.paidByUserId) ?? {
+      userId: transaction.paidByUserId,
+      name: transaction.paidByName,
+      amount: 0,
+    };
+    current.amount += transaction.amount;
+    totals.set(transaction.paidByUserId, current);
+  });
+
+  return [...totals.values()]
+    .map((payer) => ({ ...payer, amount: roundMoney(payer.amount) }))
+    .sort((a, b) => b.amount - a.amount)[0] ?? null;
+}
+
+function calculateTopCategories(
+  sharedTransactions: Array<{
+    amount: number;
+    category: { id: string; name: string; color?: string | null } | null;
+  }>,
+) {
+  const totals = new Map<string, { id: string; name: string; color: string | null; amount: number; count: number }>();
+
+  sharedTransactions.forEach((transaction) => {
+    if (!transaction.category) return;
+
+    const current = totals.get(transaction.category.id) ?? {
+      id: transaction.category.id,
+      name: transaction.category.name,
+      color: transaction.category.color ?? null,
+      amount: 0,
+      count: 0,
+    };
+    current.amount += transaction.amount;
+    current.count += 1;
+    totals.set(transaction.category.id, current);
+  });
+
+  return [...totals.values()]
+    .map((category) => ({ ...category, amount: roundMoney(category.amount) }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 3);
+}
+
 export function hashInviteToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -451,4 +715,17 @@ function formatArs(amount: number) {
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function getArgentinaMonthParts(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(date);
+
+  return {
+    year: Number(parts.find((part) => part.type === "year")?.value),
+    month: Number(parts.find((part) => part.type === "month")?.value),
+  };
 }

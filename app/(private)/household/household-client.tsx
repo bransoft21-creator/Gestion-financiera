@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, Copy, Home, Loader2, Mail, MessageCircle, Plus, ReceiptText, Send } from "lucide-react";
+import { ArrowRight, BarChart3, Check, Copy, Home, Loader2, Mail, MessageCircle, Plus, ReceiptText, Send, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { useHideAmounts } from "@/hooks/use-hide-amounts";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +59,40 @@ type HouseholdBalance = {
   }>;
 };
 
+type HouseholdBriefingStatus = "STABLE" | "NEEDS_BALANCE" | "LOW_ACTIVITY" | "HIGH_SPEND";
+
+type HouseholdBriefing = {
+  status: HouseholdBriefingStatus;
+  tone: "emerald" | "amber" | "blue" | "zinc";
+  title: string;
+  summary: string;
+  metrics: {
+    totalSharedAmount: number;
+    transactionCount: number;
+    pendingAmount: number;
+    currency: "ARS" | "USD";
+    topPayer: {
+      userId: string;
+      name: string;
+      amount: number;
+    } | null;
+  };
+  topCategories: Array<{
+    id: string;
+    name: string;
+    color: string | null;
+    amount: number;
+    count: number;
+  }>;
+  settlement: HouseholdBalance["settlement"];
+  memberBalances: HouseholdBalance["members"];
+  ctas: Array<{
+    label: string;
+    href: string;
+    intent: "primary" | "secondary";
+  }>;
+};
+
 export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Household[] }) {
   const [households, setHouseholds] = useState(initialHouseholds);
   const [selectedHouseholdId, setSelectedHouseholdId] = useState(initialHouseholds[0]?.id ?? "");
@@ -68,9 +102,11 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
   const [inviteUrl, setInviteUrl] = useState("");
   const [hasCopiedInvite, setHasCopiedInvite] = useState(false);
   const [balance, setBalance] = useState<HouseholdBalance | null>(null);
+  const [briefing, setBriefing] = useState<HouseholdBriefing | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [isLoadingBriefing, setIsLoadingBriefing] = useState(false);
 
   const selectedHousehold = useMemo(
     () => households.find((household) => household.id === selectedHouseholdId) ?? households[0],
@@ -165,6 +201,35 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
     }
   }
 
+  async function loadBriefing(householdId = selectedHousehold?.id) {
+    if (!householdId) return;
+
+    setIsLoadingBriefing(true);
+    try {
+      const params = new URLSearchParams({ householdId });
+      const response = await fetch(`/api/households/briefing?${params.toString()}`);
+      const payload = (await response.json()) as { data?: HouseholdBriefing; error?: string };
+
+      if (!response.ok || !payload.data) {
+        toast.error(payload.error ?? "No se pudo leer el estado del hogar.");
+        return;
+      }
+
+      setBriefing(payload.data);
+    } finally {
+      setIsLoadingBriefing(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!selectedHousehold) return;
+    const timer = window.setTimeout(() => {
+      void loadBriefing(selectedHousehold.id);
+    }, 0);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedHousehold?.id]);
+
   async function copyInvite() {
     if (!inviteUrl) return;
     await navigator.clipboard.writeText(inviteUrl);
@@ -221,6 +286,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                   onClick={() => {
                     setSelectedHouseholdId(household.id);
                     setBalance(null);
+                    setBriefing(null);
                     setInviteUrl("");
                     setHasCopiedInvite(false);
                   }}
@@ -275,7 +341,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                   ))}
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                <div id="invite-member" className="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                   <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
                     <div className="space-y-2">
                       <Label>Invitar por email</Label>
@@ -315,6 +381,111 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                       ))}
                     </div>
                   ) : null}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle>Lectura del hogar</CardTitle>
+                    <CardDescription>Una mirada simple del mes compartido.</CardDescription>
+                  </div>
+                  <Badge className={getBriefingBadgeClass(briefing?.status)}>
+                    {isLoadingBriefing ? "Leyendo" : briefing?.title ?? "Sin datos"}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className={`rounded-2xl border p-4 ${getBriefingPanelClass(briefing?.status)}`}>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/[0.08]">
+                      {isLoadingBriefing ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <WalletCards className="h-5 w-5" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground">
+                        {briefing ? getBriefingSummary(briefing, hideAmounts) : "Todavía no hay suficientes movimientos compartidos."}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                        El briefing usa solo gastos compartidos del mes actual.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  <BriefingMetric
+                    label="Compartido este mes"
+                    value={formatMoney(briefing?.metrics.totalSharedAmount ?? 0, briefing?.metrics.currency ?? "ARS", hideAmounts)}
+                  />
+                  <BriefingMetric
+                    label="Gastos compartidos"
+                    value={String(briefing?.metrics.transactionCount ?? 0)}
+                  />
+                  <BriefingMetric
+                    label="Pagó más"
+                    value={briefing?.metrics.topPayer?.name ?? "Sin datos"}
+                  />
+                  <BriefingMetric
+                    label="Pendiente"
+                    value={formatMoney(briefing?.metrics.pendingAmount ?? 0, briefing?.metrics.currency ?? "ARS", hideAmounts)}
+                  />
+                </div>
+
+                {briefing?.topCategories.length ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-normal text-muted-foreground">
+                      <BarChart3 className="h-3.5 w-3.5" />
+                      Categorías compartidas
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {briefing.topCategories.map((category) => (
+                        <div key={category.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 shrink-0 rounded-full"
+                              style={{ backgroundColor: category.color ?? "#5eead4" }}
+                            />
+                            <p className="truncate text-sm font-semibold text-foreground">{category.name}</p>
+                          </div>
+                          <p className="mt-2 text-sm font-bold text-foreground">
+                            {formatMoney(category.amount, briefing.metrics.currency, hideAmounts)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {category.count} gasto{category.count !== 1 ? "s" : ""}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                    <p className="text-sm font-semibold text-foreground">Sin categorías compartidas todavía.</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      Cuando los gastos tengan categoría, Meridian va a destacar las más relevantes.
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {(briefing?.ctas ?? defaultBriefingCtas).map((cta) => (
+                    <Button
+                      key={cta.href}
+                      asChild
+                      variant={cta.intent === "primary" ? "default" : "outline"}
+                      className="w-full"
+                    >
+                      <Link href={cta.href}>
+                        {cta.label}
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -401,4 +572,45 @@ function getBalanceSummary(balance: HouseholdBalance | null, hidden: boolean) {
   if (!balance.settlement) return "El hogar viene estable.";
 
   return `${balance.settlement.fromName} tiene un balance pendiente con ${balance.settlement.toName}.`;
+}
+
+function BriefingMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+      <p className="text-xs leading-5 text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-sm font-bold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+const defaultBriefingCtas = [
+  { label: "Agregar gasto compartido", href: "/transactions?new=1", intent: "primary" },
+  { label: "Invitar miembro", href: "#invite-member", intent: "secondary" },
+  { label: "Ver movimientos", href: "/transactions", intent: "secondary" },
+] as const;
+
+function getBriefingSummary(briefing: HouseholdBriefing, hidden: boolean) {
+  if (!hidden) return briefing.summary;
+  if (briefing.status === "STABLE") return "El hogar viene estable este mes.";
+  if (briefing.status === "LOW_ACTIVITY") return "Todavía no hay suficientes movimientos compartidos.";
+  if (briefing.status === "HIGH_SPEND") return "El gasto compartido viene más alto que lo habitual.";
+  if (!briefing.settlement) return "Hay un saldo pendiente por equilibrar.";
+
+  return `${briefing.settlement.fromName} tiene un saldo pendiente con ${briefing.settlement.toName}.`;
+}
+
+function getBriefingBadgeClass(status: HouseholdBriefingStatus | undefined) {
+  if (status === "STABLE") return "border-emerald-300/20 bg-emerald-300/10 text-emerald-100";
+  if (status === "NEEDS_BALANCE") return "border-amber-300/20 bg-amber-300/10 text-amber-100";
+  if (status === "HIGH_SPEND") return "border-sky-300/20 bg-sky-300/10 text-sky-100";
+
+  return "border-white/10 bg-white/[0.06] text-zinc-200";
+}
+
+function getBriefingPanelClass(status: HouseholdBriefingStatus | undefined) {
+  if (status === "STABLE") return "border-emerald-300/15 bg-emerald-300/10";
+  if (status === "NEEDS_BALANCE") return "border-amber-300/15 bg-amber-300/10";
+  if (status === "HIGH_SPEND") return "border-sky-300/15 bg-sky-300/10";
+
+  return "border-white/10 bg-white/[0.04]";
 }

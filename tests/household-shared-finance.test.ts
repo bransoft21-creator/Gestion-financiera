@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { CurrencyCode } from "@prisma/client";
 import {
   buildHouseholdSummary,
+  calculateHouseholdBriefing,
   calculateHouseholdMemberBalances,
   calculateHouseholdSettlement,
   hashInviteToken,
@@ -95,5 +97,116 @@ describe("household shared finance", () => {
 
     assert.equal(settlement, null);
     assert.equal(buildHouseholdSummary(balances, settlement), "El hogar viene estable.");
+  });
+
+  it("builds a low-activity briefing for empty monthly shared spending", () => {
+    const briefing = calculateHouseholdBriefing({
+      household: { id: "home", name: "Casa" },
+      period: { month: 5, year: 2026, from: new Date("2026-05-01"), to: new Date("2026-06-01") },
+      members: [
+        { userId: "a", name: "A", email: "a@example.com" },
+        { userId: "b", name: "B", email: "b@example.com" },
+      ],
+      sharedTransactions: [],
+    });
+
+    assert.equal(briefing.status, "LOW_ACTIVITY");
+    assert.equal(briefing.metrics.totalSharedAmount, 0);
+    assert.equal(briefing.metrics.transactionCount, 0);
+    assert.equal(briefing.summary, "Todavía no hay suficientes movimientos compartidos.");
+    assert.deepEqual(briefing.topCategories, []);
+  });
+
+  it("builds monthly briefing metrics, top payer and top categories", () => {
+    const briefing = calculateHouseholdBriefing({
+      household: { id: "home", name: "Casa" },
+      period: { month: 5, year: 2026, from: new Date("2026-05-01"), to: new Date("2026-06-01") },
+      members: [
+        { userId: "brandon", name: "Brandon", email: "brandon@example.com" },
+        { userId: "zoirelys", name: "Zoirelys", email: "zoirelys@example.com" },
+      ],
+      sharedTransactions: [
+        {
+          id: "shared-1",
+          paidByUserId: "brandon",
+          paidByName: "Brandon",
+          amount: 30000,
+          currency: CurrencyCode.ARS,
+          description: "Super",
+          occurredAt: new Date("2026-05-10"),
+          category: { id: "food", name: "Supermercado", color: "#22c55e" },
+          participants: [
+            { userId: "brandon", amount: 15000 },
+            { userId: "zoirelys", amount: 15000 },
+          ],
+        },
+        {
+          id: "shared-2",
+          paidByUserId: "brandon",
+          paidByName: "Brandon",
+          amount: 10000,
+          currency: CurrencyCode.ARS,
+          description: "Internet",
+          occurredAt: new Date("2026-05-12"),
+          category: { id: "services", name: "Servicios", color: "#38bdf8" },
+          participants: [
+            { userId: "brandon", amount: 5000 },
+            { userId: "zoirelys", amount: 5000 },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(briefing.status, "NEEDS_BALANCE");
+    assert.equal(briefing.metrics.totalSharedAmount, 40000);
+    assert.equal(briefing.metrics.transactionCount, 2);
+    assert.equal(briefing.metrics.topPayer?.name, "Brandon");
+    assert.equal(briefing.metrics.pendingAmount, 20000);
+    assert.equal(briefing.topCategories[0].name, "Supermercado");
+    assert.match(briefing.summary, /Brandon cubrió más gastos compartidos/);
+  });
+
+  it("marks high shared spend without aggressive language", () => {
+    const briefing = calculateHouseholdBriefing({
+      household: { id: "home", name: "Casa" },
+      period: { month: 5, year: 2026, from: new Date("2026-05-01"), to: new Date("2026-06-01") },
+      members: [
+        { userId: "a", name: "A", email: "a@example.com" },
+        { userId: "b", name: "B", email: "b@example.com" },
+      ],
+      sharedTransactions: [
+        {
+          id: "shared-1",
+          paidByUserId: "a",
+          paidByName: "A",
+          amount: 300000,
+          currency: CurrencyCode.ARS,
+          description: "Reserva",
+          occurredAt: new Date("2026-05-10"),
+          category: null,
+          participants: [
+            { userId: "a", amount: 150000 },
+            { userId: "b", amount: 150000 },
+          ],
+        },
+        {
+          id: "shared-2",
+          paidByUserId: "b",
+          paidByName: "B",
+          amount: 2000,
+          currency: CurrencyCode.ARS,
+          description: "Cafe",
+          occurredAt: new Date("2026-05-11"),
+          category: null,
+          participants: [
+            { userId: "a", amount: 1000 },
+            { userId: "b", amount: 1000 },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(briefing.status, "HIGH_SPEND");
+    assert.match(briefing.summary, /Conviene revisar el ritmo del mes/);
   });
 });
