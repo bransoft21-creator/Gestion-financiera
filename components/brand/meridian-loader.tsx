@@ -15,7 +15,7 @@ type MeridianLoaderProps = {
 };
 
 export function MeridianLoader({
-  size = 28,
+  size = 44,
   label,
   fullScreen = false,
   className,
@@ -24,14 +24,14 @@ export function MeridianLoader({
 
   const inner = (
     <motion.div
-      className="flex flex-col items-center gap-3"
+      className="flex flex-col items-center gap-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: shouldReduceMotion ? 0 : 0.45, ease: "easeOut" }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.5, ease: "easeOut" }}
     >
       <motion.div
-        animate={shouldReduceMotion ? {} : { opacity: [0.6, 1, 0.6] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        animate={shouldReduceMotion ? {} : { opacity: [0.65, 1, 0.65], scale: [0.96, 1, 0.96] }}
+        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
       >
         <Image
           src="/icons/Meridian.png"
@@ -43,7 +43,7 @@ export function MeridianLoader({
         />
       </motion.div>
       {label && (
-        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        <p className="text-sm font-medium tracking-wide text-zinc-400">{label}</p>
       )}
     </motion.div>
   );

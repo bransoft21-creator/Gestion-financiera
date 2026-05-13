@@ -245,9 +245,9 @@ export function LoginForm({ initialError }: LoginFormProps) {
     <div className="flex min-h-screen bg-background">
       {/* ── Panel izquierdo (solo desktop) ── */}
       <div className="relative hidden flex-col justify-center overflow-hidden border-r border-white/10 bg-zinc-950 px-16 py-16 lg:flex lg:w-[58%]">
-        <div className="mb-14 flex items-center gap-3.5">
-          <Image src="/icons/Meridian.png" alt="Meridian" width={52} height={52} className="select-none" priority />
-          <span className="text-[22px] font-bold tracking-tight text-foreground">Meridian</span>
+        <div className="mb-14 flex items-center gap-4">
+          <Image src="/icons/Meridian.png" alt="Meridian" width={64} height={64} className="select-none" priority />
+          <span className="text-[26px] font-bold tracking-tight text-foreground">Meridian</span>
         </div>
 
         <h1 className="mb-4 text-[44px] font-semibold leading-[1.05] text-foreground">
@@ -277,10 +277,10 @@ export function LoginForm({ initialError }: LoginFormProps) {
       <div className="flex flex-1 items-center justify-center px-6 py-10">
         <div className="fade-in w-full max-w-[420px]">
           {/* Logo mobile */}
-          <div className="mb-10 flex flex-col items-center pt-2 lg:hidden">
-            <Image src="/icons/Meridian.png" alt="Meridian" width={80} height={80} className="mb-5 select-none" priority />
-            <p className="text-[26px] font-bold tracking-tight text-foreground">Meridian</p>
-            <p className="mt-2 text-sm text-zinc-400">Tu perspectiva financiera</p>
+          <div className="mb-12 flex flex-col items-center pt-4 lg:hidden">
+            <Image src="/icons/Meridian.png" alt="Meridian" width={120} height={120} className="mb-6 select-none" priority />
+            <p className="text-[32px] font-bold tracking-tight text-foreground">Meridian</p>
+            <p className="mt-2.5 text-[15px] text-zinc-400">Tu perspectiva financiera</p>
           </div>
 
           {/* ── Google button — visible in login + register, hidden in forgot ── */}

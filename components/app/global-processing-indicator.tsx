@@ -47,8 +47,8 @@ export function GlobalProcessingIndicator() {
       }`}
       aria-hidden={!visible}
     >
-      <div className="v2-card min-w-[140px] rounded-[var(--v2-radius-lg)] px-6 py-5 shadow-2xl shadow-black/30">
-        <MeridianLoader size={24} label="Un momento" />
+      <div className="v2-card min-w-[160px] rounded-[var(--v2-radius-lg)] px-8 py-7 shadow-[0_32px_80px_rgba(0,0,0,0.55)]">
+        <MeridianLoader size={52} label="Un momento" />
       </div>
     </div>
   );

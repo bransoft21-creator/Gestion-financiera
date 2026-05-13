@@ -15,14 +15,14 @@ export function MobileHeader({ userName }: MobileHeaderProps) {
 
   return (
     <header className="sticky top-0 z-20 shrink-0 border-b border-white/10 bg-zinc-950/80 px-5 backdrop-blur-xl lg:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
-      <div className="flex h-16 items-center justify-between">
-        <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
-          <Image src="/icons/Meridian.png" alt="Meridian" width={44} height={44} className="shrink-0 select-none" />
+      <div className="flex h-[72px] items-center justify-between">
+        <Link href="/dashboard" className="flex min-w-0 items-center gap-3.5">
+          <Image src="/icons/Meridian.png" alt="Meridian" width={50} height={50} className="shrink-0 select-none" />
           <span className="min-w-0">
-            <span className="block truncate text-[15px] font-semibold leading-snug tracking-tight text-foreground">
+            <span className="block truncate text-[17px] font-semibold leading-snug tracking-tight text-foreground">
               Meridian
             </span>
-            <span className="block truncate text-[12px] font-medium leading-snug text-zinc-400">
+            <span className="block truncate text-[13px] font-medium leading-snug text-zinc-400">
               Copilot {subtitle}
             </span>
           </span>
@@ -32,7 +32,7 @@ export function MobileHeader({ userName }: MobileHeaderProps) {
             <PrivacyToggle compact />
           </span>
           <span data-tutorial="notifications-mobile">
-            <NotificationsButton compact panelClassName="fixed left-3 right-3 w-auto top-[calc(env(safe-area-inset-top)+4rem+8px)]" />
+            <NotificationsButton compact panelClassName="fixed left-3 right-3 w-auto top-[calc(env(safe-area-inset-top)+4.5rem+8px)]" />
           </span>
           <LogoutButton compact />
         </div>

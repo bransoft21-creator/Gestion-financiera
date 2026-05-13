@@ -139,7 +139,7 @@ export function ResetPasswordForm() {
         <div className="v2-card-raised rounded-[28px] p-6 sm:p-8">
           {recoveryState === "checking" && (
             <div className="flex min-h-[360px] flex-col items-center justify-center text-center">
-              <MeridianLoader size={36} className="mb-6" />
+              <MeridianLoader size={56} className="mb-6" />
               <h1 className="text-2xl font-semibold text-foreground">Validando enlace</h1>
               <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">
                 Estamos preparando el cambio de contraseña.
