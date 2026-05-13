@@ -195,6 +195,7 @@ model UserProfile {
   aiFinancialAnalyses  AiFinancialAnalysis[]
   aiUsages             AiUsage[]
   activityItems        ActivityItem[]
+  householdSettlements HouseholdSettlement[] @relation("HouseholdSettlementSettledBy")
 }
 
 model Household {
@@ -215,6 +216,7 @@ model Household {
   categories             Category[]
   transactions           Transaction[]
   sharedTransactions     SharedTransaction[]
+  settlements            HouseholdSettlement[]
   budgets                Budget[]
   recurringExpenses      RecurringExpense[]
   goals                  Goal[]
@@ -673,6 +675,21 @@ model InvestmentAsset {
   @@unique([householdId, symbol, type])
   @@index([householdId])
   @@index([createdById])
+}
+
+model HouseholdSettlement {
+  id              String   @id @default(cuid())
+  householdId     String
+  settledByUserId String
+  amount          Decimal  @db.Decimal(18, 2)
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  household Household   @relation(fields: [householdId], references: [id])
+  settledBy UserProfile @relation("HouseholdSettlementSettledBy", fields: [settledByUserId], references: [id])
+
+  @@index([householdId, createdAt])
+  @@index([settledByUserId])
 }
 
 model InvestmentTransaction {

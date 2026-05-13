@@ -48,16 +48,16 @@ describe("household shared finance", () => {
   it("computes a simple 50/50 settlement with human wording", () => {
     const balances = calculateHouseholdMemberBalances({
       members: [
-        { userId: "brandon", name: "Brandon", email: "brandon@example.com" },
-        { userId: "zoirelys", name: "Zoirelys", email: "zoirelys@example.com" },
+        { userId: "user-1", name: "Ana", email: "ana@example.com" },
+        { userId: "user-2", name: "Beto", email: "beto@example.com" },
       ],
       sharedTransactions: [
         {
-          paidByUserId: "brandon",
+          paidByUserId: "user-1",
           amount: 24000,
           participants: [
-            { userId: "brandon", amount: 12000 },
-            { userId: "zoirelys", amount: 12000 },
+            { userId: "user-1", amount: 12000 },
+            { userId: "user-2", amount: 12000 },
           ],
         },
       ],
@@ -66,22 +66,22 @@ describe("household shared finance", () => {
     assert.deepEqual(
       balances.map((member) => ({ userId: member.userId, balance: member.balance })),
       [
-        { userId: "brandon", balance: 12000 },
-        { userId: "zoirelys", balance: -12000 },
+        { userId: "user-1", balance: 12000 },
+        { userId: "user-2", balance: -12000 },
       ],
     );
 
     const settlement = calculateHouseholdSettlement(balances);
     assert.deepEqual(settlement, {
-      fromUserId: "zoirelys",
-      fromName: "Zoirelys",
-      toUserId: "brandon",
-      toName: "Brandon",
+      fromUserId: "user-2",
+      fromName: "Beto",
+      toUserId: "user-1",
+      toName: "Ana",
       amount: 12000,
     });
     const summary = buildHouseholdSummary(balances, settlement);
-    assert.match(summary, /Brandon cubrió más gastos este mes\./);
-    assert.match(summary, /Zoirelys debe/);
+    assert.match(summary, /Ana cubrió más gastos este mes\./);
+    assert.match(summary, /Beto debe/);
   });
 
   it("returns a calm stable message when balances are even", () => {
@@ -122,36 +122,36 @@ describe("household shared finance", () => {
       household: { id: "home", name: "Casa" },
       period: { month: 5, year: 2026, from: new Date("2026-05-01"), to: new Date("2026-06-01") },
       members: [
-        { userId: "brandon", name: "Brandon", email: "brandon@example.com" },
-        { userId: "zoirelys", name: "Zoirelys", email: "zoirelys@example.com" },
+        { userId: "user-1", name: "Ana", email: "ana@example.com" },
+        { userId: "user-2", name: "Beto", email: "beto@example.com" },
       ],
       sharedTransactions: [
         {
           id: "shared-1",
-          paidByUserId: "brandon",
-          paidByName: "Brandon",
+          paidByUserId: "user-1",
+          paidByName: "Ana",
           amount: 30000,
           currency: CurrencyCode.ARS,
           description: "Super",
           occurredAt: new Date("2026-05-10"),
           category: { id: "food", name: "Supermercado", color: "#22c55e" },
           participants: [
-            { userId: "brandon", amount: 15000 },
-            { userId: "zoirelys", amount: 15000 },
+            { userId: "user-1", amount: 15000 },
+            { userId: "user-2", amount: 15000 },
           ],
         },
         {
           id: "shared-2",
-          paidByUserId: "brandon",
-          paidByName: "Brandon",
+          paidByUserId: "user-1",
+          paidByName: "Ana",
           amount: 10000,
           currency: CurrencyCode.ARS,
           description: "Internet",
           occurredAt: new Date("2026-05-12"),
           category: { id: "services", name: "Servicios", color: "#38bdf8" },
           participants: [
-            { userId: "brandon", amount: 5000 },
-            { userId: "zoirelys", amount: 5000 },
+            { userId: "user-1", amount: 5000 },
+            { userId: "user-2", amount: 5000 },
           ],
         },
       ],
@@ -160,10 +160,10 @@ describe("household shared finance", () => {
     assert.equal(briefing.status, "NEEDS_BALANCE");
     assert.equal(briefing.metrics.totalSharedAmount, 40000);
     assert.equal(briefing.metrics.transactionCount, 2);
-    assert.equal(briefing.metrics.topPayer?.name, "Brandon");
+    assert.equal(briefing.metrics.topPayer?.name, "Ana");
     assert.equal(briefing.metrics.pendingAmount, 20000);
     assert.equal(briefing.topCategories[0].name, "Supermercado");
-    assert.match(briefing.summary, /Brandon cubrió más gastos compartidos/);
+    assert.match(briefing.summary, /Ana cubrió más gastos compartidos/);
   });
 
   it("marks high shared spend without aggressive language", () => {

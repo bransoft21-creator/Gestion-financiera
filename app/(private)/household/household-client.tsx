@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BarChart3, Check, Copy, Home, Loader2, Mail, MessageCircle, Plus, ReceiptText, Send, WalletCards } from "lucide-react";
+import { ArrowRight, BarChart3, Check, CheckCircle2, Copy, Home, Loader2, Mail, MessageCircle, Plus, ReceiptText, Send, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { useHideAmounts } from "@/hooks/use-hide-amounts";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +59,17 @@ type HouseholdBalance = {
   }>;
 };
 
+type HouseholdSettlement = {
+  id: string;
+  amount: number;
+  notes: string | null;
+  createdAt: string;
+  settledBy: {
+    fullName: string | null;
+    email: string;
+  };
+};
+
 type HouseholdBriefingStatus = "STABLE" | "NEEDS_BALANCE" | "LOW_ACTIVITY" | "HIGH_SPEND";
 
 type HouseholdBriefing = {
@@ -103,10 +114,12 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
   const [hasCopiedInvite, setHasCopiedInvite] = useState(false);
   const [balance, setBalance] = useState<HouseholdBalance | null>(null);
   const [briefing, setBriefing] = useState<HouseholdBriefing | null>(null);
+  const [settlements, setSettlements] = useState<HouseholdSettlement[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [isInviting, setIsInviting] = useState(false);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [isLoadingBriefing, setIsLoadingBriefing] = useState(false);
+  const [isSettling, setIsSettling] = useState(false);
 
   const selectedHousehold = useMemo(
     () => households.find((household) => household.id === selectedHouseholdId) ?? households[0],
@@ -221,10 +234,50 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
     }
   }
 
+  async function loadSettlements(householdId = selectedHousehold?.id) {
+    if (!householdId) return;
+
+    const params = new URLSearchParams({ householdId });
+    const response = await fetch(`/api/households/settlements?${params.toString()}`);
+    const payload = (await response.json()) as { data?: HouseholdSettlement[]; error?: string };
+
+    if (response.ok && payload.data) {
+      setSettlements(payload.data);
+    }
+  }
+
+  async function settleBalance() {
+    if (!selectedHousehold || !balance?.settlement) return;
+
+    setIsSettling(true);
+    try {
+      const response = await fetch("/api/households/settlements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          householdId: selectedHousehold.id,
+          amount: balance.settlement.amount,
+        }),
+      });
+      const payload = (await response.json()) as { data?: HouseholdSettlement; error?: string };
+
+      if (!response.ok || !payload.data) {
+        toast.error(payload.error ?? "No se pudo registrar el equilibrio.");
+        return;
+      }
+
+      toast.success("El hogar quedó equilibrado.");
+      await Promise.all([loadBalance(), loadSettlements(selectedHousehold.id)]);
+    } finally {
+      setIsSettling(false);
+    }
+  }
+
   useEffect(() => {
     if (!selectedHousehold) return;
     const timer = window.setTimeout(() => {
       void loadBriefing(selectedHousehold.id);
+      void loadSettlements(selectedHousehold.id);
     }, 0);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -262,7 +315,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
               </div>
               <div className="space-y-2">
                 <Label>Nombre</Label>
-                <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Brandon & Zoirelys" />
+                <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Nuestro hogar" />
               </div>
             </div>
             <Button className="w-full" disabled={isCreating || name.trim().length < 2} onClick={() => void createHousehold()}>
@@ -287,6 +340,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                     setSelectedHouseholdId(household.id);
                     setBalance(null);
                     setBriefing(null);
+                    setSettlements([]);
                     setInviteUrl("");
                     setHasCopiedInvite(false);
                   }}
@@ -525,6 +579,28 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                       ))}
                     </div>
 
+                    {balance.settlement ? (
+                      <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4">
+                        <p className="text-sm font-semibold text-amber-100">
+                          {hideAmounts
+                            ? `${balance.settlement.fromName} tiene un saldo pendiente.`
+                            : `${balance.settlement.fromName} le debe ${formatMoney(balance.settlement.amount, "ARS")} a ${balance.settlement.toName}.`}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-amber-100/70">
+                          Cuando lo resuelvan entre ustedes, marcá el hogar como equilibrado.
+                        </p>
+                        <Button
+                          className="mt-3 w-full border-amber-300/20 bg-amber-300/15 text-amber-50 hover:bg-amber-300/25"
+                          variant="outline"
+                          disabled={isSettling}
+                          onClick={() => void settleBalance()}
+                        >
+                          {isSettling ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                          Marcar como equilibrado
+                        </Button>
+                      </div>
+                    ) : null}
+
                     {balance.recentSharedTransactions.length > 0 ? (
                       <div className="space-y-2">
                         {balance.recentSharedTransactions.slice(0, 5).map((transaction) => (
@@ -547,6 +623,26 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                     </Link>
                   </Button>
                 )}
+
+                {settlements.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-normal text-muted-foreground">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Equilibrios registrados
+                    </div>
+                    {settlements.map((settlement) => (
+                      <div key={settlement.id} className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300/10 bg-emerald-300/5 p-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-emerald-100">El hogar quedó equilibrado</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            Marcado por {settlement.settledBy.fullName ?? settlement.settledBy.email} · {formatSettlementDate(settlement.createdAt)}
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-sm font-bold text-emerald-200">{formatMoney(Number(settlement.amount), "ARS", hideAmounts)}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           </>
@@ -613,4 +709,13 @@ function getBriefingPanelClass(status: HouseholdBriefingStatus | undefined) {
   if (status === "HIGH_SPEND") return "border-sky-300/15 bg-sky-300/10";
 
   return "border-white/10 bg-white/[0.04]";
+}
+
+function formatSettlementDate(dateStr: string) {
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "America/Argentina/Buenos_Aires",
+  }).format(new Date(dateStr));
 }

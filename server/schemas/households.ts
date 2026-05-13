@@ -14,5 +14,16 @@ export const householdBalanceSchema = z.object({
   householdId: z.string().min(1),
 });
 
+export const createSettlementSchema = z.object({
+  householdId: z.string().min(1),
+  amount: z.number().positive("El monto debe ser positivo."),
+  notes: z.string().trim().max(200).optional().nullable(),
+});
+
+export const listSettlementsSchema = z.object({
+  householdId: z.string().min(1),
+});
+
 export type CreateHouseholdInput = z.infer<typeof createHouseholdSchema>;
 export type CreateHouseholdInviteInput = z.infer<typeof createHouseholdInviteSchema>;
+export type CreateSettlementInput = z.infer<typeof createSettlementSchema>;

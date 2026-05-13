@@ -665,6 +665,46 @@ function calculateTopCategories(
     .slice(0, 3);
 }
 
+export async function createHouseholdSettlement(
+  userProfileId: string,
+  input: { householdId: string; amount: number; notes?: string | null },
+) {
+  await assertCollaborativeHouseholdAccess(userProfileId, input.householdId);
+
+  return prisma.householdSettlement.create({
+    data: {
+      householdId: input.householdId,
+      settledByUserId: userProfileId,
+      amount: input.amount,
+      notes: input.notes ?? null,
+    },
+    select: {
+      id: true,
+      amount: true,
+      notes: true,
+      createdAt: true,
+      settledBy: { select: { fullName: true, email: true } },
+    },
+  });
+}
+
+export async function listHouseholdSettlements(userProfileId: string, householdId: string) {
+  await assertCollaborativeHouseholdAccess(userProfileId, householdId);
+
+  return prisma.householdSettlement.findMany({
+    where: { householdId },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: {
+      id: true,
+      amount: true,
+      notes: true,
+      createdAt: true,
+      settledBy: { select: { fullName: true, email: true } },
+    },
+  });
+}
+
 export function hashInviteToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
