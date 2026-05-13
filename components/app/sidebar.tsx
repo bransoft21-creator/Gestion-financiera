@@ -22,7 +22,7 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
     <aside data-tutorial="nav-desktop" className="hidden h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-zinc-950/74 shadow-[1px_0_34px_rgba(0,0,0,0.34)] backdrop-blur-xl lg:sticky lg:top-0 lg:flex">
       {/* Logo */}
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-[18px]">
-        <Image src="/icons/Meridian.png" alt="Meridian" width={28} height={28} className="shrink-0 select-none" />
+        <Image src="/icons/Meridian.png" alt="Meridian" width={38} height={38} className="shrink-0 select-none" />
         <div>
           <p className="text-[13px] font-bold leading-tight text-foreground">Meridian</p>
           <p className="text-xs leading-tight text-muted-foreground">Perspectiva diaria</p>
