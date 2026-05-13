@@ -794,7 +794,7 @@ function MonthlySignals({
   return (
     <PremiumCard className="flex h-full flex-col">
       <PremiumCardContent className="flex h-full flex-col space-y-3 pt-5 sm:pt-6">
-        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
           <Lightbulb className="h-3 w-3 shrink-0" aria-hidden="true" />
           Lo que importa hoy
         </div>
@@ -1303,7 +1303,7 @@ function ActivityPreview() {
     <PremiumCard className="mb-8">
       <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Actividad reciente</p>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Actividad reciente</p>
           <h3 className="mt-1 text-sm font-semibold text-white">
             {status === "loading"
               ? "Revisando señales"
@@ -1353,7 +1353,7 @@ function ActivityPreview() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-medium text-zinc-200 group-hover:text-white">{item.title}</span>
-                  <span className="mt-0.5 line-clamp-1 block text-[11px] text-zinc-600">{item.body}</span>
+                  <span className="mt-0.5 line-clamp-1 block text-xs text-zinc-500">{item.body}</span>
                 </span>
               </Link>
             ))}
@@ -1427,7 +1427,7 @@ export function DashboardClient() {
   const monthNav = (
     <div className="mb-6">
       {isCurrentMonth && (
-        <p className="mb-3 text-[11px] tracking-wide text-zinc-600" suppressHydrationWarning>
+        <p className="mb-3 text-sm font-medium text-zinc-400" suppressHydrationWarning>
           {timeContext.greeting}
         </p>
       )}
