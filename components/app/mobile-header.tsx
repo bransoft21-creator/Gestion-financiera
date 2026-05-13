@@ -1,7 +1,7 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { MeridianMark } from "@/components/brand/meridian-mark";
 import { LogoutButton } from "./logout-button";
 import { NotificationsButton } from "./notifications-button";
 import { PrivacyToggle } from "./privacy-toggle";
@@ -17,12 +17,14 @@ export function MobileHeader({ userName }: MobileHeaderProps) {
     <header className="sticky top-0 z-20 shrink-0 border-b border-white/10 bg-zinc-950/80 px-4 backdrop-blur-xl lg:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <div className="flex h-14 items-center justify-between">
         <Link href="/dashboard" className="flex min-w-0 items-center gap-2">
-          <MeridianMark size={14} showContainer containerSize={32} />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]">
+            <Image src="/icons/Meridian.png" alt="Meridian" width={18} height={18} className="select-none" />
+          </div>
           <span className="min-w-0">
             <span className="block truncate text-[13px] font-bold leading-tight text-foreground">
-              meridian
+              Meridian
             </span>
-            <span className="block truncate text-[10px] font-medium leading-tight text-muted-foreground">
+            <span className="block truncate text-xs font-medium leading-tight text-muted-foreground">
               Copilot {subtitle}
             </span>
           </span>

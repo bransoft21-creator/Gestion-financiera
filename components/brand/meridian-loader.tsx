@@ -1,12 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { MeridianMark } from "./meridian-mark";
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 type MeridianLoaderProps = {
   /** Mark size in px. Default: 28 */
@@ -17,10 +13,6 @@ type MeridianLoaderProps = {
   fullScreen?: boolean;
   className?: string;
 };
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 export function MeridianLoader({
   size = 28,
@@ -37,7 +29,19 @@ export function MeridianLoader({
       animate={{ opacity: 1 }}
       transition={{ duration: shouldReduceMotion ? 0 : 0.45, ease: "easeOut" }}
     >
-      <MeridianMark size={size} animated />
+      <motion.div
+        animate={shouldReduceMotion ? {} : { opacity: [0.6, 1, 0.6] }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <Image
+          src="/icons/Meridian.png"
+          alt="Meridian"
+          width={size}
+          height={size}
+          className="select-none"
+          priority
+        />
+      </motion.div>
       {label && (
         <p className="text-sm font-medium text-muted-foreground">{label}</p>
       )}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { ArrowLeft, BarChart3, Eye, EyeOff, Loader2, Target, TrendingUp } from "lucide-react";
-import { MeridianMark } from "@/components/brand/meridian-mark";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type AuthMode = "login" | "register" | "forgot";
@@ -245,15 +245,11 @@ export function LoginForm({ initialError }: LoginFormProps) {
     <div className="flex min-h-screen bg-background">
       {/* ── Panel izquierdo (solo desktop) ── */}
       <div className="relative hidden flex-col justify-center overflow-hidden border-r border-white/10 bg-zinc-950 px-16 py-16 lg:flex lg:w-[58%]">
-        <div className="mb-14">
-          <MeridianMark
-            size={20}
-            showContainer
-            containerSize={44}
-            showWordmark
-            animated
-            wordmarkClassName="text-xl font-extrabold tracking-tight"
-          />
+        <div className="mb-14 flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-white/[0.06] shadow-[0_8px_32px_rgba(20,184,166,0.15)]">
+            <Image src="/icons/Meridian.png" alt="Meridian" width={26} height={26} className="select-none" priority />
+          </div>
+          <span className="text-xl font-extrabold tracking-tight text-foreground">Meridian</span>
         </div>
 
         <h1 className="mb-4 text-[44px] font-semibold leading-[1.05] text-foreground">
@@ -284,13 +280,10 @@ export function LoginForm({ initialError }: LoginFormProps) {
         <div className="fade-in w-full max-w-[420px]">
           {/* Logo mobile */}
           <div className="mb-9 flex flex-col items-center lg:hidden">
-            <MeridianMark
-              size={24}
-              showContainer
-              containerSize={56}
-              containerClassName="mb-3 rounded-3xl shadow-[0_18px_55px_rgba(45,212,191,0.14)]"
-            />
-            <p className="text-lg font-extrabold text-foreground">meridian</p>
+            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-3xl border border-white/10 bg-white/[0.06] shadow-[0_18px_55px_rgba(20,184,166,0.18)]">
+              <Image src="/icons/Meridian.png" alt="Meridian" width={34} height={34} className="select-none" priority />
+            </div>
+            <p className="text-lg font-extrabold text-foreground">Meridian</p>
           </div>
 
           {/* ── Google button — visible in login + register, hidden in forgot ── */}
@@ -497,8 +490,8 @@ export function LoginForm({ initialError }: LoginFormProps) {
             </form>
           )}
 
-          <p className="mt-8 text-center text-[11px] text-muted-foreground/40">
-            meridian · Tu perspectiva financiera
+          <p className="mt-8 text-center text-xs text-muted-foreground/40">
+            Meridian · Tu perspectiva financiera
           </p>
         </div>
       </div>

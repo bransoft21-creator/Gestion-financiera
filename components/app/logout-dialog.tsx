@@ -63,16 +63,22 @@ export function LogoutDialog({ open, onClose }: LogoutDialogProps) {
             type="button"
             onClick={() => void handleConfirm()}
             disabled={isLoading}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-rose-500 text-sm font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-6"
+            className="flex h-11 w-full min-w-[120px] items-center justify-center gap-2 rounded-2xl bg-rose-500 text-sm font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:px-6"
           >
-            {isLoading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-            {isLoading ? "Cerrando..." : "Cerrar sesión"}
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+                <span>Cerrando…</span>
+              </>
+            ) : (
+              "Cerrar sesión"
+            )}
           </button>
           <button
             type="button"
             onClick={onClose}
             disabled={isLoading}
-            className="flex h-11 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-semibold text-zinc-300 transition hover:bg-white/[0.08] disabled:opacity-60 sm:w-auto sm:px-6"
+            className="flex h-11 w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-semibold text-zinc-300 transition hover:bg-white/[0.08] disabled:pointer-events-none disabled:opacity-40 sm:w-auto sm:px-6"
           >
             Cancelar
           </button>

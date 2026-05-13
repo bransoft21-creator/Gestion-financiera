@@ -11,9 +11,9 @@ import {
   CircleDollarSign,
   ScanLine,
 } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { ActionButton } from "@/components/ui-v2/action-button";
-import { MeridianMark } from "@/components/brand/meridian-mark";
 
 /* ── Goals ───────────────────────────────────────────────────────────────── */
 
@@ -223,17 +223,19 @@ export function OnboardingClient({
 function WelcomeStep({ onNext }: { onNext: () => void }) {
   return (
     <div className="text-center">
-      {/* Mark — appears first, sets the brand tone before any text */}
+      {/* Logo — appears first, sets the brand tone before any text */}
       <motion.div
         className="mb-8 flex justify-center"
         initial={{ opacity: 0, scale: 0.85 }}
         animate={{ opacity: 1, scale: 1, transition: { delay: 0.04, duration: 0.55, ease: easeOut } }}
       >
-        <MeridianMark size={44} animated />
+        <div className="flex h-16 w-16 items-center justify-center rounded-[28px] border border-white/10 bg-white/[0.06] shadow-[0_20px_60px_rgba(20,184,166,0.18)]">
+          <Image src="/icons/Meridian.png" alt="Meridian" width={40} height={40} className="select-none" priority />
+        </div>
       </motion.div>
 
       <motion.p
-        className="mb-8 text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-600"
+        className="mb-8 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1, transition: { delay: 0.18, duration: 0.55 } }}
       >

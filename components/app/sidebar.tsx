@@ -1,10 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MeridianMark } from "@/components/brand/meridian-mark";
 import { navItems } from "./nav-items";
 import { LogoutButton } from "./logout-button";
 
@@ -22,10 +22,12 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
     <aside data-tutorial="nav-desktop" className="hidden h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-zinc-950/74 shadow-[1px_0_34px_rgba(0,0,0,0.34)] backdrop-blur-xl lg:sticky lg:top-0 lg:flex">
       {/* Logo */}
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-[18px]">
-        <MeridianMark size={17} showContainer containerSize={36} />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06]">
+          <Image src="/icons/Meridian.png" alt="Meridian" width={20} height={20} className="select-none" />
+        </div>
         <div>
-          <p className="text-[13px] font-bold leading-tight text-foreground">meridian</p>
-          <p className="text-[11px] leading-tight text-muted-foreground">Perspectiva diaria</p>
+          <p className="text-[13px] font-bold leading-tight text-foreground">Meridian</p>
+          <p className="text-xs leading-tight text-muted-foreground">Perspectiva diaria</p>
         </div>
       </div>
 
@@ -58,7 +60,7 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
         >
           <TrendingUp className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="flex-1">Inversiones</span>
-          <span className="rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+          <span className="rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
             Pronto
           </span>
         </div>

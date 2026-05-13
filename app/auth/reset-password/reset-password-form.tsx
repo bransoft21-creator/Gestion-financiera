@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { CheckCircle2, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
 import { MeridianLoader } from "@/components/brand/meridian-loader";
-import { MeridianMark } from "@/components/brand/meridian-mark";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type RecoveryState = "checking" | "ready" | "invalid" | "success";
@@ -132,12 +132,9 @@ export function ResetPasswordForm() {
     <main className="flex min-h-screen items-center justify-center bg-background px-5 py-8">
       <section className="fade-in w-full max-w-[460px]">
         <div className="mb-8 flex flex-col items-center text-center">
-          <MeridianMark
-            size={24}
-            showContainer
-            containerSize={56}
-            containerClassName="mb-4 rounded-[24px] shadow-[0_18px_55px_rgba(45,212,191,0.12)]"
-          />
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-[24px] border border-white/10 bg-white/[0.06] shadow-[0_18px_55px_rgba(20,184,166,0.14)]">
+            <Image src="/icons/Meridian.png" alt="Meridian" width={32} height={32} className="select-none" priority />
+          </div>
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-100/80">Meridian</p>
         </div>
 
