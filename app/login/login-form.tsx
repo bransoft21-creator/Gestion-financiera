@@ -246,9 +246,7 @@ export function LoginForm({ initialError }: LoginFormProps) {
       {/* ── Panel izquierdo (solo desktop) ── */}
       <div className="relative hidden flex-col justify-center overflow-hidden border-r border-white/10 bg-zinc-950 px-16 py-16 lg:flex lg:w-[58%]">
         <div className="mb-14 flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[18px] border border-white/10 bg-white/[0.06] shadow-[0_8px_32px_rgba(20,184,166,0.15)]">
-            <Image src="/icons/Meridian.png" alt="Meridian" width={26} height={26} className="select-none" priority />
-          </div>
+          <Image src="/icons/Meridian.png" alt="Meridian" width={36} height={36} className="select-none" priority />
           <span className="text-xl font-extrabold tracking-tight text-foreground">Meridian</span>
         </div>
 
@@ -280,9 +278,7 @@ export function LoginForm({ initialError }: LoginFormProps) {
         <div className="fade-in w-full max-w-[420px]">
           {/* Logo mobile */}
           <div className="mb-9 flex flex-col items-center lg:hidden">
-            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-3xl border border-white/10 bg-white/[0.06] shadow-[0_18px_55px_rgba(20,184,166,0.18)]">
-              <Image src="/icons/Meridian.png" alt="Meridian" width={34} height={34} className="select-none" priority />
-            </div>
+            <Image src="/icons/Meridian.png" alt="Meridian" width={72} height={72} className="mb-4 select-none" priority />
             <p className="text-lg font-extrabold text-foreground">Meridian</p>
           </div>
 

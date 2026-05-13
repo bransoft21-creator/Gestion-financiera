@@ -132,9 +132,7 @@ export function ResetPasswordForm() {
     <main className="flex min-h-screen items-center justify-center bg-background px-5 py-8">
       <section className="fade-in w-full max-w-[460px]">
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-[24px] border border-white/10 bg-white/[0.06] shadow-[0_18px_55px_rgba(20,184,166,0.14)]">
-            <Image src="/icons/Meridian.png" alt="Meridian" width={32} height={32} className="select-none" priority />
-          </div>
+          <Image src="/icons/Meridian.png" alt="Meridian" width={60} height={60} className="mb-4 select-none" priority />
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-100/80">Meridian</p>
         </div>
 

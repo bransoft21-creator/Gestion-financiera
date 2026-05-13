@@ -229,9 +229,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         initial={{ opacity: 0, scale: 0.85 }}
         animate={{ opacity: 1, scale: 1, transition: { delay: 0.04, duration: 0.55, ease: easeOut } }}
       >
-        <div className="flex h-16 w-16 items-center justify-center rounded-[28px] border border-white/10 bg-white/[0.06] shadow-[0_20px_60px_rgba(20,184,166,0.18)]">
-          <Image src="/icons/Meridian.png" alt="Meridian" width={40} height={40} className="select-none" priority />
-        </div>
+        <Image src="/icons/Meridian.png" alt="Meridian" width={72} height={72} className="select-none" priority />
       </motion.div>
 
       <motion.p
