@@ -333,7 +333,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
 
                   <Field label="Categoría" error={errors.categoryId}>
                     <select
-                      className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                      className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]"
                       value={selectedCategoryId}
                       onChange={(event) => updateForm("categoryId", event.target.value)}
                       disabled={!canCreateBudget}
@@ -350,7 +350,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
                   <div className="grid gap-3 sm:grid-cols-[104px_1fr]">
                     <Field label="Moneda" error={errors.currency}>
                       <select
-                        className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                        className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]"
                         value={form.currency}
                         onChange={(event) => updateForm("currency", event.target.value as "ARS" | "USD")}
                       >

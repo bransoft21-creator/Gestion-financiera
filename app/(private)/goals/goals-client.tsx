@@ -411,7 +411,7 @@ export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
               <div className="grid gap-3 sm:grid-cols-[104px_1fr]">
                 <Field label="Moneda" error={errors.currency}>
                   <select
-                    className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                    className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]"
                     value={form.currency}
                     onChange={(event) => updateForm("currency", event.target.value as CurrencyCode)}
                   >
@@ -462,7 +462,7 @@ export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
                 </Field>
                 <Field label="Estado" error={errors.status}>
                   <select
-                    className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                    className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]"
                     value={form.status}
                     onChange={(event) => updateForm("status", event.target.value as GoalStatus)}
                   >
@@ -477,7 +477,7 @@ export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
 
               <Field label="Notas" error={errors.notes}>
                 <textarea
-                  className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
+                  className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-base md:text-sm text-white outline-none placeholder:text-zinc-600"
                   maxLength={1000}
                   value={form.notes}
                   onChange={(event) => updateForm("notes", event.target.value)}
@@ -873,7 +873,7 @@ function GoalCard({
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-zinc-400">Cuenta</label>
                 <select
-                  className="v2-focus-ring h-10 w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-3 text-sm text-white outline-none"
+                  className="v2-focus-ring h-10 w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-3 text-base md:text-sm text-white outline-none"
                   value={quickContribAccountId}
                   onChange={(event) => onContribAccountChange(event.target.value)}
                 >

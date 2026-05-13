@@ -1350,7 +1350,7 @@ function CandidateCard({
               onChange={(e) => onPatch({ editDescription: e.target.value })}
               maxLength={80}
               placeholder="Descripción"
-              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder-zinc-600 outline-none focus:border-teal-400/40 focus:bg-white/[0.07]"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-base md:text-sm text-white placeholder-zinc-600 outline-none focus:border-teal-400/40 focus:bg-white/[0.07]"
             />
 
             {/* Amount — full width, prominent */}
@@ -1373,7 +1373,7 @@ function CandidateCard({
               type="date"
               value={c.editDate}
               onChange={(e) => onPatch({ editDate: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none focus:border-teal-400/40 focus:bg-white/[0.07] [color-scheme:dark]"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-base md:text-sm text-white outline-none focus:border-teal-400/40 focus:bg-white/[0.07] [color-scheme:dark]"
             />
 
             {/* Account + Category — 2 cols, compact selects */}
@@ -1385,7 +1385,7 @@ function CandidateCard({
                 <select
                   value={c.editAccountId}
                   onChange={(e) => onPatch({ editAccountId: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-xs text-white outline-none focus:border-teal-400/40 [&>option]:bg-zinc-900"
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-base md:text-xs text-white outline-none focus:border-teal-400/40 [&>option]:bg-zinc-900"
                 >
                   <option value="">Sin cuenta</option>
                   {accounts.map((a) => (
@@ -1402,7 +1402,7 @@ function CandidateCard({
                 <select
                   value={c.editCategoryId}
                   onChange={(e) => onPatch({ editCategoryId: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-xs text-white outline-none focus:border-teal-400/40 [&>option]:bg-zinc-900"
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-base md:text-xs text-white outline-none focus:border-teal-400/40 [&>option]:bg-zinc-900"
                 >
                   <option value="">Sin categoría</option>
                   {expenseCategories.map((cat) => (

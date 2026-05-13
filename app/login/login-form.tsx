@@ -361,7 +361,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
                   placeholder="nombre@ejemplo.com"
                   required
                   disabled={isLoading}
-                  className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-foreground outline-none transition hover:bg-white/[0.07] disabled:opacity-60"
+                  className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-white/[0.07] disabled:opacity-60"
                 />
                 {fieldErrors.email && <p className="mt-1.5 text-xs text-destructive">{fieldErrors.email}</p>}
               </div>
@@ -394,7 +394,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
                     autoComplete="name"
                     placeholder="Tu nombre"
                     disabled={isAnyLoading}
-                    className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-foreground outline-none transition hover:bg-white/[0.07] disabled:opacity-60"
+                    className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-white/[0.07] disabled:opacity-60"
                   />
                   {fieldErrors.name && <p className="mt-1.5 text-xs text-destructive">{fieldErrors.name}</p>}
                 </div>
@@ -411,7 +411,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
                   placeholder="nombre@ejemplo.com"
                   required
                   disabled={isAnyLoading}
-                  className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-foreground outline-none transition hover:bg-white/[0.07] disabled:opacity-60"
+                  className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-white/[0.07] disabled:opacity-60"
                 />
                 {fieldErrors.email && <p className="mt-1.5 text-xs text-destructive">{fieldErrors.email}</p>}
               </div>

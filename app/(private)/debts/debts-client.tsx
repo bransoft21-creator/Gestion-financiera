@@ -492,7 +492,7 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
               </div>
 
               <Field label="Notas" error={errors.notes}>
-                <textarea className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600" maxLength={1000} value={form.notes} onChange={(e) => updateForm("notes", e.target.value)} placeholder="Detalle opcional" />
+                <textarea className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-base md:text-sm text-white outline-none placeholder:text-zinc-600" maxLength={1000} value={form.notes} onChange={(e) => updateForm("notes", e.target.value)} placeholder="Detalle opcional" />
               </Field>
 
               {message ? (
@@ -537,7 +537,7 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <select
-                    className="v2-focus-ring h-9 rounded-2xl border border-white/10 bg-white/[0.05] px-3 text-sm text-white outline-none"
+                    className="v2-focus-ring h-9 rounded-2xl border border-white/10 bg-white/[0.05] px-3 text-base md:text-sm text-white outline-none"
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                   >
@@ -601,7 +601,7 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
 }
 
 const inputClass = "v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-zinc-600";
-const selectClass = "v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition hover:bg-white/[0.07]";
+const selectClass = "v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]";
 
 function DebtBriefing({
   summary,
@@ -823,7 +823,7 @@ function DebtCard({
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-zinc-400">Cuenta</label>
                 <select
-                  className="v2-focus-ring h-10 w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-3 text-sm text-white outline-none"
+                  className="v2-focus-ring h-10 w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-3 text-base md:text-sm text-white outline-none"
                   value={quickPayAccountId}
                   onChange={(e) => onQuickPayAccountChange(e.target.value)}
                 >

@@ -200,7 +200,7 @@ export function ResetPasswordForm() {
                       type={showPassword ? "text" : "password"}
                       autoComplete="new-password"
                       placeholder="••••••••"
-                      className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 pr-12 text-sm text-foreground outline-none transition hover:bg-white/[0.07]"
+                      className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 pr-12 text-base md:text-sm text-foreground outline-none transition hover:bg-white/[0.07]"
                     />
                     <button
                       type="button"
@@ -224,7 +224,7 @@ export function ResetPasswordForm() {
                       type={showConfirmPassword ? "text" : "password"}
                       autoComplete="new-password"
                       placeholder="••••••••"
-                      className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 pr-12 text-sm text-foreground outline-none transition hover:bg-white/[0.07]"
+                      className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 pr-12 text-base md:text-sm text-foreground outline-none transition hover:bg-white/[0.07]"
                     />
                     <button
                       type="button"

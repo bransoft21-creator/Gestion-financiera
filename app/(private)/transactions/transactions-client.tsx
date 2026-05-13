@@ -183,9 +183,9 @@ const transactionOriginLabels: Record<TransactionOrigin, string> = {
 const optionalEnumField = <T extends [string, ...string[]]>(values: T) =>
   z.preprocess((value) => value === "" ? undefined : value, z.enum(values).optional());
 const transactionSelectClass =
-  "v2-focus-ring h-11 w-full min-w-0 max-w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition hover:bg-white/[0.07]";
+  "v2-focus-ring h-11 w-full min-w-0 max-w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]";
 const compactSelectClass =
-  "v2-focus-ring h-9 w-full min-w-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-xs text-white outline-none transition hover:bg-white/[0.07]";
+  "v2-focus-ring h-9 w-full min-w-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-base md:text-xs text-white outline-none transition hover:bg-white/[0.07]";
 
 const formSchema = z.object({
   type: z.enum(transactionTypes as [TransactionType, ...TransactionType[]]),
@@ -761,7 +761,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
 
             <Field label="Notas" error={formErrors.notes?.message}>
               <textarea
-                className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]"
                 maxLength={1000}
                 {...register("notes")}
                 placeholder="Detalle opcional"
@@ -911,7 +911,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
               <div className="relative min-w-0 flex-1">
                 <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                 <Input
-                  className="h-10 min-w-0 rounded-2xl border-white/10 bg-white/[0.045] pl-8 text-xs"
+                  className="h-10 min-w-0 rounded-2xl border-white/10 bg-white/[0.045] pl-8 text-base md:text-xs"
                   placeholder="Buscar movimiento..."
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
@@ -978,7 +978,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
 
                 <Field label="Desde">
                   <Input
-                    className="h-9 text-xs"
+                    className="h-9 text-base md:text-xs"
                     type="date"
                     value={filters.from}
                     onChange={(event) => setFilters((current) => ({ ...current, from: event.target.value }))}
@@ -986,7 +986,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                 </Field>
                 <Field label="Hasta">
                   <Input
-                    className="h-9 text-xs"
+                    className="h-9 text-base md:text-xs"
                     type="date"
                     value={filters.to}
                     onChange={(event) => setFilters((current) => ({ ...current, to: event.target.value }))}
