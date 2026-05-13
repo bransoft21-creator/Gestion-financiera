@@ -258,6 +258,12 @@ export async function acceptHouseholdInvite(userProfileId: string, token: string
 export async function getHouseholdBalance(userProfileId: string, householdId: string) {
   await assertCollaborativeHouseholdAccess(userProfileId, householdId);
 
+  const lastSettlement = await prisma.householdSettlement.findFirst({
+    where: { householdId },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+
   const household = await prisma.household.findFirst({
     where: { id: householdId, kind: HouseholdKind.HOUSEHOLD, deletedAt: null },
     select: {
@@ -273,6 +279,7 @@ export async function getHouseholdBalance(userProfileId: string, householdId: st
       },
       sharedTransactions: {
         where: {
+          ...(lastSettlement ? { createdAt: { gte: lastSettlement.createdAt } } : {}),
           transaction: { deletedAt: null, status: { not: "CANCELED" } },
         },
         orderBy: { createdAt: "desc" },
@@ -332,6 +339,7 @@ export async function getHouseholdBalance(userProfileId: string, householdId: st
     },
     members: memberBalances,
     settlement,
+    lastSettledAt: lastSettlement?.createdAt ?? null,
     summary: buildHouseholdSummary(memberBalances, settlement),
     recentSharedTransactions: household.sharedTransactions.map((shared) => ({
       id: shared.id,
@@ -352,6 +360,18 @@ export async function getHouseholdBriefing(userProfileId: string, householdId: s
   const { year, month } = getArgentinaMonthParts(now);
   const { start: monthStart, end: nextMonthStart } = argentinaMonthRangeUtc(year, month);
 
+  const lastSettlement = await prisma.householdSettlement.findFirst({
+    where: { householdId },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+
+  // Effective start: the later of the month start or the last settlement date.
+  // This ensures the briefing only reflects spending since the last reset.
+  const effectiveStart = lastSettlement && lastSettlement.createdAt > monthStart
+    ? lastSettlement.createdAt
+    : monthStart;
+
   const household = await prisma.household.findFirst({
     where: { id: householdId, kind: HouseholdKind.HOUSEHOLD, deletedAt: null },
     select: {
@@ -367,10 +387,11 @@ export async function getHouseholdBriefing(userProfileId: string, householdId: s
       },
       sharedTransactions: {
         where: {
+          ...(lastSettlement ? { createdAt: { gte: lastSettlement.createdAt } } : {}),
           transaction: {
             deletedAt: null,
             status: { not: "CANCELED" },
-            occurredAt: { gte: monthStart, lt: nextMonthStart },
+            occurredAt: { gte: effectiveStart, lt: nextMonthStart },
           },
         },
         orderBy: { createdAt: "desc" },

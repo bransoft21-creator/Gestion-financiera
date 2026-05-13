@@ -166,6 +166,56 @@ describe("household shared finance", () => {
     assert.match(briefing.summary, /Ana cubrió más gastos compartidos/);
   });
 
+  it("balance after settlement only counts post-cutoff transactions", () => {
+    const members = [
+      { userId: "user-1", name: "Ana", email: "ana@example.com" },
+      { userId: "user-2", name: "Beto", email: "beto@example.com" },
+    ];
+
+    // Pre-settlement: Ana paid ARS 24.000 (split 50/50)
+    const preSettlement = [
+      {
+        paidByUserId: "user-1",
+        amount: 24000,
+        participants: [
+          { userId: "user-1", amount: 12000 },
+          { userId: "user-2", amount: 12000 },
+        ],
+      },
+    ];
+
+    // Post-settlement: Ana paid ARS 10.000 (split 50/50)
+    const postSettlement = [
+      {
+        paidByUserId: "user-1",
+        amount: 10000,
+        participants: [
+          { userId: "user-1", amount: 5000 },
+          { userId: "user-2", amount: 5000 },
+        ],
+      },
+    ];
+
+    // Without cutoff: both pre and post count — Beto owes ARS 17.000
+    const balanceAll = calculateHouseholdMemberBalances({
+      members,
+      sharedTransactions: [...preSettlement, ...postSettlement],
+    });
+    assert.equal(balanceAll.find((m) => m.userId === "user-2")?.balance, -17000);
+
+    // With cutoff applied (DB filters to post-settlement only): Beto owes ARS 5.000
+    const balancePostCutoff = calculateHouseholdMemberBalances({
+      members,
+      sharedTransactions: postSettlement,
+    });
+    assert.equal(balancePostCutoff.find((m) => m.userId === "user-2")?.balance, -5000);
+
+    // After full settlement with no new expenses: balance is zero, no CTA shown
+    const balanceZero = calculateHouseholdMemberBalances({ members, sharedTransactions: [] });
+    const settlementAfterZero = calculateHouseholdSettlement(balanceZero);
+    assert.equal(settlementAfterZero, null);
+  });
+
   it("marks high shared spend without aggressive language", () => {
     const briefing = calculateHouseholdBriefing({
       household: { id: "home", name: "Casa" },

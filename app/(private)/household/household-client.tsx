@@ -37,6 +37,7 @@ type Household = {
 
 type HouseholdBalance = {
   summary: string;
+  lastSettledAt: string | null;
   settlement: {
     fromName: string;
     toName: string;
@@ -561,7 +562,9 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                 <div className="rounded-2xl border border-teal-300/15 bg-teal-300/10 p-4">
                   <p className="text-sm font-semibold text-teal-50">{getBalanceSummary(balance, hideAmounts)}</p>
                   <p className="mt-1 text-xs leading-5 text-teal-100/70">
-                    Marcá un gasto como compartido desde Movimientos para empezar.
+                    {balance?.lastSettledAt
+                      ? `Desde el último equilibrio: ${formatSettlementDate(balance.lastSettledAt)}.`
+                      : "Marcá un gasto como compartido desde Movimientos para empezar."}
                   </p>
                 </div>
 
