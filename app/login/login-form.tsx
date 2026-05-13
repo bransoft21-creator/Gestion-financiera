@@ -251,16 +251,17 @@ export function LoginForm({ initialError }: LoginFormProps) {
             showContainer
             containerSize={44}
             showWordmark
+            animated
             wordmarkClassName="text-xl font-extrabold tracking-tight"
           />
         </div>
 
         <h1 className="mb-4 text-[44px] font-semibold leading-[1.05] text-foreground">
-          Tu sistema financiero,<br />
-          <span className="v2-text-gradient">con lectura propia.</span>
+          Tu dinero,<br />
+          <span className="v2-text-gradient">con perspectiva propia.</span>
         </h1>
         <p className="mb-14 max-w-md text-base leading-relaxed text-muted-foreground">
-          Entendé qué está pasando, qué cambió y cuál es el próximo movimiento razonable.
+          Entendé dónde estás, qué cambió y cuál es el próximo movimiento razonable.
         </p>
 
         <div className="space-y-6">
@@ -475,7 +476,7 @@ export function LoginForm({ initialError }: LoginFormProps) {
               >
                 {isLoading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
                 {isLoading
-                  ? "Procesando…"
+                  ? mode === "login" ? "Entrando…" : "Creando cuenta…"
                   : mode === "login"
                     ? "Iniciar sesión"
                     : "Crear cuenta"}

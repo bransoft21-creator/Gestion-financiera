@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { MeridianLoader } from "@/components/brand/meridian-loader";
 
 export function GlobalProcessingIndicator() {
   const pathname = usePathname();
@@ -47,14 +47,8 @@ export function GlobalProcessingIndicator() {
       }`}
       aria-hidden={!visible}
     >
-      <div className="v2-card flex min-w-[180px] flex-col items-center gap-3 rounded-[var(--v2-radius-lg)] px-5 py-4 text-center shadow-2xl shadow-black/30">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-300/12 text-teal-100">
-          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-foreground">Procesando</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Un momento</p>
-        </div>
+      <div className="v2-card min-w-[140px] rounded-[var(--v2-radius-lg)] px-6 py-5 shadow-2xl shadow-black/30">
+        <MeridianLoader size={24} label="Un momento" />
       </div>
     </div>
   );

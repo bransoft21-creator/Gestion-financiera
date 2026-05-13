@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ActionButton } from "@/components/ui-v2/action-button";
+import { MeridianMark } from "@/components/brand/meridian-mark";
 
 /* ── Goals ───────────────────────────────────────────────────────────────── */
 
@@ -222,27 +223,36 @@ export function OnboardingClient({
 function WelcomeStep({ onNext }: { onNext: () => void }) {
   return (
     <div className="text-center">
+      {/* Mark — appears first, sets the brand tone before any text */}
+      <motion.div
+        className="mb-8 flex justify-center"
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: 1, scale: 1, transition: { delay: 0.04, duration: 0.55, ease: easeOut } }}
+      >
+        <MeridianMark size={44} animated />
+      </motion.div>
+
       <motion.p
-        className="mb-10 text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-700"
+        className="mb-8 text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-600"
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1, transition: { delay: 0.08, duration: 0.6 } }}
+        animate={{ opacity: 1, transition: { delay: 0.18, duration: 0.55 } }}
       >
         Meridian
       </motion.p>
 
       <motion.h1
-        className="text-balance text-[44px] font-semibold leading-[1.1] tracking-tight text-white sm:text-[52px]"
+        className="text-balance text-[40px] font-semibold leading-[1.1] tracking-tight text-white sm:text-[48px]"
         initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0, transition: { delay: 0.15, duration: 0.55, ease: easeOut } }}
+        animate={{ opacity: 1, y: 0, transition: { delay: 0.26, duration: 0.55, ease: easeOut } }}
       >
         Tu dinero,{" "}
         <span className="text-zinc-500">con perspectiva.</span>
       </motion.h1>
 
       <motion.p
-        className="mx-auto mt-6 max-w-[280px] text-[15px] leading-relaxed text-zinc-500"
+        className="mx-auto mt-5 max-w-[280px] text-[15px] leading-relaxed text-zinc-500"
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1, transition: { delay: 0.28, duration: 0.5 } }}
+        animate={{ opacity: 1, transition: { delay: 0.36, duration: 0.5 } }}
       >
         Entendé en qué punto estás y hacia dónde vas. Una sola vista para todo.
       </motion.p>
@@ -250,7 +260,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
       <motion.div
         className="mt-10"
         initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0, transition: { delay: 0.38, duration: 0.45, ease: easeOut } }}
+        animate={{ opacity: 1, y: 0, transition: { delay: 0.46, duration: 0.45, ease: easeOut } }}
       >
         <ActionButton size="lg" className="min-w-[160px]" onClick={onNext}>
           Empezar
