@@ -10,6 +10,7 @@ import {
 } from "../server/services/households";
 import { createHouseholdInviteSchema } from "../server/schemas/households";
 import { createTransactionSchema } from "../server/schemas/transactions";
+import { computeRecurringPaymentStatus } from "../server/services/recurring-payments";
 
 describe("household shared finance", () => {
   it("hashes invite tokens instead of storing the raw token", () => {
@@ -264,6 +265,28 @@ describe("household shared finance", () => {
     assert.equal(balances.find((m) => m.userId === "user-1")?.balance, 0);
     assert.equal(balances.find((m) => m.userId === "user-2")?.balance, 0);
     assert.equal(calculateHouseholdSettlement(balances), null);
+  });
+
+  describe("recurring payment status", () => {
+    it("returns PENDING when dueDay has not passed this month", () => {
+      const status = computeRecurringPaymentStatus(20, "2026-05", false, new Date("2026-05-10T15:00:00Z"));
+      assert.equal(status, "PENDING");
+    });
+
+    it("returns OVERDUE when dueDay has passed this month and not paid", () => {
+      const status = computeRecurringPaymentStatus(5, "2026-05", false, new Date("2026-05-13T15:00:00Z"));
+      assert.equal(status, "OVERDUE");
+    });
+
+    it("returns PAID when there is a paid occurrence", () => {
+      const status = computeRecurringPaymentStatus(5, "2026-05", true, new Date("2026-05-13T15:00:00Z"));
+      assert.equal(status, "PAID");
+    });
+
+    it("returns OVERDUE for a past month without payment", () => {
+      const status = computeRecurringPaymentStatus(15, "2026-04", false, new Date("2026-05-13T15:00:00Z"));
+      assert.equal(status, "OVERDUE");
+    });
   });
 
   it("marks high shared spend without aggressive language", () => {

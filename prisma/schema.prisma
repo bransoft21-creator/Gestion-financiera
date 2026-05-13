@@ -107,6 +107,12 @@ enum TransactionOrigin {
   MERCADO_PAGO
 }
 
+enum RecurringPaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
 enum PaymentMethod {
   CASH
   DEBIT
@@ -198,6 +204,9 @@ model UserProfile {
   aiUsages             AiUsage[]
   activityItems        ActivityItem[]
   householdSettlements HouseholdSettlement[] @relation("HouseholdSettlementSettledBy")
+  householdRecurringPaymentsCreated        HouseholdRecurringPayment[]            @relation("HouseholdRecurringPaymentCreatedBy")
+  householdRecurringPaymentParticipations  HouseholdRecurringPaymentParticipant[] @relation("HouseholdRecurringPaymentParticipations")
+  householdRecurringPaymentOccurrencesPaid HouseholdRecurringPaymentOccurrence[]  @relation("HouseholdRecurringPaymentOccurrencePaidBy")
 }
 
 model Household {
@@ -228,6 +237,7 @@ model Household {
   investmentAssets       InvestmentAsset[]
   investmentTransactions InvestmentTransaction[]
   smartImportCaches      SmartImportCache[]
+  recurringPayments      HouseholdRecurringPayment[]
 
   @@index([createdById])
 }
@@ -318,6 +328,7 @@ model Category {
   transactions       Transaction[]
   budgets            Budget[]
   recurringExpenses  RecurringExpense[]
+  householdRecurringPayments HouseholdRecurringPayment[]
 
   @@unique([householdId, name, type])
   @@index([householdId])
@@ -693,6 +704,64 @@ model HouseholdSettlement {
 
   @@index([householdId, createdAt])
   @@index([settledByUserId])
+}
+
+model HouseholdRecurringPayment {
+  id              String          @id @default(cuid())
+  householdId     String
+  createdById     String
+  categoryId      String?
+  name            String
+  currency        CurrencyCode    @default(ARS)
+  estimatedAmount Decimal         @db.Decimal(18, 2)
+  dueDay          Int
+  splitMode       SharedSplitMode @default(EQUAL)
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  deletedAt       DateTime?
+
+  household    Household                                @relation(fields: [householdId], references: [id])
+  createdBy    UserProfile                              @relation("HouseholdRecurringPaymentCreatedBy", fields: [createdById], references: [id])
+  category     Category?                                @relation(fields: [categoryId], references: [id])
+  participants HouseholdRecurringPaymentParticipant[]
+  occurrences  HouseholdRecurringPaymentOccurrence[]
+
+  @@index([householdId, isActive])
+  @@index([createdById])
+  @@index([categoryId])
+}
+
+model HouseholdRecurringPaymentParticipant {
+  recurringPaymentId String
+  userId             String
+  percentage         Decimal? @db.Decimal(5, 2)
+  fixedAmount        Decimal? @db.Decimal(18, 2)
+
+  recurringPayment HouseholdRecurringPayment @relation(fields: [recurringPaymentId], references: [id])
+  user             UserProfile               @relation("HouseholdRecurringPaymentParticipations", fields: [userId], references: [id])
+
+  @@id([recurringPaymentId, userId])
+  @@index([userId])
+}
+
+model HouseholdRecurringPaymentOccurrence {
+  id                  String                 @id @default(cuid())
+  recurringPaymentId  String
+  monthKey            String
+  status              RecurringPaymentStatus @default(PENDING)
+  paidAt              DateTime?
+  paidByUserId        String?
+  sharedTransactionId String?
+  finalAmount         Decimal?               @db.Decimal(18, 2)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  recurringPayment HouseholdRecurringPayment @relation(fields: [recurringPaymentId], references: [id])
+  paidBy           UserProfile?              @relation("HouseholdRecurringPaymentOccurrencePaidBy", fields: [paidByUserId], references: [id])
+
+  @@unique([recurringPaymentId, monthKey])
+  @@index([recurringPaymentId, status])
 }
 
 model InvestmentTransaction {
