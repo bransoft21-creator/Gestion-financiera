@@ -134,6 +134,7 @@ export function SmartImportClient({ householdId, accounts, categories }: Props) 
   const previewUrlRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -277,6 +278,16 @@ export function SmartImportClient({ householdId, accounts, categories }: Props) 
   }, []);
 
   useEffect(() => () => abortRef.current?.abort("unmount"), []);
+
+  // Scroll to page top on every step transition — prevents black zones and
+  // lost context when content height changes between steps.
+  useEffect(() => {
+    if (shouldReduceMotion) {
+      document.documentElement.scrollTop = 0;
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [step, shouldReduceMotion]);
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
