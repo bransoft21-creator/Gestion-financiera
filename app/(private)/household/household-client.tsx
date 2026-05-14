@@ -143,6 +143,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showSettlementsHistory, setShowSettlementsHistory] = useState(false);
   const [showPaidPayments, setShowPaidPayments] = useState(false);
+  const [showAllActivePayments, setShowAllActivePayments] = useState(false);
   const [balance, setBalance] = useState<HouseholdBalance | null>(null);
   const [briefing, setBriefing] = useState<HouseholdBriefing | null>(null);
   const [settlements, setSettlements] = useState<HouseholdSettlement[]>([]);
@@ -190,6 +191,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
     setPayingOccurrenceId(null);
     setShowSettlementsHistory(false);
     setShowPaidPayments(false);
+    setShowAllActivePayments(false);
     setIsAddingRecurring(false);
   }
 
@@ -542,12 +544,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                   {tab === "overview" && <WalletCards className="h-3.5 w-3.5" />}
                   {tab === "payments" && <CheckCircle2 className="h-3.5 w-3.5" />}
                   {tab === "team" && <Users className="h-3.5 w-3.5" />}
-                  <span className="hidden sm:inline">
-                    {tab === "overview" ? "Inicio" : tab === "payments" ? "Pagos" : "Equipo"}
-                  </span>
-                  <span className="sm:hidden">
-                    {tab === "overview" ? "Inicio" : tab === "payments" ? "Pagos" : "Equipo"}
-                  </span>
+                  <span>{tab === "overview" ? "Inicio" : tab === "payments" ? "Pagos" : "Equipo"}</span>
                 </button>
               ))}
             </div>
@@ -654,9 +651,13 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       </div>
                     ) : (
-                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                        <p className="text-sm text-muted-foreground">Todavía no hay gastos compartidos.</p>
-                        <Button asChild variant="outline" className="mt-3 w-full">
+                      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 text-center">
+                        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.06] text-lg">💸</div>
+                        <p className="text-sm font-semibold text-foreground">Sin movimientos compartidos</p>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          Cuando alguien pague algo para el hogar, aparecerá acá.
+                        </p>
+                        <Button asChild variant="outline" size="sm" className="mt-4 w-full">
                           <Link href="/transactions?new=1">
                             <Plus className="h-4 w-4" />
                             Agregar gasto compartido
@@ -725,6 +726,46 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                     ) : null}
                   </CardContent>
                 </Card>
+
+                {/* Monthly timeline — editorial financial memory */}
+                {(recurringPayments?.payments.some((p) => p.status === "PAID") ||
+                  settlements.length > 0 ||
+                  briefing?.status === "HIGH_SPEND") ? (
+                  <div className="space-y-2.5 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground capitalize">{currentMonthLabel}</p>
+                    <div className="space-y-2">
+                      {settlements[0] ? (
+                        <div className="flex items-start gap-2.5 text-xs text-emerald-200/80">
+                          <span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400/70" />
+                          Hogar equilibrado el {formatDate(settlements[0].createdAt)}
+                        </div>
+                      ) : null}
+                      {recurringPayments?.payments
+                        .filter((p) => p.status === "PAID")
+                        .map((p) => (
+                          <div key={p.id} className="flex items-start gap-2.5 text-xs text-muted-foreground">
+                            <span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400/50" />
+                            {p.name} cubierto
+                          </div>
+                        ))}
+                      {briefing?.status === "HIGH_SPEND" ? (
+                        <div className="flex items-start gap-2.5 text-xs text-sky-300/70">
+                          <span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400/60" />
+                          El gasto compartido viene más alto que lo habitual
+                        </div>
+                      ) : null}
+                      {briefing?.status === "STABLE" &&
+                       recurringPayments &&
+                       recurringPayments.totalCount > 0 &&
+                       recurringPayments.paidCount === recurringPayments.totalCount ? (
+                        <div className="flex items-start gap-2.5 text-xs text-emerald-200/70">
+                          <span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400/70" />
+                          Todos los pagos del mes cubiertos
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
 
@@ -815,30 +856,47 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                     </div>
                   ) : recurringPayments?.payments.length ? (
                     <div className="space-y-2">
-                      {/* OVERDUE + PENDING (sorted: OVERDUE first, then by dueDay) */}
-                      {[...recurringPayments.payments]
-                        .filter((p) => p.status !== "PAID")
-                        .sort((a, b) => {
-                          if (a.status === "OVERDUE" && b.status !== "OVERDUE") return -1;
-                          if (a.status !== "OVERDUE" && b.status === "OVERDUE") return 1;
-                          return a.dueDay - b.dueDay;
-                        })
-                        .map((payment) => (
-                          <PaymentRow
-                            key={payment.id}
-                            payment={payment}
-                            isExpanded={payingOccurrenceId === payment.id}
-                            isPaying={isPaying}
-                            payForm={payForm}
-                            setPayForm={setPayForm}
-                            members={selectedHousehold.members}
-                            userAccounts={userAccounts}
-                            hideAmounts={hideAmounts}
-                            onPay={() => void openPayDialog(payment)}
-                            onConfirmPay={() => void confirmMarkAsPaid(payment.id)}
-                            onCancel={closePayDialog}
-                          />
-                        ))}
+                      {/* OVERDUE + PENDING (sorted: OVERDUE first, then by dueDay; capped at 8) */}
+                      {(() => {
+                        const sorted = [...recurringPayments.payments]
+                          .filter((p) => p.status !== "PAID")
+                          .sort((a, b) => {
+                            if (a.status === "OVERDUE" && b.status !== "OVERDUE") return -1;
+                            if (a.status !== "OVERDUE" && b.status === "OVERDUE") return 1;
+                            return a.dueDay - b.dueDay;
+                          });
+                        const visible = showAllActivePayments ? sorted : sorted.slice(0, 8);
+                        const hidden = sorted.length - visible.length;
+                        return (
+                          <>
+                            {visible.map((payment) => (
+                              <PaymentRow
+                                key={payment.id}
+                                payment={payment}
+                                isExpanded={payingOccurrenceId === payment.id}
+                                isPaying={isPaying}
+                                payForm={payForm}
+                                setPayForm={setPayForm}
+                                members={selectedHousehold.members}
+                                userAccounts={userAccounts}
+                                hideAmounts={hideAmounts}
+                                onPay={() => void openPayDialog(payment)}
+                                onConfirmPay={() => void confirmMarkAsPaid(payment.id)}
+                                onCancel={closePayDialog}
+                              />
+                            ))}
+                            {hidden > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => setShowAllActivePayments(true)}
+                                className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-white/10 py-2.5 text-xs text-muted-foreground transition hover:text-foreground"
+                              >
+                                Ver {hidden} pago{hidden > 1 ? "s" : ""} más
+                              </button>
+                            ) : null}
+                          </>
+                        );
+                      })()}
 
                       {/* PAID (collapsed) */}
                       {recurringPayments.payments.filter((p) => p.status === "PAID").length > 0 ? (
@@ -880,11 +938,21 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                       ) : null}
                     </div>
                   ) : (
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
-                      <p className="text-sm font-semibold text-foreground">Sin pagos fijos registrados.</p>
+                    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 text-center">
+                      <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.06] text-lg">📋</div>
+                      <p className="text-sm font-semibold text-foreground">Sin pagos fijos aún</p>
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        Agregá el alquiler, la luz o Internet para no perderlos de vista.
+                        Registrá el alquiler, la luz o Internet para seguirlos mes a mes.
                       </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-4 w-full"
+                        onClick={() => setIsAddingRecurring(true)}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Agregar pago fijo
+                      </Button>
                     </div>
                   )}
                 </CardContent>
@@ -897,7 +965,8 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                 <CardHeader>
                   <CardTitle>Miembros</CardTitle>
                   <CardDescription>
-                    {selectedHousehold.members.length} {selectedHousehold.members.length === 1 ? "persona" : "personas"} en este hogar
+                    {selectedHousehold.members.length} {selectedHousehold.members.length === 1 ? "persona" : "personas"}
+                    {selectedHousehold.invites.length > 0 ? ` · ${selectedHousehold.invites.length} invitación${selectedHousehold.invites.length > 1 ? "es" : ""} pendiente${selectedHousehold.invites.length > 1 ? "s" : ""}` : ""}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">

@@ -61,7 +61,7 @@ function buildSummary(paidCount: number, overdueCount: number, totalCount: numbe
   if (totalCount === 0) return "";
   if (paidCount === totalCount) return "Los gastos fijos del hogar están al día.";
   if (overdueCount > 0) {
-    return `${overdueCount} pago${overdueCount > 1 ? "s" : ""} vencido${overdueCount > 1 ? "s" : ""}. Atendé los pagos pendientes.`;
+    return `Todavía ${overdueCount > 1 ? `quedan ${overdueCount} pagos` : "queda 1 pago"} por cubrir.`;
   }
   return `${paidCount} de ${totalCount} pago${totalCount > 1 ? "s" : ""} del hogar ${paidCount === 1 ? "está cubierto" : "están cubiertos"}.`;
 }
