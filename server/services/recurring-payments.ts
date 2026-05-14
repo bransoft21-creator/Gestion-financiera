@@ -59,7 +59,7 @@ export function computeRecurringPaymentStatus(
 
 function buildSummary(paidCount: number, overdueCount: number, totalCount: number): string {
   if (totalCount === 0) return "";
-  if (paidCount === totalCount) return "Los gastos fijos del hogar están al día.";
+  if (paidCount === totalCount) return "Los pagos del hogar están al día.";
   if (overdueCount > 0) {
     return `Todavía ${overdueCount > 1 ? `quedan ${overdueCount} pagos` : "queda 1 pago"} por cubrir.`;
   }

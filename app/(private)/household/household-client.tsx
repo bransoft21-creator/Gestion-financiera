@@ -372,7 +372,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
       });
       const payload = (await response.json()) as { data?: unknown; error?: string };
       if (!response.ok) { toast.error(payload.error ?? "No se pudo crear el pago."); return; }
-      toast.success("Pago fijo agregado.");
+      toast.success("Pago del hogar agregado.");
       setNewPaymentForm({ name: "", estimatedAmount: "", dueDay: "1", splitMode: "EQUAL" });
       setIsAddingRecurring(false);
       await loadRecurringPayments(selectedHousehold.id);
@@ -776,15 +776,31 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <CardTitle>Pagos del mes</CardTitle>
-                      <CardDescription className="capitalize">{currentMonthLabel}</CardDescription>
+                      <CardDescription className="capitalize">
+                        {currentMonthLabel} · fijos, variables y compras compartidas
+                      </CardDescription>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => setIsAddingRecurring((prev) => !prev)}>
-                      <Plus className="h-4 w-4" />
-                      {isAddingRecurring ? "Cancelar" : "Agregar"}
-                    </Button>
+                    <div className="flex shrink-0 gap-2">
+                      <Button asChild variant="outline" size="sm">
+                        <Link href="/transactions?new=1">
+                          <Plus className="h-4 w-4" />
+                          Gasto
+                        </Link>
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setIsAddingRecurring((prev) => !prev)}>
+                        <Plus className="h-4 w-4" />
+                        {isAddingRecurring ? "Cancelar" : "Pago"}
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="rounded-2xl border border-teal-300/15 bg-teal-300/10 p-3">
+                    <p className="text-sm font-semibold text-teal-50">Los pagos del hogar no tienen que ser todos fijos.</p>
+                    <p className="mt-1 text-xs leading-5 text-teal-100/70">
+                      Usá “Gasto” para supermercado, farmacia o compras puntuales. Usá “Pago” para alquiler, servicios o compromisos que querés seguir mes a mes.
+                    </p>
+                  </div>
                   {/* Add form */}
                   {isAddingRecurring ? (
                     <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -794,7 +810,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                           <Input
                             value={newPaymentForm.name}
                             onChange={(e) => setNewPaymentForm((p) => ({ ...p, name: e.target.value }))}
-                            placeholder="Alquiler, Luz, Internet…"
+                            placeholder="Alquiler, luz, Internet, expensas…"
                           />
                         </div>
                         <div className="space-y-2">
@@ -827,7 +843,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                           >
                             <option value="EQUAL">Partes iguales</option>
                             <option value="PERCENTAGE">Porcentaje</option>
-                            <option value="CUSTOM_AMOUNT">Monto fijo</option>
+                            <option value="CUSTOM_AMOUNT">Monto acordado</option>
                           </select>
                         </div>
                       </div>
@@ -837,7 +853,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                         onClick={() => void createRecurringPayment()}
                       >
                         {isCreatingRecurring ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                        Agregar pago fijo
+                        Agregar pago del hogar
                       </Button>
                     </div>
                   ) : null}
@@ -940,19 +956,27 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                   ) : (
                     <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 text-center">
                       <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.06] text-lg">📋</div>
-                      <p className="text-sm font-semibold text-foreground">Sin pagos fijos aún</p>
+                      <p className="text-sm font-semibold text-foreground">Sin pagos del hogar aún</p>
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        Registrá el alquiler, la luz o Internet para seguirlos mes a mes.
+                        Registrá pagos mensuales acá o cargá gastos variables desde Movimientos.
                       </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-4 w-full"
-                        onClick={() => setIsAddingRecurring(true)}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Agregar pago fijo
-                      </Button>
+                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                        <Button asChild variant="outline" size="sm" className="w-full">
+                          <Link href="/transactions?new=1">
+                            <Plus className="h-4 w-4" />
+                            Agregar gasto
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => setIsAddingRecurring(true)}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Agregar pago
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </CardContent>
