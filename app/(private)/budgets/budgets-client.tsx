@@ -28,7 +28,7 @@ import {
   PremiumCardTitle,
 } from "@/components/ui-v2/premium-card";
 import { onMoneyKeyDown } from "@/lib/input-utils";
-import { moneySchema } from "@/lib/money";
+import { moneySchema, parseMoneyInput } from "@/lib/money";
 import { SensitiveAmount } from "@/components/app/sensitive-amount";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +53,18 @@ type BudgetItem = {
   spentAmount: number;
   usagePercent: number;
   category: CategoryOption;
+};
+
+type BudgetSuggestion = {
+  categoryId: string;
+  category: CategoryOption;
+  currency: "ARS" | "USD";
+  suggestedAmount: number;
+  recentAverage: number;
+  recurringAmount: number;
+  incomeSharePercent: number | null;
+  confidence: "high" | "medium" | "starter";
+  reason: string;
 };
 
 type BudgetsClientProps = {
@@ -107,7 +119,13 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
   const [deletingBudgetId, setDeletingBudgetId] = useState<string | null>(null);
   const [pendingDeleteBudget, setPendingDeleteBudget] = useState<BudgetItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isApplyingSuggestions, setIsApplyingSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<BudgetSuggestion[]>([]);
+  const [suggestionDrafts, setSuggestionDrafts] = useState<Record<string, string>>({});
+  const [selectedSuggestionIds, setSelectedSuggestionIds] = useState<string[]>([]);
+  const [recentMonthlyIncome, setRecentMonthlyIncome] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
 
   const availableCategories = useMemo(() => {
@@ -121,6 +139,52 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
   }, [budgets, categories, editingBudgetId]);
   const canCreateBudget = editingBudgetId !== null || availableCategories.length > 0;
   const planSummary = useMemo(() => buildPlanSummary(budgets), [budgets]);
+  const selectedSuggestions = useMemo(
+    () => suggestions.filter((suggestion) => selectedSuggestionIds.includes(suggestion.categoryId)),
+    [selectedSuggestionIds, suggestions],
+  );
+
+  const loadSuggestions = useCallback(async () => {
+    setIsLoadingSuggestions(true);
+
+    try {
+      const params = new URLSearchParams({
+        householdId,
+        year: String(currentYear),
+        month: String(currentMonth),
+      });
+      const response = await fetch(`/api/budgets/suggestions?${params.toString()}`);
+      const payload = (await response.json()) as {
+        data?: {
+          recentMonthlyIncome: number;
+          suggestions: BudgetSuggestion[];
+        };
+        error?: string;
+      };
+
+      if (!response.ok) {
+        toast.error(payload.error ?? "No pudimos preparar una distribución inicial.");
+        return;
+      }
+
+      const nextSuggestions = payload.data?.suggestions ?? [];
+      setSuggestions(nextSuggestions);
+      setRecentMonthlyIncome(payload.data?.recentMonthlyIncome ?? 0);
+      setSuggestionDrafts(
+        Object.fromEntries(
+          nextSuggestions.map((suggestion) => [
+            suggestion.categoryId,
+            String(suggestion.suggestedAmount),
+          ]),
+        ),
+      );
+      setSelectedSuggestionIds(nextSuggestions.map((suggestion) => suggestion.categoryId));
+    } catch {
+      toast.error("No pudimos preparar sugerencias. Podés crear el plan manualmente.");
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  }, [currentMonth, currentYear, householdId]);
 
   const loadBudgets = useCallback(async () => {
     setIsLoading(true);
@@ -141,12 +205,13 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
       }
 
       setBudgets(payload.data ?? []);
+      await loadSuggestions();
     } catch {
       toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
       setIsLoading(false);
     }
-  }, [currentMonth, currentYear, householdId]);
+  }, [currentMonth, currentYear, householdId, loadSuggestions]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -214,6 +279,72 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function applySuggestedBudgets() {
+    setMessage(null);
+
+    if (selectedSuggestions.length === 0) {
+      setMessage("Elegí al menos una categoría sugerida para crear el plan.");
+      return;
+    }
+
+    const invalidSuggestion = selectedSuggestions.find((suggestion) => {
+      const parsed = parseMoneyInput(suggestionDrafts[suggestion.categoryId] ?? "");
+      return !parsed.success || parsed.data == null || parsed.data <= 0;
+    });
+
+    if (invalidSuggestion) {
+      setMessage(`Revisá el monto de ${invalidSuggestion.category.name}.`);
+      return;
+    }
+
+    setIsApplyingSuggestions(true);
+
+    try {
+      for (const suggestion of selectedSuggestions) {
+        const parsed = parseMoneyInput(suggestionDrafts[suggestion.categoryId] ?? "");
+        if (!parsed.success || parsed.data == null) continue;
+
+        const response = await fetch("/api/budgets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            householdId,
+            categoryId: suggestion.categoryId,
+            currency: suggestion.currency,
+            year: currentYear,
+            month: currentMonth,
+            plannedAmount: parsed.data,
+          }),
+        });
+        const payload = (await response.json()) as { error?: string };
+
+        if (!response.ok) {
+          setMessage(payload.error ?? `No se pudo crear el plan de ${suggestion.category.name}.`);
+          return;
+        }
+      }
+
+      toast.success("Distribución inicial creada.");
+      await loadBudgets();
+    } catch {
+      setMessage("Error de red. No pudimos crear la distribución inicial.");
+    } finally {
+      setIsApplyingSuggestions(false);
+    }
+  }
+
+  function updateSuggestionDraft(categoryId: string, value: string) {
+    setSuggestionDrafts((current) => ({ ...current, [categoryId]: value }));
+  }
+
+  function toggleSuggestion(categoryId: string) {
+    setSelectedSuggestionIds((current) =>
+      current.includes(categoryId)
+        ? current.filter((id) => id !== categoryId)
+        : [...current, categoryId],
+    );
   }
 
   function requestDelete(budget: BudgetItem) {
@@ -297,11 +428,13 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
             <PremiumCardHeader>
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <PremiumCardTitle>{editingBudgetId ? "Ajustar intención" : "Nueva intención"}</PremiumCardTitle>
-                  <PremiumCardDescription>{formatMonth(currentYear, currentMonth)}</PremiumCardDescription>
+                  <PremiumCardTitle>{editingBudgetId ? "Ajustar intención" : "Plan preparado"}</PremiumCardTitle>
+                  <PremiumCardDescription>
+                    {editingBudgetId ? formatMonth(currentYear, currentMonth) : "Una base editable para este mes"}
+                  </PremiumCardDescription>
                 </div>
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white shadow-[0_18px_45px_rgba(0,0,0,0.22)]">
-                  <Plus className="h-5 w-5" aria-hidden="true" />
+                  <Sparkles className="h-5 w-5" aria-hidden="true" />
                 </div>
               </div>
             </PremiumCardHeader>
@@ -322,77 +455,98 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
                   </ActionButton>
                 </div>
               ) : (
-                <form className="space-y-4" onSubmit={handleSubmit}>
-                  {!editingBudgetId && availableCategories.length === 0 ? (
-                    <div className="rounded-3xl border border-emerald-300/20 bg-emerald-300/10 p-4">
-                      <p className="text-sm font-semibold text-white">Todas las categorías ya tienen plan</p>
-                      <p className="mt-1 text-xs leading-5 text-zinc-400">
-                        Editá una intención existente o liberá una categoría.
-                      </p>
-                    </div>
+                <div className="space-y-5">
+                  {!editingBudgetId ? (
+                    <SuggestedPlanPanel
+                      suggestions={suggestions}
+                      drafts={suggestionDrafts}
+                      selectedIds={selectedSuggestionIds}
+                      recentMonthlyIncome={recentMonthlyIncome}
+                      isLoading={isLoadingSuggestions}
+                      isApplying={isApplyingSuggestions}
+                      onAmountChange={updateSuggestionDraft}
+                      onToggle={toggleSuggestion}
+                      onApply={applySuggestedBudgets}
+                    />
                   ) : null}
 
-                  <Field label="Categoría" error={errors.categoryId}>
-                    <select
-                      className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]"
-                      value={selectedCategoryId}
-                      onChange={(event) => updateForm("categoryId", event.target.value)}
-                      disabled={!canCreateBudget}
-                    >
-                      {availableCategories.length === 0 ? <option value="">Sin categorías disponibles</option> : null}
-                      {availableCategories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-
-                  <div className="grid gap-3 sm:grid-cols-[104px_1fr]">
-                    <Field label="Moneda" error={errors.currency}>
-                      <select
-                        className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]"
-                        value={form.currency}
-                        onChange={(event) => updateForm("currency", event.target.value as "ARS" | "USD")}
-                      >
-                        <option value="ARS">ARS</option>
-                        <option value="USD">USD</option>
-                      </select>
-                    </Field>
-                    <Field label="Monto" error={errors.plannedAmount}>
-                      <Input
-                        inputMode="decimal"
-                        onKeyDown={onMoneyKeyDown}
-                        value={form.plannedAmount}
-                        onChange={(event) => updateForm("plannedAmount", event.target.value)}
-                        placeholder="0"
-                        className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-zinc-600"
-                      />
-                    </Field>
-                  </div>
-
-                  {message ? (
-                    <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">
-                      {message}
+                  <div className="border-t border-white/[0.08] pt-5">
+                    <p className="mb-4 text-xs font-semibold uppercase text-zinc-500">
+                      {editingBudgetId ? "Editar categoría" : "Ajuste manual"}
                     </p>
-                  ) : null}
+                    <form className="space-y-4" onSubmit={handleSubmit}>
+                      {!editingBudgetId && availableCategories.length === 0 ? (
+                        <div className="rounded-3xl border border-emerald-300/20 bg-emerald-300/10 p-4">
+                          <p className="text-sm font-semibold text-white">Todas las categorías ya tienen plan</p>
+                          <p className="mt-1 text-xs leading-5 text-zinc-400">
+                            Editá una intención existente o liberá una categoría.
+                          </p>
+                        </div>
+                      ) : null}
 
-                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-                    <ActionButton
-                      className="w-full"
-                      disabled={isSaving || (!editingBudgetId && availableCategories.length === 0)}
-                    >
-                      {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-                      {editingBudgetId ? "Guardar cambios" : "Crear plan"}
-                    </ActionButton>
-                    {editingBudgetId ? (
-                      <ActionButton type="button" variant="glass" className="w-full" onClick={resetForm}>
-                        <X className="h-4 w-4" aria-hidden="true" />
-                        Cancelar
-                      </ActionButton>
-                    ) : null}
+                      <Field label="Categoría" error={errors.categoryId}>
+                        <select
+                          className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                          value={selectedCategoryId}
+                          onChange={(event) => updateForm("categoryId", event.target.value)}
+                          disabled={!canCreateBudget}
+                        >
+                          {availableCategories.length === 0 ? <option value="">Sin categorías disponibles</option> : null}
+                          {availableCategories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+
+                      <div className="grid gap-3 sm:grid-cols-[104px_1fr]">
+                        <Field label="Moneda" error={errors.currency}>
+                          <select
+                            className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                            value={form.currency}
+                            onChange={(event) => updateForm("currency", event.target.value as "ARS" | "USD")}
+                          >
+                            <option value="ARS">ARS</option>
+                            <option value="USD">USD</option>
+                          </select>
+                        </Field>
+                        <Field label="Monto" error={errors.plannedAmount}>
+                          <Input
+                            inputMode="decimal"
+                            onKeyDown={onMoneyKeyDown}
+                            value={form.plannedAmount}
+                            onChange={(event) => updateForm("plannedAmount", event.target.value)}
+                            placeholder="0"
+                            className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-zinc-600"
+                          />
+                        </Field>
+                      </div>
+
+                      {message ? (
+                        <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">
+                          {message}
+                        </p>
+                      ) : null}
+
+                      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+                        <ActionButton
+                          className="w-full"
+                          disabled={isSaving || (!editingBudgetId && availableCategories.length === 0)}
+                        >
+                          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+                          {editingBudgetId ? "Guardar cambios" : "Crear ajuste"}
+                        </ActionButton>
+                        {editingBudgetId ? (
+                          <ActionButton type="button" variant="glass" className="w-full" onClick={resetForm}>
+                            <X className="h-4 w-4" aria-hidden="true" />
+                            Cancelar
+                          </ActionButton>
+                        ) : null}
+                      </div>
+                    </form>
                   </div>
-                </form>
+                </div>
               )}
             </PremiumCardContent>
           </PremiumCard>
@@ -518,6 +672,149 @@ function PlanBriefing({
         </PremiumCardContent>
       </PremiumCard>
     </motion.div>
+  );
+}
+
+function SuggestedPlanPanel({
+  suggestions,
+  drafts,
+  selectedIds,
+  recentMonthlyIncome,
+  isLoading,
+  isApplying,
+  onAmountChange,
+  onToggle,
+  onApply,
+}: {
+  suggestions: BudgetSuggestion[];
+  drafts: Record<string, string>;
+  selectedIds: string[];
+  recentMonthlyIncome: number;
+  isLoading: boolean;
+  isApplying: boolean;
+  onAmountChange: (categoryId: string, value: string) => void;
+  onToggle: (categoryId: string) => void;
+  onApply: () => void;
+}) {
+  const selectedTotal = suggestions.reduce((sum, suggestion) => {
+    if (!selectedIds.includes(suggestion.categoryId)) return sum;
+    const parsed = parseMoneyInput(drafts[suggestion.categoryId] ?? "");
+    return sum + (parsed.success && parsed.data ? parsed.data : 0);
+  }, 0);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-5 w-48 rounded-full bg-white/10" />
+        <Skeleton className="h-16 rounded-3xl bg-white/10" />
+        <Skeleton className="h-16 rounded-3xl bg-white/10" />
+      </div>
+    );
+  }
+
+  if (suggestions.length === 0) {
+    return (
+      <div className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
+        <p className="text-sm font-semibold text-white">El mes ya tiene una base clara</p>
+        <p className="mt-1 text-xs leading-5 text-zinc-400">
+          No quedan categorías libres para sugerir. Podés ajustar cualquier intención activa cuando lo necesites.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-3xl border border-teal-300/20 bg-teal-300/10 p-4">
+        <div className="flex items-start gap-3">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-teal-100" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-semibold text-white">Meridian preparó una distribución inicial</p>
+            <p className="mt-1 text-xs leading-5 text-zinc-300">
+              Basada en cómo suele moverse tu dinero. Ajustá, quitá o confirmá lo que tenga sentido.
+            </p>
+            {recentMonthlyIncome > 0 ? (
+              <p className="mt-2 text-xs text-teal-100/80">
+                Ingreso mensual reciente: <SensitiveAmount value={formatMoney(recentMonthlyIncome, "ARS")} />
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {suggestions.map((suggestion) => {
+          const selected = selectedIds.includes(suggestion.categoryId);
+
+          return (
+            <div
+              key={suggestion.categoryId}
+              className={`rounded-3xl border p-3 transition ${
+                selected ? "border-white/[0.14] bg-white/[0.055]" : "border-white/[0.06] bg-white/[0.025] opacity-70"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <button
+                  type="button"
+                  aria-pressed={selected}
+                  aria-label={selected ? `Quitar ${suggestion.category.name}` : `Incluir ${suggestion.category.name}`}
+                  className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${
+                    selected ? "border-emerald-300/50 bg-emerald-300/20 text-emerald-100" : "border-white/15 bg-white/[0.03] text-transparent"
+                  }`}
+                  onClick={() => onToggle(suggestion.categoryId)}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-white">{suggestion.category.name}</p>
+                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-500">{suggestion.reason}</p>
+                    </div>
+                    <Badge className={getSuggestionBadgeClass(suggestion.confidence)}>
+                      {getSuggestionLabel(suggestion.confidence)}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center xl:grid-cols-1 2xl:grid-cols-[1fr_auto]">
+                    <Input
+                      inputMode="decimal"
+                      onKeyDown={onMoneyKeyDown}
+                      value={drafts[suggestion.categoryId] ?? ""}
+                      onChange={(event) => onAmountChange(suggestion.categoryId, event.target.value)}
+                      disabled={!selected}
+                      className="v2-focus-ring h-10 rounded-2xl border-white/10 bg-zinc-950/50 text-white placeholder:text-zinc-600 disabled:opacity-50"
+                    />
+                    <p className="text-xs text-zinc-500">
+                      {suggestion.incomeSharePercent != null ? `${suggestion.incomeSharePercent}% del ingreso` : "Editable"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="rounded-3xl border border-white/[0.08] bg-black/15 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase text-zinc-500">Total sugerido</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums text-white">
+              <SensitiveAmount value={formatMoney(selectedTotal, "ARS")} />
+            </p>
+          </div>
+          <ActionButton
+            type="button"
+            size="sm"
+            disabled={isApplying || selectedIds.length === 0}
+            onClick={onApply}
+          >
+            {isApplying ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+            Confirmar
+          </ActionButton>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -702,9 +999,9 @@ function PlanEmptyState() {
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-zinc-300">
         <BarChart3 className="h-5 w-5" aria-hidden="true" />
       </div>
-      <h3 className="mt-4 text-base font-semibold text-white">Todavía no hay plan para este mes</h3>
+      <h3 className="mt-4 text-base font-semibold text-white">Tu distribución inicial está lista para ajustar</h3>
       <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-zinc-400">
-        Empezá por una categoría importante. La app va a comparar tu intención contra el ritmo real.
+        Confirmá las sugerencias o ajustá una categoría puntual. No hace falta armar el mes desde cero.
       </p>
     </div>
   );
@@ -848,6 +1145,18 @@ function getBudgetAlert(usagePercent: number) {
     label: "En ritmo",
     className: "border-emerald-300/20 bg-emerald-300/10 text-emerald-100",
   };
+}
+
+function getSuggestionLabel(confidence: BudgetSuggestion["confidence"]) {
+  if (confidence === "high") return "Fuerte";
+  if (confidence === "medium") return "Reciente";
+  return "Base";
+}
+
+function getSuggestionBadgeClass(confidence: BudgetSuggestion["confidence"]) {
+  if (confidence === "high") return "border-emerald-300/20 bg-emerald-300/10 text-emerald-100";
+  if (confidence === "medium") return "border-sky-300/20 bg-sky-300/10 text-sky-100";
+  return "border-white/10 bg-white/[0.06] text-zinc-200";
 }
 
 function getProgressClass(usagePercent: number) {

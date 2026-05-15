@@ -96,6 +96,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
   const [accounts, setAccounts] = useState<AccountItem[]>([]);
   const [assets, setAssets] = useState(0);
   const [liabilities, setLiabilities] = useState(0);
+  const [debtLiabilities, setDebtLiabilities] = useState(0);
   const [netWorth, setNetWorth] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -118,7 +119,13 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
       const params = new URLSearchParams({ householdId, includeArchived: String(showArchived) });
       const response = await fetch(`/api/accounts?${params}`);
       const payload = (await response.json()) as {
-        data?: { accounts: AccountItem[]; assets: number; liabilities: number; netWorth: number };
+        data?: {
+          accounts: AccountItem[];
+          assets: number;
+          liabilities: number;
+          debtLiabilities: number;
+          netWorth: number;
+        };
         error?: string;
       };
 
@@ -131,6 +138,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
         setAccounts(payload.data.accounts);
         setAssets(payload.data.assets);
         setLiabilities(payload.data.liabilities);
+        setDebtLiabilities(payload.data.debtLiabilities);
         setNetWorth(payload.data.netWorth);
       }
     } catch {
@@ -368,9 +376,14 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
 
       <div className="space-y-5">
         <div className="grid gap-3 sm:grid-cols-3">
-          <SummaryCard label="Activos" value={formatMoney(assets, "ARS")} tone="positive" />
-          <SummaryCard label="Pasivos" value={formatMoney(liabilities, "ARS")} tone="danger" />
-          <SummaryCard label="Patrimonio neto" value={formatMoney(netWorth, "ARS")} tone={netWorth >= 0 ? "default" : "warning"} highlight />
+          <SummaryCard label="Disponible real" value={formatMoney(assets, "ARS")} tone="positive" description="Balances positivos actuales" />
+          <SummaryCard
+            label="Deuda pendiente"
+            value={formatMoney(liabilities, "ARS")}
+            tone="danger"
+            description={debtLiabilities > 0 ? "Deudas abiertas y saldos negativos" : "Saldos negativos actuales"}
+          />
+          <SummaryCard label="Patrimonio neto" value={formatMoney(netWorth, "ARS")} tone={netWorth >= 0 ? "default" : "warning"} description="Disponible menos deuda pendiente" highlight />
         </div>
 
         <PremiumCard>
@@ -529,11 +542,13 @@ function SummaryCard({
   label,
   value,
   tone,
+  description,
   highlight,
 }: {
   label: string;
   value: string;
   tone: "default" | "positive" | "warning" | "danger";
+  description: string;
   highlight?: boolean;
 }) {
   const toneClass = {
@@ -549,6 +564,7 @@ function SummaryCard({
       <p className={`mt-2 text-xl font-bold tabular-nums ${highlight ? "text-foreground" : toneClass}`}>
         <SensitiveAmount value={value} />
       </p>
+      <p className="mt-1 text-[11px] leading-4 text-zinc-500">{description}</p>
     </div>
   );
 }

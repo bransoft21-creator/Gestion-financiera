@@ -119,7 +119,7 @@ const formSchema = z.object({
   status: z.enum(debtStatuses as [DebtStatus, ...DebtStatus[]]),
   currency: z.enum(["ARS", "USD"]),
   originalAmount: moneySchema(),
-  outstandingAmount: moneySchema(),
+  outstandingAmount: moneySchema({ allowZero: true }),
   minimumPayment: optionalMoneySchema(),
   interestRate: z.coerce.number().nonnegative().max(999).optional(),
   nextDueDate: z.string().optional(),
@@ -532,8 +532,8 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
             <PremiumCardHeader className="pb-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <PremiumCardTitle>Compromisos activos</PremiumCardTitle>
-                  <PremiumCardDescription>Saldo pendiente, vencimientos y próximos pagos.</PremiumCardDescription>
+                  <PremiumCardTitle>Compromisos pendientes</PremiumCardTitle>
+                  <PremiumCardDescription>Solo deuda real con saldo abierto hoy.</PremiumCardDescription>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <select
@@ -541,7 +541,7 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                   >
-                    <option value="">Todos</option>
+                    <option value="">Pendientes hoy</option>
                     {debtStatuses.map((status) => <option key={status} value={status}>{debtStatusLabels[status]}</option>)}
                   </select>
                   <ActionButton type="button" size="sm" className="hidden xl:inline-flex" onClick={openNewDebt}>

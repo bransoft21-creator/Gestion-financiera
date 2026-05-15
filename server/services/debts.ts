@@ -5,6 +5,10 @@ import type { CreateDebtInput, ListDebtsInput, UpdateDebtInput } from "../schema
 import { assertHouseholdAccess } from "./households";
 
 type DebtRecord = Prisma.DebtGetPayload<Record<string, never>>;
+type NormalizedDebtState = {
+  status?: DebtStatus;
+  outstandingAmount?: number;
+};
 
 function serializeDebt(debt: DebtRecord) {
   const original = Number(debt.originalAmount);
@@ -40,13 +44,18 @@ export async function listDebts(userProfileId: string, input: ListDebtsInput) {
     where: {
       householdId: input.householdId,
       deletedAt: null,
-      ...(input.status ? { status: input.status } : {}),
+      ...(input.status
+        ? { status: input.status }
+        : {
+            status: { in: [DebtStatus.ACTIVE, DebtStatus.PAUSED, DebtStatus.DEFAULTED] },
+            outstandingAmount: { gt: 0 },
+          }),
     },
     orderBy: [{ status: "asc" }, { nextDueDate: "asc" }, { name: "asc" }],
   });
 
   const totalOutstanding = debts
-    .filter((d) => d.status === DebtStatus.ACTIVE)
+    .filter((d) => isCurrentLiability(d.status, Number(d.outstandingAmount)))
     .reduce((sum, d) => sum + Number(d.outstandingAmount), 0);
 
   return { debts: debts.map(serializeDebt), totalOutstanding };
@@ -54,6 +63,7 @@ export async function listDebts(userProfileId: string, input: ListDebtsInput) {
 
 export async function createDebt(userProfileId: string, input: CreateDebtInput) {
   await assertHouseholdAccess(userProfileId, input.householdId);
+  const debtState = normalizeDebtState(undefined, input.outstandingAmount);
 
   const debt = await prisma.debt.create({
     data: {
@@ -64,7 +74,8 @@ export async function createDebt(userProfileId: string, input: CreateDebtInput) 
       type: input.type,
       currency: input.currency,
       originalAmount: input.originalAmount,
-      outstandingAmount: input.outstandingAmount,
+      outstandingAmount: debtState.outstandingAmount ?? input.outstandingAmount,
+      status: debtState.status ?? DebtStatus.ACTIVE,
       minimumPayment: input.minimumPayment,
       interestRate: input.interestRate,
       nextDueDate: input.nextDueDate,
@@ -82,6 +93,10 @@ export async function updateDebt(
   input: UpdateDebtInput,
 ) {
   await assertDebtAccess(userProfileId, debtId, input.householdId);
+  const debtState: NormalizedDebtState =
+    input.outstandingAmount !== undefined || input.status !== undefined
+      ? normalizeDebtState(input.status, input.outstandingAmount)
+      : {};
 
   const debt = await prisma.debt.update({
     where: { id: debtId },
@@ -89,10 +104,12 @@ export async function updateDebt(
       name: input.name,
       lender: input.lender,
       type: input.type,
-      status: input.status,
+      ...(debtState.status !== undefined ? { status: debtState.status } : {}),
       currency: input.currency,
       originalAmount: input.originalAmount,
-      outstandingAmount: input.outstandingAmount,
+      ...(debtState.outstandingAmount !== undefined
+        ? { outstandingAmount: debtState.outstandingAmount }
+        : {}),
       minimumPayment: input.minimumPayment,
       interestRate: input.interestRate,
       nextDueDate: input.nextDueDate,
@@ -115,6 +132,45 @@ export async function deleteDebt(
     where: { id: debtId },
     data: { deletedAt: new Date() },
   });
+}
+
+function normalizeDebtState(
+  status: DebtStatus | undefined,
+  outstandingAmount: Prisma.Decimal | number | undefined,
+): NormalizedDebtState {
+  if (outstandingAmount === undefined) {
+    return { status };
+  }
+
+  const amount = Math.max(Number(outstandingAmount), 0);
+
+  if (amount === 0) {
+    return {
+      outstandingAmount: 0,
+      status: DebtStatus.PAID,
+    };
+  }
+
+  if (status === DebtStatus.PAID || status === DebtStatus.CANCELED) {
+    return {
+      outstandingAmount: amount,
+      status: DebtStatus.ACTIVE,
+    };
+  }
+
+  return {
+    outstandingAmount: amount,
+    status,
+  };
+}
+
+function isCurrentLiability(status: DebtStatus, outstandingAmount: number) {
+  const currentStatuses = [DebtStatus.ACTIVE, DebtStatus.PAUSED, DebtStatus.DEFAULTED];
+
+  return (
+    outstandingAmount > 0 &&
+    currentStatuses.some((currentStatus) => currentStatus === status)
+  );
 }
 
 async function assertDebtAccess(

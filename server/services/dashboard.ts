@@ -77,7 +77,12 @@ export async function getDashboardSummary(
     }),
     prisma.debt.aggregate({
       _sum: { outstandingAmount: true },
-      where: { householdId, status: DebtStatus.ACTIVE, deletedAt: null },
+      where: {
+        householdId,
+        status: { in: [DebtStatus.ACTIVE, DebtStatus.PAUSED, DebtStatus.DEFAULTED] },
+        outstandingAmount: { gt: 0 },
+        deletedAt: null,
+      },
     }),
     prisma.recurringExpense.findMany({
       where: {
@@ -101,7 +106,8 @@ export async function getDashboardSummary(
     prisma.debt.findMany({
       where: {
         householdId,
-        status: DebtStatus.ACTIVE,
+        status: { in: [DebtStatus.ACTIVE, DebtStatus.DEFAULTED] },
+        outstandingAmount: { gt: 0 },
         deletedAt: null,
         nextDueDate: { gte: monthStart, lt: nextMonthStart },
       },

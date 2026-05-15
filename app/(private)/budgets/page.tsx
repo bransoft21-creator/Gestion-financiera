@@ -10,8 +10,8 @@ export default async function BudgetsPage() {
   return (
     <V2PageShell
       eyebrow="Plan del mes"
-      title="Protegé tu dinero antes de gastarlo"
-      description="Asigná intención a cada categoría y seguí el ritmo real del mes sin convertirlo en una planilla."
+      title="Meridian preparó una base para tu mes"
+      description="Una distribución editable basada en ingresos recientes, hábitos y compromisos recurrentes."
     >
       <BudgetsClient householdId={workspace.household.id} categories={workspace.categories} />
     </V2PageShell>

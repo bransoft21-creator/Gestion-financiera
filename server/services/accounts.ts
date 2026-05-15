@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { DebtStatus, Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { NotFoundError } from "../api/errors";
 import type { CreateAccountInput, ListAccountsInput, UpdateAccountInput } from "../schemas/accounts";
@@ -26,24 +26,42 @@ function serializeAccount(account: AccountRecord) {
 export async function listAccounts(userProfileId: string, input: ListAccountsInput) {
   await assertHouseholdAccess(userProfileId, input.householdId);
 
-  const accounts = await prisma.account.findMany({
-    where: {
-      householdId: input.householdId,
-      deletedAt: null,
-      ...(input.includeArchived ? {} : { isArchived: false }),
-    },
-    orderBy: [{ isArchived: "asc" }, { type: "asc" }, { name: "asc" }],
-  });
+  const [accounts, debtAggregate] = await Promise.all([
+    prisma.account.findMany({
+      where: {
+        householdId: input.householdId,
+        deletedAt: null,
+        ...(input.includeArchived ? {} : { isArchived: false }),
+      },
+      orderBy: [{ isArchived: "asc" }, { type: "asc" }, { name: "asc" }],
+    }),
+    prisma.debt.aggregate({
+      _sum: { outstandingAmount: true },
+      where: {
+        householdId: input.householdId,
+        status: { in: [DebtStatus.ACTIVE, DebtStatus.PAUSED, DebtStatus.DEFAULTED] },
+        outstandingAmount: { gt: 0 },
+        deletedAt: null,
+      },
+    }),
+  ]);
 
   const allAccounts = input.includeArchived
     ? accounts
     : await prisma.account.findMany({
         where: { householdId: input.householdId, deletedAt: null },
       });
+  const accountSummary = computeAccountSummary(allAccounts);
+  const debtLiabilities = toFiniteNumber(debtAggregate._sum.outstandingAmount ?? 0);
+  const liabilities = accountSummary.liabilities + debtLiabilities;
 
   return {
     accounts: accounts.map(serializeAccount),
-    ...computeAccountSummary(allAccounts),
+    ...accountSummary,
+    accountLiabilities: accountSummary.liabilities,
+    debtLiabilities,
+    liabilities,
+    netWorth: accountSummary.assets - liabilities,
   };
 }
 

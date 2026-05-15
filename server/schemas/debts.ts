@@ -18,7 +18,7 @@ export const createDebtSchema = z.object({
   type: z.enum(debtTypeValues),
   currency: z.enum(currencyValues).default(CurrencyCode.ARS),
   originalAmount: moneySchema(),
-  outstandingAmount: moneySchema(),
+  outstandingAmount: moneySchema({ allowZero: true }),
   minimumPayment: moneySchema().optional(),
   interestRate: z.coerce.number().finite().nonnegative().max(999).optional(),
   nextDueDate: z.coerce.date().optional(),

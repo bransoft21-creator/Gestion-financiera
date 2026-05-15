@@ -9,9 +9,9 @@ export default async function AccountsPage() {
 
   return (
     <V2PageShell
-      eyebrow="Dónde vive tu dinero"
-      title="Tus cuentas, ordenadas por claridad"
-      description="Bancos, efectivo, tarjetas y billeteras como lugares financieros, no como registros administrativos."
+      eyebrow="Dinero actual"
+      title="Lo que tenés, lo que debés y lo que queda"
+      description="Balances reales, deuda pendiente y patrimonio neto en una lectura simple del presente."
     >
       <AccountsClient householdId={household.id} />
     </V2PageShell>
