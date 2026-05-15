@@ -6,21 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
-  ArrowDownCircle,
-  ArrowRightLeft,
-  ArrowUpCircle,
-  CalendarDays,
-  ChevronDown,
-  ChevronRight,
-  Download,
-  Filter,
-  Home,
   Loader2,
   Plus,
-  ReceiptText,
-  Search,
-  ShieldAlert,
-  Trash2,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -36,156 +23,51 @@ import { formatArgentinaDateInput } from "@/lib/dates";
 import { onIntegerKeyDown, onMoneyKeyDown } from "@/lib/input-utils";
 import { moneySchema } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ActionButton } from "@/components/ui-v2/action-button";
-import { PremiumCard, PremiumCardContent, PremiumCardDescription, PremiumCardHeader, PremiumCardTitle } from "@/components/ui-v2/premium-card";
-
-type TransactionType =
-  | "INCOME"
-  | "EXPENSE"
-  | "TRANSFER"
-  | "ADJUSTMENT"
-  | "DEBT_PAYMENT"
-  | "GOAL_CONTRIBUTION"
-  | "INVESTMENT";
-
-type CategoryType = "INCOME" | "EXPENSE" | "TRANSFER" | "DEBT" | "GOAL" | "INVESTMENT" | "ADJUSTMENT";
-type CurrencyCode = "ARS" | "USD";
-
-type AccountOption = {
-  id: string;
-  name: string;
-  type: string;
-  currency: CurrencyCode;
-};
-
-type CategoryOption = {
-  id: string;
-  name: string;
-  type: CategoryType;
-};
-
-type TransactionStatus = "PENDING" | "CONFIRMED" | "CANCELED";
-type ExpenseType = "FIXED" | "VARIABLE" | "EXTRAORDINARY";
-type TransactionOrigin = "MANUAL" | "CARD_SUMMARY" | "BANK" | "MERCADO_PAGO";
-type PaymentMethod = "CASH" | "DEBIT" | "CREDIT" | "TRANSFER";
-
-type TransactionItem = {
-  id: string;
-  type: TransactionType;
-  status: TransactionStatus;
-  currency: CurrencyCode;
-  amount: string;
-  description: string | null;
-  notes: string | null;
-  expenseType: ExpenseType | null;
-  origin: TransactionOrigin;
-  paymentMethod: PaymentMethod | null;
-  isInstallment: boolean;
-  installmentNumber: number | null;
-  totalInstallments: number | null;
-  isRecurring: boolean;
-  occurredAt: string;
-  account: {
-    id: string;
-    name: string;
-  };
-  transferAccount: {
-    id: string;
-    name: string;
-  } | null;
-  category: {
-    id: string;
-    name: string;
-  } | null;
-  sharedTransaction: {
-    id: string;
-    householdId: string;
-    household: {
-      id: string;
-      name: string;
-      avatar: string | null;
-    };
-  } | null;
-};
-
-type TransactionsClientProps = {
-  householdId: string;
-  accounts: AccountOption[];
-  categories: CategoryOption[];
-  sharedHouseholds: Array<{
-    id: string;
-    name: string;
-    avatar: string | null;
-    members: Array<{
-      userProfileId: string;
-      userProfile: {
-        fullName: string | null;
-        email: string;
-      };
-    }>;
-  }>;
-};
-
-type Filters = {
-  type: string;
-  categoryId: string;
-  from: string;
-  to: string;
-};
-
-const transactionTypeLabels: Record<TransactionType, string> = {
-  INCOME: "Ingreso",
-  EXPENSE: "Gasto",
-  TRANSFER: "Transferencia",
-  ADJUSTMENT: "Ajuste",
-  DEBT_PAYMENT: "Pago de deuda",
-  GOAL_CONTRIBUTION: "Aporte a meta",
-  INVESTMENT: "Inversión",
-};
-
-const transactionTypes = Object.keys(transactionTypeLabels) as TransactionType[];
-const supportedFormTransactionTypes = ["INCOME", "EXPENSE", "TRANSFER", "ADJUSTMENT"] as const;
-const transactionIcons = {
-  INCOME: ArrowUpCircle,
-  EXPENSE: ArrowDownCircle,
-  TRANSFER: ArrowRightLeft,
-  ADJUSTMENT: ArrowDownCircle,
-  DEBT_PAYMENT: ArrowDownCircle,
-  GOAL_CONTRIBUTION: ArrowDownCircle,
-  INVESTMENT: ArrowDownCircle,
-} satisfies Record<TransactionType, typeof ArrowDownCircle>;
-
-const expenseTypeLabels: Record<ExpenseType, string> = {
-  FIXED: "Fijo",
-  VARIABLE: "Variable",
-  EXTRAORDINARY: "Extraordinario",
-};
-
-const paymentMethodLabels: Record<PaymentMethod, string> = {
-  CASH: "Efectivo",
-  DEBIT: "Débito",
-  CREDIT: "Crédito",
-  TRANSFER: "Transferencia",
-};
-
-const transactionOriginLabels: Record<TransactionOrigin, string> = {
-  MANUAL: "Manual",
-  CARD_SUMMARY: "Resumen tarjeta",
-  BANK: "Banco",
-  MERCADO_PAGO: "Mercado Pago",
-};
+import {
+  expenseTypeLabels,
+  paymentMethodLabels,
+  supportedFormTransactionTypes,
+  transactionSelectClass,
+  transactionTypeLabels,
+  transactionTypes,
+} from "./constants";
+import { DeleteTransactionDialog } from "./delete-transaction-dialog";
+import { Field } from "./field";
+import { SplitEditor } from "./split-editor";
+import { TransactionFilters } from "./transaction-filters";
+import { TransactionList } from "./transaction-list";
+import type {
+  AccountOption,
+  CategoryOption,
+  CurrencyCode,
+  ExpenseType,
+  Filters,
+  PaymentMethod,
+  TransactionItem,
+  TransactionType,
+  TransactionsClientProps,
+} from "./types";
+import { useTransactionSplits } from "./use-transaction-splits";
+import {
+  buildFeedSummary,
+  formatDate,
+  formatMoney,
+  formatMoneyBalance,
+  getDisplayAmount,
+  getPreferredArsBankAccount,
+  getSignedAmount,
+  getTransactionTone,
+  groupTransactionsByDate,
+  isCategoryAllowedForType,
+  isSupportedFormTransactionType,
+  optionalPayloadValue,
+} from "./utils";
 
 const optionalEnumField = <T extends [string, ...string[]]>(values: T) =>
   z.preprocess((value) => value === "" ? undefined : value, z.enum(values).optional());
-const transactionSelectClass =
-  "v2-focus-ring h-11 w-full min-w-0 max-w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]";
-const compactSelectClass =
-  "v2-focus-ring h-9 w-full min-w-0 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-base md:text-xs text-white outline-none transition hover:bg-white/[0.07]";
 
 const formSchema = z.object({
   type: z.enum(transactionTypes as [TransactionType, ...TransactionType[]]),
@@ -271,6 +153,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
   const pendingCreateRequestIdRef = useRef<string | null>(null);
+  const loadRequestSeqRef = useRef(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
@@ -282,9 +165,6 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   ));
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
   const [message, setMessage] = useState<string | null>(null);
-  type SplitMode = "EQUAL" | "PERCENTAGE" | "CUSTOM_AMOUNT";
-  const [splitMode, setSplitMode] = useState<SplitMode>("EQUAL");
-  const [splitValues, setSplitValues] = useState<Record<string, string>>({});
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -297,15 +177,19 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
     () => sharedHouseholds.find((h) => h.id === watchedSharedHouseholdId),
     [sharedHouseholds, watchedSharedHouseholdId],
   );
-  const splitTotal = useMemo(
-    () => Object.values(splitValues).reduce((sum, v) => sum + (parseFloat(v) || 0), 0),
-    [splitValues],
-  );
-  const splitIsValid = useMemo(() => {
-    if (splitMode === "EQUAL") return true;
-    if (splitMode === "PERCENTAGE") return Math.abs(splitTotal - 100) <= 0.5;
-    return Math.abs(splitTotal - (parseFloat(watchedAmountStr) || 0)) <= 0.5;
-  }, [splitMode, splitTotal, watchedAmountStr]);
+  const {
+    splitMode,
+    splitValues,
+    splitTotal,
+    splitIsValid,
+    setSplitMode,
+    setSplitValues,
+    resetSplits,
+  } = useTransactionSplits({
+    selectedHousehold,
+    sharedHouseholdId: watchedSharedHouseholdId,
+    amount: watchedAmountStr,
+  });
 
   const groupedTransactions = useMemo(() => {
     return groupTransactionsByDate(transactions);
@@ -341,27 +225,13 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (!selectedHousehold?.members.length || !watchedSharedHouseholdId) return;
-    const members = selectedHousehold.members;
-    const values: Record<string, string> = {};
-    if (splitMode === "PERCENTAGE") {
-      const equalPct = (100 / members.length).toFixed(1);
-      members.forEach((m) => { values[m.userProfileId] = equalPct; });
-    } else if (splitMode === "CUSTOM_AMOUNT") {
-      members.forEach((m) => { values[m.userProfileId] = ""; });
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSplitValues(values);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchedSharedHouseholdId, splitMode]);
-
   async function loadTransactions(
     nextFilters = filters,
     nextSearch = search,
     options: { append?: boolean; cursor?: string | null } = {},
   ) {
     const { append = false, cursor = null } = options;
+    const requestSeq = ++loadRequestSeqRef.current;
 
     if (append) {
       setIsLoadingMore(true);
@@ -388,6 +258,8 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
         error?: string;
       };
 
+      if (loadRequestSeqRef.current !== requestSeq) return;
+
       if (!response.ok) {
         toast.error(payload.error ?? "No se pudieron cargar las transacciones.");
         return;
@@ -399,10 +271,13 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
         setNextCursor(payload.data.nextCursor);
       }
     } catch {
+      if (loadRequestSeqRef.current !== requestSeq) return;
       toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
     } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
+      if (loadRequestSeqRef.current === requestSeq) {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
     }
   }
 
@@ -579,8 +454,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
 
   function resetForm() {
     setEditingTransactionId(null);
-    setSplitMode("EQUAL");
-    setSplitValues({});
+    resetSplits();
     reset({
       type: "EXPENSE",
       accountId: defaultAccount?.id ?? "",
@@ -921,76 +795,16 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                           </select>
                         ) : null}
 
-                        <div>
-                          <p className="mb-2 text-xs font-semibold text-muted-foreground">¿Cómo se reparte?</p>
-                          <div className="grid grid-cols-3 gap-1.5">
-                            {(
-                              [
-                                { value: "EQUAL", label: "Igual" },
-                                { value: "PERCENTAGE", label: "Por %" },
-                                { value: "CUSTOM_AMOUNT", label: "Por monto" },
-                              ] as const
-                            ).map((option) => (
-                              <button
-                                key={option.value}
-                                type="button"
-                                onClick={() => setSplitMode(option.value)}
-                                className={`rounded-xl border px-2 py-2 text-xs font-semibold transition ${
-                                  splitMode === option.value
-                                    ? "border-teal-300/30 bg-teal-300/15 text-teal-100"
-                                    : "border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.07]"
-                                }`}
-                              >
-                                {option.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {splitMode === "EQUAL" && selectedHousehold ? (
-                          <p className="text-xs text-muted-foreground">
-                            {selectedHousehold.members.length} miembros · partes iguales.
-                          </p>
-                        ) : null}
-
-                        {splitMode !== "EQUAL" && selectedHousehold ? (
-                          <div className="space-y-2">
-                            {selectedHousehold.members.map((member) => (
-                              <div key={member.userProfileId} className="flex items-center gap-2">
-                                <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                                  {member.userProfile.fullName ?? member.userProfile.email}
-                                </span>
-                                <div className="relative">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max={splitMode === "PERCENTAGE" ? 100 : undefined}
-                                    step={splitMode === "PERCENTAGE" ? "0.1" : "1"}
-                                    inputMode="decimal"
-                                    value={splitValues[member.userProfileId] ?? ""}
-                                    onChange={(e) =>
-                                      setSplitValues((prev) => ({
-                                        ...prev,
-                                        [member.userProfileId]: e.target.value,
-                                      }))
-                                    }
-                                    className={`v2-focus-ring h-9 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-base md:text-sm text-white outline-none ${splitMode === "PERCENTAGE" ? "w-24 pr-7" : "w-32"}`}
-                                  />
-                                  {splitMode === "PERCENTAGE" ? (
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
-                                  ) : null}
-                                </div>
-                              </div>
-                            ))}
-                            <div
-                              className={`rounded-xl px-3 py-2 text-xs font-semibold ${splitIsValid ? "bg-emerald-300/10 text-emerald-100" : "bg-amber-300/10 text-amber-200"}`}
-                            >
-                              {splitMode === "PERCENTAGE"
-                                ? `${splitTotal.toFixed(1)}% de 100%${splitIsValid ? " ✓" : " — debe sumar 100%"}`
-                                : `${splitTotal.toLocaleString("es-AR")} de ${parseFloat(watchedAmountStr || "0").toLocaleString("es-AR")}${splitIsValid ? " ✓" : " — debe sumar el total"}`}
-                            </div>
-                          </div>
-                        ) : null}
+                        <SplitEditor
+                          selectedHousehold={selectedHousehold}
+                          splitMode={splitMode}
+                          splitValues={splitValues}
+                          splitTotal={splitTotal}
+                          splitIsValid={splitIsValid}
+                          amount={watchedAmountStr}
+                          onModeChange={setSplitMode}
+                          onValuesChange={setSplitValues}
+                        />
                       </div>
                     ) : null}
                   </div>
@@ -1026,253 +840,52 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
       </AppFormPanel>
 
       <div className="min-w-0 space-y-6">
-        <TransactionFeedBriefing summary={feedSummary} totalAmount={totalAmount} activeFilterCount={activeFilterCount} />
+        <TransactionFilters
+          search={search}
+          filters={filters}
+          categories={categories}
+          activeFilterCount={activeFilterCount}
+          isFiltersOpen={isFiltersOpen}
+          isLoading={isLoading}
+          onSearchChange={setSearch}
+          onFiltersChange={setFilters}
+          onToggleFilters={() => setIsFiltersOpen((current) => !current)}
+          onSubmit={handleFilterSubmit}
+          onClearFilters={() => {
+            const nextFilters = { type: "", categoryId: "", from: "", to: "" };
+            setFilters(nextFilters);
+            void loadTransactions(nextFilters, search, { append: false });
+          }}
+          onNew={() => {
+            resetForm();
+            setIsFormOpen(true);
+          }}
+        />
 
-        <PremiumCard>
-          <PremiumCardHeader className="p-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="relative min-w-0 flex-1">
-                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                <Input
-                  className="h-10 min-w-0 rounded-2xl border-white/10 bg-white/[0.045] pl-8 text-base md:text-xs"
-                  placeholder="Buscar movimiento..."
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
-              </div>
-              <ActionButton
-                type="button"
-                variant={activeFilterCount > 0 ? "glass" : "quiet"}
-                size="sm"
-                className="shrink-0"
-                onClick={() => setIsFiltersOpen((current) => !current)}
-                aria-expanded={isFiltersOpen}
-              >
-                <Filter className="h-3.5 w-3.5" aria-hidden="true" />
-                {activeFilterCount > 0 ? activeFilterCount : "Filtros"}
-                <ChevronDown className={`h-3.5 w-3.5 transition ${isFiltersOpen ? "rotate-180" : ""}`} aria-hidden="true" />
-              </ActionButton>
-              <ActionButton
-                type="button"
-                size="sm"
-                className="shrink-0"
-                onClick={() => {
-                  resetForm();
-                  setIsFormOpen(true);
-                }}
-              >
-                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                Nueva
-              </ActionButton>
-            </div>
-          </PremiumCardHeader>
-          {isFiltersOpen ? (
-            <PremiumCardContent className="px-3 pb-3 pt-0">
-              <form className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-5" onSubmit={handleFilterSubmit}>
-                <Field label="Tipo">
-                  <select
-                    className={compactSelectClass}
-                    value={filters.type}
-                    onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}
-                  >
-                    <option value="">Todos</option>
-                    {transactionTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {transactionTypeLabels[type]}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-
-                <Field label="Categoría">
-                  <select
-                    className={compactSelectClass}
-                    value={filters.categoryId}
-                    onChange={(event) => setFilters((current) => ({ ...current, categoryId: event.target.value }))}
-                  >
-                    <option value="">Todas</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-
-                <Field label="Desde">
-                  <Input
-                    className="h-9 text-base md:text-xs"
-                    type="date"
-                    value={filters.from}
-                    onChange={(event) => setFilters((current) => ({ ...current, from: event.target.value }))}
-                  />
-                </Field>
-                <Field label="Hasta">
-                  <Input
-                    className="h-9 text-base md:text-xs"
-                    type="date"
-                    value={filters.to}
-                    onChange={(event) => setFilters((current) => ({ ...current, to: event.target.value }))}
-                  />
-                </Field>
-                <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-1">
-                  <ActionButton size="sm" className="flex-1" disabled={isLoading}>
-                    {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
-                    Aplicar
-                  </ActionButton>
-                  {activeFilterCount > 0 ? (
-                    <ActionButton
-                      type="button"
-                      variant="quiet"
-                      size="sm"
-                      onClick={() => {
-                        const nextFilters = { type: "", categoryId: "", from: "", to: "" };
-                        setFilters(nextFilters);
-                        void loadTransactions(nextFilters, search, { append: false });
-                      }}
-                    >
-                      Limpiar
-                    </ActionButton>
-                  ) : null}
-                </div>
-              </form>
-            </PremiumCardContent>
-          ) : null}
-        </PremiumCard>
-
-        <PremiumCard data-tutorial="transactions-feed">
-          <PremiumCardHeader>
-            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <PremiumCardTitle>Feed de movimientos</PremiumCardTitle>
-                <PremiumCardDescription>
-                  {transactions.length} movimiento{transactions.length !== 1 ? "s" : ""} ·{" "}
-                  <span className={totalAmount >= 0 ? "text-emerald-400" : "text-rose-400"}>
-                    {totalAmount >= 0 ? "+" : ""}{formatMoneyBalance(totalAmount)}
-                  </span>
-                </PremiumCardDescription>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto"
-                onClick={() => void exportCsv()}
-                disabled={transactions.length === 0}
-              >
-                <Download className="h-4 w-4" aria-hidden="true" />
-                CSV
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  resetForm();
-                  setIsFormOpen(true);
-                }}
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Nueva
-              </Button>
-            </div>
-          </PremiumCardHeader>
-          <PremiumCardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="rounded-2xl border border-border p-4 space-y-3">
-                    <div className="flex gap-3">
-                      <Skeleton className="h-11 w-11 rounded-2xl shrink-0" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-4 w-40" />
-                        <Skeleton className="h-3 w-28" />
-                      </div>
-                      <Skeleton className="h-5 w-20 shrink-0" />
-                    </div>
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                ))}
-              </div>
-            ) : transactions.length === 0 ? (
-              <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-secondary/20 p-8 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-muted-foreground shadow-sm">
-                  <ReceiptText className="h-6 w-6" aria-hidden="true" />
-                </div>
-                <h2 className="mt-4 text-lg font-semibold">{search ? "Sin resultados" : "Sin transacciones"}</h2>
-                <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                  {search
-                    ? "Ningún movimiento coincide con la búsqueda."
-                    : "Creá el primer movimiento o ajustá los filtros para ver otros resultados."}
-                </p>
-                {!search ? (
-                  <Button
-                    type="button"
-                    className="mt-5 inline-flex"
-                    onClick={() => {
-                      resetForm();
-                      setIsFormOpen(true);
-                    }}
-                  >
-                    <Plus className="h-4 w-4" aria-hidden="true" />
-                    Agregar primera transacción
-                  </Button>
-                ) : null}
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 text-xs text-muted-foreground"
-                    onClick={collapseAllGroups}
-                  >
-                    Colapsar días
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 text-xs text-muted-foreground"
-                    onClick={expandAllGroups}
-                  >
-                    Ver todos
-                  </Button>
-                </div>
-                {groupedTransactions.map((group) => (
-                  <TransactionGroup
-                    key={group.label}
-                    group={group}
-                    isCollapsed={collapsedGroups.has(group.label)}
-                    deletingTransactionId={deletingTransactionId}
-                    onToggle={() => toggleGroup(group.label)}
-                    onEdit={startEditing}
-                    onDelete={handleDelete}
-                  />
-                ))}
-
-                {hasMore && (
-                  <div className="flex justify-center pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={isLoadingMore}
-                      onClick={() => loadTransactions(filters, search, { append: true, cursor: nextCursor })}
-                    >
-                      {isLoadingMore ? (
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                      ) : null}
-                      {isLoadingMore ? "Cargando..." : "Cargar más"}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-          </PremiumCardContent>
-        </PremiumCard>
+        <TransactionList
+          transactions={transactions}
+          isLoading={isLoading}
+          search={search}
+          totalAmount={totalAmount}
+          feedSummary={feedSummary}
+          activeFilterCount={activeFilterCount}
+          groupedTransactions={groupedTransactions}
+          collapsedGroups={collapsedGroups}
+          deletingTransactionId={deletingTransactionId}
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
+          onCollapseAll={collapseAllGroups}
+          onExpandAll={expandAllGroups}
+          onToggleGroup={toggleGroup}
+          onEdit={startEditing}
+          onDelete={handleDelete}
+          onLoadMore={() => void loadTransactions(filters, search, { append: true, cursor: nextCursor })}
+          onExportCsv={() => void exportCsv()}
+          onNew={() => {
+            resetForm();
+            setIsFormOpen(true);
+          }}
+        />
       </div>
       <MobileCreateFab
         label="Nuevo movimiento"
@@ -1283,420 +896,4 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
       />
     </div>
   );
-}
-
-function getPreferredArsBankAccount(accounts: AccountOption[]) {
-  return (
-    accounts.find((account) => account.currency === "ARS" && account.type === "BANK" && account.name.toLowerCase() === "cuenta bancaria") ??
-    accounts.find((account) => account.currency === "ARS" && account.type === "BANK") ??
-    accounts.find((account) => account.currency === "ARS") ??
-    accounts[0]
-  );
-}
-
-function optionalPayloadValue(value: unknown, shouldClearWithNull: boolean) {
-  return value === "" || value == null ? (shouldClearWithNull ? null : undefined) : value;
-}
-
-function Field({
-  label,
-  error,
-  children,
-}: {
-  label: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      {children}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
-    </div>
-  );
-}
-
-function TransactionFeedBriefing({
-  summary,
-  totalAmount,
-  activeFilterCount,
-}: {
-  summary: ReturnType<typeof buildFeedSummary>;
-  totalAmount: number;
-  activeFilterCount: number;
-}) {
-  const balanceTone = totalAmount >= 0 ? "text-emerald-100" : "text-rose-100";
-
-  return (
-    <PremiumCard variant="raised" className="overflow-hidden p-5 sm:p-6">
-      <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
-        <div className="min-w-0">
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <Badge className="border-white/10 bg-white/[0.07] text-teal-100">Money feed</Badge>
-            {activeFilterCount > 0 && (
-              <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-100">{activeFilterCount} filtros activos</Badge>
-            )}
-          </div>
-          <h2 className="text-balance text-2xl font-semibold leading-tight text-white sm:text-4xl">
-            {summary.count === 0 ? "Todavía no hay movimientos para leer." : "Así se movió tu dinero."}
-          </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
-            {summary.count === 0
-              ? "Cuando registres movimientos, esta vista va a mostrar el pulso real del mes."
-              : `${summary.count} movimientos cargados. Entraron ${formatMoneyBalance(summary.income)} y salieron ${formatMoneyBalance(summary.expenses)}.`}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 lg:min-w-[360px]">
-          <BriefingMetric label="Balance" value={`${totalAmount >= 0 ? "+" : ""}${formatMoneyBalance(totalAmount)}`} className={balanceTone} />
-          <BriefingMetric label="Entró" value={formatMoneyBalance(summary.income)} className="text-emerald-100" />
-          <BriefingMetric label="Salió" value={formatMoneyBalance(summary.expenses)} className="text-rose-100" />
-        </div>
-      </div>
-    </PremiumCard>
-  );
-}
-
-function BriefingMetric({ label, value, className }: { label: string; value: string; className?: string }) {
-  return (
-    <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.045] p-3">
-      <p className="truncate text-[11px] font-semibold uppercase text-zinc-500">{label}</p>
-      <p className={`mt-1 break-words text-xs font-semibold tabular-nums leading-tight sm:text-sm ${className ?? "text-zinc-100"}`}>{value}</p>
-    </div>
-  );
-}
-
-function DeleteTransactionDialog({
-  transaction,
-  isDeleting,
-  onCancel,
-  onConfirm,
-}: {
-  transaction: TransactionItem | null;
-  isDeleting: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  if (!transaction) return null;
-
-  return (
-    <div className="fixed inset-0 z-[220] flex items-end justify-center bg-black/65 p-3 backdrop-blur-sm sm:items-center">
-      <PremiumCard variant="raised" className="w-full max-w-md p-5">
-        <div className="mb-5 flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-300/12 text-rose-100">
-            <ShieldAlert className="h-5 w-5" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-white">Eliminar movimiento</h2>
-            <p className="mt-1 text-sm leading-6 text-zinc-400">
-              Se va a quitar este movimiento del feed. La operación usa soft delete.
-            </p>
-          </div>
-        </div>
-        <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.045] p-3">
-          <p className="truncate text-sm font-semibold text-zinc-100">{transaction.description ?? "Sin descripción"}</p>
-          <p className="mt-1 text-xs text-zinc-500">
-            {transactionTypeLabels[transaction.type]} · {formatMoney(getDisplayAmount(transaction), transaction.currency)}
-          </p>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <ActionButton type="button" variant="glass" onClick={onCancel} disabled={isDeleting}>
-            Cancelar
-          </ActionButton>
-          <ActionButton type="button" variant="danger" onClick={onConfirm} disabled={isDeleting}>
-            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Trash2 className="h-4 w-4" aria-hidden="true" />}
-            Eliminar
-          </ActionButton>
-        </div>
-      </PremiumCard>
-    </div>
-  );
-}
-
-function TransactionGroup({
-  group,
-  isCollapsed,
-  deletingTransactionId,
-  onToggle,
-  onEdit,
-  onDelete,
-}: {
-  group: ReturnType<typeof groupTransactionsByDate>[number];
-  isCollapsed: boolean;
-  deletingTransactionId: string | null;
-  onToggle: () => void;
-  onEdit: (transaction: TransactionItem) => void;
-  onDelete: (transaction: TransactionItem) => void;
-}) {
-  return (
-    <section className="space-y-1.5">
-      <button
-        type="button"
-        className="sticky top-2 z-10 flex w-full items-center justify-between rounded-full border border-border bg-background/90 px-3 py-2 text-xs font-semibold uppercase tracking-normal text-muted-foreground shadow-sm backdrop-blur transition hover:bg-secondary"
-        onClick={onToggle}
-        aria-expanded={!isCollapsed}
-      >
-        <span className="flex items-center gap-2">
-          <ChevronRight className={`h-3.5 w-3.5 transition ${isCollapsed ? "" : "rotate-90"}`} aria-hidden="true" />
-          {group.label}
-        </span>
-        <span>{group.transactions.length}</span>
-      </button>
-      {!isCollapsed ? (
-        <div className="space-y-1.5">
-          {group.transactions.map((transaction) => (
-            <TransactionCard
-              key={transaction.id}
-              transaction={transaction}
-              isDeleting={deletingTransactionId === transaction.id}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          ))}
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function TransactionCard({
-  transaction,
-  isDeleting,
-  onEdit,
-  onDelete,
-}: {
-  transaction: TransactionItem;
-  isDeleting: boolean;
-  onEdit: (transaction: TransactionItem) => void;
-  onDelete: (transaction: TransactionItem) => void;
-}) {
-  const Icon = transactionIcons[transaction.type];
-  const tone = getTransactionTone(transaction.type);
-  const signedAmount = getSignedAmount(transaction);
-  const displayAmount = getDisplayAmount(transaction);
-  const isTransfer = transaction.type === "TRANSFER";
-
-  return (
-    <article
-      className="group min-w-0 cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 shadow-sm transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06] active:scale-[0.99]"
-      role="button"
-      tabIndex={0}
-      onClick={() => onEdit(transaction)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onEdit(transaction);
-        }
-      }}
-    >
-      <div className="flex min-w-0 items-center gap-2.5">
-        <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${tone.icon}`}
-        >
-          <Icon className="h-4 w-4" aria-hidden="true" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="truncate text-xs font-semibold sm:text-sm">{transaction.description ?? "Sin descripción"}</p>
-              <p className="truncate text-[11px] text-muted-foreground">
-                {transaction.type === "TRANSFER"
-                  ? `${transaction.account.name}${transaction.transferAccount ? ` → ${transaction.transferAccount.name}` : ""}`
-                  : `${transaction.category?.name ?? "Sin categoría"} · ${transaction.account.name}`}
-              </p>
-            </div>
-            <div className="max-w-[42%] shrink-0 text-right">
-              <p className={`max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs font-bold leading-none sm:text-sm ${tone.amount}`}>
-                {isTransfer ? "" : signedAmount > 0 ? "+" : signedAmount < 0 ? "-" : ""}
-                {formatMoney(isTransfer ? displayAmount : Math.abs(signedAmount), transaction.currency)}
-              </p>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">{transaction.currency}</p>
-            </div>
-          </div>
-
-          <div className="mt-1.5 flex min-w-0 items-center gap-1.5 overflow-hidden">
-            <Badge className={`h-5 shrink-0 border-0 px-2 text-[11px] ${tone.badge}`}>{transactionTypeLabels[transaction.type]}</Badge>
-            {transaction.status === "PENDING" && (
-              <Badge className="h-5 shrink-0 border-amber-500/30 bg-amber-500/10 px-2 text-[11px] text-amber-400">Pendiente</Badge>
-            )}
-            {transaction.status === "CANCELED" && (
-              <Badge className="h-5 shrink-0 border-border bg-secondary px-2 text-[11px] text-muted-foreground line-through">Cancelada</Badge>
-            )}
-            {transaction.sharedTransaction ? (
-              <Badge className="h-5 shrink-0 border-teal-300/20 bg-teal-300/10 px-2 text-[11px] text-teal-100">
-                <Home className="mr-1 h-3 w-3" aria-hidden="true" />
-                {transaction.sharedTransaction.household.name}
-              </Badge>
-            ) : null}
-            <span className="inline-flex min-w-0 items-center gap-1 truncate rounded-md bg-secondary px-2 py-1 text-[11px] leading-none text-muted-foreground">
-              <CalendarDays className="h-3 w-3" aria-hidden="true" />
-              {formatDate(transaction.occurredAt)}
-            </span>
-          </div>
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-          onClick={(event) => {
-            event.stopPropagation();
-            onDelete(transaction);
-          }}
-          disabled={isDeleting}
-          aria-label="Eliminar transacción"
-        >
-          {isDeleting ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
-          )}
-        </Button>
-      </div>
-    </article>
-  );
-}
-
-function groupTransactionsByDate(transactions: TransactionItem[]) {
-  const groups = new Map<string, TransactionItem[]>();
-
-  transactions.forEach((transaction) => {
-    const label = getDateGroupLabel(transaction.occurredAt);
-    groups.set(label, [...(groups.get(label) ?? []), transaction]);
-  });
-
-  return Array.from(groups.entries()).map(([label, items]) => ({
-    label,
-    transactions: items,
-  }));
-}
-
-function buildFeedSummary(transactions: TransactionItem[]) {
-  return transactions.reduce(
-    (summary, transaction) => {
-      const amount = Number(transaction.amount);
-      if (!Number.isFinite(amount)) return summary;
-
-      if (transaction.type === "INCOME") {
-        summary.income += amount;
-      } else if (transaction.type !== "TRANSFER") {
-        summary.expenses += amount;
-      }
-      summary.count += 1;
-      return summary;
-    },
-    { income: 0, expenses: 0, count: 0 },
-  );
-}
-
-function getDateGroupLabel(value: string) {
-  const [y, m, d] = value.slice(0, 10).split("-").map(Number);
-  const date = Date.UTC(y, m - 1, d);
-  const now = new Date();
-  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = today - 86_400_000;
-  const weekStart = today - (((now.getDay() + 6) % 7) * 86_400_000);
-
-  if (date === today) return "Hoy";
-  if (date === yesterday) return "Ayer";
-  if (date >= weekStart && date < yesterday) return "Esta semana";
-
-  return new Intl.DateTimeFormat("es-AR", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(date));
-}
-
-function getTransactionTone(type: TransactionType) {
-  if (type === "INCOME") {
-    return {
-      icon: "bg-emerald-500/15 text-emerald-500",
-      amount: "text-emerald-500",
-      badge: "bg-emerald-500/10 text-emerald-500",
-    };
-  }
-
-  if (type === "TRANSFER") {
-    return {
-      icon: "bg-sky-500/15 text-sky-500",
-      amount: "text-sky-500",
-      badge: "bg-sky-500/10 text-sky-500",
-    };
-  }
-
-  return {
-    icon: "bg-rose-500/15 text-rose-500",
-    amount: "text-rose-500",
-    badge: "bg-rose-500/10 text-rose-500",
-  };
-}
-
-function getSignedAmount(transaction: TransactionItem) {
-  const amount = Number(transaction.amount);
-  if (!Number.isFinite(amount)) return 0;
-  if (transaction.type === "INCOME") return amount;
-  if (transaction.type === "TRANSFER") return 0;
-  return -amount;
-}
-
-function getDisplayAmount(transaction: TransactionItem) {
-  const amount = Number(transaction.amount);
-  if (!Number.isFinite(amount)) return 0;
-  return amount;
-}
-
-function isCategoryAllowedForType(categoryType: CategoryType, transactionType: TransactionType) {
-  if (transactionType === "INCOME") {
-    return categoryType === "INCOME";
-  }
-
-  if (transactionType === "EXPENSE") {
-    return categoryType === "EXPENSE";
-  }
-
-  if (transactionType === "DEBT_PAYMENT") {
-    return categoryType === "DEBT";
-  }
-
-  if (transactionType === "GOAL_CONTRIBUTION") {
-    return categoryType === "GOAL";
-  }
-
-  if (transactionType === "INVESTMENT") {
-    return categoryType === "INVESTMENT";
-  }
-
-  return categoryType === "TRANSFER" || categoryType === "ADJUSTMENT";
-}
-
-function isSupportedFormTransactionType(type: TransactionType) {
-  return supportedFormTransactionTypes.includes(
-    type as (typeof supportedFormTransactionTypes)[number],
-  );
-}
-
-function formatMoney(value: string | number, currency: CurrencyCode) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(Number(value));
-}
-
-function formatMoneyBalance(value: number) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("es-AR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(value));
 }

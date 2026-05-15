@@ -172,23 +172,35 @@ export async function analyzeFile(
     user: traceUserId(workspace.userProfileId),
     household: workspace.householdId,
   });
-  await prisma.smartImportCache.upsert({
-    where: { householdId_fileHash: { householdId: workspace.householdId, fileHash } },
-    create: {
+  try {
+    await prisma.smartImportCache.upsert({
+      where: { householdId_fileHash: { householdId: workspace.householdId, fileHash } },
+      create: {
+        householdId: workspace.householdId,
+        fileHash,
+        mimeType,
+        result: result as unknown as Prisma.InputJsonValue,
+      },
+      update: {
+        mimeType,
+        result: result as unknown as Prisma.InputJsonValue,
+      },
+    });
+    traceAi("AI_SMART_IMPORT_CACHE_WRITE_OK", {
+      user: traceUserId(workspace.userProfileId),
+      household: workspace.householdId,
+    });
+  } catch (error) {
+    traceAi("AI_SMART_IMPORT_CACHE_WRITE_FAILED", {
+      user: traceUserId(workspace.userProfileId),
+      household: workspace.householdId,
+      name: error instanceof Error ? error.name : "UnknownError",
+    });
+    captureServerMessage("Smart Import cache write failed", "smart-import", {
       householdId: workspace.householdId,
-      fileHash,
-      mimeType,
-      result: result as unknown as Prisma.InputJsonValue,
-    },
-    update: {
-      mimeType,
-      result: result as unknown as Prisma.InputJsonValue,
-    },
-  });
-  traceAi("AI_SMART_IMPORT_CACHE_WRITE_OK", {
-    user: traceUserId(workspace.userProfileId),
-    household: workspace.householdId,
-  });
+      fileHash: fileHash.slice(0, 12),
+    });
+  }
 
   return result;
 }
