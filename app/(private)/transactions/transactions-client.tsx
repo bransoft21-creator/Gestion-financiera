@@ -386,17 +386,17 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
             paymentMethod: isExpenseOrIncome
               ? optionalPayloadValue(data.paymentMethod, isEditing)
               : optionalPayloadValue(undefined, isEditing),
-            isInstallment: isExpenseOrIncome ? Boolean(data.isInstallment) : false,
-            installmentNumber: isExpenseOrIncome && data.isInstallment
+            isInstallment: type === "EXPENSE" ? Boolean(data.isInstallment) : false,
+            installmentNumber: type === "EXPENSE" && data.isInstallment
               ? optionalPayloadValue(data.installmentNumber, isEditing)
               : optionalPayloadValue(undefined, isEditing),
-            totalInstallments: isExpenseOrIncome && data.isInstallment
+            totalInstallments: type === "EXPENSE" && data.isInstallment
               ? optionalPayloadValue(data.totalInstallments, isEditing)
               : optionalPayloadValue(undefined, isEditing),
             isRecurring: isExpenseOrIncome ? Boolean(data.isRecurring) : false,
-            sharedHouseholdId: !editingTransactionId && type === "EXPENSE"
-              ? ((data.sharedHouseholdId as string) || undefined)
-              : undefined,
+            sharedHouseholdId: type === "EXPENSE"
+              ? ((data.sharedHouseholdId as string) || (isEditing ? null : undefined))
+              : (isEditing ? null : undefined),
             splitConfig:
               !editingTransactionId && type === "EXPENSE" && (data.sharedHouseholdId as string) && splitMode !== "EQUAL"
                 ? {
@@ -764,7 +764,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
               </select>
             </Field>
 
-            {watchedType === "TRANSFER" && !editingTransactionId ? (
+            {watchedType === "TRANSFER" ? (
               <>
                 <Field label="Cuenta destino" error={formErrors.transferAccountId?.message}>
                   <select
@@ -788,7 +788,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                     ))}
                   </select>
                 </Field>
-                {isTransferToCreditCard ? (
+                {isTransferToCreditCard && !editingTransactionId ? (
                   <div className="space-y-3 rounded-2xl border border-teal-300/20 bg-teal-400/10 p-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -929,7 +929,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
               />
             </Field>
 
-            {isPotentialCardPayment ? (
+            {isPotentialCardPayment && !editingTransactionId ? (
               <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-3">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
@@ -962,7 +962,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
               />
             </Field>
 
-            {(watchedType === "EXPENSE" || watchedType === "INCOME") && !editingTransactionId ? (
+            {(watchedType === "EXPENSE" || watchedType === "INCOME") ? (
               <>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {watchedType === "EXPENSE" ? (
@@ -1000,17 +1000,19 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                     />
                     Recurrente
                   </label>
-                  <label className="flex cursor-pointer items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-input accent-primary"
-                      {...register("isInstallment")}
-                    />
-                    Es en cuotas
-                  </label>
+                  {watchedType === "EXPENSE" ? (
+                    <label className="flex cursor-pointer items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-input accent-primary"
+                        {...register("isInstallment")}
+                      />
+                      Es en cuotas
+                    </label>
+                  ) : null}
                 </div>
 
-                {watchedIsInstallment ? (
+                {watchedType === "EXPENSE" && watchedIsInstallment ? (
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Field label="Cuota N°" error={formErrors.installmentNumber?.message}>
                       <Input

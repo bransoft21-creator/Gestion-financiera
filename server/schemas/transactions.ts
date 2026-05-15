@@ -133,6 +133,7 @@ export const updateTransactionSchema = createTransactionBaseSchema
     paymentMethod: z.enum(paymentMethodValues).nullable().optional(),
     installmentNumber: z.coerce.number().int().positive().nullable().optional(),
     totalInstallments: z.coerce.number().int().positive().nullable().optional(),
+    sharedHouseholdId: z.string().min(1).nullable().optional(),
   })
   .superRefine((data, ctx) => {
     if (
