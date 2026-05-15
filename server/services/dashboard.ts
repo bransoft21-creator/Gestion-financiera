@@ -159,8 +159,44 @@ export async function getDashboardSummary(
   const isCurrentMonth = argYear === year && argMonth === month;
   const daysInMonth = new Date(year, month, 0).getDate();
   const dayOfMonth = isCurrentMonth ? argDay : daysInMonth;
-  const projectedExpenses = dayOfMonth > 0 ? (expenses / dayOfMonth) * daysInMonth : expenses;
-  const projectedBalance = income - projectedExpenses;
+  const daysRemaining = daysInMonth - dayOfMonth;
+
+  // Split expenses by projectability:
+  // - fixed + extraordinary are one-time payments (rent, cards, services, vacation).
+  //   Multiplying them by remaining days would grossly overstate the forecast.
+  // - variable + unclassified represent daily flow and are projected linearly.
+  const nonDailySpent = expensesByType.fixed + expensesByType.extraordinary;
+  const dailySpent = expensesByType.variable + expensesByType.unclassified;
+  const dailyEstimated = dayOfMonth > 0 && daysRemaining > 0
+    ? (dailySpent / dayOfMonth) * daysRemaining
+    : 0;
+
+  const projectedExpenses = Math.round(nonDailySpent + dailySpent + dailyEstimated);
+  const projectedBalance = Math.round(income - projectedExpenses);
+
+  // Confidence level: how reliable is this estimate?
+  type ProjectionConfidence = "high" | "medium" | "low";
+  let projectionConfidence: ProjectionConfidence;
+  let projectionNote: string;
+
+  if (!isCurrentMonth) {
+    projectionConfidence = "high";
+    projectionNote = "";
+  } else if (dayOfMonth < 3) {
+    projectionConfidence = "low";
+    projectionNote = "Inicio del mes: pocos días para estimar el flujo variable.";
+  } else if (dailySpent === 0) {
+    projectionConfidence = "low";
+    projectionNote = "Solo pagos únicos registrados. Falta flujo diario para proyectar.";
+  } else if (dayOfMonth >= 7 && (budgets.length > 0 || dayOfMonth >= 14)) {
+    projectionConfidence = "high";
+    projectionNote = nonDailySpent > 0
+      ? "Gastos fijos y extraordinarios no se proyectan diariamente."
+      : "Proyección basada en el flujo variable del mes.";
+  } else {
+    projectionConfidence = "medium";
+    projectionNote = "Estimación en progreso. Más días registrados mejoran la precisión.";
+  }
 
   return {
     period: {
@@ -178,10 +214,13 @@ export async function getDashboardSummary(
         isCurrentMonth,
         daysInMonth,
         dayOfMonth,
-        daysRemaining: daysInMonth - dayOfMonth,
-        projectedExpenses: Math.round(projectedExpenses),
-        projectedBalance: Math.round(projectedBalance),
+        daysRemaining,
+        projectedExpenses,
+        projectedBalance,
         projectedRealAvailable: Math.round(projectedBalance - health.upcomingObligations),
+        confidence: projectionConfidence,
+        confidenceNote: projectionNote,
+        hasEarlyLargeFixed: isCurrentMonth && nonDailySpent > 0 && dayOfMonth <= 7,
       },
       accountBalances: getAccountBalancesByCurrency(accounts),
     },

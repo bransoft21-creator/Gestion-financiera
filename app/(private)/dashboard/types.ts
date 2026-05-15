@@ -39,6 +39,9 @@ export type DashboardSummary = {
       projectedExpenses: number;
       projectedBalance: number;
       projectedRealAvailable: number;
+      confidence: "high" | "medium" | "low";
+      confidenceNote: string;
+      hasEarlyLargeFixed: boolean;
     };
   };
   expensesByCategory: ExpenseCategoryChartItem[];

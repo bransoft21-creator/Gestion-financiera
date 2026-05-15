@@ -12,14 +12,40 @@ import { SensitiveAmount, SensitiveText } from "@/components/app/sensitive-amoun
 import { formatMoney, buildNarrative } from "@/app/(private)/dashboard/utils";
 import type { DashboardSummary } from "@/app/(private)/dashboard/types";
 
+function ConfidenceBadge({ confidence }: { confidence: "high" | "medium" | "low" }) {
+  const label = confidence === "high" ? "Alta" : confidence === "medium" ? "Media" : "Baja";
+  const cls =
+    confidence === "high"
+      ? "border-teal-300/20 bg-teal-300/10 text-teal-400"
+      : confidence === "medium"
+        ? "border-amber-300/20 bg-amber-300/10 text-amber-400"
+        : "border-white/10 bg-white/[0.04] text-zinc-500";
+  return (
+    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${cls}`}>
+      Confianza: {label}
+    </span>
+  );
+}
+
+function getSubtitle(projection: DashboardSummary["metrics"]["projection"]): string {
+  if (projection.hasEarlyLargeFixed) {
+    return "Pagos grandes del inicio no se proyectan como gasto diario.";
+  }
+  if (projection.confidence === "low") {
+    return "Pocos datos aún — la estimación mejora con más días.";
+  }
+  if (projection.confidence === "medium") {
+    return "Estimación en progreso. Clasificar gastos mejora la precisión.";
+  }
+  return "Proyección ajustada por tipo de gasto.";
+}
+
 export function MonthProjection({ metrics }: { metrics: DashboardSummary["metrics"] }) {
   const { projection } = metrics;
   if (!projection.isCurrentMonth || metrics.income === 0) return null;
 
-  const dailyRate = projection.dayOfMonth > 0
-    ? Math.round(metrics.expenses / projection.dayOfMonth)
-    : 0;
   const narrative = buildNarrative(metrics);
+  const subtitle = getSubtitle(projection);
 
   return (
     <PremiumCard>
@@ -29,8 +55,8 @@ export function MonthProjection({ metrics }: { metrics: DashboardSummary["metric
             <TrendingUp className="h-4 w-4" aria-hidden="true" />
           </div>
           <div>
-            <PremiumCardTitle className="text-sm">Tendencia del mes</PremiumCardTitle>
-            <PremiumCardDescription>A este ritmo, así cierra tu mes.</PremiumCardDescription>
+            <PremiumCardTitle className="text-sm">Cierre estimado</PremiumCardTitle>
+            <PremiumCardDescription>{subtitle}</PremiumCardDescription>
           </div>
         </div>
       </PremiumCardHeader>
@@ -43,7 +69,7 @@ export function MonthProjection({ metrics }: { metrics: DashboardSummary["metric
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Gasto al cierre
+              Gasto proyectado
             </p>
             <p
               className={`mt-1 text-sm font-bold tabular-nums ${
@@ -55,7 +81,7 @@ export function MonthProjection({ metrics }: { metrics: DashboardSummary["metric
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Saldo proyectado
+              Saldo estimado
             </p>
             <p
               className={`mt-1 text-sm font-bold tabular-nums ${
@@ -66,14 +92,19 @@ export function MonthProjection({ metrics }: { metrics: DashboardSummary["metric
             </p>
           </div>
         </div>
-        <p className="text-[11px] text-muted-foreground">
-          Quedan{" "}
-          <span className="font-semibold text-foreground">{projection.daysRemaining}</span>{" "}
-          día{projection.daysRemaining !== 1 ? "s" : ""} del mes · Ritmo actual:{" "}
-          <span className="font-semibold text-foreground">
-            <SensitiveAmount value={formatMoney(dailyRate)} />
-          </span>/día
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <p className="text-[11px] text-muted-foreground">
+            Quedan{" "}
+            <span className="font-semibold text-foreground">{projection.daysRemaining}</span>{" "}
+            día{projection.daysRemaining !== 1 ? "s" : ""} del mes
+            {projection.confidenceNote ? (
+              <span> · {projection.confidenceNote}</span>
+            ) : null}
+          </p>
+          {projection.isCurrentMonth && (
+            <ConfidenceBadge confidence={projection.confidence} />
+          )}
+        </div>
       </PremiumCardContent>
     </PremiumCard>
   );
