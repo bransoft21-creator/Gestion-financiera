@@ -62,6 +62,7 @@ type GoalItem = {
 type GoalsClientProps = {
   householdId: string;
   accounts: AccountOption[];
+  defaultCurrency?: "ARS" | "USD";
 };
 
 type FormState = {
@@ -124,10 +125,10 @@ const cardMotion = {
   transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
 } as const;
 
-export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
+export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: GoalsClientProps) {
   const defaultAccount = getPreferredArsBankAccount(accounts);
   const [goals, setGoals] = useState<GoalItem[]>([]);
-  const [form, setForm] = useState<FormState>(defaultForm);
+  const [form, setForm] = useState<FormState>({ ...defaultForm, currency: defaultCurrency });
   const [errors, setErrors] = useState<FormErrors>({});
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -350,7 +351,7 @@ export function GoalsClient({ householdId, accounts }: GoalsClientProps) {
   function resetForm() {
     setEditingGoalId(null);
     setErrors({});
-    setForm(defaultForm);
+    setForm({ ...defaultForm, currency: defaultCurrency });
   }
 
   function updateForm<Key extends keyof FormState>(key: Key, value: FormState[Key]) {

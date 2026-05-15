@@ -86,6 +86,7 @@ export type TransactionsClientProps = {
   accounts: AccountOption[];
   categories: CategoryOption[];
   sharedHouseholds: SharedHouseholdOption[];
+  defaultCurrency?: CurrencyCode;
 };
 
 export type Filters = {

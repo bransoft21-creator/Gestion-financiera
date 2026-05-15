@@ -66,12 +66,51 @@
     color: hsl(var(--foreground));
   }
 
+  /* ── Light mode ── */
+  .light {
+    --background: 220 20% 97%;
+    --foreground: 224 20% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 20% 12%;
+    --primary: 176 66% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 224 20% 12%;
+    --muted: 220 14% 93%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 176 66% 36%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14% 88%;
+    --input: 220 14% 90%;
+    --ring: 176 66% 36%;
+    --surface: hsl(220 14% 96%);
+    --surface-el: hsl(220 14% 94%);
+    --surface-2: hsl(220 14% 92%);
+    --text: hsl(224 20% 12%);
+    --muted-color: hsl(220 9% 46%);
+    --glow-primary: rgba(13, 148, 136, 0.10);
+    --glow-emerald: rgba(16, 185, 129, 0.08);
+    --glow-rose: rgba(239, 68, 68, 0.08);
+    --glow-sky: rgba(14, 165, 233, 0.08);
+    color-scheme: light;
+  }
+
   select,
   input[type="date"],
   input[type="datetime-local"],
   input[type="time"],
   input[type="month"] {
     color-scheme: dark;
+  }
+
+  .light select,
+  .light input[type="date"],
+  .light input[type="datetime-local"],
+  .light input[type="time"],
+  .light input[type="month"] {
+    color-scheme: light;
   }
 
   /* Thinner, on-brand scrollbar */
@@ -131,6 +170,34 @@
 .stagger-in > *:nth-child(5)  { animation-delay: 270ms; }
 .stagger-in > *:nth-child(6)  { animation-delay: 330ms; }
 .stagger-in > *:nth-child(n+7){ animation-delay: 390ms; }
+
+/* ── Text size scale ── */
+[data-text-size="large"] { font-size: 1.0625rem; }
+
+/* ── Light mode structural overrides (beat inline styles) ── */
+.light aside {
+  background: rgba(246, 247, 250, 0.92) !important;
+  border-right-color: hsl(220 14% 88%) !important;
+}
+.light header {
+  background: rgba(246, 247, 250, 0.92) !important;
+  border-bottom-color: hsl(220 14% 88%) !important;
+}
+/* Bottom nav bar */
+.light nav[data-tutorial="nav-mobile"] {
+  background: rgba(246, 247, 250, 0.92) !important;
+  border-top-color: hsl(220 14% 88%) !important;
+}
+/* Bottom nav More drawer */
+.light [data-bottom-drawer] {
+  background: rgba(248, 249, 252, 0.98) !important;
+  border-top-color: hsl(220 14% 88%) !important;
+}
+/* Floating action buttons ring (desktop) */
+.light .fixed.right-5.top-4 {
+  background: rgba(246, 247, 250, 0.90) !important;
+  border-color: hsl(220 14% 88%) !important;
+}
 
 /* ── Privacy mode: blur monetary values ── */
 html[data-hide-amounts="true"] .tabular-nums {

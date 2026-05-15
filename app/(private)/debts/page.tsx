@@ -13,7 +13,7 @@ export default async function DebtsPage() {
       title="Lo que pesa sobre tu mes"
       description="Seguís deuda, vencimientos y pagos mínimos como compromisos vivos, no como un listado frío."
     >
-      <DebtsClient householdId={household.id} accounts={accounts} />
+      <DebtsClient householdId={household.id} accounts={accounts} defaultCurrency={userProfile.currency as "ARS" | "USD"} />
     </V2PageShell>
   );
 }

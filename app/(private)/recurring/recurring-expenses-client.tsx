@@ -67,6 +67,7 @@ type RecurringClientProps = {
   householdId: string;
   accounts: AccountOption[];
   categories: CategoryOption[];
+  defaultCurrency?: "ARS" | "USD";
 };
 
 type FormState = {
@@ -140,11 +141,11 @@ const cardMotion = {
 const inputClass = "v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-zinc-600";
 const selectClass = "v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]";
 
-export function RecurringExpensesClient({ householdId, accounts, categories }: RecurringClientProps) {
+export function RecurringExpensesClient({ householdId, accounts, categories, defaultCurrency = "ARS" }: RecurringClientProps) {
   const defaultAccount = getPreferredArsBankAccount(accounts);
   const getDefaultForm = (): FormState => ({
     ...defaultForm,
-    currency: defaultAccount?.currency ?? "ARS",
+    currency: (defaultAccount?.currency ?? defaultCurrency) as CurrencyCode,
     accountId: defaultAccount?.id ?? "",
     nextDueDate: formatArgentinaDateInput(),
   });

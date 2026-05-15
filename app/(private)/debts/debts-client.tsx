@@ -64,7 +64,7 @@ type DebtItem = {
   paidPercent: number;
 };
 
-type DebtsClientProps = { householdId: string; accounts: AccountOption[] };
+type DebtsClientProps = { householdId: string; accounts: AccountOption[]; defaultCurrency?: "ARS" | "USD" };
 
 type FormState = {
   name: string;
@@ -149,7 +149,7 @@ const cardMotion = {
   transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
 } as const;
 
-export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
+export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: DebtsClientProps) {
   const defaultAccount = getPreferredArsBankAccount(accounts);
   const [todayMs] = useState(() => Date.now());
   const [debts, setDebts] = useState<DebtItem[]>([]);
@@ -160,7 +160,7 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
   const [pendingDeleteDebt, setPendingDeleteDebt] = useState<DebtItem | null>(null);
   const [editingDebtId, setEditingDebtId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [form, setForm] = useState<FormState>(defaultForm);
+  const [form, setForm] = useState<FormState>({ ...defaultForm, currency: defaultCurrency });
   const [errors, setErrors] = useState<FormErrors>({});
   const [message, setMessage] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -389,7 +389,7 @@ export function DebtsClient({ householdId, accounts }: DebtsClientProps) {
   function resetForm() {
     setEditingDebtId(null);
     setErrors({});
-    setForm(defaultForm);
+    setForm({ ...defaultForm, currency: defaultCurrency });
   }
 
   function updateForm<K extends keyof FormState>(key: K, value: FormState[K]) {

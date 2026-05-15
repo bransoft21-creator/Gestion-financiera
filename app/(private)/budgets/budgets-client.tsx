@@ -73,6 +73,7 @@ type BudgetSuggestion = {
 type BudgetsClientProps = {
   householdId: string;
   categories: CategoryOption[];
+  defaultCurrency?: "ARS" | "USD";
 };
 
 type FormState = {
@@ -105,7 +106,7 @@ const cardMotion = {
   transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
 } as const;
 
-export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
+export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS" }: BudgetsClientProps) {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
@@ -115,7 +116,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
   const [form, setForm] = useState<FormState>({
     categoryId: categories[0]?.id ?? "",
     plannedAmount: "",
-    currency: "ARS",
+    currency: defaultCurrency,
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
@@ -410,7 +411,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
     setForm({
       categoryId: nextCategory?.id ?? "",
       plannedAmount: "",
-      currency: "ARS",
+      currency: defaultCurrency,
     });
   }
 

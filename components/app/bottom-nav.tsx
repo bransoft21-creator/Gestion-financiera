@@ -74,6 +74,7 @@ export function BottomNav() {
 
       {/* More drawer */}
       <div
+        data-bottom-drawer
         className={cn(
           "fixed inset-x-0 z-[130] rounded-t-[28px] border-t border-white/10 transition-transform duration-300 ease-out lg:hidden",
           moreOpen ? "translate-y-0" : "translate-y-full",

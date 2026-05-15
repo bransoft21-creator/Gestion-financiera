@@ -53,6 +53,7 @@ type AccountItem = {
 
 type AccountsClientProps = {
   householdId: string;
+  defaultCurrency?: "ARS" | "USD";
 };
 
 type FormState = {
@@ -92,14 +93,14 @@ const defaultForm: FormState = {
   creditLimit: "",
 };
 
-export function AccountsClient({ householdId }: AccountsClientProps) {
+export function AccountsClient({ householdId, defaultCurrency = "ARS" }: AccountsClientProps) {
   const [accounts, setAccounts] = useState<AccountItem[]>([]);
   const [netWorthByCurrency, setNetWorthByCurrency] = useState<Array<{ currency: string; assets: number; liabilities: number; netWorth: number }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>(defaultForm);
+  const [form, setForm] = useState<FormState>({ ...defaultForm, currency: defaultCurrency });
   const [errors, setErrors] = useState<FormErrors>({});
   const [message, setMessage] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -238,7 +239,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
   function resetForm() {
     setEditingAccountId(null);
     setErrors({});
-    setForm(defaultForm);
+    setForm({ ...defaultForm, currency: defaultCurrency });
   }
 
   function updateForm<K extends keyof FormState>(key: K, value: FormState[K]) {

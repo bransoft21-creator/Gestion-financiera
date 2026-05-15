@@ -13,7 +13,7 @@ export default async function BudgetsPage() {
       title="Meridian preparó una base para tu mes"
       description="Una distribución editable basada en ingresos recientes, hábitos y compromisos recurrentes."
     >
-      <BudgetsClient householdId={workspace.household.id} categories={workspace.categories} />
+      <BudgetsClient householdId={workspace.household.id} categories={workspace.categories} defaultCurrency={userProfile.currency as "ARS" | "USD"} />
     </V2PageShell>
   );
 }

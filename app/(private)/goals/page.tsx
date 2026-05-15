@@ -13,7 +13,7 @@ export default async function GoalsPage() {
       title="Tus próximos movimientos importantes"
       description="Seguís ahorro, fechas y aportes como una historia de progreso, no como una lista de tareas."
     >
-      <GoalsClient householdId={workspace.household.id} accounts={workspace.accounts} />
+      <GoalsClient householdId={workspace.household.id} accounts={workspace.accounts} defaultCurrency={userProfile.currency as "ARS" | "USD"} />
     </V2PageShell>
   );
 }

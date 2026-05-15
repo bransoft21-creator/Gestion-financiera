@@ -116,7 +116,7 @@ const formSchema = z.object({
   }
 });
 
-export function TransactionsClient({ householdId, accounts, categories, sharedHouseholds }: TransactionsClientProps) {
+export function TransactionsClient({ householdId, accounts, categories, sharedHouseholds, defaultCurrency = "ARS" }: TransactionsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const defaultAccount = getPreferredArsBankAccount(accounts);
@@ -143,7 +143,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
       accountId: defaultAccount?.id ?? "",
       transferAccountId: "",
       categoryId: "",
-      currency: (defaultAccount?.currency ?? "ARS") as CurrencyCode,
+      currency: (defaultAccount?.currency ?? defaultCurrency) as CurrencyCode,
       amount: "",
       occurredAt: formatArgentinaDateInput(),
       description: "",
@@ -529,7 +529,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
       accountId: defaultAccount?.id ?? "",
       transferAccountId: "",
       categoryId: "",
-      currency: (defaultAccount?.currency ?? "ARS") as CurrencyCode,
+      currency: (defaultAccount?.currency ?? defaultCurrency) as CurrencyCode,
       amount: "",
       occurredAt: formatArgentinaDateInput(),
       description: "",
@@ -564,7 +564,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
       accountId: sourceAccount?.id ?? nonCCAccounts[0]?.id ?? defaultAccount?.id ?? "",
       transferAccountId: destAccount?.id ?? "",
       categoryId: "",
-      currency: (sourceAccount?.currency ?? destAccount?.currency ?? "ARS") as CurrencyCode,
+      currency: (sourceAccount?.currency ?? destAccount?.currency ?? defaultCurrency) as CurrencyCode,
       amount: "",
       occurredAt: formatArgentinaDateInput(),
       description: "Pago tarjeta",

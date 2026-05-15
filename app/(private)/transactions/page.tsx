@@ -18,6 +18,7 @@ export default async function TransactionsPage() {
         accounts={workspace.accounts}
         categories={workspace.categories}
         sharedHouseholds={workspace.sharedHouseholds}
+        defaultCurrency={userProfile.currency as "ARS" | "USD"}
       />
     </V2PageShell>
   );

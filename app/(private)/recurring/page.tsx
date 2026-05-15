@@ -17,6 +17,7 @@ export default async function RecurringPage() {
         householdId={household.id}
         accounts={accounts}
         categories={categories}
+        defaultCurrency={userProfile.currency as "ARS" | "USD"}
       />
     </V2PageShell>
   );

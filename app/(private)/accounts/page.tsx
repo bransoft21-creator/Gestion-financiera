@@ -13,7 +13,7 @@ export default async function AccountsPage() {
       title="Lo que tenés, lo que debés y lo que queda"
       description="Balances reales, deuda pendiente y patrimonio neto en una lectura simple del presente."
     >
-      <AccountsClient householdId={household.id} />
+      <AccountsClient householdId={household.id} defaultCurrency={userProfile.currency as "ARS" | "USD"} />
     </V2PageShell>
   );
 }

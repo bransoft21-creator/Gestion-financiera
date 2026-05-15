@@ -6,6 +6,7 @@ import { MobileHeader } from "./mobile-header";
 import { NotificationsButton } from "./notifications-button";
 import { OnlineStatusBanner } from "./online-status-banner";
 import { PageTransition } from "./page-transition";
+import { PreferencesProvider } from "./preferences-provider";
 import { PrivacyToggle } from "./privacy-toggle";
 import { Sidebar } from "./sidebar";
 import { TelemetryProvider } from "./telemetry-provider";
@@ -22,6 +23,7 @@ type AppShellProps = {
 export function AppShell({ children, userId, userName, userEmail }: AppShellProps) {
   return (
     <UserProvider userName={userName ?? null}>
+      <PreferencesProvider>
       <TutorialProvider>
         <div className="v2-shell min-h-screen bg-background">
           <TelemetryProvider userId={userId} />
@@ -58,6 +60,7 @@ export function AppShell({ children, userId, userName, userEmail }: AppShellProp
           />
         </div>
       </TutorialProvider>
+      </PreferencesProvider>
     </UserProvider>
   );
 }

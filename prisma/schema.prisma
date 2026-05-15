@@ -180,6 +180,9 @@ model UserProfile {
   locale     String    @default("es-AR")
   timezone   String    @default("America/Argentina/Buenos_Aires")
   currency   CurrencyCode @default(ARS)
+  theme      String    @default("system")
+  textSize   String    @default("normal")
+  language   String    @default("es")
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   deletedAt             DateTime?

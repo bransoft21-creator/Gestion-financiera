@@ -1,0 +1,10 @@
+import { z } from "zod";
+
+export const updatePreferencesSchema = z.object({
+  theme: z.enum(["system", "dark", "light"]).optional(),
+  textSize: z.enum(["normal", "large"]).optional(),
+  language: z.enum(["es", "en"]).optional(),
+  primaryCurrency: z.enum(["ARS", "USD"]).optional(),
+});
+
+export type UpdatePreferencesInput = z.infer<typeof updatePreferencesSchema>;
