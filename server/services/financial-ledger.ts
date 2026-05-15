@@ -257,6 +257,76 @@ function isCurrentDebtStatus(status: DebtStatus) {
   );
 }
 
+export type AccountNetWorthInput = {
+  type: AccountType;
+  currency: string;
+  currentBalance: Prisma.Decimal | number;
+  isArchived: boolean;
+  deletedAt?: Date | null;
+};
+
+export type DebtNetWorthInput = {
+  type: DebtType;
+  status: DebtStatus;
+  currency: string;
+  outstandingAmount: Prisma.Decimal | number;
+};
+
+export function computeNetWorthByCurrency(
+  accounts: AccountNetWorthInput[],
+  debts: DebtNetWorthInput[],
+): Array<{ currency: string; assets: number; liabilities: number; netWorth: number }> {
+  const activeAccounts = accounts.filter((a) => !a.isArchived && !a.deletedAt);
+
+  const byCurrency = new Map<string, {
+    assets: number;
+    accountLiabilities: number;
+    ccAccountLiabilities: number;
+    debtLiabilities: number;
+  }>();
+
+  const getEntry = (currency: string) => {
+    if (!byCurrency.has(currency)) {
+      byCurrency.set(currency, { assets: 0, accountLiabilities: 0, ccAccountLiabilities: 0, debtLiabilities: 0 });
+    }
+    return byCurrency.get(currency)!;
+  };
+
+  for (const account of activeAccounts) {
+    const balance = toFiniteNumber(account.currentBalance);
+    const entry = getEntry(account.currency);
+    if (balance > 0) {
+      entry.assets += balance;
+    } else if (balance < 0) {
+      entry.accountLiabilities += Math.abs(balance);
+      if (account.type === AccountType.CREDIT_CARD) {
+        entry.ccAccountLiabilities += Math.abs(balance);
+      }
+    }
+  }
+
+  const currentDebts = debts.filter(
+    (d) => isCurrentDebtStatus(d.status) && toFiniteNumber(d.outstandingAmount) > 0,
+  );
+  for (const debt of currentDebts) {
+    const entry = getEntry(debt.currency);
+    const amount = toFiniteNumber(debt.outstandingAmount);
+    if (debt.type === DebtType.CREDIT_CARD) {
+      const dedup = Math.min(entry.ccAccountLiabilities, amount);
+      entry.debtLiabilities += Math.max(amount - dedup, 0);
+    } else {
+      entry.debtLiabilities += amount;
+    }
+  }
+
+  return Array.from(byCurrency.entries())
+    .map(([currency, entry]) => {
+      const liabilities = entry.accountLiabilities + entry.debtLiabilities;
+      return { currency, assets: entry.assets, liabilities, netWorth: entry.assets - liabilities };
+    })
+    .sort((a, b) => a.currency.localeCompare(b.currency));
+}
+
 export function computeBudgetReservation(input: BudgetReservationInput) {
   return Math.max(toFiniteNumber(input.plannedAmount) - toFiniteNumber(input.spentAmount), 0);
 }

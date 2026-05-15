@@ -97,7 +97,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
   const [assets, setAssets] = useState(0);
   const [liabilities, setLiabilities] = useState(0);
   const [debtLiabilities, setDebtLiabilities] = useState(0);
-  const [netWorth, setNetWorth] = useState(0);
+  const [netWorthByCurrency, setNetWorthByCurrency] = useState<Array<{ currency: string; assets: number; liabilities: number; netWorth: number }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -125,6 +125,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
           liabilities: number;
           debtLiabilities: number;
           netWorth: number;
+          netWorthByCurrency: Array<{ currency: string; assets: number; liabilities: number; netWorth: number }>;
         };
         error?: string;
       };
@@ -139,7 +140,7 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
         setAssets(payload.data.assets);
         setLiabilities(payload.data.liabilities);
         setDebtLiabilities(payload.data.debtLiabilities);
-        setNetWorth(payload.data.netWorth);
+        setNetWorthByCurrency(payload.data.netWorthByCurrency ?? []);
       }
     } catch {
       toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
@@ -375,16 +376,34 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
       </AppFormPanel>
 
       <div className="space-y-5">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <SummaryCard label="Disponible real" value={formatMoney(assets, "ARS")} tone="positive" description="Balances positivos actuales" />
+        <div className={`grid gap-3 ${netWorthByCurrency.length === 1 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          <SummaryCard label="Activos" value={formatMoney(assets, "ARS")} tone="positive" description="Balances positivos en ARS" />
           <SummaryCard
             label="Deuda pendiente"
             value={formatMoney(liabilities, "ARS")}
             tone="danger"
             description={debtLiabilities > 0 ? "Deudas abiertas y saldos negativos" : "Saldos negativos actuales"}
           />
-          <SummaryCard label="Patrimonio neto" value={formatMoney(netWorth, "ARS")} tone={netWorth >= 0 ? "default" : "warning"} description="Disponible menos deuda pendiente" highlight />
+          {netWorthByCurrency.length > 0 ? (
+            netWorthByCurrency.map((item) => (
+              <SummaryCard
+                key={item.currency}
+                label={`Patrimonio ${item.currency}`}
+                value={formatMoney(item.netWorth, item.currency)}
+                tone={item.netWorth >= 0 ? "default" : "warning"}
+                description={`Activos menos deuda en ${item.currency}`}
+                highlight
+              />
+            ))
+          ) : (
+            <SummaryCard label="Patrimonio neto" value={formatMoney(0, "ARS")} tone="default" description="Sin cuentas activas" highlight />
+          )}
         </div>
+        {netWorthByCurrency.length > 1 && (
+          <p className="text-[11px] text-zinc-600">
+            El patrimonio se muestra por moneda para evitar conversiones incorrectas entre ARS y USD.
+          </p>
+        )}
 
         <PremiumCard>
           <PremiumCardHeader>
@@ -587,7 +606,7 @@ function Field({
   );
 }
 
-function formatMoney(value: number, currency: CurrencyCode) {
+function formatMoney(value: number, currency: CurrencyCode | string) {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency,

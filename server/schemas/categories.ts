@@ -25,6 +25,16 @@ export const listCategoriesSchema = z.object({
   includeArchived: z.coerce.boolean().default(false),
 });
 
+export const mergeCategoriesSchema = z.object({
+  householdId: z.string().min(1),
+  fromId: z.string().min(1),
+  toId: z.string().min(1),
+}).refine((data) => data.fromId !== data.toId, {
+  message: "Las categorías de origen y destino deben ser distintas.",
+  path: ["toId"],
+});
+
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
 export type ListCategoriesInput = z.infer<typeof listCategoriesSchema>;
+export type MergeCategoriesInput = z.infer<typeof mergeCategoriesSchema>;

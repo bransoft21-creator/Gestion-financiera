@@ -2,7 +2,7 @@ import { DebtStatus, Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { NotFoundError } from "../api/errors";
 import type { CreateAccountInput, ListAccountsInput, UpdateAccountInput } from "../schemas/accounts";
-import { computeRealLiabilitySummary, toFiniteNumber } from "./financial-ledger";
+import { computeNetWorthByCurrency, computeRealLiabilitySummary, toFiniteNumber } from "./financial-ledger";
 import { traceFinancialSource } from "./financial-debug";
 import { assertHouseholdAccess } from "./households";
 
@@ -53,6 +53,7 @@ export async function listAccounts(userProfileId: string, input: ListAccountsInp
         where: { householdId: input.householdId, deletedAt: null },
       });
   const liabilitySummary = computeRealLiabilitySummary(allAccounts, debts);
+  const netWorthByCurrency = computeNetWorthByCurrency(allAccounts, debts);
   traceFinancialSource({
     endpoint: "/api/accounts",
     householdId: input.householdId,
@@ -72,6 +73,7 @@ export async function listAccounts(userProfileId: string, input: ListAccountsInp
   return {
     accounts: accounts.map(serializeAccount),
     ...liabilitySummary,
+    netWorthByCurrency,
   };
 }
 

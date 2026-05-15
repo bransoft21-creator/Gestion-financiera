@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FolderTree, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { FolderTree, GitMerge, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
 import { ActionButton } from "@/components/ui-v2/action-button";
@@ -55,6 +55,32 @@ const categoryTypeLabels: Record<CategoryType, string> = {
 
 const categoryTypes = Object.keys(categoryTypeLabels) as CategoryType[];
 
+function normalizeCategoryName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]/g, "")
+    .replace(/s$/, "");
+}
+
+function detectSimilarPairs(categories: CategoryItem[]): Array<[CategoryItem, CategoryItem]> {
+  const pairs: Array<[CategoryItem, CategoryItem]> = [];
+  for (let i = 0; i < categories.length; i++) {
+    for (let j = i + 1; j < categories.length; j++) {
+      const a = categories[i];
+      const b = categories[j];
+      if (a.type !== b.type) continue;
+      const na = normalizeCategoryName(a.name);
+      const nb = normalizeCategoryName(b.name);
+      if (na === nb || (na.length >= 4 && nb.length >= 4 && (na.startsWith(nb) || nb.startsWith(na)))) {
+        pairs.push([a, b]);
+      }
+    }
+  }
+  return pairs;
+}
+
 const categorySchema = z.object({
   name: z.string().trim().min(2, "Ingresá un nombre.").max(80),
   type: z.enum(categoryTypes),
@@ -80,10 +106,14 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [mergePending, setMergePending] = useState<{ from: CategoryItem; to: CategoryItem } | null>(null);
+  const [isMerging, setIsMerging] = useState(false);
 
   const parentOptions = useMemo(() => {
     return categories.filter((category) => category.id !== editingCategoryId);
   }, [categories, editingCategoryId]);
+
+  const similarPairs = useMemo(() => detectSimilarPairs(categories), [categories]);
 
   async function loadCategories() {
     setIsLoading(true);
@@ -155,6 +185,29 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
     await loadCategories();
   }
 
+  async function handleMergeConfirm() {
+    if (!mergePending) return;
+    setIsMerging(true);
+    try {
+      const response = await fetch("/api/categories/merge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ householdId, fromId: mergePending.from.id, toId: mergePending.to.id }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setMessage(payload.error ?? "No se pudo unificar.");
+        return;
+      }
+      setMergePending(null);
+      await loadCategories();
+    } catch {
+      setMessage("Error de red. Intentá de nuevo.");
+    } finally {
+      setIsMerging(false);
+    }
+  }
+
   async function handleDelete(categoryId: string) {
     const shouldDelete = window.confirm("¿Eliminar esta categoría? Se aplicará soft delete.");
 
@@ -214,6 +267,37 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
   }
 
   return (
+    <>
+    {mergePending && (
+      <div className="fixed inset-0 z-[300] flex items-end justify-center bg-black/65 p-3 backdrop-blur-sm sm:items-center" onClick={() => setMergePending(null)} aria-hidden="true">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="merge-dialog-title"
+          className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0f1117] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:pb-5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h2 id="merge-dialog-title" className="text-base font-semibold text-white">Unificar categorías</h2>
+          <p className="mt-2 text-sm text-zinc-400">
+            Las transacciones y recurrentes de{" "}
+            <span className="font-semibold text-white">"{mergePending.from.name}"</span>{" "}
+            se van a mover a{" "}
+            <span className="font-semibold text-white">"{mergePending.to.name}"</span>.
+            La categoría origen va a quedar desactivada.
+          </p>
+          <p className="mt-2 text-xs text-zinc-500">Los presupuestos no se transfieren automáticamente.</p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <ActionButton type="button" variant="glass" onClick={() => setMergePending(null)}>
+              Cancelar
+            </ActionButton>
+            <ActionButton type="button" disabled={isMerging} onClick={() => void handleMergeConfirm()}>
+              {isMerging ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+              Unificar
+            </ActionButton>
+          </div>
+        </div>
+      </div>
+    )}
     <div className={`grid min-w-0 gap-6 ${isFormOpen ? "xl:grid-cols-[360px_1fr]" : ""}`}>
       {isFormOpen ? (
         <PremiumCard variant="raised">
@@ -322,6 +406,36 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
         </PremiumCard>
       ) : null}
 
+      {similarPairs.length > 0 && (
+        <div className="rounded-3xl border border-amber-300/20 bg-amber-300/[0.07] p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <GitMerge className="h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
+            <p className="text-sm font-semibold text-amber-100">
+              {similarPairs.length === 1 ? "Posible categoría duplicada" : `${similarPairs.length} posibles duplicados detectados`}
+            </p>
+          </div>
+          <div className="space-y-2">
+            {similarPairs.map(([a, b]) => (
+              <div key={`${a.id}-${b.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-2">
+                <p className="text-sm text-zinc-300">
+                  <span className="font-medium text-white">{a.name}</span>
+                  <span className="mx-1.5 text-zinc-600">·</span>
+                  <span className="font-medium text-white">{b.name}</span>
+                </p>
+                <div className="flex shrink-0 gap-1.5">
+                  <ActionButton type="button" size="sm" variant="glass" onClick={() => setMergePending({ from: a, to: b })}>
+                    Usar "{b.name}"
+                  </ActionButton>
+                  <ActionButton type="button" size="sm" variant="glass" onClick={() => setMergePending({ from: b, to: a })}>
+                    Usar "{a.name}"
+                  </ActionButton>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <PremiumCard>
         <PremiumCardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -367,6 +481,7 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
         </PremiumCardContent>
       </PremiumCard>
     </div>
+    </>
   );
 }
 

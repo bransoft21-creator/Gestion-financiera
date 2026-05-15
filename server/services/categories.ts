@@ -3,6 +3,7 @@ import { ForbiddenError, NotFoundError } from "../api/errors";
 import type {
   CreateCategoryInput,
   ListCategoriesInput,
+  MergeCategoriesInput,
   UpdateCategoryInput,
 } from "../schemas/categories";
 import { assertHouseholdAccess } from "./households";
@@ -58,6 +59,29 @@ export async function updateCategory(
       parentId: input.parentId,
     },
   });
+}
+
+export async function mergeCategories(
+  userProfileId: string,
+  input: MergeCategoriesInput,
+) {
+  await assertCategoryAccess(userProfileId, input.fromId, input.householdId);
+  await assertCategoryAccess(userProfileId, input.toId, input.householdId);
+
+  await prisma.$transaction([
+    prisma.transaction.updateMany({
+      where: { categoryId: input.fromId, householdId: input.householdId },
+      data: { categoryId: input.toId },
+    }),
+    prisma.recurringExpense.updateMany({
+      where: { categoryId: input.fromId, householdId: input.householdId },
+      data: { categoryId: input.toId },
+    }),
+    prisma.category.update({
+      where: { id: input.fromId },
+      data: { deletedAt: new Date(), isArchived: true },
+    }),
+  ]);
 }
 
 export async function deleteCategory(
