@@ -64,7 +64,7 @@ export async function getTransactionWorkspace(userProfileId: string) {
         isArchived: false,
       },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, type: true, currency: true },
+      select: { id: true, name: true, type: true, currency: true, currentBalance: true },
     }),
     prisma.category.findMany({
       where: {
@@ -104,17 +104,20 @@ export async function getTransactionWorkspace(userProfileId: string) {
     }),
   ]);
 
+  const serializeAccounts = (raw: typeof accounts) =>
+    raw.map((a) => ({ ...a, currentBalance: a.currentBalance.toString() }));
+
   if (accounts.length === 0) {
     await ensureDefaultAccount(household.id, userProfileId);
     const defaultAccounts = await prisma.account.findMany({
       where: { householdId: household.id, deletedAt: null, isArchived: false },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, type: true, currency: true },
+      select: { id: true, name: true, type: true, currency: true, currentBalance: true },
     });
-    return { household, accounts: defaultAccounts, categories, sharedHouseholds };
+    return { household, accounts: serializeAccounts(defaultAccounts), categories, sharedHouseholds };
   }
 
-  return { household, accounts, categories, sharedHouseholds };
+  return { household, accounts: serializeAccounts(accounts), categories, sharedHouseholds };
 }
 
 export async function getCategoryWorkspace(userProfileId: string) {

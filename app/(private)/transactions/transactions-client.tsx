@@ -21,9 +21,11 @@ import {
   appFormContentClass,
   appFormHeaderClass,
 } from "@/components/app/mobile-form";
+import { SensitiveAmount } from "@/components/app/sensitive-amount";
 import { formatArgentinaDateInput } from "@/lib/dates";
 import { onIntegerKeyDown, onMoneyKeyDown } from "@/lib/input-utils";
 import { moneySchema } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -166,6 +168,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   const loadRequestSeqRef = useRef(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [cardPaymentMode, setCardPaymentMode] = useState<"total" | "parcial" | null>(null);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
   const [pendingDeleteTransaction, setPendingDeleteTransaction] = useState<TransactionItem | null>(null);
@@ -194,6 +197,22 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   ), [watchedType, selectedAccount, watchedDescription]);
 
   const isTransferToCreditCard = watchedType === "TRANSFER" && transferTargetAccount?.type === "CREDIT_CARD";
+
+  const cardPendingAmount = useMemo(() => {
+    if (!transferTargetAccount?.currentBalance) return 0;
+    const balance = parseFloat(transferTargetAccount.currentBalance);
+    return isNaN(balance) ? 0 : Math.max(0, -balance);
+  }, [transferTargetAccount]);
+
+  const targetCurrency = (transferTargetAccount?.currency ?? "ARS") as CurrencyCode;
+
+  const cardPartialPaymentCopy = useMemo(() => {
+    if (!isTransferToCreditCard || cardPaymentMode !== "parcial") return null;
+    const amount = parseFloat(watchedAmountStr);
+    if (!amount || amount <= 0) return null;
+    if (cardPendingAmount > 0 && amount > cardPendingAmount * 1.05) return "overpay";
+    return "partial";
+  }, [isTransferToCreditCard, cardPaymentMode, watchedAmountStr, cardPendingAmount]);
 
   const selectedHousehold = useMemo(
     () => sharedHouseholds.find((h) => h.id === watchedSharedHouseholdId),
@@ -452,6 +471,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
 
   function startEditing(transaction: TransactionItem) {
     setEditingTransactionId(transaction.id);
+    setCardPaymentMode(null);
     setIsFormOpen(true);
     setMessage(null);
     reset({
@@ -476,6 +496,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
 
   function resetForm() {
     setEditingTransactionId(null);
+    setCardPaymentMode(null);
     resetSplits();
     reset({
       type: "EXPENSE",
@@ -502,6 +523,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
     const sourceAccount = nonCCAccounts[0] ?? accounts[0];
     const destAccount = creditCardAccounts[0];
     setEditingTransactionId(null);
+    setCardPaymentMode(null);
     resetSplits();
     reset({
       type: "TRANSFER",
@@ -647,6 +669,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                   onChange={(event) => {
                     setValue("type", event.target.value as TransactionType);
                     setValue("categoryId", "");
+                    setCardPaymentMode(null);
                   }}
                 >
                   {supportedFormTransactionTypes.map((type) => (
@@ -677,6 +700,10 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                   <select
                     className={transactionSelectClass}
                     {...register("transferAccountId")}
+                    onChange={(event) => {
+                      setValue("transferAccountId", event.target.value);
+                      setCardPaymentMode(null);
+                    }}
                   >
                     <option value="">Seleccioná cuenta destino</option>
                     {accounts.filter((a) => a.id !== watchedAccountId).map((account) => (
@@ -687,9 +714,68 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                   </select>
                 </Field>
                 {isTransferToCreditCard ? (
-                  <div className="flex items-center gap-2 rounded-2xl border border-teal-300/20 bg-teal-400/10 px-3 py-2">
-                    <CreditCard className="h-4 w-4 shrink-0 text-teal-400" aria-hidden="true" />
-                    <p className="text-xs text-teal-100">Pago de tarjeta · reduce el saldo negativo, no genera gasto nuevo.</p>
+                  <div className="space-y-3 rounded-2xl border border-teal-300/20 bg-teal-400/10 p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 shrink-0 text-teal-400" aria-hidden="true" />
+                        <span className="text-xs font-semibold text-teal-100">Pago de tarjeta</span>
+                      </div>
+                      {cardPendingAmount > 0 ? (
+                        <span className="text-xs text-muted-foreground">
+                          Saldo pendiente: <SensitiveAmount value={formatMoney(cardPendingAmount, targetCurrency)} />
+                        </span>
+                      ) : null}
+                    </div>
+                    {cardPendingAmount <= 0 ? (
+                      <p className="text-xs text-teal-100/70">Esta tarjeta no tiene saldo pendiente.</p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCardPaymentMode("total");
+                            setValue("amount", String(cardPendingAmount));
+                          }}
+                          className={cn(
+                            "rounded-xl border px-3 py-2.5 text-left text-xs transition",
+                            cardPaymentMode === "total"
+                              ? "border-teal-400/60 bg-teal-400/20 text-teal-100"
+                              : "border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.07]",
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            <span className={cn(
+                              "h-3 w-3 shrink-0 rounded-full border-2 transition",
+                              cardPaymentMode === "total" ? "border-teal-400 bg-teal-400" : "border-white/30",
+                            )} />
+                            Pago total
+                          </span>
+                          <span className="mt-0.5 block text-muted-foreground">Deja la tarjeta en cero.</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCardPaymentMode("parcial");
+                            setValue("amount", "");
+                          }}
+                          className={cn(
+                            "rounded-xl border px-3 py-2.5 text-left text-xs transition",
+                            cardPaymentMode === "parcial"
+                              ? "border-amber-400/60 bg-amber-400/10 text-amber-100"
+                              : "border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.07]",
+                          )}
+                        >
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            <span className={cn(
+                              "h-3 w-3 shrink-0 rounded-full border-2 transition",
+                              cardPaymentMode === "parcial" ? "border-amber-400 bg-amber-400" : "border-white/30",
+                            )} />
+                            Pago parcial
+                          </span>
+                          <span className="mt-0.5 block text-muted-foreground">Quedará saldo pendiente.</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : null}
               </>
@@ -727,9 +813,21 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                   onKeyDown={onMoneyKeyDown}
                   {...register("amount")}
                   placeholder="0"
+                  disabled={isTransferToCreditCard && cardPaymentMode === "total"}
+                  className={cn(isTransferToCreditCard && cardPaymentMode === "total" && "cursor-default opacity-60")}
                 />
               </Field>
             </div>
+
+            {cardPartialPaymentCopy === "overpay" ? (
+              <p className="text-xs text-amber-300/80">
+                El monto supera el saldo de la tarjeta. Podés continuar si querés generar saldo a favor.
+              </p>
+            ) : cardPartialPaymentCopy === "partial" ? (
+              <p className="text-xs text-muted-foreground">
+                Quedará saldo pendiente en la tarjeta.
+              </p>
+            ) : null}
 
             <Field label="Fecha" error={formErrors.occurredAt?.message}>
               <Input

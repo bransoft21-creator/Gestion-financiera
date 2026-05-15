@@ -20,6 +20,7 @@ export type AccountOption = {
   name: string;
   type: string;
   currency: CurrencyCode;
+  currentBalance: string;
 };
 
 export type CategoryOption = {
