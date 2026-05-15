@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   CreditCard,
@@ -57,10 +57,12 @@ import type {
 import { useTransactionSplits } from "./use-transaction-splits";
 import {
   buildFeedSummary,
+  detectCurrencyMismatch,
   formatDate,
   formatMoney,
   formatMoneyBalance,
   getDisplayAmount,
+  getHighestDebtCreditCard,
   getPreferredArsBankAccount,
   getSignedAmount,
   getTransactionTone,
@@ -68,6 +70,7 @@ import {
   isCategoryAllowedForType,
   isSupportedFormTransactionType,
   optionalPayloadValue,
+  sortAccountsByCurrency,
 } from "./utils";
 
 const optionalEnumField = <T extends [string, ...string[]]>(values: T) =>
@@ -115,6 +118,7 @@ const formSchema = z.object({
 });
 
 export function TransactionsClient({ householdId, accounts, categories, sharedHouseholds }: TransactionsClientProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const defaultAccount = getPreferredArsBankAccount(accounts);
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
@@ -197,6 +201,17 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   ), [watchedType, selectedAccount, watchedDescription]);
 
   const isTransferToCreditCard = watchedType === "TRANSFER" && transferTargetAccount?.type === "CREDIT_CARD";
+
+  const isCurrencyMismatch = useMemo(() =>
+    watchedType === "TRANSFER" && Boolean(watchedTransferAccountId) && detectCurrencyMismatch(selectedAccount, transferTargetAccount),
+  [watchedType, watchedTransferAccountId, selectedAccount, transferTargetAccount]);
+
+  const isCCCurrencyMismatch = isTransferToCreditCard && detectCurrencyMismatch(selectedAccount, transferTargetAccount);
+
+  const sortedTransferDestAccounts = useMemo(() => {
+    const others = accounts.filter((a) => a.id !== watchedAccountId);
+    return selectedAccount ? sortAccountsByCurrency(others, selectedAccount.currency as CurrencyCode) : others;
+  }, [accounts, watchedAccountId, selectedAccount]);
 
   const cardPendingAmount = useMemo(() => {
     if (!transferTargetAccount?.currentBalance) return 0;
@@ -418,11 +433,14 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
         return;
       }
 
+      const wasCardPayment = type === "TRANSFER" &&
+        accounts.find((a) => a.id === (data.transferAccountId as string))?.type === "CREDIT_CARD";
       toast.success(editingTransactionId ? "Transacción actualizada." : "Transacción guardada.");
       pendingCreateRequestIdRef.current = null;
       resetForm();
       setIsFormOpen(false);
       await loadTransactions(filters, search);
+      if (wasCardPayment) router.refresh();
     } catch {
       pendingCreateRequestIdRef.current = null;
       setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
@@ -519,9 +537,12 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   }
 
   function openCreditCardPaymentForm() {
+    const destAccount = getHighestDebtCreditCard(creditCardAccounts);
     const nonCCAccounts = accounts.filter((a) => a.type !== "CREDIT_CARD");
-    const sourceAccount = nonCCAccounts[0] ?? accounts[0];
-    const destAccount = creditCardAccounts[0];
+    const sourceAccount =
+      nonCCAccounts.find((a) => a.currency === destAccount?.currency) ??
+      nonCCAccounts[0] ??
+      accounts[0];
     setEditingTransactionId(null);
     setCardPaymentMode(null);
     resetSplits();
@@ -530,7 +551,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
       accountId: sourceAccount?.id ?? defaultAccount?.id ?? "",
       transferAccountId: destAccount?.id ?? "",
       categoryId: "",
-      currency: (sourceAccount?.currency ?? "ARS") as CurrencyCode,
+      currency: (sourceAccount?.currency ?? destAccount?.currency ?? "ARS") as CurrencyCode,
       amount: "",
       occurredAt: formatArgentinaDateInput(),
       description: "Pago tarjeta",
@@ -547,14 +568,20 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   }
 
   function convertToCardPaymentTransfer() {
-    const nonCCAccount = accounts.find((a) => a.type !== "CREDIT_CARD" && a.id !== watchedAccountId)
-      ?? accounts.find((a) => a.id !== watchedAccountId);
+    const ccAccount = accounts.find((a) => a.id === watchedAccountId);
+    const nonCCAccount =
+      accounts.find((a) => a.type !== "CREDIT_CARD" && a.id !== watchedAccountId && a.currency === ccAccount?.currency) ??
+      accounts.find((a) => a.type !== "CREDIT_CARD" && a.id !== watchedAccountId);
     setValue("type", "TRANSFER");
     setValue("transferAccountId", watchedAccountId);
-    if (nonCCAccount) setValue("accountId", nonCCAccount.id);
+    if (nonCCAccount) {
+      setValue("accountId", nonCCAccount.id);
+      setValue("currency", nonCCAccount.currency as CurrencyCode);
+    }
     setValue("categoryId", "");
     setValue("expenseType", undefined as ExpenseType | undefined);
     setValue("paymentMethod", undefined as PaymentMethod | undefined);
+    setCardPaymentMode(null);
   }
 
   function toggleGroup(label: string) {
@@ -685,6 +712,12 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
               <select
                 className={transactionSelectClass}
                 {...register("accountId")}
+                onChange={(event) => {
+                  const newId = event.target.value;
+                  setValue("accountId", newId);
+                  const account = accounts.find((a) => a.id === newId);
+                  if (account) setValue("currency", account.currency as CurrencyCode);
+                }}
               >
                 {accounts.map((account) => (
                   <option key={account.id} value={account.id}>
@@ -701,12 +734,17 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                     className={transactionSelectClass}
                     {...register("transferAccountId")}
                     onChange={(event) => {
-                      setValue("transferAccountId", event.target.value);
+                      const newId = event.target.value;
+                      setValue("transferAccountId", newId);
                       setCardPaymentMode(null);
+                      const dst = accounts.find((a) => a.id === newId);
+                      if (dst && dst.currency === selectedAccount?.currency) {
+                        setValue("currency", dst.currency as CurrencyCode);
+                      }
                     }}
                   >
                     <option value="">Seleccioná cuenta destino</option>
-                    {accounts.filter((a) => a.id !== watchedAccountId).map((account) => (
+                    {sortedTransferDestAccounts.map((account) => (
                       <option key={account.id} value={account.id}>
                         {account.name} · {account.currency}
                       </option>
@@ -800,8 +838,10 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Moneda" error={formErrors.currency?.message}>
                 <select
-                  className={transactionSelectClass}
+                  className={cn(transactionSelectClass, "cursor-default opacity-70")}
                   {...register("currency")}
+                  disabled
+                  title="La moneda se toma de la cuenta seleccionada."
                 >
                   <option value="ARS">ARS</option>
                   <option value="USD">USD</option>
@@ -819,7 +859,15 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
               </Field>
             </div>
 
-            {cardPartialPaymentCopy === "overpay" ? (
+            {isCCCurrencyMismatch ? (
+              <div className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-xs text-rose-100">
+                Elegí una cuenta en la misma moneda que la tarjeta ({transferTargetAccount?.currency}).
+              </div>
+            ) : isCurrencyMismatch ? (
+              <div className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-xs text-rose-100">
+                Las transferencias entre monedas distintas todavía no están disponibles. Elegí cuentas en la misma moneda.
+              </div>
+            ) : cardPartialPaymentCopy === "overpay" ? (
               <p className="text-xs text-amber-300/80">
                 El monto supera el saldo de la tarjeta. Podés continuar si querés generar saldo a favor.
               </p>
@@ -1005,7 +1053,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
             {message ? <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">{message}</p> : null}
 
             <div className={appFormActionsClass()}>
-              <Button className="h-11 w-full" disabled={isSaving || accounts.length === 0}>
+              <Button className="h-11 w-full" disabled={isSaving || accounts.length === 0 || isCurrencyMismatch || isCCCurrencyMismatch}>
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                 {editingTransactionId ? "Guardar cambios" : "Guardar transacción"}
               </Button>

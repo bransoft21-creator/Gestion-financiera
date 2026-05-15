@@ -17,6 +17,37 @@ export function getPreferredArsBankAccount(accounts: AccountOption[]) {
   );
 }
 
+// Returns the CREDIT_CARD account with the highest absolute debt (most negative balance).
+// Falls back to the first CC if none carry debt.
+export function getHighestDebtCreditCard(accounts: AccountOption[]): AccountOption | undefined {
+  if (accounts.length === 0) return undefined;
+  const withDebt = accounts.filter((a) => parseFloat(a.currentBalance) < 0);
+  if (withDebt.length === 0) return accounts[0];
+  return withDebt.reduce((prev, curr) =>
+    parseFloat(curr.currentBalance) < parseFloat(prev.currentBalance) ? curr : prev,
+  );
+}
+
+// Returns true when two accounts have different currencies (cross-currency mismatch).
+export function detectCurrencyMismatch(
+  srcAccount: AccountOption | undefined,
+  dstAccount: AccountOption | undefined,
+): boolean {
+  if (!srcAccount || !dstAccount) return false;
+  return srcAccount.currency !== dstAccount.currency;
+}
+
+// Sorts accounts so that those matching the given currency appear first.
+export function sortAccountsByCurrency(
+  accounts: AccountOption[],
+  preferredCurrency: CurrencyCode,
+): AccountOption[] {
+  return [
+    ...accounts.filter((a) => a.currency === preferredCurrency),
+    ...accounts.filter((a) => a.currency !== preferredCurrency),
+  ];
+}
+
 export function optionalPayloadValue(value: unknown, shouldClearWithNull: boolean) {
   return value === "" || value == null ? (shouldClearWithNull ? null : undefined) : value;
 }
