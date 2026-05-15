@@ -173,6 +173,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [cardPaymentMode, setCardPaymentMode] = useState<"total" | "parcial" | null>(null);
+  const [cardPaymentBlocked, setCardPaymentBlocked] = useState<{ currency: CurrencyCode } | null>(null);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
   const [pendingDeleteTransaction, setPendingDeleteTransaction] = useState<TransactionItem | null>(null);
@@ -515,6 +516,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   function resetForm() {
     setEditingTransactionId(null);
     setCardPaymentMode(null);
+    setCardPaymentBlocked(null);
     resetSplits();
     reset({
       type: "EXPENSE",
@@ -539,16 +541,21 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   function openCreditCardPaymentForm() {
     const destAccount = getHighestDebtCreditCard(creditCardAccounts);
     const nonCCAccounts = accounts.filter((a) => a.type !== "CREDIT_CARD");
-    const sourceAccount =
-      nonCCAccounts.find((a) => a.currency === destAccount?.currency) ??
-      nonCCAccounts[0] ??
-      accounts[0];
+    const sourceAccount = nonCCAccounts.find((a) => a.currency === destAccount?.currency);
+
+    if (!sourceAccount && destAccount) {
+      setCardPaymentBlocked({ currency: destAccount.currency as CurrencyCode });
+      setIsFormOpen(true);
+      return;
+    }
+
+    setCardPaymentBlocked(null);
     setEditingTransactionId(null);
     setCardPaymentMode(null);
     resetSplits();
     reset({
       type: "TRANSFER",
-      accountId: sourceAccount?.id ?? defaultAccount?.id ?? "",
+      accountId: sourceAccount?.id ?? nonCCAccounts[0]?.id ?? defaultAccount?.id ?? "",
       transferAccountId: destAccount?.id ?? "",
       categoryId: "",
       currency: (sourceAccount?.currency ?? destAccount?.currency ?? "ARS") as CurrencyCode,
@@ -639,7 +646,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
         onConfirm={() => void confirmDelete()}
       />
 
-      <AppFormPanel isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} desktopAlwaysOpen={false}>
+      <AppFormPanel isOpen={isFormOpen} onClose={() => { setIsFormOpen(false); setCardPaymentBlocked(null); }} desktopAlwaysOpen={false}>
         <CardHeader className={appFormHeaderClass()}>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] text-teal-100">
@@ -664,7 +671,37 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
           </div>
         </CardHeader>
         <CardContent className={appFormContentClass(isFormOpen)}>
-          {accounts.length === 0 ? (
+          {cardPaymentBlocked ? (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4">
+                <div className="flex items-start gap-3">
+                  <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      Para pagar esta tarjeta necesitás una cuenta en {cardPaymentBlocked.currency}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      No tenés ninguna cuenta en {cardPaymentBlocked.currency} desde donde pueda salir el dinero. Creá una para poder registrar el pago.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <Button asChild className="h-11 w-full">
+                <Link href="/accounts">
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Crear cuenta compatible
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-9 w-full text-xs text-muted-foreground"
+                onClick={() => { setCardPaymentBlocked(null); setIsFormOpen(false); }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          ) : accounts.length === 0 ? (
             <div className="space-y-4">
               <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4">
                 <p className="text-sm font-semibold text-foreground">Primero necesitás una cuenta</p>
