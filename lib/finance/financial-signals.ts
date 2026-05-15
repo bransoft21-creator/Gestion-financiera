@@ -2,6 +2,15 @@
  * Layer 2 — Heuristic signal engine (no AI).
  * Deterministic rules that detect behavioral patterns and anomalies.
  * All thresholds are intentionally readable — adjust without touching AI.
+ *
+ * FRAMING CONTRACT:
+ * Weekly signals represent RHYTHM, ACTIVITY and MOVEMENT — not structural
+ * financial health. Rent, card payments, and services are scheduled events,
+ * not daily-repeatable expenses. Severity "warning" is reserved for genuine
+ * anomalies (e.g., a category absorbing >28% of all weekly spend), never
+ * for high-flow weeks caused by normal monthly obligations.
+ * Structural health (savings rate, net worth, debt) lives in the monthly
+ * dashboard — not here.
  */
 
 import type { WeeklyMetrics, WeeklyComparison } from "./financial-analytics";
@@ -33,34 +42,37 @@ export function generateWeeklySignals(
   const signals: Signal[] = [];
 
   // ── Expenses trend ──────────────────────────────────────────────────────────
+  // Threshold raised (25→40%) to avoid flagging normal month-start spikes as notable.
+  // Severity downgraded: expense movement is ACTIVITY context, not health judgment.
   if (comparison.available && comparison.expensesPct !== null) {
     if (comparison.expensesPct < -10) {
       signals.push({
         id: "EXPENSES_DOWN",
-        label: `Tus gastos bajaron un ${Math.abs(Math.round(comparison.expensesPct))}% respecto a la semana anterior`,
+        label: `El flujo de gasto bajó un ${Math.abs(Math.round(comparison.expensesPct))}% respecto a la semana anterior`,
         severity: "positive",
       });
-    } else if (comparison.expensesPct > 25) {
+    } else if (comparison.expensesPct > 40) {
       signals.push({
         id: "EXPENSES_UP",
-        label: `Tus gastos subieron un ${Math.round(comparison.expensesPct)}% respecto a la semana anterior`,
-        severity: "warning",
+        label: "El flujo de gasto estuvo más activo esta semana",
+        severity: "neutral",
       });
     } else if (Math.abs(comparison.expensesPct) <= 8) {
       signals.push({
         id: "STABLE_WEEK",
-        label: "Tu gasto semanal se mantuvo estable respecto a la semana anterior",
+        label: "El ritmo de gasto se mantuvo parejo respecto a la semana anterior",
         severity: "positive",
       });
     }
   }
 
-  // ── Weekend spike ────────────────────────────────────────────────────────────
+  // ── Weekend concentration ─────────────────────────────────────────────────
+  // Neutral: weekend spending is a pattern observation, not a health warning.
   if (metrics.weekendPct > 45 && metrics.transactionCount > 3) {
     signals.push({
       id: "WEEKEND_SPIKE",
-      label: `El ${Math.round(metrics.weekendPct)}% de tus gastos fue en el fin de semana`,
-      severity: "warning",
+      label: `El fin de semana concentró el ${Math.round(metrics.weekendPct)}% del flujo semanal`,
+      severity: "neutral",
     });
   }
 
@@ -69,7 +81,7 @@ export function generateWeeklySignals(
   if (deliveryCat && deliveryCat.pct > 28) {
     signals.push({
       id: "DELIVERY_HIGH",
-      label: `${deliveryCat.name} representó el ${Math.round(deliveryCat.pct)}% de tus gastos`,
+      label: `${deliveryCat.name} representó el ${Math.round(deliveryCat.pct)}% de los gastos esta semana`,
       severity: "warning",
     });
   }
@@ -85,24 +97,29 @@ export function generateWeeklySignals(
   ) {
     signals.push({
       id: "TRANSPORT_GROWTH",
-      label: `Tus gastos en ${transportCat.name} crecieron esta semana`,
+      label: `Transporte tuvo más movimiento que la semana anterior`,
       severity: "neutral",
     });
   }
 
-  // ── Savings rate ─────────────────────────────────────────────────────────────
+  // ── Weekly flow balance ──────────────────────────────────────────────────────
+  // NOTE: This is FLOW context, not structural savings health.
+  // "savingsRate" here means balance/income for the week — a week with
+  // rent or card payments will show low savingsRate even with a healthy month.
+  // GOOD_SAVINGS → "flujo liviano", severity positive (no change)
+  // LOW_SAVINGS  → "flujo intenso", severity NEUTRAL (was warning — rent ≠ bad habit)
   if (metrics.totalIncome > 0) {
     if (metrics.savingsRate >= 25) {
       signals.push({
         id: "GOOD_SAVINGS",
-        label: `Mantuviste una tasa de ahorro del ${Math.round(metrics.savingsRate)}%`,
+        label: "La semana cerró con un balance positivo de flujo",
         severity: "positive",
       });
     } else if (metrics.savingsRate < 5) {
       signals.push({
         id: "LOW_SAVINGS",
-        label: "Tu tasa de ahorro esta semana fue muy baja",
-        severity: "warning",
+        label: "La semana tuvo un flujo de gasto elevado",
+        severity: "neutral",
       });
     }
   }
@@ -111,7 +128,7 @@ export function generateWeeklySignals(
   if (metrics.topCategory && metrics.topCategory.pct > 55 && metrics.transactionCount > 4) {
     signals.push({
       id: "CATEGORY_DOMINANT",
-      label: `${metrics.topCategory.name} concentró más del 55% de tus gastos`,
+      label: `${metrics.topCategory.name} concentró más de la mitad del gasto semanal`,
       severity: "neutral",
     });
   }
@@ -120,7 +137,7 @@ export function generateWeeklySignals(
   if (metrics.creditPct > 75 && metrics.totalExpenses > 0) {
     signals.push({
       id: "CREDIT_HEAVY",
-      label: `El ${Math.round(metrics.creditPct)}% de tus gastos fue con tarjeta de crédito`,
+      label: `El ${Math.round(metrics.creditPct)}% del gasto semanal fue con tarjeta de crédito`,
       severity: "neutral",
     });
   }
@@ -132,7 +149,7 @@ export function generateWeeklySignals(
     signals.push({ id: "LOW_ACTIVITY", label: "Pocos movimientos registrados esta semana", severity: "neutral" });
   }
 
-  // Return max 4 signals — sorted so positives come last (AI gets the negatives first)
+  // Return max 4 signals — warnings first so they reach the AI prompt with priority
   const warnings = signals.filter((s) => s.severity === "warning");
   const neutrals = signals.filter((s) => s.severity === "neutral");
   const positives = signals.filter((s) => s.severity === "positive");

@@ -66,23 +66,23 @@ function buildPrompt(input: ReflectionInput): string {
   const lines: string[] = [];
 
   lines.push(`Semana: ${input.weekLabel}`);
-  lines.push(`Gastos: ${formatARS(input.totalExpenses)}`);
+  lines.push(`Movimiento semanal: ${formatARS(input.totalExpenses)} en gastos`);
 
   if (input.totalIncome > 0) {
-    lines.push(`Ingresos: ${formatARS(input.totalIncome)} | Ahorro: ${Math.round(input.savingsRate)}%`);
+    lines.push(`Ingresos registrados esta semana: ${formatARS(input.totalIncome)}`);
   }
 
   if (input.topCategory) {
-    lines.push(`Categoría top: ${input.topCategory}`);
+    lines.push(`Categoría con más actividad: ${input.topCategory}`);
   }
 
   if (input.weekendPct > 15) {
-    lines.push(`Fin de semana: ${Math.round(input.weekendPct)}% del gasto total`);
+    lines.push(`Fin de semana: ${Math.round(input.weekendPct)}% del movimiento total`);
   }
 
   if (input.expensesChange !== null && Math.abs(input.expensesChange) >= 5) {
     const dir = input.expensesChange > 0 ? "↑" : "↓";
-    lines.push(`Vs semana anterior: gastos ${dir} ${Math.abs(Math.round(input.expensesChange))}%`);
+    lines.push(`Vs semana anterior: flujo ${dir} ${Math.abs(Math.round(input.expensesChange))}%`);
   }
 
   if (input.signals.length > 0) {
@@ -91,15 +91,16 @@ function buildPrompt(input: ReflectionInput): string {
 
   return [
     "Sos un asistente financiero personal para una app en Argentina. Tu tono es calmado, empático y directo.",
+    "Contexto clave: los datos son de UNA sola semana. Las semanas pueden incluir pagos programados como alquiler, tarjeta de crédito o servicios — estos son eventos normales del calendario, no señales negativas. Nunca los trates como hábitos preocupantes.",
     "",
     "Datos de la semana:",
     ...lines,
     "",
-    "Generá exactamente 2 o 3 insights breves sobre esta semana. Cada insight:",
+    "Generá exactamente 2 o 3 observaciones breves sobre el ritmo y la actividad de esta semana. Cada observación:",
     "- text: oración corta (máx 15 palabras), en español rioplatense, dirigida al usuario",
-    '- tone: "positive" si es buena noticia, "warning" si requiere atención, "neutral" si es informativo',
+    '- tone: "positive" si hay algo destacable, "warning" solo si hay algo que merece atención real (no por pagos normales), "neutral" si es informativo',
     "",
-    "Reglas: no uses tecnicismos, no culpes al usuario, no seas dramático.",
+    "Reglas: no uses tecnicismos, no culpes al usuario, no seas dramático. Pagar el alquiler, la tarjeta o los servicios NO es un problema — es parte del mes.",
     "Respondé SOLO con el JSON solicitado.",
   ].join("\n");
 }
