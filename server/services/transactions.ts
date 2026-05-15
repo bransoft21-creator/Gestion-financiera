@@ -158,40 +158,66 @@ export async function listTransactions(
 ) {
   await assertHouseholdAccess(userProfileId, input.householdId);
 
-  const items = await prisma.transaction.findMany({
-    where: {
-      householdId: input.householdId,
-      accountId: input.accountId,
-      categoryId: input.categoryId,
-      type: input.type,
-      status: input.status ?? { not: TransactionStatus.CANCELED },
-      deletedAt: null,
-      occurredAt: {
-        gte: input.from,
-        lt: input.to ? nextArgentinaDayStart(input.to) : undefined,
-      },
-      ...(input.search
-        ? {
-            OR: [
-              { description: { contains: input.search, mode: "insensitive" } },
-              { notes: { contains: input.search, mode: "insensitive" } },
-            ],
-          }
-        : {}),
+  const where: Prisma.TransactionWhereInput = {
+    householdId: input.householdId,
+    accountId: input.accountId,
+    categoryId: input.categoryId,
+    type: input.type,
+    status: input.status ?? { not: TransactionStatus.CANCELED },
+    deletedAt: null,
+    occurredAt: {
+      gte: input.from,
+      lt: input.to ? nextArgentinaDayStart(input.to) : undefined,
     },
-    include: transactionInclude,
-    orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
-    take: input.limit + 1,
-    ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
-  });
+    ...(input.search
+      ? {
+          OR: [
+            { description: { contains: input.search, mode: "insensitive" } },
+            { notes: { contains: input.search, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+
+  const [items, groupedTotals] = await Promise.all([
+    prisma.transaction.findMany({
+      where,
+      include: transactionInclude,
+      orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
+      take: input.limit + 1,
+      ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
+    }),
+    // Aggregate period totals only on first page — cursor pages skip this to save a query.
+    input.cursor
+      ? Promise.resolve(null)
+      : prisma.transaction.groupBy({
+          by: ["type"],
+          where,
+          _sum: { amount: true },
+          _count: { id: true },
+        }),
+  ]);
 
   const hasMore = items.length > input.limit;
   const data = hasMore ? items.slice(0, input.limit) : items;
+
+  let totals: { income: number; expenses: number; count: number } | null = null;
+  if (groupedTotals) {
+    let income = 0, expenses = 0, count = 0;
+    for (const row of groupedTotals) {
+      count += row._count.id;
+      const amount = Number(row._sum.amount ?? 0);
+      if (row.type === "INCOME") income += amount;
+      else if (row.type !== "TRANSFER") expenses += amount;
+    }
+    totals = { income, expenses, count };
+  }
 
   return {
     data,
     hasMore,
     nextCursor: hasMore ? (data[data.length - 1]?.id ?? null) : null,
+    totals,
   };
 }
 

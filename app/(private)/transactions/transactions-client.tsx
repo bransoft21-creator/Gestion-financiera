@@ -48,6 +48,7 @@ import type {
   CategoryOption,
   CurrencyCode,
   ExpenseType,
+  FeedSummary,
   Filters,
   PaymentMethod,
   TransactionItem,
@@ -56,7 +57,6 @@ import type {
 } from "./types";
 import { useTransactionSplits } from "./use-transaction-splits";
 import {
-  buildFeedSummary,
   detectCurrencyMismatch,
   formatDate,
   formatMoney,
@@ -64,7 +64,6 @@ import {
   getDisplayAmount,
   getHighestDebtCreditCard,
   getPreferredArsBankAccount,
-  getSignedAmount,
   getTransactionTone,
   groupTransactionsByDate,
   isCategoryAllowedForType,
@@ -186,6 +185,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [feedTotals, setFeedTotals] = useState<{ income: number; expenses: number; count: number } | null>(null);
 
   const filteredCategories = useMemo(() => {
     return categories.filter((category) => isCategoryAllowedForType(category.type, watchedType));
@@ -252,10 +252,8 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
     return groupTransactionsByDate(transactions);
   }, [transactions]);
 
-  const totalAmount = useMemo(() => {
-    return transactions.reduce((sum, transaction) => sum + getSignedAmount(transaction), 0);
-  }, [transactions]);
-  const feedSummary = useMemo(() => buildFeedSummary(transactions), [transactions]);
+  const feedSummary: FeedSummary = feedTotals ?? { income: 0, expenses: 0, count: 0 };
+  const totalAmount = feedTotals ? feedTotals.income - feedTotals.expenses : 0;
   const activeFilterCount = [filters.type, filters.categoryId, filters.from, filters.to].filter(Boolean).length;
 
   useEffect(() => {
@@ -311,7 +309,12 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
 
       const response = await fetch(`/api/transactions?${params.toString()}`);
       const payload = (await response.json()) as {
-        data?: { data: TransactionItem[]; hasMore: boolean; nextCursor: string | null };
+        data?: {
+          data: TransactionItem[];
+          hasMore: boolean;
+          nextCursor: string | null;
+          totals: { income: number; expenses: number; count: number } | null;
+        };
         error?: string;
       };
 
@@ -326,6 +329,9 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
         setTransactions((prev) => append ? [...prev, ...payload.data!.data] : payload.data!.data);
         setHasMore(payload.data.hasMore);
         setNextCursor(payload.data.nextCursor);
+        if (!append && payload.data.totals) {
+          setFeedTotals(payload.data.totals);
+        }
       }
     } catch {
       if (loadRequestSeqRef.current !== requestSeq) return;
