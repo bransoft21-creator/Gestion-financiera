@@ -153,7 +153,7 @@ function appFormDesktopPanelClass(
 
 function appFormMobilePanelClass(className?: string) {
   return cn(
-    "fixed inset-0 z-[100] flex h-dvh max-h-dvh w-screen max-w-[100vw] touch-pan-y flex-col overflow-hidden overflow-x-hidden overscroll-none rounded-none border-x-0 border-y-0 bg-zinc-950/96 pt-[env(safe-area-inset-top)] shadow-2xl animate-slide-up",
+    "fixed inset-0 z-[100] flex h-dvh max-h-dvh w-screen max-w-[100vw] touch-pan-y flex-col overflow-hidden overflow-x-hidden overscroll-none rounded-none border-x-0 border-y-0 bg-card/[0.98] pt-[env(safe-area-inset-top)] shadow-2xl animate-slide-up",
     className,
   );
 }
@@ -170,7 +170,7 @@ export function appFormContentClass(isOpen: boolean, className?: string) {
 
 export function appFormHeaderClass(className?: string) {
   return cn(
-    "sticky top-0 z-20 shrink-0 border-b border-white/10 bg-zinc-950/92 backdrop-blur-xl xl:static xl:border-b-0 xl:bg-transparent xl:backdrop-blur-none",
+    "sticky top-0 z-20 shrink-0 border-b border-border bg-card/90 backdrop-blur-xl xl:static xl:border-b-0 xl:bg-transparent xl:backdrop-blur-none",
     className,
   );
 }

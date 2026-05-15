@@ -34,8 +34,8 @@ export function EmptyState({ icon: Icon, title, description, actions }: EmptySta
                 className={cn(
                   "rounded-2xl px-5 py-2.5 text-sm font-semibold transition duration-150",
                   action.primary
-                    ? "bg-white text-zinc-950 shadow-[0_8px_24px_rgba(255,255,255,0.1)] hover:bg-zinc-100"
-                    : "border border-white/10 bg-white/[0.05] text-zinc-300 hover:bg-white/[0.09] hover:text-white",
+                    ? "bg-foreground text-background shadow-[var(--btn-default-shadow)] hover:opacity-90"
+                    : "border border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
                 {action.label}
