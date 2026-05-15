@@ -8,10 +8,10 @@ const actionButtonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-white text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.12)] hover:bg-zinc-100",
-        glass: "border border-white/10 bg-white/[0.055] text-zinc-100 hover:bg-white/[0.09]",
-        quiet: "text-zinc-300 hover:bg-white/[0.06] hover:text-white",
-        danger: "border border-rose-300/20 bg-rose-400/10 text-rose-100 hover:bg-rose-400/15",
+        primary: "bg-foreground text-background shadow-[var(--btn-default-shadow)] hover:opacity-90",
+        glass: "border border-border bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground",
+        quiet: "text-muted-foreground hover:bg-muted hover:text-foreground",
+        danger: "border border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/15",
       },
       size: {
         default: "h-11",

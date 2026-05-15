@@ -254,16 +254,16 @@ export function AccountsClient({ householdId, defaultCurrency = "ARS" }: Account
       <AppFormPanel
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
-        className="border-white/10 bg-zinc-950/80 shadow-[0_24px_80px_rgba(0,0,0,0.32)] xl:rounded-[var(--v2-radius-xl)]"
+        className="border-border bg-card/80 shadow-[0_24px_80px_rgba(0,0,0,0.32)] xl:rounded-[var(--v2-radius-xl)]"
       >
-        <div className={appFormHeaderClass("border-white/10 bg-zinc-950/95 xl:bg-transparent")}>
+        <div className={appFormHeaderClass("border-border bg-card/95 xl:bg-transparent")}>
           <div className="flex items-start gap-3 p-5 sm:p-6">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/50 text-foreground">
               <Plus className="h-5 w-5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-base font-semibold leading-tight text-white">{editingAccountId ? "Editar lugar" : "Nuevo lugar"}</h2>
-              <p className="mt-1 text-sm leading-5 text-zinc-400">
+              <h2 className="text-base font-semibold leading-tight text-foreground">{editingAccountId ? "Editar lugar" : "Nuevo lugar"}</h2>
+              <p className="mt-1 text-sm leading-5 text-muted-foreground">
                 {editingAccountId ? "Modificá los datos de la cuenta." : "Agregá una cuenta bancaria, efectivo o tarjeta."}
               </p>
             </div>
@@ -343,7 +343,7 @@ export function AccountsClient({ householdId, defaultCurrency = "ARS" }: Account
             )}
 
             {message ? (
-              <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">{message}</p>
+              <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-destructive">{message}</p>
             ) : null}
 
             <div className={appFormActionsClass()}>
@@ -403,7 +403,7 @@ export function AccountsClient({ householdId, defaultCurrency = "ARS" }: Account
               </div>
             ))}
             {netWorthByCurrency.length > 1 && (
-              <p className="text-[11px] text-zinc-600">
+              <p className="text-[11px] text-muted-foreground">
                 Los valores se muestran separados por moneda para evitar conversiones incorrectas.
               </p>
             )}
@@ -495,8 +495,8 @@ export function AccountsClient({ householdId, defaultCurrency = "ARS" }: Account
   );
 }
 
-const inputClass = "v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-zinc-600";
-const selectClass = "v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]";
+const inputClass = "v2-focus-ring h-11 rounded-2xl border-border bg-muted/40 text-foreground placeholder:text-muted-foreground";
+const selectClass = "v2-focus-ring h-11 w-full rounded-2xl border border-border bg-muted/40 px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-muted/60";
 
 function AccountRow({
   account,
@@ -519,16 +519,16 @@ function AccountRow({
   const isCredit = account.type === "CREDIT_CARD";
 
   return (
-    <div className="grid gap-3 rounded-[1.5rem] border border-white/[0.08] bg-white/[0.035] p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+    <div className="grid gap-3 rounded-[1.5rem] border border-border bg-muted/25 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-sky-100">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/50 text-sky-400">
           <Landmark className="h-5 w-5" aria-hidden="true" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-white">{account.name}</p>
+          <p className="text-sm font-semibold text-foreground">{account.name}</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <Badge className="border-white/10 bg-white/[0.06] text-zinc-200">{typeLabels[account.type]}</Badge>
-            <span className="text-xs text-zinc-500">{account.currency}</span>
+            <Badge className="border-border bg-muted/50 text-muted-foreground">{typeLabels[account.type]}</Badge>
+            <span className="text-xs text-muted-foreground">{account.currency}</span>
             {account.creditLimit && (
               <span className="text-xs text-muted-foreground">
                 Límite: <SensitiveAmount value={formatMoney(account.creditLimit, account.currency)} />
@@ -583,12 +583,12 @@ function SummaryCard({
   }[tone];
 
   return (
-    <div className={`rounded-3xl border border-white/[0.08] p-4 ${highlight ? "bg-white/[0.055]" : "bg-white/[0.035]"}`}>
-      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
+    <div className={`rounded-3xl border border-border p-4 ${highlight ? "bg-muted/40" : "bg-muted/25"}`}>
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className={`mt-2 text-xl font-bold tabular-nums ${highlight ? "text-foreground" : toneClass}`}>
         <SensitiveAmount value={value} />
       </p>
-      <p className="mt-1 text-[11px] leading-4 text-zinc-500">{description}</p>
+      <p className="mt-1 text-[11px] leading-4 text-muted-foreground">{description}</p>
     </div>
   );
 }
@@ -604,7 +604,7 @@ function Field({
 }) {
   return (
     <div className="space-y-2">
-      <Label className="text-xs font-semibold uppercase text-zinc-500">{label}</Label>
+      <Label className="text-xs font-semibold uppercase text-muted-foreground">{label}</Label>
       {children}
       {error ? <p className="text-xs text-rose-300">{error}</p> : null}
     </div>

@@ -440,7 +440,7 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
                     {editingBudgetId ? formatMonth(currentYear, currentMonth) : "Una base editable para este mes"}
                   </PremiumCardDescription>
                 </div>
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white shadow-[0_18px_45px_rgba(0,0,0,0.22)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-muted/50 text-foreground shadow-[0_18px_45px_rgba(0,0,0,0.22)]">
                   <Sparkles className="h-5 w-5" aria-hidden="true" />
                 </div>
               </div>
@@ -449,8 +449,8 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
               {categories.length === 0 ? (
                 <div className="space-y-4">
                   <div className="rounded-3xl border border-amber-300/20 bg-amber-300/10 p-4">
-                    <p className="text-sm font-semibold text-white">Primero necesitás categorías de gasto</p>
-                    <p className="mt-1 text-xs leading-5 text-zinc-400">
+                    <p className="text-sm font-semibold text-foreground">Primero necesitás categorías de gasto</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       Creá una categoría de gasto para asignarle intención mensual.
                     </p>
                   </div>
@@ -478,15 +478,15 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
                     />
                   ) : null}
 
-                  <div className="border-t border-white/[0.08] pt-5">
-                    <p className="mb-4 text-xs font-semibold uppercase text-zinc-500">
+                  <div className="border-t border-border pt-5">
+                    <p className="mb-4 text-xs font-semibold uppercase text-muted-foreground">
                       {editingBudgetId ? "Editar categoría" : "Ajuste manual"}
                     </p>
                     <form className="space-y-4" onSubmit={handleSubmit}>
                       {!editingBudgetId && availableCategories.length === 0 ? (
                         <div className="rounded-3xl border border-emerald-300/20 bg-emerald-300/10 p-4">
-                          <p className="text-sm font-semibold text-white">Todas las categorías ya tienen plan</p>
-                          <p className="mt-1 text-xs leading-5 text-zinc-400">
+                          <p className="text-sm font-semibold text-foreground">Todas las categorías ya tienen plan</p>
+                          <p className="mt-1 text-xs leading-5 text-muted-foreground">
                             Editá una intención existente o liberá una categoría.
                           </p>
                         </div>
@@ -494,7 +494,7 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
 
                       <Field label="Categoría" error={errors.categoryId}>
                         <select
-                          className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                          className="v2-focus-ring h-11 w-full rounded-2xl border border-border bg-muted/40 px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-muted/60"
                           value={selectedCategoryId}
                           onChange={(event) => updateForm("categoryId", event.target.value)}
                           disabled={!canCreateBudget}
@@ -511,7 +511,7 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
                       <div className="grid gap-3 sm:grid-cols-[104px_1fr]">
                         <Field label="Moneda" error={errors.currency}>
                           <select
-                            className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                            className="v2-focus-ring h-11 w-full rounded-2xl border border-border bg-muted/40 px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-muted/60"
                             value={form.currency}
                             onChange={(event) => updateForm("currency", event.target.value as "ARS" | "USD")}
                           >
@@ -526,13 +526,13 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
                             value={form.plannedAmount}
                             onChange={(event) => updateForm("plannedAmount", event.target.value)}
                             placeholder="0"
-                            className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-zinc-600"
+                            className="v2-focus-ring h-11 rounded-2xl border-border bg-muted/40 text-foreground placeholder:text-muted-foreground"
                           />
                         </Field>
                       </div>
 
                       {message ? (
-                        <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">
+                        <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-destructive">
                           {message}
                         </p>
                       ) : null}
@@ -570,7 +570,7 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
                   <PremiumCardTitle>Intenciones activas</PremiumCardTitle>
                   <PremiumCardDescription>{formatMonth(currentYear, currentMonth)}</PremiumCardDescription>
                 </div>
-                <Badge className="w-fit border-white/10 bg-white/[0.06] text-zinc-200">
+                <Badge className="w-fit border-border bg-muted/50 text-muted-foreground">
                   {budgets.length} activas
                 </Badge>
               </div>
@@ -630,12 +630,12 @@ function PlanBriefing({
         <PremiumCardContent className="relative p-5 sm:p-6">
           {isLoading ? (
             <div className="space-y-5">
-              <Skeleton className="h-5 w-36 rounded-full bg-white/10" />
-              <Skeleton className="h-8 w-72 max-w-full rounded-full bg-white/10" />
-              <Skeleton className="h-3 w-full rounded-full bg-white/10" />
+              <Skeleton className="h-5 w-36 rounded-full bg-muted" />
+              <Skeleton className="h-8 w-72 max-w-full rounded-full bg-muted" />
+              <Skeleton className="h-3 w-full rounded-full bg-muted" />
               <div className="grid gap-3 sm:grid-cols-3">
                 {[1, 2, 3].map((item) => (
-                  <Skeleton key={item} className="h-20 rounded-3xl bg-white/10" />
+                  <Skeleton key={item} className="h-20 rounded-3xl bg-muted" />
                 ))}
               </div>
             </div>
@@ -643,25 +643,25 @@ function PlanBriefing({
             <>
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-2xl">
-                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-zinc-300">
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-semibold text-muted-foreground">
                     <Sparkles className="h-3.5 w-3.5 text-teal-200" aria-hidden="true" />
                     Plan inteligente
                   </div>
-                  <h2 className="text-balance text-2xl font-semibold leading-tight text-white sm:text-3xl">
+                  <h2 className="text-balance text-2xl font-semibold leading-tight text-foreground sm:text-3xl">
                     {state.title}
                   </h2>
-                  <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">{state.description}</p>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{state.description}</p>
                 </div>
 
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[2rem] border border-white/10 bg-white/[0.055] shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[2rem] border border-border bg-muted/40 shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
                   <div className="text-center">
-                    <p className="text-3xl font-semibold tabular-nums text-white">{summary.globalPct}%</p>
-                    <p className="text-[10px] font-semibold uppercase text-zinc-500">usado</p>
+                    <p className="text-3xl font-semibold tabular-nums text-foreground">{summary.globalPct}%</p>
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground">usado</p>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/[0.08]">
+              <div className="mt-6 h-2 overflow-hidden rounded-full bg-muted/70">
                 <motion.div
                   className={`h-full rounded-full ${state.progressClass}`}
                   initial={{ width: 0 }}
@@ -715,20 +715,20 @@ function SuggestedPlanPanel({
   if (isLoading) {
     return (
       <div className="space-y-3">
-        <Skeleton className="h-5 w-48 rounded-full bg-white/10" />
-        <Skeleton className="h-16 rounded-3xl bg-white/10" />
-        <Skeleton className="h-16 rounded-3xl bg-white/10" />
+        <Skeleton className="h-5 w-48 rounded-full bg-muted" />
+        <Skeleton className="h-16 rounded-3xl bg-muted" />
+        <Skeleton className="h-16 rounded-3xl bg-muted" />
       </div>
     );
   }
 
   if (suggestions.length === 0) {
     return (
-      <div className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
-        <p className="text-sm font-semibold text-white">
+      <div className="rounded-3xl border border-border bg-muted/30 p-4">
+        <p className="text-sm font-semibold text-foreground">
           {hasHistoricalActivity ? "No quedan categorías reales para sugerir" : "Todavía no hay historial suficiente"}
         </p>
-        <p className="mt-1 text-xs leading-5 text-zinc-400">
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
           {hasHistoricalActivity
             ? "Las categorías con actividad ya tienen plan o no hay recurrentes libres. Podés ajustar cualquier intención activa."
             : "Meridian necesita movimientos o recurrentes reales para preparar una distribución confiable."}
@@ -741,14 +741,14 @@ function SuggestedPlanPanel({
     <div className="space-y-4">
       <div className="rounded-3xl border border-teal-300/20 bg-teal-300/10 p-4">
         <div className="flex items-start gap-3">
-          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-teal-100" aria-hidden="true" />
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
           <div>
-            <p className="text-sm font-semibold text-white">Meridian preparó una distribución inicial</p>
-            <p className="mt-1 text-xs leading-5 text-zinc-300">
+            <p className="text-sm font-semibold text-foreground">Meridian preparó una distribución inicial</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
               Usa actividad real de los últimos meses y pagos recurrentes. Ajustá, quitá o confirmá lo que tenga sentido.
             </p>
             {recentMonthlyIncome > 0 ? (
-              <p className="mt-2 text-xs text-teal-100/80">
+              <p className="mt-2 text-xs text-primary/80">
                 Ingreso mensual reciente: <SensitiveAmount value={formatMoney(recentMonthlyIncome, "ARS")} />
               </p>
             ) : null}
@@ -764,7 +764,7 @@ function SuggestedPlanPanel({
             <div
               key={suggestion.categoryId}
               className={`rounded-3xl border p-3 transition ${
-                selected ? "border-white/[0.14] bg-white/[0.055]" : "border-white/[0.06] bg-white/[0.025] opacity-70"
+                selected ? "border-border bg-muted/40" : "border-border bg-muted/20 opacity-70"
               }`}
             >
               <div className="flex items-start gap-3">
@@ -773,7 +773,7 @@ function SuggestedPlanPanel({
                   aria-pressed={selected}
                   aria-label={selected ? `Quitar ${suggestion.category.name}` : `Incluir ${suggestion.category.name}`}
                   className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${
-                    selected ? "border-emerald-300/50 bg-emerald-300/20 text-emerald-100" : "border-white/15 bg-white/[0.03] text-transparent"
+                    selected ? "border-emerald-300/50 bg-emerald-300/20 text-emerald-400" : "border-border bg-muted/20 text-transparent"
                   }`}
                   onClick={() => onToggle(suggestion.categoryId)}
                 >
@@ -782,9 +782,9 @@ function SuggestedPlanPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-white">{suggestion.category.name}</p>
-                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-500">{suggestion.reason}</p>
-                      <p className="mt-1 text-[11px] text-zinc-600">
+                      <p className="truncate text-sm font-semibold text-foreground">{suggestion.category.name}</p>
+                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{suggestion.reason}</p>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
                         {getSuggestionMeta(suggestion)}
                       </p>
                     </div>
@@ -799,9 +799,9 @@ function SuggestedPlanPanel({
                       value={drafts[suggestion.categoryId] ?? ""}
                       onChange={(event) => onAmountChange(suggestion.categoryId, event.target.value)}
                       disabled={!selected}
-                      className="v2-focus-ring h-10 rounded-2xl border-white/10 bg-zinc-950/50 text-white placeholder:text-zinc-600 disabled:opacity-50"
+                      className="v2-focus-ring h-10 rounded-2xl border-border bg-input text-foreground placeholder:text-muted-foreground disabled:opacity-50"
                     />
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-muted-foreground">
                       {suggestion.incomeSharePercent != null ? `${suggestion.incomeSharePercent}% del ingreso` : "Editable"}
                     </p>
                   </div>
@@ -812,11 +812,11 @@ function SuggestedPlanPanel({
         })}
       </div>
 
-      <div className="rounded-3xl border border-white/[0.08] bg-black/15 p-4">
+      <div className="rounded-3xl border border-border bg-muted/40 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase text-zinc-500">Total sugerido</p>
-            <p className="mt-1 text-lg font-semibold tabular-nums text-white">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Total sugerido</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
               <SensitiveAmount value={formatMoney(selectedTotal, "ARS")} />
             </p>
           </div>
@@ -845,10 +845,10 @@ function PlanMetric({
   value: string;
 }) {
   return (
-    <div className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
-      <Icon className="h-4 w-4 text-zinc-400" aria-hidden />
-      <p className="mt-3 text-[11px] font-medium uppercase text-zinc-500">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-white">
+    <div className="rounded-3xl border border-border bg-muted/30 p-4">
+      <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
+      <p className="mt-3 text-[11px] font-medium uppercase text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-foreground">
         <SensitiveAmount value={value} />
       </p>
     </div>
@@ -866,7 +866,7 @@ function Field({
 }) {
   return (
     <div className="space-y-2">
-      <Label className="text-xs font-semibold uppercase text-zinc-500">{label}</Label>
+      <Label className="text-xs font-semibold uppercase text-muted-foreground">{label}</Label>
       {children}
       {error ? <p className="text-xs text-rose-300">{error}</p> : null}
     </div>
@@ -903,7 +903,7 @@ function BudgetCard({
     <motion.article
       layout
       {...(shouldReduceMotion ? { initial: false } : cardMotion)}
-      className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.035] p-4 transition duration-200 hover:border-white/[0.16] hover:bg-white/[0.055] sm:p-5"
+      className="rounded-[1.75rem] border border-border bg-muted/25 p-4 transition duration-200 hover:border-border hover:bg-muted/40 sm:p-5"
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
@@ -913,13 +913,13 @@ function BudgetCard({
               style={{ backgroundColor: budget.category.color ?? "#14b8a6" }}
             />
             <div className="min-w-0">
-              <p className="truncate text-base font-semibold text-white">{budget.category.name}</p>
-              <p className="mt-1 text-sm leading-5 text-zinc-400">
+              <p className="truncate text-base font-semibold text-foreground">{budget.category.name}</p>
+              <p className="mt-1 text-sm leading-5 text-muted-foreground">
                 <SensitiveAmount value={formatMoney(budget.spentAmount, budget.currency)} /> usados de{" "}
                 <SensitiveAmount value={formatMoney(budget.plannedAmount, budget.currency)} />
               </p>
               {exceededAmount > 0 ? (
-                <p className="mt-2 inline-flex rounded-full border border-rose-300/20 bg-rose-400/10 px-2.5 py-1 text-xs font-semibold text-rose-100">
+                <p className="mt-2 inline-flex rounded-full border border-rose-300/20 bg-rose-400/10 px-2.5 py-1 text-xs font-semibold text-destructive">
                   El gasto superó el plan por <SensitiveAmount value={formatMoney(exceededAmount, budget.currency)} />
                 </p>
               ) : null}
@@ -928,12 +928,12 @@ function BudgetCard({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Badge className="border-white/10 bg-white/[0.06] text-zinc-200">{usage.toFixed(0)}% del plan</Badge>
+          <Badge className="border-border bg-muted/50 text-muted-foreground">{usage.toFixed(0)}% del plan</Badge>
           <Badge className={alert.className}>{alert.label}</Badge>
         </div>
       </div>
 
-      <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.08]">
+      <div className="mt-5 h-2 overflow-hidden rounded-full bg-muted/70">
         <div
           className={`h-full rounded-full transition-[width] duration-700 ease-out ${getProgressClass(budget.usagePercent)}`}
           style={{ width: `${displayWidth}%` }}
@@ -976,9 +976,9 @@ function BudgetCard({
 
 function BudgetMetric({ label, value, sensitive = true }: { label: string; value: string; sensitive?: boolean }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-white/[0.08] bg-black/15 p-3">
-      <p className="text-[10px] font-medium uppercase text-zinc-500">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-white">
+    <div className="min-w-0 rounded-2xl border border-border bg-muted/40 p-3">
+      <p className="text-[10px] font-medium uppercase text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-foreground">
         {sensitive ? <SensitiveAmount value={value} /> : value}
       </p>
     </div>
@@ -989,19 +989,19 @@ function BudgetSkeletonList() {
   return (
     <div className="grid gap-3">
       {[1, 2, 3].map((item) => (
-        <div key={item} className="space-y-4 rounded-[1.75rem] border border-white/[0.08] bg-white/[0.035] p-4">
+        <div key={item} className="space-y-4 rounded-[1.75rem] border border-border bg-muted/25 p-4">
           <div className="flex gap-3">
-            <Skeleton className="mt-1 h-4 w-4 shrink-0 rounded-full bg-white/10" />
+            <Skeleton className="mt-1 h-4 w-4 shrink-0 rounded-full bg-muted" />
             <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-32 bg-white/10" />
-              <Skeleton className="h-3 w-48 max-w-full bg-white/10" />
+              <Skeleton className="h-4 w-32 bg-muted" />
+              <Skeleton className="h-3 w-48 max-w-full bg-muted" />
             </div>
-            <Skeleton className="h-6 w-20 rounded-full bg-white/10" />
+            <Skeleton className="h-6 w-20 rounded-full bg-muted" />
           </div>
-          <Skeleton className="h-2 w-full rounded-full bg-white/10" />
+          <Skeleton className="h-2 w-full rounded-full bg-muted" />
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[1, 2, 3, 4].map((metric) => (
-              <Skeleton key={metric} className="h-16 rounded-2xl bg-white/10" />
+              <Skeleton key={metric} className="h-16 rounded-2xl bg-muted" />
             ))}
           </div>
         </div>
@@ -1012,12 +1012,12 @@ function BudgetSkeletonList() {
 
 function PlanEmptyState() {
   return (
-    <div className="rounded-[1.75rem] border border-dashed border-white/10 bg-white/[0.025] p-6 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-zinc-300">
+    <div className="rounded-[1.75rem] border border-dashed border-border bg-muted/20 p-6 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-muted/50 text-muted-foreground">
         <BarChart3 className="h-5 w-5" aria-hidden="true" />
       </div>
-      <h3 className="mt-4 text-base font-semibold text-white">Tu distribución inicial está lista para ajustar</h3>
-      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-zinc-400">
+      <h3 className="mt-4 text-base font-semibold text-foreground">Tu distribución inicial está lista para ajustar</h3>
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
         Confirmá las sugerencias o ajustá una categoría puntual. No hace falta armar el mes desde cero.
       </p>
     </div>
@@ -1055,7 +1055,7 @@ function DeleteBudgetDialog({
             <PremiumCard variant="raised">
               <PremiumCardHeader>
                 <div className="flex items-start gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-rose-300/20 bg-rose-400/10 text-rose-100">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-rose-300/20 bg-rose-400/10 text-destructive">
                     <ShieldAlert className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div>
@@ -1067,12 +1067,12 @@ function DeleteBudgetDialog({
                 </div>
               </PremiumCardHeader>
               <PremiumCardContent>
-                <div className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
-                  <div className="flex items-center gap-2 text-sm text-zinc-300">
-                    <CalendarDays className="h-4 w-4 text-zinc-500" aria-hidden="true" />
+                <div className="rounded-3xl border border-border bg-muted/30 p-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CalendarDays className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     Plan actual
                   </div>
-                  <p className="mt-2 text-xl font-semibold tabular-nums text-white">
+                  <p className="mt-2 text-xl font-semibold tabular-nums text-foreground">
                     <SensitiveAmount value={formatMoney(budget.plannedAmount, budget.currency)} />
                   </p>
                 </div>
@@ -1147,20 +1147,20 @@ function getBudgetAlert(usagePercent: number) {
   if (usagePercent >= 100) {
     return {
       label: "Excedido",
-      className: "border-rose-300/20 bg-rose-400/10 text-rose-100",
+      className: "border-rose-300/20 bg-rose-400/10 text-destructive",
     };
   }
 
   if (usagePercent >= 80) {
     return {
       label: "Cerca del límite",
-      className: "border-amber-300/20 bg-amber-300/10 text-amber-100",
+      className: "border-amber-300/20 bg-amber-300/10 text-amber-500",
     };
   }
 
   return {
     label: "En ritmo",
-    className: "border-emerald-300/20 bg-emerald-300/10 text-emerald-100",
+    className: "border-emerald-300/20 bg-emerald-300/10 text-emerald-400",
   };
 }
 
@@ -1171,9 +1171,9 @@ function getSuggestionLabel(confidence: BudgetSuggestion["confidence"]) {
 }
 
 function getSuggestionBadgeClass(confidence: BudgetSuggestion["confidence"]) {
-  if (confidence === "high") return "border-emerald-300/20 bg-emerald-300/10 text-emerald-100";
-  if (confidence === "medium") return "border-sky-300/20 bg-sky-300/10 text-sky-100";
-  return "border-white/10 bg-white/[0.06] text-zinc-200";
+  if (confidence === "high") return "border-emerald-300/20 bg-emerald-300/10 text-emerald-400";
+  if (confidence === "medium") return "border-sky-300/20 bg-sky-300/10 text-sky-400";
+  return "border-border bg-muted/50 text-muted-foreground";
 }
 
 function getSuggestionMeta(suggestion: BudgetSuggestion) {

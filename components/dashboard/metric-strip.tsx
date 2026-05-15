@@ -10,7 +10,7 @@ const metricAmountColor: Record<InsightCardTone, string> = {
   positive: "text-emerald-400",
   warning: "text-amber-400",
   danger: "text-rose-400",
-  neutral: "text-zinc-100",
+  neutral: "text-foreground",
   info: "text-sky-400",
 };
 
@@ -18,7 +18,7 @@ const metricDotColor: Record<InsightCardTone, string> = {
   positive: "bg-emerald-500",
   warning: "bg-amber-500",
   danger: "bg-rose-500",
-  neutral: "bg-zinc-600",
+  neutral: "bg-muted-foreground",
   info: "bg-sky-500",
 };
 
@@ -28,16 +28,16 @@ export function MetricStrip({
   items: Array<{ label: string; value: string; tone: InsightCardTone; href: string }>;
 }) {
   return (
-    <div className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.05] sm:grid-cols-4">
+    <div className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-muted/30 sm:grid-cols-4">
       {items.map((item) => (
         <Link
           key={item.label}
           href={item.href}
-          className="flex flex-col gap-1.5 bg-zinc-950 px-4 py-3.5 transition hover:bg-zinc-900"
+          className="flex flex-col gap-1.5 bg-card px-4 py-3.5 transition hover:bg-muted/50"
         >
           <div className="flex items-center gap-1.5">
             <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", metricDotColor[item.tone])} />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {item.label}
             </span>
           </div>

@@ -72,19 +72,19 @@ export function DeleteTransactionDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-300/12 text-rose-100">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
             <ShieldAlert className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <h2 id="delete-dialog-title" className="text-lg font-semibold text-white">Eliminar movimiento</h2>
-            <p className="mt-1 text-sm leading-6 text-zinc-400">
+            <h2 id="delete-dialog-title" className="text-lg font-semibold text-foreground">Eliminar movimiento</h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
               Se va a quitar este movimiento del feed. La operación usa soft delete.
             </p>
           </div>
         </div>
-        <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.045] p-3">
-          <p className="truncate text-sm font-semibold text-zinc-100">{transaction.description ?? "Sin descripción"}</p>
-          <p className="mt-1 text-xs text-zinc-500">
+        <div className="mb-5 rounded-2xl border border-border bg-muted/40 p-3">
+          <p className="truncate text-sm font-semibold text-foreground">{transaction.description ?? "Sin descripción"}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
             {transactionTypeLabels[transaction.type]} ·{" "}
             <SensitiveAmount value={formatMoney(getDisplayAmount(transaction), transaction.currency)} />
           </p>

@@ -274,18 +274,18 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
           role="dialog"
           aria-modal="true"
           aria-labelledby="merge-dialog-title"
-          className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0f1117] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:pb-5"
+          className="w-full max-w-md rounded-3xl border border-border bg-[#0f1117] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:pb-5"
           onClick={(e) => e.stopPropagation()}
         >
-          <h2 id="merge-dialog-title" className="text-base font-semibold text-white">Unificar categorías</h2>
-          <p className="mt-2 text-sm text-zinc-400">
+          <h2 id="merge-dialog-title" className="text-base font-semibold text-foreground">Unificar categorías</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
             Las transacciones y recurrentes de{" "}
-            <span className="font-semibold text-white">"{mergePending.from.name}"</span>{" "}
+            <span className="font-semibold text-foreground">"{mergePending.from.name}"</span>{" "}
             se van a mover a{" "}
-            <span className="font-semibold text-white">"{mergePending.to.name}"</span>.
+            <span className="font-semibold text-foreground">"{mergePending.to.name}"</span>.
             La categoría origen va a quedar desactivada.
           </p>
-          <p className="mt-2 text-xs text-zinc-500">Los presupuestos no se transfieren automáticamente.</p>
+          <p className="mt-2 text-xs text-muted-foreground">Los presupuestos no se transfieren automáticamente.</p>
           <div className="mt-4 grid grid-cols-2 gap-2">
             <ActionButton type="button" variant="glass" onClick={() => setMergePending(null)}>
               Cancelar
@@ -303,7 +303,7 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
         <PremiumCard variant="raised">
           <PremiumCardHeader className="p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-muted/50 text-foreground">
                 <Plus className="h-4 w-4" aria-hidden="true" />
               </div>
               <div className="min-w-0">
@@ -349,7 +349,7 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
               <Field label="Color" error={errors.color}>
                 <input
                   type="color"
-                  className="h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] p-1"
+                  className="h-11 w-full rounded-2xl border border-border bg-muted/40 p-1"
                   value={form.color}
                   onChange={(event) => updateForm("color", event.target.value)}
                 />
@@ -379,7 +379,7 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
               </select>
             </Field>
 
-            {message ? <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">{message}</p> : null}
+            {message ? <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-destructive">{message}</p> : null}
 
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
               <ActionButton className="w-full" disabled={isLoading}>
@@ -410,17 +410,17 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
         <div className="rounded-3xl border border-amber-300/20 bg-amber-300/[0.07] p-4">
           <div className="mb-3 flex items-center gap-2">
             <GitMerge className="h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
-            <p className="text-sm font-semibold text-amber-100">
+            <p className="text-sm font-semibold text-amber-500">
               {similarPairs.length === 1 ? "Posible categoría duplicada" : `${similarPairs.length} posibles duplicados detectados`}
             </p>
           </div>
           <div className="space-y-2">
             {similarPairs.map(([a, b]) => (
-              <div key={`${a.id}-${b.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-2">
-                <p className="text-sm text-zinc-300">
-                  <span className="font-medium text-white">{a.name}</span>
-                  <span className="mx-1.5 text-zinc-600">·</span>
-                  <span className="font-medium text-white">{b.name}</span>
+              <div key={`${a.id}-${b.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-muted/20 px-3 py-2">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">{a.name}</span>
+                  <span className="mx-1.5 text-muted-foreground">·</span>
+                  <span className="font-medium text-foreground">{b.name}</span>
                 </p>
                 <div className="flex shrink-0 gap-1.5">
                   <ActionButton type="button" size="sm" variant="glass" onClick={() => setMergePending({ from: a, to: b })}>
@@ -485,8 +485,8 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
   );
 }
 
-const inputClass = "v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-zinc-600";
-const selectClass = "v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]";
+const inputClass = "v2-focus-ring h-11 rounded-2xl border-border bg-muted/40 text-foreground placeholder:text-muted-foreground";
+const selectClass = "v2-focus-ring h-11 w-full rounded-2xl border border-border bg-muted/40 px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-muted/60";
 
 function Field({
   label,
@@ -499,7 +499,7 @@ function Field({
 }) {
   return (
     <div className="space-y-2">
-      <Label className="text-xs font-semibold uppercase text-zinc-500">{label}</Label>
+      <Label className="text-xs font-semibold uppercase text-muted-foreground">{label}</Label>
       {children}
       {error ? <p className="text-xs text-rose-300">{error}</p> : null}
     </div>
@@ -520,7 +520,7 @@ function CategoryCard({
   onDelete: (categoryId: string) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] px-3 py-2.5 transition duration-200 hover:border-white/[0.16] hover:bg-white/[0.055]">
+    <div className="rounded-2xl border border-border bg-muted/25 px-3 py-2.5 transition duration-200 hover:border-border hover:bg-muted/40">
       <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"
@@ -533,13 +533,13 @@ function CategoryCard({
           />
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
-              <p className="truncate text-xs font-semibold text-white sm:text-sm">{category.name}</p>
-              {parentName ? <span className="truncate text-[11px] text-zinc-500">· {parentName}</span> : null}
+              <p className="truncate text-xs font-semibold text-foreground sm:text-sm">{category.name}</p>
+              {parentName ? <span className="truncate text-[11px] text-muted-foreground">· {parentName}</span> : null}
             </div>
             <div className="mt-1 flex min-w-0 items-center gap-1.5 overflow-hidden">
-              <Badge className="h-5 shrink-0 border-white/10 bg-white/[0.06] px-1.5 py-0 text-[10px] text-zinc-200">{categoryTypeLabels[category.type]}</Badge>
-              <Badge className="h-5 shrink-0 border-white/10 bg-white/[0.06] px-1.5 py-0 text-[10px] text-zinc-200">{category.isSystem ? "Base" : "Personal"}</Badge>
-              {category.icon ? <Badge className="h-5 shrink-0 border-white/10 bg-white/[0.06] px-1.5 py-0 text-[10px] text-zinc-200">{category.icon}</Badge> : null}
+              <Badge className="h-5 shrink-0 border-border bg-muted/50 px-1.5 py-0 text-[10px] text-muted-foreground">{categoryTypeLabels[category.type]}</Badge>
+              <Badge className="h-5 shrink-0 border-border bg-muted/50 px-1.5 py-0 text-[10px] text-muted-foreground">{category.isSystem ? "Base" : "Personal"}</Badge>
+              {category.icon ? <Badge className="h-5 shrink-0 border-border bg-muted/50 px-1.5 py-0 text-[10px] text-muted-foreground">{category.icon}</Badge> : null}
             </div>
           </div>
         </button>

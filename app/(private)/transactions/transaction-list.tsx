@@ -233,22 +233,22 @@ function TransactionFeedBriefing({
   totalAmount: number;
   activeFilterCount: number;
 }) {
-  const balanceTone = totalAmount >= 0 ? "text-emerald-100" : "text-rose-100";
+  const balanceTone = totalAmount >= 0 ? "text-emerald-400" : "text-rose-400";
 
   return (
     <PremiumCard variant="raised" className="overflow-hidden p-5 sm:p-6">
       <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
         <div className="min-w-0">
           <div className="mb-4 flex flex-wrap items-center gap-2">
-            <Badge className="border-white/10 bg-white/[0.07] text-teal-100">Money feed</Badge>
+            <Badge className="border-primary/20 bg-primary/10 text-primary">Money feed</Badge>
             {activeFilterCount > 0 && (
-              <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-100">{activeFilterCount} filtros activos</Badge>
+              <Badge className="border-amber-500/20 bg-amber-500/10 text-amber-500">{activeFilterCount} filtros activos</Badge>
             )}
           </div>
-          <h2 className="text-balance text-2xl font-semibold leading-tight text-white sm:text-4xl">
+          <h2 className="text-balance text-2xl font-semibold leading-tight text-foreground sm:text-4xl">
             {summary.count === 0 ? "Todavía no hay movimientos para leer." : "Así se movió tu dinero."}
           </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
             {summary.count === 0
               ? "Cuando registres movimientos, esta vista va a mostrar el pulso real del mes."
               : (
@@ -263,8 +263,8 @@ function TransactionFeedBriefing({
 
         <div className="grid grid-cols-3 gap-2 lg:min-w-[360px]">
           <BriefingMetric label="Balance" value={`${totalAmount >= 0 ? "+" : ""}${formatMoneyBalance(totalAmount)}`} className={balanceTone} />
-          <BriefingMetric label="Entró" value={formatMoneyBalance(summary.income)} className="text-emerald-100" />
-          <BriefingMetric label="Salió" value={formatMoneyBalance(summary.expenses)} className="text-rose-100" />
+          <BriefingMetric label="Entró" value={formatMoneyBalance(summary.income)} className="text-emerald-400" />
+          <BriefingMetric label="Salió" value={formatMoneyBalance(summary.expenses)} className="text-rose-400" />
         </div>
       </div>
     </PremiumCard>
@@ -273,9 +273,9 @@ function TransactionFeedBriefing({
 
 function BriefingMetric({ label, value, className }: { label: string; value: string; className?: string }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.045] p-3">
-      <p className="truncate text-[11px] font-semibold uppercase text-zinc-500">{label}</p>
-      <p className={`mt-1 break-words text-xs font-semibold tabular-nums leading-tight sm:text-sm ${className ?? "text-zinc-100"}`}>
+    <div className="min-w-0 rounded-2xl border border-border bg-muted/40 p-3">
+      <p className="truncate text-[11px] font-semibold uppercase text-muted-foreground">{label}</p>
+      <p className={`mt-1 break-words text-xs font-semibold tabular-nums leading-tight sm:text-sm ${className ?? "text-foreground"}`}>
         <SensitiveAmount value={value} />
       </p>
     </div>
@@ -347,7 +347,7 @@ function TransactionCard({
 
   return (
     <article
-      className="group min-w-0 cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 shadow-sm transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.06] active:scale-[0.99]"
+      className="group min-w-0 cursor-pointer overflow-hidden rounded-2xl border border-border bg-muted/30 px-3 py-3 shadow-sm transition hover:-translate-y-0.5 hover:border-border hover:bg-muted/50 active:scale-[0.99]"
       role="button"
       tabIndex={0}
       onClick={() => onEdit(transaction)}
@@ -391,7 +391,7 @@ function TransactionCard({
               <Badge className="h-5 shrink-0 border-border bg-secondary px-2 text-[11px] text-muted-foreground line-through">Cancelada</Badge>
             )}
             {transaction.sharedTransaction ? (
-              <Badge className="h-5 shrink-0 border-teal-300/20 bg-teal-300/10 px-2 text-[11px] text-teal-100">
+              <Badge className="h-5 shrink-0 border-teal-500/20 bg-teal-500/10 px-2 text-[11px] text-teal-500">
                 <Home className="mr-1 h-3 w-3" aria-hidden="true" />
                 {transaction.sharedTransaction.household.name}
               </Badge>

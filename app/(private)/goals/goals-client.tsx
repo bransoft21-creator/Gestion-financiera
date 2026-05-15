@@ -372,18 +372,18 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
         <AppFormPanel
           isOpen={isFormOpen}
           onClose={() => setIsFormOpen(false)}
-          className="border-white/10 bg-zinc-950/80 shadow-[0_24px_80px_rgba(0,0,0,0.32)] xl:rounded-[var(--v2-radius-xl)]"
+          className="border-border bg-card/80 shadow-[0_24px_80px_rgba(0,0,0,0.32)] xl:rounded-[var(--v2-radius-xl)]"
         >
-          <div className={appFormHeaderClass("border-white/10 bg-zinc-950/95 xl:bg-transparent")}>
+          <div className={appFormHeaderClass("border-border bg-card/95 xl:bg-transparent")}>
             <div className="flex items-start gap-3 p-5 sm:p-6">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/50 text-foreground">
                 <Flag className="h-5 w-5" aria-hidden="true" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-base font-semibold leading-tight text-white">
+                <h2 className="text-base font-semibold leading-tight text-foreground">
                   {editingGoalId ? "Ajustar hito" : "Nuevo hito"}
                 </h2>
-                <p className="mt-1 text-sm leading-5 text-zinc-400">Objetivo, ritmo y fecha esperada.</p>
+                <p className="mt-1 text-sm leading-5 text-muted-foreground">Objetivo, ritmo y fecha esperada.</p>
               </div>
               <ActionButton
                 type="button"
@@ -405,14 +405,14 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
                   value={form.name}
                   onChange={(event) => updateForm("name", event.target.value)}
                   placeholder="Ej. Fondo de emergencia"
-                  className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-zinc-600"
+                  className="v2-focus-ring h-11 rounded-2xl border-border bg-muted/40 text-foreground placeholder:text-muted-foreground"
                 />
               </Field>
 
               <div className="grid gap-3 sm:grid-cols-[104px_1fr]">
                 <Field label="Moneda" error={errors.currency}>
                   <select
-                    className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                    className="v2-focus-ring h-11 w-full rounded-2xl border border-border bg-muted/40 px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-muted/60"
                     value={form.currency}
                     onChange={(event) => updateForm("currency", event.target.value as CurrencyCode)}
                   >
@@ -426,7 +426,7 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
                     onKeyDown={onMoneyKeyDown}
                     value={form.targetAmount}
                     onChange={(event) => updateForm("targetAmount", event.target.value)}
-                    className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white"
+                    className="v2-focus-ring h-11 rounded-2xl border-border bg-muted/40 text-foreground"
                   />
                 </Field>
               </div>
@@ -438,7 +438,7 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
                     onKeyDown={onMoneyKeyDown}
                     value={form.currentAmount}
                     onChange={(event) => updateForm("currentAmount", event.target.value)}
-                    className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white"
+                    className="v2-focus-ring h-11 rounded-2xl border-border bg-muted/40 text-foreground"
                   />
                 </Field>
                 <Field label="Aporte mensual" error={errors.requiredMonthlyAmount}>
@@ -447,7 +447,7 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
                     onKeyDown={onMoneyKeyDown}
                     value={form.requiredMonthlyAmount}
                     onChange={(event) => updateForm("requiredMonthlyAmount", event.target.value)}
-                    className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white"
+                    className="v2-focus-ring h-11 rounded-2xl border-border bg-muted/40 text-foreground"
                   />
                 </Field>
               </div>
@@ -458,12 +458,12 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
                     type="date"
                     value={form.targetDate}
                     onChange={(event) => updateForm("targetDate", event.target.value)}
-                    className="v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white"
+                    className="v2-focus-ring h-11 rounded-2xl border-border bg-muted/40 text-foreground"
                   />
                 </Field>
                 <Field label="Estado" error={errors.status}>
                   <select
-                    className="v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                    className="v2-focus-ring h-11 w-full rounded-2xl border border-border bg-muted/40 px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-muted/60"
                     value={form.status}
                     onChange={(event) => updateForm("status", event.target.value as GoalStatus)}
                   >
@@ -478,7 +478,7 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
 
               <Field label="Notas" error={errors.notes}>
                 <textarea
-                  className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-base md:text-sm text-white outline-none placeholder:text-zinc-600"
+                  className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-border bg-muted/40 px-4 py-3 text-base md:text-sm text-foreground outline-none placeholder:text-muted-foreground"
                   maxLength={1000}
                   value={form.notes}
                   onChange={(event) => updateForm("notes", event.target.value)}
@@ -487,7 +487,7 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
               </Field>
 
               {message ? (
-                <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">
+                <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-destructive">
                   {message}
                 </p>
               ) : null}
@@ -529,7 +529,7 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
                   </PremiumCardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="w-fit border-emerald-300/20 bg-emerald-300/10 text-emerald-100">
+                  <Badge className="w-fit border-emerald-300/20 bg-emerald-300/10 text-emerald-400">
                     {summary.active} activas
                   </Badge>
                   <ActionButton type="button" size="sm" className="hidden xl:inline-flex" onClick={openNewGoal}>
@@ -608,12 +608,12 @@ function GoalsBriefing({
         <PremiumCardContent className="relative p-5 sm:p-6">
           {isLoading ? (
             <div className="space-y-5">
-              <Skeleton className="h-5 w-36 rounded-full bg-white/10" />
-              <Skeleton className="h-8 w-80 max-w-full rounded-full bg-white/10" />
-              <Skeleton className="h-3 w-full rounded-full bg-white/10" />
+              <Skeleton className="h-5 w-36 rounded-full bg-muted" />
+              <Skeleton className="h-8 w-80 max-w-full rounded-full bg-muted" />
+              <Skeleton className="h-3 w-full rounded-full bg-muted" />
               <div className="grid gap-3 sm:grid-cols-3">
                 {[1, 2, 3].map((item) => (
-                  <Skeleton key={item} className="h-20 rounded-3xl bg-white/10" />
+                  <Skeleton key={item} className="h-20 rounded-3xl bg-muted" />
                 ))}
               </div>
             </div>
@@ -621,14 +621,14 @@ function GoalsBriefing({
             <>
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-2xl">
-                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-zinc-300">
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-semibold text-muted-foreground">
                     <Sparkles className="h-3.5 w-3.5 text-emerald-200" aria-hidden="true" />
                     Momentum financiero
                   </div>
-                  <h2 className="text-balance text-2xl font-semibold leading-tight text-white sm:text-3xl">
+                  <h2 className="text-balance text-2xl font-semibold leading-tight text-foreground sm:text-3xl">
                     {state.title}
                   </h2>
-                  <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">{state.description}</p>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{state.description}</p>
                 </div>
 
                 <div className="flex items-center gap-3 lg:flex-col lg:items-end">
@@ -667,10 +667,10 @@ function GoalBriefMetric({
   value: string;
 }) {
   return (
-    <div className="min-w-0 rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
-      <Icon className="h-4 w-4 text-zinc-400" aria-hidden />
-      <p className="mt-3 text-[11px] font-medium uppercase text-zinc-500">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-white">{value}</p>
+    <div className="min-w-0 rounded-3xl border border-border bg-muted/30 p-4">
+      <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
+      <p className="mt-3 text-[11px] font-medium uppercase text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-foreground">{value}</p>
     </div>
   );
 }
@@ -695,7 +695,7 @@ function Field({
 }) {
   return (
     <div className="space-y-2">
-      <Label className="text-xs font-semibold uppercase text-zinc-500">{label}</Label>
+      <Label className="text-xs font-semibold uppercase text-muted-foreground">{label}</Label>
       {children}
       {error ? <p className="text-xs text-rose-300">{error}</p> : null}
     </div>
@@ -733,7 +733,7 @@ function CircularProgress({ value, size = 72, strokeWidth = 6 }: { value: number
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-sm font-semibold tabular-nums text-white">{Math.round(value)}%</span>
+        <span className="text-sm font-semibold tabular-nums text-foreground">{Math.round(value)}%</span>
       </div>
     </div>
   );
@@ -783,33 +783,33 @@ function GoalCard({
     <motion.article
       layout
       {...(shouldReduceMotion ? { initial: false } : cardMotion)}
-      className="rounded-[1.75rem] border border-white/[0.08] bg-white/[0.035] p-4 transition duration-200 hover:border-white/[0.16] hover:bg-white/[0.055] sm:p-5"
+      className="rounded-[1.75rem] border border-border bg-muted/25 p-4 transition duration-200 hover:border-border hover:bg-muted/40 sm:p-5"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-emerald-100">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/50 text-emerald-400">
             <Target className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-base font-semibold text-white">{goal.name}</p>
-            <p className="mt-1 text-sm leading-5 text-zinc-400">
+            <p className="truncate text-base font-semibold text-foreground">{goal.name}</p>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
               {formatMoney(goal.currentAmount, goal.currency)} de {formatMoney(goal.targetAmount, goal.currency)}
             </p>
             {goal.targetDate ? (
-              <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs text-zinc-300">
-                <CalendarDays className="h-3.5 w-3.5 text-zinc-500" aria-hidden="true" />
+              <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground">
+                <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                 {formatDate(goal.targetDate)}
               </p>
             ) : null}
             <div className="mt-2 flex flex-wrap gap-2">
               <Badge className={getStatusClass(goal.status)}>{statusLabels[goal.status]}</Badge>
               {goal.requiredMonthlyAmount ? (
-                <Badge className="border-white/10 bg-white/[0.06] text-zinc-200">
+                <Badge className="border-border bg-muted/50 text-muted-foreground">
                   {formatMoney(goal.requiredMonthlyAmount, goal.currency)} / mes
                 </Badge>
               ) : null}
               {impactsDashboard ? (
-                <Badge className="border-emerald-300/20 bg-emerald-300/10 text-emerald-100">impacta dashboard</Badge>
+                <Badge className="border-emerald-300/20 bg-emerald-300/10 text-emerald-400">impacta dashboard</Badge>
               ) : null}
             </div>
           </div>
@@ -824,7 +824,7 @@ function GoalCard({
         <GoalMetric label="Estado" value={statusLabels[goal.status]} />
       </div>
 
-      {goal.notes ? <p className="mt-4 rounded-2xl border border-white/[0.08] bg-black/15 p-3 text-sm leading-6 text-zinc-400">{goal.notes}</p> : null}
+      {goal.notes ? <p className="mt-4 rounded-2xl border border-border bg-muted/40 p-3 text-sm leading-6 text-muted-foreground">{goal.notes}</p> : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {canContribute && (
@@ -869,12 +869,12 @@ function GoalCard({
             {...(shouldReduceMotion ? { initial: false } : cardMotion)}
             className="mt-4 space-y-3 rounded-[1.5rem] border border-emerald-300/20 bg-emerald-300/10 p-4"
           >
-            <p className="text-xs font-semibold uppercase text-emerald-100">Registrar aporte</p>
+            <p className="text-xs font-semibold uppercase text-emerald-400">Registrar aporte</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-400">Cuenta</label>
+                <label className="text-xs font-medium text-muted-foreground">Cuenta</label>
                 <select
-                  className="v2-focus-ring h-10 w-full rounded-2xl border border-white/10 bg-zinc-950/70 px-3 text-base md:text-sm text-white outline-none"
+                  className="v2-focus-ring h-10 w-full rounded-2xl border border-border bg-card/70 px-3 text-base md:text-sm text-foreground outline-none"
                   value={quickContribAccountId}
                   onChange={(event) => onContribAccountChange(event.target.value)}
                 >
@@ -887,14 +887,14 @@ function GoalCard({
                 {quickContribErrors.accountId ? <p className="text-xs text-rose-200">{quickContribErrors.accountId}</p> : null}
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-400">Monto ({goal.currency})</label>
+                <label className="text-xs font-medium text-muted-foreground">Monto ({goal.currency})</label>
                 <Input
                   inputMode="decimal"
                   onKeyDown={onMoneyKeyDown}
                   value={quickContribAmount}
                   onChange={(event) => onContribAmountChange(event.target.value)}
                   placeholder="0"
-                  className="v2-focus-ring h-10 rounded-2xl border-white/10 bg-zinc-950/70 text-white placeholder:text-zinc-600"
+                  className="v2-focus-ring h-10 rounded-2xl border-border bg-card/70 text-foreground placeholder:text-muted-foreground"
                 />
                 {quickContribErrors.amount ? <p className="text-xs text-rose-200">{quickContribErrors.amount}</p> : null}
               </div>
@@ -918,9 +918,9 @@ function GoalCard({
 
 function GoalMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-white/[0.08] bg-black/15 p-3">
-      <p className="text-[10px] font-medium uppercase text-zinc-500">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-white">{value}</p>
+    <div className="min-w-0 rounded-2xl border border-border bg-muted/40 p-3">
+      <p className="text-[10px] font-medium uppercase text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-foreground">{value}</p>
     </div>
   );
 }
@@ -929,18 +929,18 @@ function GoalSkeletonList() {
   return (
     <div className="grid gap-3">
       {[1, 2].map((item) => (
-        <div key={item} className="space-y-4 rounded-[1.75rem] border border-white/[0.08] bg-white/[0.035] p-4">
+        <div key={item} className="space-y-4 rounded-[1.75rem] border border-border bg-muted/25 p-4">
           <div className="flex gap-3">
-            <Skeleton className="h-11 w-11 shrink-0 rounded-2xl bg-white/10" />
+            <Skeleton className="h-11 w-11 shrink-0 rounded-2xl bg-muted" />
             <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-40 bg-white/10" />
-              <Skeleton className="h-3 w-56 max-w-full bg-white/10" />
+              <Skeleton className="h-4 w-40 bg-muted" />
+              <Skeleton className="h-3 w-56 max-w-full bg-muted" />
             </div>
-            <Skeleton className="h-16 w-16 shrink-0 rounded-full bg-white/10" />
+            <Skeleton className="h-16 w-16 shrink-0 rounded-full bg-muted" />
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[1, 2, 3, 4].map((metric) => (
-              <Skeleton key={metric} className="h-16 rounded-2xl bg-white/10" />
+              <Skeleton key={metric} className="h-16 rounded-2xl bg-muted" />
             ))}
           </div>
         </div>
@@ -951,12 +951,12 @@ function GoalSkeletonList() {
 
 function GoalEmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="rounded-[1.75rem] border border-dashed border-white/10 bg-white/[0.025] p-6 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-zinc-300">
+    <div className="rounded-[1.75rem] border border-dashed border-border bg-muted/20 p-6 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-muted/50 text-muted-foreground">
         <Target className="h-5 w-5" aria-hidden="true" />
       </div>
-      <h3 className="mt-4 text-base font-semibold text-white">Todavía no hay hitos financieros</h3>
-      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-zinc-400">
+      <h3 className="mt-4 text-base font-semibold text-foreground">Todavía no hay hitos financieros</h3>
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
         Creá una meta que valga la pena mirar: ahorro, fecha y aporte sugerido.
       </p>
       <ActionButton type="button" className="mt-5" onClick={onCreate}>
@@ -998,7 +998,7 @@ function DeleteGoalDialog({
             <PremiumCard variant="raised">
               <PremiumCardHeader>
                 <div className="flex items-start gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-rose-300/20 bg-rose-400/10 text-rose-100">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-rose-300/20 bg-rose-400/10 text-destructive">
                     <ShieldAlert className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div>
@@ -1010,12 +1010,12 @@ function DeleteGoalDialog({
                 </div>
               </PremiumCardHeader>
               <PremiumCardContent>
-                <div className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
-                  <div className="flex items-center gap-2 text-sm text-zinc-300">
-                    <TrendingUp className="h-4 w-4 text-zinc-500" aria-hidden="true" />
+                <div className="rounded-3xl border border-border bg-muted/30 p-4">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                     Progreso actual
                   </div>
-                  <p className="mt-2 text-xl font-semibold tabular-nums text-white">
+                  <p className="mt-2 text-xl font-semibold tabular-nums text-foreground">
                     {formatMoney(goal.currentAmount, goal.currency)} de {formatMoney(goal.targetAmount, goal.currency)}
                   </p>
                 </div>
@@ -1107,10 +1107,10 @@ function formatCommitments(commitments: Partial<Record<CurrencyCode, number>>) {
 }
 
 function getStatusClass(status: GoalStatus) {
-  if (status === "ACTIVE") return "border-emerald-300/20 bg-emerald-300/10 text-emerald-100";
-  if (status === "COMPLETED") return "border-teal-300/20 bg-teal-300/10 text-teal-100";
-  if (status === "PAUSED") return "border-amber-300/20 bg-amber-300/10 text-amber-100";
-  return "border-zinc-300/10 bg-zinc-300/10 text-zinc-300";
+  if (status === "ACTIVE") return "border-emerald-300/20 bg-emerald-300/10 text-emerald-400";
+  if (status === "COMPLETED") return "border-teal-300/20 bg-teal-300/10 text-primary";
+  if (status === "PAUSED") return "border-amber-300/20 bg-amber-300/10 text-amber-500";
+  return "border-border bg-muted/20 text-muted-foreground";
 }
 
 function formatMoney(value: number, currency: CurrencyCode) {

@@ -131,12 +131,12 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
 
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-zinc-400">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/50 text-muted-foreground">
           <Settings className="h-5 w-5" aria-hidden="true" />
         </div>
         <div>
           <h1 className="text-xl font-bold text-foreground">Ajustes</h1>
-          <p className="text-sm text-zinc-500">Preferencias y configuración de Meridian</p>
+          <p className="text-sm text-muted-foreground">Preferencias y configuración de Meridian</p>
         </div>
       </div>
 
@@ -145,12 +145,12 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
         {/* Tema */}
         <div className="px-5 py-4">
           <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
               <Palette className="h-4 w-4" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-sm font-medium text-zinc-200">Tema</p>
-              <p className="text-xs text-zinc-500">Apariencia visual de la interfaz</p>
+              <p className="text-sm font-medium text-muted-foreground">Tema</p>
+              <p className="text-xs text-muted-foreground">Apariencia visual de la interfaz</p>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -166,7 +166,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                 className={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-xs font-medium transition-all ${
                   prefs.theme === value
                     ? "border-teal-400/30 bg-teal-400/10 text-teal-300"
-                    : "border-white/10 bg-white/[0.04] text-zinc-400 hover:bg-white/[0.07] hover:text-zinc-200"
+                    : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-muted-foreground"
                 }`}
               >
                 <Icon className="h-5 w-5" aria-hidden="true" />
@@ -177,14 +177,14 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
         </div>
 
         {/* Tamaño de texto */}
-        <div className="border-t border-white/[0.06] px-5 py-4">
+        <div className="border-t border-border px-5 py-4">
           <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
               <Type className="h-4 w-4" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-sm font-medium text-zinc-200">Tamaño de texto</p>
-              <p className="text-xs text-zinc-500">Ajustá la legibilidad del contenido</p>
+              <p className="text-sm font-medium text-muted-foreground">Tamaño de texto</p>
+              <p className="text-xs text-muted-foreground">Ajustá la legibilidad del contenido</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -199,7 +199,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                 className={`flex items-center justify-center rounded-2xl border px-3 py-3 text-sm font-medium transition-all ${
                   prefs.textSize === value
                     ? "border-teal-400/30 bg-teal-400/10 text-teal-300"
-                    : "border-white/10 bg-white/[0.04] text-zinc-400 hover:bg-white/[0.07] hover:text-zinc-200"
+                    : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-muted-foreground"
                 } ${value === "large" ? "text-base" : ""}`}
               >
                 {label}
@@ -214,12 +214,12 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
         {/* Moneda principal */}
         <div className="px-5 py-4">
           <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
               <Globe className="h-4 w-4" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-sm font-medium text-zinc-200">Moneda principal</p>
-              <p className="text-xs text-zinc-500">Default en formularios y orden visual de monedas</p>
+              <p className="text-sm font-medium text-muted-foreground">Moneda principal</p>
+              <p className="text-xs text-muted-foreground">Default en formularios y orden visual de monedas</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -231,14 +231,14 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                 className={`flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-all ${
                   prefs.primaryCurrency === currency
                     ? "border-teal-400/30 bg-teal-400/10 text-teal-300"
-                    : "border-white/10 bg-white/[0.04] text-zinc-400 hover:bg-white/[0.07] hover:text-zinc-200"
+                    : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-muted-foreground"
                 }`}
               >
                 {currency === "ARS" ? "🇦🇷" : "🇺🇸"} {currency}
               </button>
             ))}
           </div>
-          <p className="mt-3 text-[11px] text-zinc-600">
+          <p className="mt-3 text-[11px] text-muted-foreground">
             No convierte monedas ni suma ARS + USD. Solo define el default en los formularios.
           </p>
         </div>
@@ -248,7 +248,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
           icon={Globe}
           label="Formato regional"
           description="Números y fechas"
-          action={<span className="text-xs text-zinc-500">Argentina</span>}
+          action={<span className="text-xs text-muted-foreground">Argentina</span>}
         />
       </Section>
 
@@ -256,12 +256,12 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
       <Section icon={Globe} title="Idioma">
         <div className="px-5 py-4">
           <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
               <Globe className="h-4 w-4" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-sm font-medium text-zinc-200">Idioma de la app</p>
-              <p className="text-xs text-zinc-500">La preferencia se guarda para cuando llegue la traducción completa</p>
+              <p className="text-sm font-medium text-muted-foreground">Idioma de la app</p>
+              <p className="text-xs text-muted-foreground">La preferencia se guarda para cuando llegue la traducción completa</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -276,12 +276,12 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                 className={`relative flex flex-col items-center gap-1.5 rounded-2xl border px-3 py-3 text-sm font-medium transition-all ${
                   prefs.language === value
                     ? "border-teal-400/30 bg-teal-400/10 text-teal-300"
-                    : "border-white/10 bg-white/[0.04] text-zinc-400 hover:bg-white/[0.07] hover:text-zinc-200"
+                    : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-muted-foreground"
                 }`}
               >
                 {label}
                 {value === "en" && (
-                  <span className="rounded-full border border-white/10 bg-white/[0.06] px-2 py-0.5 text-[10px] text-zinc-500">
+                  <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] text-muted-foreground">
                     Próximamente
                   </span>
                 )}
@@ -300,7 +300,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
           action={
             <a
               href="/login"
-              className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-zinc-300 transition hover:bg-white/[0.08] hover:text-white"
+              className="shrink-0 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
             >
               Cambiar
             </a>
@@ -327,7 +327,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
           }
         />
         <div className="px-5 py-3">
-          <p className="text-xs leading-5 text-zinc-600">
+          <p className="text-xs leading-5 text-muted-foreground">
             Tus datos financieros son privados y nunca se comparten con terceros. El export no incluye contraseñas, tokens ni datos de otros usuarios.
           </p>
         </div>
@@ -342,19 +342,19 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
             </div>
             <div>
               <PremiumCardTitle className="text-sm text-rose-200">Zona de riesgo</PremiumCardTitle>
-              <p className="text-xs text-zinc-500">Las acciones de esta sección son irreversibles</p>
+              <p className="text-xs text-muted-foreground">Las acciones de esta sección son irreversibles</p>
             </div>
           </div>
         </PremiumCardHeader>
         <PremiumCardContent className="p-0">
           <div className="flex items-start justify-between gap-4 px-5 py-4">
             <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-500">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
                 <CircleSlash className="h-4 w-4" aria-hidden="true" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-zinc-200">Borrar toda la información</p>
-                <p className="mt-0.5 text-xs leading-4 text-zinc-500">
+                <p className="text-sm font-semibold text-muted-foreground">Borrar toda la información</p>
+                <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
                   Elimina cuentas, transacciones, presupuestos, metas, deudas y recurrentes. Tu cuenta de acceso queda intacta.
                 </p>
               </div>
@@ -391,7 +391,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
           action={
             <a
               href="mailto:bransoft21@gmail.com?subject=Meridian%20feedback"
-              className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-zinc-300 transition hover:bg-white/[0.08] hover:text-white"
+              className="shrink-0 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
             >
               Escribir
             </a>
@@ -403,17 +403,17 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
               key={i}
               type="button"
               onClick={() => setOpenFaq(openFaq === i ? null : i)}
-              className="w-full px-5 py-4 text-left transition hover:bg-white/[0.03]"
+              className="w-full px-5 py-4 text-left transition hover:bg-muted/20"
             >
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-medium text-zinc-300">{faq.q}</span>
+                <span className="text-sm font-medium text-muted-foreground">{faq.q}</span>
                 {openFaq === i
-                  ? <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500" />
-                  : <ChevronRight className="h-4 w-4 shrink-0 text-zinc-500" />
+                  ? <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                 }
               </div>
               {openFaq === i && (
-                <p className="mt-2 text-xs leading-5 text-zinc-500">{faq.a}</p>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">{faq.a}</p>
               )}
             </button>
           ))}
@@ -429,7 +429,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
           action={
             <Link
               href="/categories"
-              className="flex shrink-0 items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-zinc-300 transition hover:bg-white/[0.08] hover:text-white"
+              className="flex shrink-0 items-center gap-1 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
             >
               Ir
               <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -445,27 +445,27 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
             className="fixed inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => { setDeleteOpen(false); setDeleteInput(""); }}
           />
-          <div className="relative z-10 w-full max-w-md rounded-t-[28px] border border-white/10 bg-zinc-950/98 p-6 shadow-2xl sm:rounded-[28px]">
+          <div className="relative z-10 w-full max-w-md rounded-t-[28px] border border-border bg-card/98 p-6 shadow-2xl sm:rounded-[28px]">
             <div className="mb-5 flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-rose-500/20 bg-rose-500/10 text-rose-400">
                 <TriangleAlert className="h-5 w-5" aria-hidden="true" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-white">Borrar toda la información</h2>
-                <p className="text-xs text-zinc-500">Esta acción es irreversible</p>
+                <h2 className="text-base font-bold text-foreground">Borrar toda la información</h2>
+                <p className="text-xs text-muted-foreground">Esta acción es irreversible</p>
               </div>
             </div>
             <div className="mb-5 rounded-2xl border border-rose-500/15 bg-rose-500/[0.06] p-4">
-              <p className="text-xs leading-5 text-zinc-300">
+              <p className="text-xs leading-5 text-muted-foreground">
                 Se eliminarán permanentemente todas las cuentas, transacciones, presupuestos, metas, deudas, recurrentes y análisis IA.{" "}
                 <strong className="text-rose-300">No se puede deshacer.</strong>
               </p>
-              <p className="mt-2 text-xs leading-5 text-zinc-400">
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
                 Tu cuenta de acceso (email y contraseña) queda intacta.
               </p>
             </div>
             <div className="mb-4 space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Escribí <span className="font-bold text-rose-300">ELIMINAR</span> para confirmar
               </label>
               <input
@@ -473,7 +473,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                 value={deleteInput}
                 onChange={(e) => setDeleteInput(e.target.value)}
                 placeholder="ELIMINAR"
-                className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-zinc-600 outline-none focus:border-rose-500/40 focus:ring-1 focus:ring-rose-500/20"
+                className="w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-foreground placeholder-zinc-600 outline-none focus:border-rose-500/40 focus:ring-1 focus:ring-rose-500/20"
                 autoComplete="off"
               />
             </div>
@@ -515,8 +515,8 @@ function Section({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 px-1">
-        <Icon className="h-3.5 w-3.5 text-zinc-600" aria-hidden="true" />
-        <h2 className="text-[11px] font-semibold uppercase tracking-widest text-zinc-600">{title}</h2>
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+        <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{title}</h2>
       </div>
       <PremiumCard>
         <PremiumCardContent className="divide-y divide-white/[0.06] p-0">
@@ -541,12 +541,12 @@ function SettingRow({
   return (
     <div className="flex items-center justify-between gap-4 px-5 py-4">
       <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
           <Icon className="h-4 w-4" aria-hidden="true" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-medium text-zinc-200">{label}</p>
-          <p className="text-xs text-zinc-500">{description}</p>
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <p className="text-xs text-muted-foreground">{description}</p>
         </div>
       </div>
       <div className="shrink-0">{action}</div>

@@ -320,11 +320,11 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
     return (
       <div className="mx-auto max-w-md space-y-6 py-8">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-white/[0.07] text-2xl">🏠</div>
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-3xl bg-muted/60 text-2xl">🏠</div>
           <h2 className="text-lg font-semibold text-foreground">Creá tu hogar compartido</h2>
           <p className="mt-1 text-sm text-muted-foreground">Invitá a tu pareja o familia para organizar gastos juntos.</p>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 space-y-4">
+        <div className="rounded-2xl border border-border bg-muted/30 p-5 space-y-4">
           <div className="grid grid-cols-[72px_1fr] gap-3">
             <div className="space-y-2">
               <Label className="text-xs">Ícono</Label>
@@ -358,10 +358,10 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
             className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition ${
               selectedHousehold?.id === household.id
                 ? "border-teal-300/30 bg-teal-300/10"
-                : "border-white/10 bg-white/[0.04] hover:bg-white/[0.07]"
+                : "border-border bg-muted/30 hover:bg-muted/60"
             }`}
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.07] text-base">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted/60 text-base">
               {household.avatar || <Home className="h-4 w-4" />}
             </span>
             <span className="min-w-0">
@@ -372,7 +372,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
         ))}
 
         {showCreateForm ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 space-y-3">
+          <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nuevo hogar</p>
             <div className="grid grid-cols-[60px_1fr] gap-2">
               <div className="space-y-1.5">
@@ -396,7 +396,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
           <button
             type="button"
             onClick={() => setShowCreateForm(true)}
-            className="flex w-full items-center gap-2 rounded-2xl border border-dashed border-white/10 px-3 py-2.5 text-sm text-muted-foreground transition hover:border-white/20 hover:text-foreground"
+            className="flex w-full items-center gap-2 rounded-2xl border border-dashed border-border px-3 py-2.5 text-sm text-muted-foreground transition hover:border-border hover:text-foreground"
           >
             <Plus className="h-3.5 w-3.5" />
             Nuevo hogar
@@ -407,14 +407,14 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
       {/* ── MAIN CONTENT ── */}
       <section className="space-y-4 min-w-0">
         {!selectedHousehold ? (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center">
+          <div className="rounded-2xl border border-border bg-muted/30 p-8 text-center">
             <p className="text-sm text-muted-foreground">Seleccioná un hogar para continuar.</p>
           </div>
         ) : (
           <>
             {/* Household header */}
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/[0.07] text-lg">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-muted/60 text-lg">
                 {selectedHousehold.avatar || <Home className="h-5 w-5" />}
               </span>
               <div className="min-w-0">
@@ -424,7 +424,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                     <span
                       key={member.id}
                       title={member.userProfile.fullName ?? member.userProfile.email}
-                      className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-300/20 text-[10px] font-bold text-teal-100"
+                      className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-300/20 text-[10px] font-bold text-primary"
                     >
                       {(member.userProfile.fullName ?? member.userProfile.email).charAt(0).toUpperCase()}
                     </span>
@@ -437,7 +437,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
             </div>
 
             {/* Tab bar */}
-            <div className="flex gap-1 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
+            <div className="flex gap-1 rounded-2xl border border-border bg-muted/30 p-1">
               {(["overview", "payments", "team"] as const).map((tab) => (
                 <button
                   key={tab}
@@ -445,7 +445,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                   onClick={() => setActiveTab(tab)}
                   className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition ${
                     activeTab === tab
-                      ? "bg-white/10 text-foreground shadow-sm"
+                      ? "bg-muted text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -463,7 +463,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                 {/* Briefing banner */}
                 <div className={`rounded-2xl border p-4 ${getBriefingPanelClass(briefing?.status)}`}>
                   <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.08]">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted/70">
                       {isLoadingBriefing
                         ? <Loader2 className="h-4 w-4 animate-spin" />
                         : <WalletCards className="h-4 w-4" />}
@@ -509,7 +509,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                         <button
                           type="button"
                           onClick={() => setActiveTab("payments")}
-                          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs text-muted-foreground transition hover:text-foreground"
+                          className="flex items-center gap-1.5 rounded-xl border border-border bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground transition hover:text-foreground"
                         >
                           <Circle className="h-3 w-3" />
                           {recurringPayments.pendingCount} pendiente{recurringPayments.pendingCount > 1 ? "s" : ""}
@@ -521,12 +521,12 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                     {/* Settlement action */}
                     {balance?.settlement ? (
                       <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4">
-                        <p className="text-sm font-semibold text-amber-100">
+                        <p className="text-sm font-semibold text-amber-500">
                           {balance.settlement.fromName} le debe{" "}
                           <SensitiveAmount value={formatMoney(balance.settlement.amount, "ARS")} />{" "}
                           a {balance.settlement.toName}.
                         </p>
-                        <p className="mt-1 text-xs leading-5 text-amber-100/70">
+                        <p className="mt-1 text-xs leading-5 text-amber-500/70">
                           Cuando lo compensen fuera de Meridian, dejá constancia para empezar de nuevo.
                         </p>
                         <Button
@@ -545,7 +545,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                     {balance ? (
                       <div className="grid gap-2 sm:grid-cols-2">
                         {balance.members.map((member) => (
-                          <div key={member.userId} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                          <div key={member.userId} className="rounded-2xl border border-border bg-muted/30 p-3">
                             <p className="truncate text-sm font-semibold text-foreground">{member.name}</p>
                             <p className={`mt-1.5 text-base font-bold ${member.balance >= 0 ? "text-emerald-200" : "text-amber-200"}`}>
                               <SensitiveAmount value={formatMoney(Math.abs(member.balance), "ARS")} />
@@ -559,8 +559,8 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       </div>
                     ) : (
-                      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 text-center">
-                        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.06] text-lg">💸</div>
+                      <div className="rounded-2xl border border-border bg-muted/15 p-5 text-center">
+                        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-muted/50 text-lg">💸</div>
                         <p className="text-sm font-semibold text-foreground">Sin movimientos compartidos</p>
                         <p className="mt-1 text-xs leading-5 text-muted-foreground">
                           Cuando alguien pague algo para el hogar, aparecerá acá.
@@ -579,7 +579,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                       <div className="space-y-1.5">
                         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Últimos gastos compartidos</p>
                         {balance.recentSharedTransactions.slice(0, 3).map((tx) => (
-                          <div key={tx.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                          <div key={tx.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-muted/30 p-3">
                             <div className="min-w-0">
                               <p className="truncate text-sm font-semibold text-foreground">{tx.description ?? "Gasto compartido"}</p>
                               <p className="truncate text-xs text-muted-foreground">Pagó {tx.paidByName}</p>
@@ -600,7 +600,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
 
                     {/* Settlement history (collapsible) */}
                     {settlements.length > 0 ? (
-                      <div className="space-y-2 border-t border-white/[0.07] pt-3">
+                      <div className="space-y-2 border-t border-border pt-3">
                         <button
                           type="button"
                           onClick={() => setShowSettlementsHistory((prev) => !prev)}
@@ -617,7 +617,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                             {settlements.map((s) => (
                               <div key={s.id} className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300/10 bg-emerald-300/5 p-2.5">
                                 <div className="min-w-0">
-                                  <p className="text-xs font-semibold text-emerald-100">Hogar equilibrado</p>
+                                  <p className="text-xs font-semibold text-emerald-400">Hogar equilibrado</p>
                                   <p className="truncate text-xs text-muted-foreground">
                                     {s.settledBy.fullName ?? s.settledBy.email} · {formatDate(s.createdAt)}
                                   </p>
@@ -630,7 +630,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                           </div>
                         ) : (
                           <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300/10 bg-emerald-300/5 p-2.5">
-                            <p className="text-xs text-emerald-100/70">Último: {formatDate(settlements[0].createdAt)}</p>
+                            <p className="text-xs text-emerald-400/70">Último: {formatDate(settlements[0].createdAt)}</p>
                             <p className="text-xs font-bold text-emerald-200">
                               <SensitiveAmount value={formatMoney(Number(settlements[0].amount), "ARS")} />
                             </p>
@@ -645,7 +645,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                 {(recurringPayments?.payments.some((p) => p.status === "PAID") ||
                   settlements.length > 0 ||
                   briefing?.status === "HIGH_SPEND") ? (
-                  <div className="space-y-2.5 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+                  <div className="space-y-2.5 rounded-2xl border border-border bg-muted/15 p-4">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground capitalize">Historia del mes · {currentMonthLabel}</p>
                     <div className="space-y-2">
                       {settlements[0] ? (
@@ -711,13 +711,13 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                 <CardContent className="space-y-4">
                   <div className="rounded-2xl border border-teal-300/15 bg-teal-300/10 p-3">
                     <p className="text-sm font-semibold text-teal-50">Los pagos del hogar no tienen que ser todos fijos.</p>
-                    <p className="mt-1 text-xs leading-5 text-teal-100/70">
+                    <p className="mt-1 text-xs leading-5 text-primary/70">
                       Usá “Gasto puntual” para supermercado, farmacia o compras sueltas. Usá “Pago fijo” para alquiler, servicios o compromisos que vuelven cada mes.
                     </p>
                   </div>
                   {/* Add form */}
                   {isAddingRecurring ? (
-                    <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <div className="space-y-3 rounded-2xl border border-border bg-muted/30 p-4">
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-2">
                           <Label>Nombre</Label>
@@ -751,7 +751,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                         <div className="space-y-2">
                           <Label>División</Label>
                           <select
-                            className="flex h-10 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-base text-foreground md:text-sm"
+                            className="flex h-10 w-full rounded-2xl border border-border bg-muted/30 px-3 py-2 text-base text-foreground md:text-sm"
                             value={newPaymentForm.splitMode}
                             onChange={(e) => setNewPaymentForm((p) => ({ ...p, splitMode: e.target.value as "EQUAL" }))}
                           >
@@ -820,7 +820,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                               <button
                                 type="button"
                                 onClick={() => setShowAllActivePayments(true)}
-                                className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-white/10 py-2.5 text-xs text-muted-foreground transition hover:text-foreground"
+                                className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-border py-2.5 text-xs text-muted-foreground transition hover:text-foreground"
                               >
                                 Ver {hidden} pago{hidden > 1 ? "s" : ""} más
                               </button>
@@ -868,8 +868,8 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                       ) : null}
                     </div>
                   ) : (
-                    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 text-center">
-                      <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.06] text-lg">📋</div>
+                    <div className="rounded-2xl border border-border bg-muted/15 p-5 text-center">
+                      <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-muted/50 text-lg">📋</div>
                       <p className="text-sm font-semibold text-foreground">Todavía no hay compromisos del hogar</p>
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">
                         Agregá los pagos que vuelven todos los meses o cargá un gasto puntual cuando alguien pague algo compartido.
@@ -911,8 +911,8 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                   {/* Members grid */}
                   <div className="grid gap-2 sm:grid-cols-2">
                     {selectedHousehold.members.map((member) => (
-                      <div key={member.id} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-teal-300/15 text-sm font-bold text-teal-100">
+                      <div key={member.id} className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 p-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-teal-300/15 text-sm font-bold text-primary">
                           {(member.userProfile.fullName ?? member.userProfile.email).charAt(0).toUpperCase()}
                         </span>
                         <div className="min-w-0">
@@ -926,7 +926,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                   </div>
 
                   {/* Invite form */}
-                  <div id="invite-member" className="scroll-mt-24 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <div id="invite-member" className="scroll-mt-24 rounded-2xl border border-border bg-muted/30 p-4">
                     <p className="mb-3 text-sm font-semibold text-foreground">Invitar por email</p>
                     <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
                       <Input
@@ -942,10 +942,10 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                     </div>
 
                     {inviteUrl ? (
-                      <div className="mt-3 space-y-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+                      <div className="mt-3 space-y-3 rounded-2xl border border-border bg-muted/50 p-3">
                         <p className="text-sm font-semibold text-foreground">Copiá y envialo por WhatsApp</p>
-                        <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-2">
-                          <Mail className="h-4 w-4 shrink-0 text-teal-100" />
+                        <div className="flex items-center gap-2 rounded-2xl border border-border bg-muted/30 p-2">
+                          <Mail className="h-4 w-4 shrink-0 text-primary" />
                           <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{inviteUrl}</p>
                         </div>
                         <div className="grid gap-2 sm:grid-cols-2">

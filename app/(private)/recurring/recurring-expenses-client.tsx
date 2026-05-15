@@ -138,8 +138,8 @@ const cardMotion = {
   transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
 } as const;
 
-const inputClass = "v2-focus-ring h-11 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-zinc-600";
-const selectClass = "v2-focus-ring h-11 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]";
+const inputClass = "v2-focus-ring h-11 rounded-2xl border-border bg-muted/40 text-foreground placeholder:text-muted-foreground";
+const selectClass = "v2-focus-ring h-11 w-full rounded-2xl border border-border bg-muted/40 px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-muted/60";
 
 export function RecurringExpensesClient({ householdId, accounts, categories, defaultCurrency = "ARS" }: RecurringClientProps) {
   const defaultAccount = getPreferredArsBankAccount(accounts);
@@ -399,16 +399,16 @@ export function RecurringExpensesClient({ householdId, accounts, categories, def
       <AppFormPanel
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
-        className="border-white/10 bg-zinc-950/80 shadow-[0_24px_80px_rgba(0,0,0,0.32)] xl:rounded-[var(--v2-radius-xl)]"
+        className="border-border bg-card/80 shadow-[0_24px_80px_rgba(0,0,0,0.32)] xl:rounded-[var(--v2-radius-xl)]"
       >
-        <div className={appFormHeaderClass("border-white/10 bg-zinc-950/95 xl:bg-transparent")}>
+        <div className={appFormHeaderClass("border-border bg-card/95 xl:bg-transparent")}>
           <div className="flex items-start gap-3 p-5 sm:p-6">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-white">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/50 text-foreground">
               <RefreshCw className="h-5 w-5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-base font-semibold leading-tight text-white">{editingId ? "Editar gasto fijo" : "Nuevo gasto fijo"}</h2>
-              <p className="mt-1 text-sm leading-5 text-zinc-400">
+              <h2 className="text-base font-semibold leading-tight text-foreground">{editingId ? "Editar gasto fijo" : "Nuevo gasto fijo"}</h2>
+              <p className="mt-1 text-sm leading-5 text-muted-foreground">
                 {editingId ? "Modificá los datos." : "Suscripción, servicio o pago periódico."}
               </p>
             </div>
@@ -465,10 +465,10 @@ export function RecurringExpensesClient({ householdId, accounts, categories, def
             </Field>
 
             <Field label="Notas" error={errors.notes}>
-              <textarea className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-base md:text-sm text-white outline-none placeholder:text-zinc-600" maxLength={1000} value={form.notes} onChange={(e) => updateForm("notes", e.target.value)} placeholder="Detalle opcional" />
+              <textarea className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-border bg-muted/40 px-4 py-3 text-base md:text-sm text-foreground outline-none placeholder:text-muted-foreground" maxLength={1000} value={form.notes} onChange={(e) => updateForm("notes", e.target.value)} placeholder="Detalle opcional" />
             </Field>
 
-            {message ? <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">{message}</p> : null}
+            {message ? <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-destructive">{message}</p> : null}
 
             <div className={appFormActionsClass()}>
               <ActionButton className="w-full" disabled={isSaving}>
@@ -499,9 +499,9 @@ export function RecurringExpensesClient({ householdId, accounts, categories, def
 
         {upcomingCount > 0 && (
           <div className="flex items-center gap-3 rounded-3xl border border-amber-300/20 bg-amber-300/10 p-4">
-            <Bell className="h-5 w-5 shrink-0 text-amber-100" aria-hidden="true" />
-            <p className="text-sm text-zinc-300">
-              <span className="font-semibold text-amber-100">{upcomingCount} vencimiento{upcomingCount > 1 ? "s" : ""}</span> dentro de los próximos 30 días.
+            <Bell className="h-5 w-5 shrink-0 text-amber-500" aria-hidden="true" />
+            <p className="text-sm text-muted-foreground">
+              <span className="font-semibold text-amber-500">{upcomingCount} vencimiento{upcomingCount > 1 ? "s" : ""}</span> dentro de los próximos 30 días.
             </p>
           </div>
         )}
@@ -535,7 +535,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories, def
           <PremiumCardContent>
             {isLoading ? (
               <div className="grid gap-3">
-                {[1, 2, 3].map((item) => <div key={item} className="h-28 rounded-[1.5rem] border border-white/[0.08] bg-white/[0.035]" />)}
+                {[1, 2, 3].map((item) => <div key={item} className="h-28 rounded-[1.5rem] border border-border bg-muted/25" />)}
               </div>
             ) : items.length === 0 ? (
               <RecurringEmptyState onCreate={openNewItem} />
@@ -583,32 +583,32 @@ function RecurringBriefing({ summary, isLoading, onCreate }: { summary: Recurrin
         <PremiumCardContent className="relative p-5 sm:p-6">
           {isLoading ? (
             <div className="space-y-5">
-              <Skeleton className="h-5 w-40 rounded-full bg-white/10" />
-              <Skeleton className="h-8 w-80 max-w-full rounded-full bg-white/10" />
+              <Skeleton className="h-5 w-40 rounded-full bg-muted" />
+              <Skeleton className="h-8 w-80 max-w-full rounded-full bg-muted" />
               <div className="grid gap-3 sm:grid-cols-3">
-                {[1, 2, 3].map((item) => <Skeleton key={item} className="h-20 rounded-3xl bg-white/10" />)}
+                {[1, 2, 3].map((item) => <Skeleton key={item} className="h-20 rounded-3xl bg-muted" />)}
               </div>
             </div>
           ) : (
             <>
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-zinc-300">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-semibold text-muted-foreground">
                   <RefreshCw className="h-3.5 w-3.5 text-teal-200" aria-hidden="true" />
                   Costo invisible
                 </div>
-                <h2 className="text-balance text-2xl font-semibold leading-tight text-white sm:text-3xl">
+                <h2 className="text-balance text-2xl font-semibold leading-tight text-foreground sm:text-3xl">
                   {summary.activeCount > 0 ? "Estos gastos ya tienen permiso para volver." : "Todavía no hay gastos automáticos activos."}
                 </h2>
-                <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">
+                <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
                   {summary.activeCount > 0
                     ? "La app los mantiene visibles para que el mes no se llene de cobros silenciosos."
                     : "Cuando cargues suscripciones y servicios, vas a ver cuánto se va solo cada mes."}
                 </p>
               </div>
-              <div className="rounded-[2rem] border border-white/10 bg-white/[0.055] p-4 text-right">
-                <p className="text-[11px] font-semibold uppercase text-zinc-500">Activo mensual</p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums text-white">
+              <div className="rounded-[2rem] border border-border bg-muted/40 p-4 text-right">
+                <p className="text-[11px] font-semibold uppercase text-muted-foreground">Activo mensual</p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">
                   <SensitiveAmount value={formatMoney(summary.activeMonthly, "ARS")} />
                 </p>
                 <ActionButton type="button" variant="glass" size="sm" className="mt-3" onClick={onCreate}>
@@ -632,21 +632,21 @@ function RecurringBriefing({ summary, isLoading, onCreate }: { summary: Recurrin
 
 function RecurringMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
-      <p className="text-[11px] font-medium uppercase text-zinc-500">{label}</p>
-      <p className="mt-2 truncate text-sm font-semibold tabular-nums text-white">{value}</p>
+    <div className="min-w-0 rounded-3xl border border-border bg-muted/30 p-4">
+      <p className="text-[11px] font-medium uppercase text-muted-foreground">{label}</p>
+      <p className="mt-2 truncate text-sm font-semibold tabular-nums text-foreground">{value}</p>
     </div>
   );
 }
 
 function RecurringEmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="rounded-[1.75rem] border border-dashed border-white/10 bg-white/[0.025] p-6 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-zinc-300">
+    <div className="rounded-[1.75rem] border border-dashed border-border bg-muted/20 p-6 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-muted/50 text-muted-foreground">
         <CalendarClock className="h-5 w-5" aria-hidden="true" />
       </div>
-      <h3 className="mt-4 text-base font-semibold text-white">Sin gastos fijos invisibles</h3>
-      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-zinc-400">
+      <h3 className="mt-4 text-base font-semibold text-foreground">Sin gastos fijos invisibles</h3>
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
         Agregá suscripciones, alquileres o servicios para revelar cuánto se va solo.
       </p>
       <ActionButton type="button" className="mt-5" onClick={onCreate}>
@@ -670,9 +670,9 @@ function DeleteRecurringDialog({ item, isDeleting, onCancel, onConfirm }: { item
                 <PremiumCardDescription>Se quita este gasto fijo. Los pagos ya registrados no se modifican.</PremiumCardDescription>
               </PremiumCardHeader>
               <PremiumCardContent>
-                <div className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
-                  <p className="text-sm text-zinc-400">Monto recurrente</p>
-                  <p className="mt-2 text-xl font-semibold tabular-nums text-white">
+                <div className="rounded-3xl border border-border bg-muted/30 p-4">
+                  <p className="text-sm text-muted-foreground">Monto recurrente</p>
+                  <p className="mt-2 text-xl font-semibold tabular-nums text-foreground">
                     <SensitiveAmount value={formatMoney(item.amount, item.currency)} />
                   </p>
                 </div>
@@ -724,18 +724,18 @@ function RecurringRow({
     <motion.article
       layout
       {...(shouldReduceMotion ? { initial: false } : cardMotion)}
-      className={`rounded-[1.75rem] border border-white/[0.08] bg-white/[0.035] p-4 transition duration-200 hover:border-white/[0.16] hover:bg-white/[0.055] sm:p-5 ${!item.isActive ? "opacity-55" : ""}`}
+      className={`rounded-[1.75rem] border border-border bg-muted/25 p-4 transition duration-200 hover:border-border hover:bg-muted/40 sm:p-5 ${!item.isActive ? "opacity-55" : ""}`}
     >
       <div className="flex min-w-0 items-start gap-3">
-        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 ${item.isActive ? "bg-white/[0.06] text-teal-100" : "bg-white/[0.03] text-zinc-500"}`}>
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border ${item.isActive ? "bg-muted/50 text-primary" : "bg-muted/20 text-muted-foreground"}`}>
           <RefreshCw className="h-5 w-5" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate text-base font-semibold text-white">{item.name}</p>
-            <Badge className="border-white/10 bg-white/[0.06] text-zinc-200">{frequencyLabels[item.frequency]}</Badge>
+            <p className="truncate text-base font-semibold text-foreground">{item.name}</p>
+            <Badge className="border-border bg-muted/50 text-muted-foreground">{frequencyLabels[item.frequency]}</Badge>
             {item.isDueSoon && item.isActive && (
-              <Badge className={item.daysUntilDue < 0 ? "border-rose-300/20 bg-rose-400/10 text-rose-100" : "border-amber-300/20 bg-amber-300/10 text-amber-100"}>
+              <Badge className={item.daysUntilDue < 0 ? "border-rose-300/20 bg-rose-400/10 text-destructive" : "border-amber-300/20 bg-amber-300/10 text-amber-500"}>
                 {item.daysUntilDue < 0
                   ? `Vencido hace ${Math.abs(item.daysUntilDue)}d`
                   : item.daysUntilDue === 0
@@ -744,7 +744,7 @@ function RecurringRow({
               </Badge>
             )}
           </div>
-          <p className="mt-1 text-sm leading-5 text-zinc-400">
+          <p className="mt-1 text-sm leading-5 text-muted-foreground">
             Vence {formatDate(item.nextDueDate)}
             {item.account ? ` · ${item.account.name}` : ""}
             {item.category ? ` · ${item.category.name}` : ""}
@@ -757,7 +757,7 @@ function RecurringRow({
             const label = d < 0 ? `Vencido hace ${Math.abs(d)}d` : d === 0 ? "Hoy" : d === 1 ? "Mañana" : `en ${d}d`;
             return (
               <div className="mt-2 flex items-center gap-2">
-                <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/[0.08]">
+                <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted/70">
                   <div className="h-full rounded-full transition-[width] duration-500"
                     style={{ width: `${barW}%`, background: urgColor }} />
                 </div>
@@ -771,7 +771,7 @@ function RecurringRow({
         </div>
       </div>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-lg font-semibold tabular-nums text-rose-100">
+        <p className="text-lg font-semibold tabular-nums text-destructive">
           <SensitiveAmount value={`-${formatMoney(item.amount, item.currency)}`} />
         </p>
         <div className="flex flex-wrap gap-2 sm:justify-end">
@@ -845,7 +845,7 @@ function getPreferredArsBankAccount(accounts: AccountOption[]) {
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
-      <Label className="text-xs font-semibold uppercase text-zinc-500">{label}</Label>
+      <Label className="text-xs font-semibold uppercase text-muted-foreground">{label}</Label>
       {children}
       {error ? <p className="text-xs text-rose-300">{error}</p> : null}
     </div>

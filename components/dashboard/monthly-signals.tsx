@@ -60,7 +60,7 @@ export function MonthlySignals({
   return (
     <PremiumCard className="flex h-full flex-col">
       <PremiumCardContent className="flex h-full flex-col space-y-3 pt-5 sm:pt-6">
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
           <Lightbulb className="h-3 w-3 shrink-0" aria-hidden="true" />
           Lo que importa hoy
         </div>
@@ -72,13 +72,13 @@ export function MonthlySignals({
               <Lightbulb className="h-4 w-4" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold leading-tight text-white">{signal.title}</h3>
-              <p className="mt-1.5 text-xs leading-5 text-zinc-400">{signal.message}</p>
+              <h3 className="text-sm font-semibold leading-tight text-foreground">{signal.title}</h3>
+              <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{signal.message}</p>
               <Button
                 asChild
                 size="sm"
                 variant="ghost"
-                className="mt-2 h-7 px-0 text-xs text-zinc-500 hover:bg-transparent hover:text-white"
+                className="mt-2 h-7 px-0 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
               >
                 <Link href={signal.href}>{signal.actionLabel} →</Link>
               </Button>
@@ -94,7 +94,7 @@ export function MonthlySignals({
                 <Link
                   key={`${insight.title}-${insight.href}`}
                   href={insight.href}
-                  className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-xs text-zinc-600 transition hover:bg-white/[0.04] hover:text-zinc-300"
+                  className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
                 >
                   <Sparkles className={`h-3 w-3 shrink-0 ${tone.label}`} aria-hidden="true" />
                   <span className="truncate">{insight.title}</span>
@@ -109,7 +109,7 @@ export function MonthlySignals({
             className="flex gap-2 rounded-xl border border-amber-500/12 bg-amber-500/[0.07] px-3 py-2"
           >
             <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-amber-500" aria-hidden="true" />
-            <p className="text-xs leading-5 text-zinc-500">{alert}</p>
+            <p className="text-xs leading-5 text-muted-foreground">{alert}</p>
           </div>
         ))}
       </PremiumCardContent>

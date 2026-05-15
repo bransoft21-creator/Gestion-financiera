@@ -655,7 +655,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
       <AppFormPanel isOpen={isFormOpen} onClose={() => { setIsFormOpen(false); setCardPaymentBlocked(null); }} desktopAlwaysOpen={false}>
         <CardHeader className={appFormHeaderClass()}>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] text-teal-100">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-muted/60 text-primary">
               <Plus className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
@@ -726,7 +726,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
           <form className="space-y-4" onSubmit={handleSubmit(onTransactionSubmit)}>
             {editingTransactionId && !isSupportedFormTransactionType(watchedType) ? (
               <Field label="Tipo">
-                <div className="flex h-11 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4">
+                <div className="flex h-11 items-center gap-2 rounded-2xl border border-border bg-muted/40 px-4">
                   <Badge>{transactionTypeLabels[watchedType]}</Badge>
                   <span className="text-xs text-muted-foreground">Solo podés editar monto, fecha, descripción y notas.</span>
                 </div>
@@ -799,7 +799,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <CreditCard className="h-4 w-4 shrink-0 text-teal-400" aria-hidden="true" />
-                        <span className="text-xs font-semibold text-teal-100">Pago de tarjeta</span>
+                        <span className="text-xs font-semibold text-primary">Pago de tarjeta</span>
                       </div>
                       {cardPendingAmount > 0 ? (
                         <span className="text-xs text-muted-foreground">
@@ -808,7 +808,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                       ) : null}
                     </div>
                     {cardPendingAmount <= 0 ? (
-                      <p className="text-xs text-teal-100/70">Esta tarjeta no tiene saldo pendiente.</p>
+                      <p className="text-xs text-primary/70">Esta tarjeta no tiene saldo pendiente.</p>
                     ) : (
                       <div className="grid grid-cols-2 gap-2">
                         <button
@@ -820,14 +820,14 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                           className={cn(
                             "rounded-xl border px-3 py-2.5 text-left text-xs transition",
                             cardPaymentMode === "total"
-                              ? "border-teal-400/60 bg-teal-400/20 text-teal-100"
-                              : "border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.07]",
+                              ? "border-teal-400/60 bg-teal-400/20 text-primary"
+                              : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60",
                           )}
                         >
                           <span className="flex items-center gap-1.5 font-semibold">
                             <span className={cn(
                               "h-3 w-3 shrink-0 rounded-full border-2 transition",
-                              cardPaymentMode === "total" ? "border-teal-400 bg-teal-400" : "border-white/30",
+                              cardPaymentMode === "total" ? "border-teal-400 bg-teal-400" : "border-border",
                             )} />
                             Pago total
                           </span>
@@ -842,14 +842,14 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                           className={cn(
                             "rounded-xl border px-3 py-2.5 text-left text-xs transition",
                             cardPaymentMode === "parcial"
-                              ? "border-amber-400/60 bg-amber-400/10 text-amber-100"
-                              : "border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.07]",
+                              ? "border-amber-400/60 bg-amber-400/10 text-amber-500"
+                              : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60",
                           )}
                         >
                           <span className="flex items-center gap-1.5 font-semibold">
                             <span className={cn(
                               "h-3 w-3 shrink-0 rounded-full border-2 transition",
-                              cardPaymentMode === "parcial" ? "border-amber-400 bg-amber-400" : "border-white/30",
+                              cardPaymentMode === "parcial" ? "border-amber-400 bg-amber-400" : "border-border",
                             )} />
                             Pago parcial
                           </span>
@@ -903,11 +903,11 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
             </div>
 
             {isCCCurrencyMismatch ? (
-              <div className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-xs text-rose-100">
+              <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
                 Elegí una cuenta en la misma moneda que la tarjeta ({transferTargetAccount?.currency}).
               </div>
             ) : isCurrencyMismatch ? (
-              <div className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-xs text-rose-100">
+              <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
                 Las transferencias entre monedas distintas todavía no están disponibles. Elegí cuentas en la misma moneda.
               </div>
             ) : cardPartialPaymentCopy === "overpay" ? (
@@ -961,7 +961,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
 
             <Field label="Notas" error={formErrors.notes?.message}>
               <textarea
-                className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-base md:text-sm text-white outline-none transition hover:bg-white/[0.07]"
+                className="v2-focus-ring min-h-24 w-full resize-none rounded-2xl border border-border bg-muted/40 px-4 py-3 text-base md:text-sm text-foreground outline-none transition hover:bg-muted/60"
                 maxLength={1000}
                 {...register("notes")}
                 placeholder="Detalle opcional"
@@ -1044,7 +1044,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                 ) : null}
 
                 {watchedType === "EXPENSE" && sharedHouseholds.length > 0 ? (
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                  <div className="rounded-2xl border border-border bg-muted/30 p-3">
                     <label className="flex cursor-pointer items-start gap-3 text-sm">
                       <input
                         type="checkbox"
@@ -1095,7 +1095,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
               </>
             ) : null}
 
-            {message ? <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">{message}</p> : null}
+            {message ? <p className="rounded-2xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">{message}</p> : null}
 
             <div className={appFormActionsClass()}>
               <Button className="h-11 w-full" disabled={isSaving || accounts.length === 0 || isCurrencyMismatch || isCCCurrencyMismatch}>
