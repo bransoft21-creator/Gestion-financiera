@@ -8,25 +8,46 @@ type TelemetryTag =
   | "ai"
   | "dashboard"
   | "onboarding"
+  | "household"
   | "mobile"
   | "analytics";
 
 type ProductEvent =
+  // Navigation
   | "route_viewed"
+  // Onboarding
+  | "onboarding_started"
+  | "onboarding_goals_advanced"
   | "onboarding_completed"
+  // Smart Import
   | "smart_import_file_selected"
   | "smart_import_started"
-  | "smart_import_cancelled"
+  | "smart_import_retry"
   | "smart_import_slow"
   | "smart_import_succeeded"
+  | "smart_import_review_started"
   | "smart_import_failed"
+  | "smart_import_cancelled"
   | "smart_import_confirm_started"
   | "smart_import_confirm_succeeded"
   | "smart_import_confirm_failed"
+  // Household
+  | "household_created"
+  | "household_invite_created"
+  | "settlement_created"
+  | "recurring_payment_created"
+  | "recurring_payment_paid"
+  // Dashboard engagement
+  | "dashboard_section_expanded"
+  | "reflection_opened"
+  | "monthly_analysis_opened"
+  | "hide_amounts_toggled"
+  // AI
   | "ai_analysis_started"
   | "ai_analysis_succeeded"
   | "ai_analysis_failed"
   | "weekly_reflection_failed"
+  // System
   | "offline_detected"
   | "online_restored"
   | "app_error";
@@ -42,6 +63,11 @@ const ALLOWED_PROPS = new Set([
   "selectedCount",
   "createdCount",
   "errorCount",
+  "goalCount",
+  "startOption",
+  "section",
+  "memberCount",
+  "replayMode",
   "cached",
   "stale",
   "mobile",

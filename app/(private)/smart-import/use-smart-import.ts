@@ -37,6 +37,7 @@ export function useSmartImport({ householdId, accounts }: Options) {
   const previewUrlRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const hadErrorRef = useRef(false);
 
   const selected = useMemo(() => candidates.filter((c) => c.selected), [candidates]);
 
@@ -89,6 +90,11 @@ export function useSmartImport({ householdId, accounts }: Options) {
       setLastError(message);
       toast.error(message);
       return;
+    }
+
+    if (hadErrorRef.current) {
+      trackProductEvent("smart_import_retry", {}, "smart-import");
+      hadErrorRef.current = false;
     }
 
     abortRef.current?.abort("superseded");
@@ -152,6 +158,7 @@ export function useSmartImport({ householdId, accounts }: Options) {
         { candidateCount: stateList.length, status: data.metadata.warnings.length > 0 ? "partial" : "ok" },
         "smart-import",
       );
+      trackProductEvent("smart_import_review_started", { candidateCount: stateList.length }, "smart-import");
       setStep("review");
     } catch (err) {
       if (abortRef.current !== controller) return;
@@ -166,6 +173,7 @@ export function useSmartImport({ householdId, accounts }: Options) {
           ? err.message
           : "No pudimos completar la importación esta vez.";
       setLastError(message);
+      if (!wasAborted) hadErrorRef.current = true;
       trackProductEvent(
         wasAborted ? "smart_import_cancelled" : "smart_import_failed",
         { reason: wasAborted ? String(abortReason ?? "timeout_or_cancel") : "request_failed" },

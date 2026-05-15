@@ -31,6 +31,7 @@ import { ExpenseCategoryExplorer } from "@/components/dashboard/expense-category
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { ActivityPreview } from "@/components/dashboard/activity-preview";
 import { useSectionCollapse } from "@/hooks/use-section-collapse";
+import { trackProductEvent } from "@/lib/observability/client";
 import {
   MONTH_NAMES,
   formatMoney,
@@ -313,7 +314,10 @@ export function DashboardClient() {
           title="Distribución"
           summary={`${metrics.fixedToIncomeRatio}% en fijos · ${formatMoney(metrics.expenses)} gastados`}
           expanded={sectionDistribucion.expanded}
-          onToggle={sectionDistribucion.toggle}
+          onToggle={() => {
+            if (!sectionDistribucion.expanded) trackProductEvent("dashboard_section_expanded", { section: "distribucion" }, "dashboard");
+            sectionDistribucion.toggle();
+          }}
         />
         {sectionDistribucion.expanded && (
           <div className="grid gap-5 lg:grid-cols-2">
@@ -340,7 +344,10 @@ export function DashboardClient() {
           title="Mapa de consumo"
           summary={`${expensesByCategory.length} categorías`}
           expanded={sectionMapa.expanded}
-          onToggle={sectionMapa.toggle}
+          onToggle={() => {
+            if (!sectionMapa.expanded) trackProductEvent("dashboard_section_expanded", { section: "mapa" }, "dashboard");
+            sectionMapa.toggle();
+          }}
         />
         {sectionMapa.expanded && (
           <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
@@ -389,7 +396,10 @@ export function DashboardClient() {
           title="Movimientos recientes"
           summary={`${latestTransactions.length} movimiento${latestTransactions.length !== 1 ? "s" : ""}`}
           expanded={sectionMovimientos.expanded}
-          onToggle={sectionMovimientos.toggle}
+          onToggle={() => {
+            if (!sectionMovimientos.expanded) trackProductEvent("dashboard_section_expanded", { section: "movimientos" }, "dashboard");
+            sectionMovimientos.toggle();
+          }}
         />
         {sectionMovimientos.expanded && (
           <PremiumCard>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Check, CheckCircle2, Circle, Clock, Copy, Home, Loader2, Mail, MessageCircle, Plus, Send, Users, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { useHideAmounts } from "@/hooks/use-hide-amounts";
+import { trackProductEvent } from "@/lib/observability/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -115,6 +116,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
       const payload = (await response.json()) as { data?: Household; error?: string };
       if (!response.ok || !payload.data) { toast.error(payload.error ?? "No se pudo crear el hogar."); return; }
       toast.success("Hogar creado.");
+      trackProductEvent("household_created", {}, "household");
       setName("");
       setAvatar("🏠");
       setShowCreateForm(false);
@@ -139,6 +141,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
       setHasCopiedInvite(false);
       setEmail("");
       toast.success("Invitación lista para enviar.");
+      trackProductEvent("household_invite_created", {}, "household");
       await reloadHouseholds(selectedHousehold.id);
     } finally {
       setIsInviting(false);
@@ -191,6 +194,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
       const payload = (await response.json()) as { data?: HouseholdSettlement; error?: string };
       if (!response.ok || !payload.data) { toast.error(payload.error ?? "No se pudo registrar el equilibrio."); return; }
       toast.success("El hogar quedó equilibrado.");
+      trackProductEvent("settlement_created", {}, "household");
       await Promise.all([loadBalance(selectedHousehold.id), loadSettlements(selectedHousehold.id)]);
     } finally {
       setIsSettling(false);
@@ -245,6 +249,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
       const payload = (await response.json()) as { data?: unknown; error?: string };
       if (!response.ok) { toast.error(payload.error ?? "No se pudo marcar como pagado."); return; }
       toast.success("Pago registrado.");
+      trackProductEvent("recurring_payment_paid", {}, "household");
       closePayDialog();
       await Promise.all([
         loadRecurringPayments(selectedHousehold.id),
@@ -274,6 +279,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
       const payload = (await response.json()) as { data?: unknown; error?: string };
       if (!response.ok) { toast.error(payload.error ?? "No se pudo crear el pago."); return; }
       toast.success("Pago del hogar agregado.");
+      trackProductEvent("recurring_payment_created", {}, "household");
       setNewPaymentForm({ name: "", estimatedAmount: "", dueDay: "1", splitMode: "EQUAL" });
       setIsAddingRecurring(false);
       await loadRecurringPayments(selectedHousehold.id);

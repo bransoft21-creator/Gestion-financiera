@@ -222,6 +222,12 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
   const [isForbidden, setIsForbidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isOpen) {
+      trackProductEvent("monthly_analysis_opened", { cached: isCached }, "ai");
+    }
+  }, [isOpen, isCached]);
+
   const clearAnalysis = useCallback(() => {
     setAnalysis(null);
     setMetrics(null);

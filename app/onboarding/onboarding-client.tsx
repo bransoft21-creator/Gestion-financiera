@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { trackProductEvent } from "@/lib/observability/client";
 import { ActionButton } from "@/components/ui-v2/action-button";
 
 /* ── Goals ───────────────────────────────────────────────────────────────── */
@@ -108,6 +109,11 @@ export function OnboardingClient({
 
   const startOptions = buildStartOptions(canSmartImport);
 
+  useEffect(() => {
+    trackProductEvent("onboarding_started", { replayMode }, "onboarding");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function toggleGoal(id: string) {
     setSelectedGoals((prev) => {
       const next = new Set(prev);
@@ -117,9 +123,21 @@ export function OnboardingClient({
     });
   }
 
+  function advanceFromGoals() {
+    trackProductEvent("onboarding_goals_advanced", { goalCount: selectedGoals.size }, "onboarding");
+    setStep(2);
+  }
+
+  const START_OPTION_MAP: Record<string, string> = {
+    "/smart-import": "import",
+    "/transactions?new=1": "manual",
+    "/dashboard": "explore",
+  };
+
   async function completeOnboarding(path: string) {
     if (pendingPath) return;
     setPendingPath(path);
+    trackProductEvent("onboarding_completed", { startOption: START_OPTION_MAP[path] ?? "unknown" }, "onboarding");
 
     // En replay no llamamos a la API — el onboarding ya está completado
     if (replayMode) {
@@ -199,7 +217,7 @@ export function OnboardingClient({
               <GoalsStep
                 selectedGoals={selectedGoals}
                 onToggle={toggleGoal}
-                onNext={() => setStep(2)}
+                onNext={advanceFromGoals}
               />
             </motion.div>
           )}

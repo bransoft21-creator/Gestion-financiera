@@ -5,6 +5,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { dispatchHideAmountsChange } from "@/hooks/use-hide-amounts";
+import { trackProductEvent } from "@/lib/observability/client";
 
 const STORAGE_KEY = "finance-control-hide-amounts";
 
@@ -32,6 +33,7 @@ export function PrivacyToggle({ compact = false, className }: PrivacyToggleProps
     window.localStorage.setItem(STORAGE_KEY, String(next));
     document.documentElement.dataset.hideAmounts = String(next);
     dispatchHideAmountsChange(next);
+    trackProductEvent("hide_amounts_toggled", { status: next ? "hidden" : "visible" }, "analytics");
   }
 
   const Icon = hidden ? EyeOff : Eye;

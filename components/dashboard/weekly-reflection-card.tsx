@@ -52,6 +52,7 @@ export function WeeklyReflectionCard() {
       setInsights(d.insights);
       setWeekLabel(d.weekLabel);
       setStatus("done");
+      trackProductEvent("reflection_opened", { cached: false }, "ai");
     } catch (err) {
       captureClientError(err, "ai", { reason: "weekly_reflection" });
       trackProductEvent("weekly_reflection_failed", { reason: "network" }, "ai");
@@ -77,6 +78,7 @@ export function WeeklyReflectionCard() {
               setInsights(d.insights);
               setWeekLabel(d.weekLabel);
               setStatus("done");
+              trackProductEvent("reflection_opened", { cached: d.cached }, "ai");
             }
             return;
           }
