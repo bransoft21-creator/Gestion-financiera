@@ -3,6 +3,7 @@ import { argentinaMonthRangeUtc } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { assertHouseholdAccess } from "./households";
 import { computeFinancialHealth, computeRealLiabilitySummary, toFiniteNumber } from "./financial-ledger";
+import { traceFinancialSource } from "./financial-debug";
 
 export async function captureMonthlySnapshot(
   userProfileId: string,
@@ -77,7 +78,7 @@ export async function captureMonthlySnapshot(
       }),
       prisma.account.findMany({
         where: { householdId, deletedAt: null, isArchived: false },
-        select: { type: true, currentBalance: true, isArchived: true, deletedAt: true },
+        select: { id: true, type: true, currency: true, currentBalance: true, isArchived: true, deletedAt: true },
       }),
     ]);
 
@@ -99,6 +100,18 @@ export async function captureMonthlySnapshot(
   }
 
   const liabilitySummary = computeRealLiabilitySummary(accounts, currentDebts);
+  traceFinancialSource({
+    endpoint: "/api/snapshots POST",
+    householdId,
+    source: "captureMonthlySnapshot.debtOutstandingAmount <- computeRealLiabilitySummary.liabilities",
+    computed: {
+      debtOutstandingAmount: liabilitySummary.liabilities,
+      accountLiabilities: liabilitySummary.accountLiabilities,
+      debtLiabilities: liabilitySummary.debtLiabilities,
+    },
+    accounts: accounts.filter((account) => toFiniteNumber(account.currentBalance) < 0),
+    debts: currentDebts.map((debt, index) => ({ ...debt, id: `debt-${index}` })),
+  });
   const health = computeFinancialHealth({
     income,
     expenses,
@@ -165,6 +178,13 @@ export async function listMonthlySnapshots(
       upcomingObligationsAmount: true,
       availableAmount: true,
     },
+  });
+
+  traceFinancialSource({
+    endpoint: "/api/snapshots",
+    householdId,
+    source: "listMonthlySnapshots.debtOutstandingAmount",
+    snapshots: rows,
   });
 
   return rows.map((r) => ({

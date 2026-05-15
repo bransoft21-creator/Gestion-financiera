@@ -2,6 +2,7 @@ import { DebtStatus, Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { NotFoundError } from "../api/errors";
 import type { CreateDebtInput, ListDebtsInput, UpdateDebtInput } from "../schemas/debts";
+import { traceFinancialSource } from "./financial-debug";
 import { assertHouseholdAccess } from "./households";
 
 type DebtRecord = Prisma.DebtGetPayload<Record<string, never>>;
@@ -57,6 +58,13 @@ export async function listDebts(userProfileId: string, input: ListDebtsInput) {
   const totalOutstanding = debts
     .filter((d) => isCurrentLiability(d.status, Number(d.outstandingAmount)))
     .reduce((sum, d) => sum + Number(d.outstandingAmount), 0);
+  traceFinancialSource({
+    endpoint: "/api/debts",
+    householdId: input.householdId,
+    source: "listDebts.totalOutstanding",
+    computed: { totalOutstanding },
+    debts,
+  });
 
   return { debts: debts.map(serializeDebt), totalOutstanding };
 }

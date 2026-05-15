@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma";
 import { NotFoundError } from "../api/errors";
 import type { CreateAccountInput, ListAccountsInput, UpdateAccountInput } from "../schemas/accounts";
 import { computeRealLiabilitySummary, toFiniteNumber } from "./financial-ledger";
+import { traceFinancialSource } from "./financial-debug";
 import { assertHouseholdAccess } from "./households";
 
 type AccountRecord = Prisma.AccountGetPayload<Record<string, never>>;
@@ -42,7 +43,7 @@ export async function listAccounts(userProfileId: string, input: ListAccountsInp
         outstandingAmount: { gt: 0 },
         deletedAt: null,
       },
-      select: { type: true, status: true, outstandingAmount: true },
+      select: { id: true, type: true, status: true, currency: true, outstandingAmount: true },
     }),
   ]);
 
@@ -52,6 +53,21 @@ export async function listAccounts(userProfileId: string, input: ListAccountsInp
         where: { householdId: input.householdId, deletedAt: null },
       });
   const liabilitySummary = computeRealLiabilitySummary(allAccounts, debts);
+  traceFinancialSource({
+    endpoint: "/api/accounts",
+    householdId: input.householdId,
+    source: "computeRealLiabilitySummary",
+    computed: {
+      assets: liabilitySummary.assets,
+      accountLiabilities: liabilitySummary.accountLiabilities,
+      debtLiabilities: liabilitySummary.debtLiabilities,
+      duplicatedCreditCardDebt: liabilitySummary.duplicatedCreditCardDebt,
+      liabilities: liabilitySummary.liabilities,
+      netWorth: liabilitySummary.netWorth,
+    },
+    accounts: allAccounts.filter((account) => toFiniteNumber(account.currentBalance) < 0),
+    debts,
+  });
 
   return {
     accounts: accounts.map(serializeAccount),

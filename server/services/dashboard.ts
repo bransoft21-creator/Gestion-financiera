@@ -2,6 +2,7 @@ import { DebtStatus, GoalStatus, Prisma, TransactionStatus, TransactionType } fr
 import { argentinaMonthRangeUtc, formatArgentinaDateInput } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { computeFinancialHealth, computeRealLiabilitySummary, toFiniteNumber } from "./financial-ledger";
+import { traceFinancialSource } from "./financial-debug";
 import { assertHouseholdAccess } from "./households";
 
 const chartColors = ["#f97316", "#ef4444", "#06b6d4", "#eab308", "#8b5cf6", "#14b8a6"];
@@ -82,7 +83,7 @@ export async function getDashboardSummary(
         outstandingAmount: { gt: 0 },
         deletedAt: null,
       },
-      select: { type: true, status: true, outstandingAmount: true },
+      select: { id: true, type: true, status: true, currency: true, outstandingAmount: true },
     }),
     prisma.recurringExpense.findMany({
       where: {
@@ -115,7 +116,7 @@ export async function getDashboardSummary(
     }),
     prisma.account.findMany({
       where: { householdId, deletedAt: null, isArchived: false },
-      select: { type: true, currency: true, currentBalance: true, isArchived: true, deletedAt: true },
+      select: { id: true, type: true, currency: true, currentBalance: true, isArchived: true, deletedAt: true },
     }),
   ]);
 
@@ -127,6 +128,19 @@ export async function getDashboardSummary(
   const expensesByCategoryId = getExpenseTotalsByCategoryId(monthTransactions);
   const fixedToIncomeRatio = income > 0 ? Math.round((expensesByType.fixed / income) * 100) : 0;
   const liabilitySummary = computeRealLiabilitySummary(accounts, currentDebts);
+  traceFinancialSource({
+    endpoint: "/api/dashboard/summary",
+    householdId,
+    source: "metrics.totalOutstandingDebt <- computeRealLiabilitySummary.liabilities",
+    computed: {
+      accountLiabilities: liabilitySummary.accountLiabilities,
+      debtLiabilities: liabilitySummary.debtLiabilities,
+      duplicatedCreditCardDebt: liabilitySummary.duplicatedCreditCardDebt,
+      totalOutstandingDebt: liabilitySummary.liabilities,
+    },
+    accounts: accounts.filter((account) => toFiniteNumber(account.currentBalance) < 0),
+    debts: currentDebts,
+  });
   const health = computeFinancialHealth({
     income,
     expenses,

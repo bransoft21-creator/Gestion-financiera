@@ -13,6 +13,8 @@ import {
   getWeekWindow,
 } from "@/lib/finance/financial-analytics";
 import { generateWeeklySignals, type SignalSeverity } from "@/lib/finance/financial-signals";
+import { computeRealLiabilitySummary, toFiniteNumber } from "./financial-ledger";
+import { traceFinancialSource } from "./financial-debug";
 
 export type { ActivityType, ActivityTone };
 
@@ -210,7 +212,7 @@ export async function upsertReminderActivities(params: {
   const monthStart = new Date(Date.UTC(year, month - 1, 1, 3, 0, 0, 0)); // 00:00 ART
   const monthEnd   = new Date(Date.UTC(year, month,     0, 26, 59, 59, 999)); // ~23:59 ART last day
 
-  const [incomeAgg, expensesAgg, debtsAgg] = await Promise.all([
+  const [incomeAgg, expensesAgg, debts, accounts] = await Promise.all([
     prisma.transaction.aggregate({
       where: {
         householdId,
@@ -231,15 +233,37 @@ export async function upsertReminderActivities(params: {
       },
       _sum: { amount: true },
     }),
-    prisma.debt.aggregate({
-      where: { householdId, status: "ACTIVE", deletedAt: null },
-      _sum: { outstandingAmount: true },
+    prisma.debt.findMany({
+      where: {
+        householdId,
+        status: { in: ["ACTIVE", "PAUSED", "DEFAULTED"] },
+        outstandingAmount: { gt: 0 },
+        deletedAt: null,
+      },
+      select: { id: true, type: true, status: true, currency: true, outstandingAmount: true },
+    }),
+    prisma.account.findMany({
+      where: { householdId, deletedAt: null, isArchived: false },
+      select: { id: true, type: true, currency: true, currentBalance: true, isArchived: true, deletedAt: true },
     }),
   ]);
 
   const income   = Number(incomeAgg._sum.amount ?? 0);
   const expenses = Number(expensesAgg._sum.amount ?? 0);
-  const debt     = Number(debtsAgg._sum.outstandingAmount ?? 0);
+  const liabilitySummary = computeRealLiabilitySummary(accounts, debts);
+  const debt = liabilitySummary.liabilities;
+  traceFinancialSource({
+    endpoint: "/api/activity",
+    householdId,
+    source: "monthly-reminders.debt <- computeRealLiabilitySummary.liabilities",
+    computed: {
+      debt,
+      accountLiabilities: liabilitySummary.accountLiabilities,
+      debtLiabilities: liabilitySummary.debtLiabilities,
+    },
+    accounts: accounts.filter((account) => toFiniteNumber(account.currentBalance) < 0),
+    debts,
+  });
 
   const upserts: Promise<unknown>[] = [];
 
