@@ -94,9 +94,6 @@ const defaultForm: FormState = {
 
 export function AccountsClient({ householdId }: AccountsClientProps) {
   const [accounts, setAccounts] = useState<AccountItem[]>([]);
-  const [assets, setAssets] = useState(0);
-  const [liabilities, setLiabilities] = useState(0);
-  const [debtLiabilities, setDebtLiabilities] = useState(0);
   const [netWorthByCurrency, setNetWorthByCurrency] = useState<Array<{ currency: string; assets: number; liabilities: number; netWorth: number }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -137,9 +134,6 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
 
       if (payload.data) {
         setAccounts(payload.data.accounts);
-        setAssets(payload.data.assets);
-        setLiabilities(payload.data.liabilities);
-        setDebtLiabilities(payload.data.debtLiabilities);
         setNetWorthByCurrency(payload.data.netWorthByCurrency ?? []);
       }
     } catch {
@@ -376,33 +370,43 @@ export function AccountsClient({ householdId }: AccountsClientProps) {
       </AppFormPanel>
 
       <div className="space-y-5">
-        <div className={`grid gap-3 ${netWorthByCurrency.length === 1 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-          <SummaryCard label="Activos" value={formatMoney(assets, "ARS")} tone="positive" description="Balances positivos en ARS" />
-          <SummaryCard
-            label="Deuda pendiente"
-            value={formatMoney(liabilities, "ARS")}
-            tone="danger"
-            description={debtLiabilities > 0 ? "Deudas abiertas y saldos negativos" : "Saldos negativos actuales"}
-          />
-          {netWorthByCurrency.length > 0 ? (
-            netWorthByCurrency.map((item) => (
-              <SummaryCard
-                key={item.currency}
-                label={`Patrimonio ${item.currency}`}
-                value={formatMoney(item.netWorth, item.currency)}
-                tone={item.netWorth >= 0 ? "default" : "warning"}
-                description={`Activos menos deuda en ${item.currency}`}
-                highlight
-              />
-            ))
-          ) : (
-            <SummaryCard label="Patrimonio neto" value={formatMoney(0, "ARS")} tone="default" description="Sin cuentas activas" highlight />
-          )}
-        </div>
-        {netWorthByCurrency.length > 1 && (
-          <p className="text-[11px] text-zinc-600">
-            El patrimonio se muestra por moneda para evitar conversiones incorrectas entre ARS y USD.
-          </p>
+        {netWorthByCurrency.length === 0 ? (
+          <div className="grid gap-3 sm:grid-cols-3">
+            <SummaryCard label="Activos ARS" value={formatMoney(0, "ARS")} tone="positive" description="Sin cuentas activas" />
+            <SummaryCard label="Pasivos ARS" value={formatMoney(0, "ARS")} tone="danger" description="Sin deudas activas" />
+            <SummaryCard label="Patrimonio ARS" value={formatMoney(0, "ARS")} tone="default" description="Sin cuentas activas" highlight />
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {netWorthByCurrency.map((item) => (
+              <div key={item.currency} className="grid gap-3 sm:grid-cols-3">
+                <SummaryCard
+                  label={`Activos ${item.currency}`}
+                  value={formatMoney(item.assets, item.currency)}
+                  tone="positive"
+                  description={`Balances positivos en ${item.currency}`}
+                />
+                <SummaryCard
+                  label={`Pasivos ${item.currency}`}
+                  value={formatMoney(item.liabilities, item.currency)}
+                  tone="danger"
+                  description={`Deudas y saldos negativos en ${item.currency}`}
+                />
+                <SummaryCard
+                  label={`Patrimonio ${item.currency}`}
+                  value={formatMoney(item.netWorth, item.currency)}
+                  tone={item.netWorth >= 0 ? "default" : "warning"}
+                  description={`Activos menos deuda en ${item.currency}`}
+                  highlight
+                />
+              </div>
+            ))}
+            {netWorthByCurrency.length > 1 && (
+              <p className="text-[11px] text-zinc-600">
+                Los valores se muestran separados por moneda para evitar conversiones incorrectas.
+              </p>
+            )}
+          </div>
         )}
 
         <PremiumCard>

@@ -17,6 +17,7 @@ import {
   Menu,
   RefreshCw,
   ScanLine,
+  Settings,
   Sparkles,
   TrendingUp,
   User,
@@ -42,6 +43,7 @@ const moreNavItems = [
   { href: "/notifications", label: "Actividad",   icon: Bell },
   { href: "/reports",      label: "Patrones",     icon: TrendingUp },
   { href: "/profile",      label: "Mi perfil",    icon: User },
+  { href: "/settings",     label: "Ajustes",      icon: Settings },
 ] as const;
 
 export function BottomNav() {
