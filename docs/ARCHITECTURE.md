@@ -1,130 +1,120 @@
 # Arquitectura
 
-Finance Control debe organizarse como una aplicacion Next.js App Router con TypeScript, separando UI, logica de negocio, validaciones y acceso a datos.
+Meridian es una aplicación Next.js App Router con TypeScript. Separa UI, lógica de negocio, validaciones y acceso a datos.
 
-## Estructura Tecnica
+## Estructura de Carpetas Real
 
 ```txt
-/app
-/components
-/features
-/hooks
-/lib
-/server
-/prisma
-/types
-/docs
+/app                    — Next.js App Router (rutas, layouts, páginas, API routes)
+  /(private)            — Rutas protegidas (requieren auth)
+  /api                  — REST endpoints
+  /auth                 — Flujos de autenticación
+  /onboarding           — Onboarding de nuevos usuarios
+
+/components             — Componentes UI organizados por dominio
+  /app                  — Chrome de la aplicación (shell, nav, modales)
+  /ui                   — Base shadcn/ui
+  /ui-v2                — Primitivos V2 (PremiumCard, etc.)
+  /dashboard            — Componentes del dashboard
+  /household            — Componentes del módulo hogar
+  /finance              — Componentes financieros compartidos
+  /copilot              — Componentes de IA/copilot
+  /insights             — Feed de insights y actividad
+  /layout               — Primitivos de layout de página
+
+/server                 — Lógica server-side pura
+  /services             — Servicios de dominio (financial-ledger, transactions, etc.)
+  /schemas              — Schemas Zod para validación de API
+  /auth                 — Helpers de autenticación server-side
+
+/hooks                  — React hooks compartidos
+/lib                    — Utilidades (dates.ts, prisma.ts, feature-flags.ts, finance/)
+/prisma                 — Schema, migraciones, seed
+/design-system          — Tokens y principios del Design System V2
+/docs                   — Documentación del proyecto
+/tests                  — Tests automatizados
 ```
+
+**No existe `/features/`** — la lógica de dominio vive en `/server/services/`.  
+**No existe `/types/`** — los tipos de cada módulo viven junto a su ruta en `app/(private)/<módulo>/types.ts`.
 
 ## Responsabilidades por Carpeta
 
 ### `/app`
 
-Rutas, layouts, paginas y boundaries propios de Next.js App Router. Debe contener composicion de vistas, metadata y entry points de cada seccion.
+Rutas, layouts, páginas y boundaries propios de Next.js App Router. Composición de vistas, metadata y entry points de cada sección.
 
 ### `/components`
 
-Componentes reutilizables y genericos de UI. Debe incluir componentes basados en shadcn/ui, elementos de layout, estados vacios, loaders, modales y piezas compartidas.
-
-### `/features`
-
-Modulos funcionales del dominio. Cada feature debe agrupar su UI especifica, hooks, schemas, tipos locales y acciones necesarias.
-
-Features esperadas para el MVP:
-
-- `auth`
-- `dashboard`
-- `transactions`
-- `categories`
-- `budgets`
-- `recurring-expenses`
-- `goals`
-- `debts`
-- `reports`
-
-### `/hooks`
-
-Hooks compartidos entre features. Los hooks especificos de una feature deben vivir dentro de su modulo en `/features`.
-
-### `/lib`
-
-Utilidades compartidas, configuracion de clientes, helpers de fechas, dinero, formato, validaciones comunes y constantes de aplicacion.
+Componentes reutilizables de UI. Shadcn/ui base en `/ui`, primitivos V2 en `/ui-v2`, componentes de dominio en subcarpetas propias.
 
 ### `/server`
 
-Logica server-side, servicios de dominio, queries, mutations, server actions y adaptadores para acceso seguro a datos. La logica de negocio financiera debe vivir aca o dentro de servicios especificos por feature.
+Lógica server-side, servicios de dominio, queries, schemas Zod y helpers de auth. La lógica de negocio financiera vive aquí.
+
+### `/lib`
+
+Utilidades compartidas: `dates.ts` (timezone Argentina), `prisma.ts` (cliente Prisma), `feature-flags.ts`, helpers de dinero.
+
+### `/hooks`
+
+Hooks compartidos entre módulos. Hooks específicos de un módulo viven junto a su ruta.
 
 ### `/prisma`
 
-Schema de Prisma, migraciones y seed scripts. Prisma debe ser la capa principal de acceso a PostgreSQL/Supabase.
+Schema de Prisma, migraciones y seed scripts.
 
-### `/types`
+## Reglas de Implementación
 
-Tipos globales compartidos por la aplicacion.
-
-### `/docs`
-
-Documentacion viva del proyecto: vision, arquitectura, roadmap, decisiones tecnicas y pendientes.
-
-## Reglas de Implementacion
-
-- Usar Zod para validar formularios, server actions y APIs.
+- Usar Zod para validar formularios y APIs.
 - Usar Prisma para acceso a datos.
-- Usar Supabase Auth para autenticacion.
+- Usar Supabase Auth para autenticación.
 - Usar React Hook Form para formularios.
-- Usar TanStack Query para sincronizacion de datos en cliente cuando corresponda.
+- **No usar TanStack Query** — fetch directo en todos los casos.
 - Usar Recharts para reportes y visualizaciones.
 - Mantener componentes reutilizables y tipados.
-- Separar logica de negocio, UI y acceso a datos.
+- Separar lógica de negocio, UI y acceso a datos.
 - Pensar mobile first desde el inicio.
-- Los formularios que se abren como modal, sheet, drawer o panel flotante deben usar `AppFormPanel` desde `components/app/mobile-form.tsx`, junto con `appFormContentClass` y `appFormActionsClass`. Ese componente centraliza overlay, portal mobile al `body`, scroll interno vertical, bloqueo rigido del body, acciones al final real del formulario y safe-area PWA; la navegacion inferior se mantiene por encima del panel y el contenido reserva espacio para no quedar tapado.
+- Montos sensibles siempre con `<SensitiveAmount>`.
+- Fechas con timezone Argentina siempre desde `lib/dates.ts`.
+- Formularios flotantes/panel siempre con `AppFormPanel` de `components/app/mobile-form.tsx`.
 
-## Modelo de Dominio Inicial
+## Modelo de Dominio
 
-Entidades principales esperadas:
+Entidades principales implementadas:
 
-- Usuario
-- Cuenta o billetera
-- Transaccion
-- Categoria
-- Presupuesto mensual
-- Gasto recurrente
-- Meta financiera
-- Deuda
-- Pago o movimiento asociado a deuda
-
-## Regla de Dinero Disponible
-
-El calculo de dinero disponible real debe considerar al menos:
-
-- Ingresos confirmados.
-- Gastos realizados.
-- Pagos proximos.
-- Presupuestos reservados.
-- Aportes obligatorios a metas.
-- Deudas proximas.
-
-Este calculo debe mantenerse como logica de dominio reutilizable, no como una resta aislada dentro de una pantalla.
+- UserProfile / Account
+- Transaction / Category
+- Budget (presupuesto mensual)
+- RecurringExpense (personal)
+- Goal (meta financiera)
+- Debt / DebtPayment
+- Household / HouseholdMember
+- HouseholdRecurringPayment / HouseholdRecurringOccurrence
+- HouseholdBalance / HouseholdSettlement
+- ActivityLog / Notification
 
 ## Ledger Financiero
 
-La logica contable compartida vive en `server/services/financial-ledger.ts`.
-Las pantallas y servicios de dominio no deben recalcular saldos o efectos
-financieros criticos por su cuenta cuando exista una funcion del ledger.
+La lógica contable compartida vive en `server/services/financial-ledger.ts`.
 
-Convencion de saldos:
+```
+Disponible real = Ingresos − Gastos − Reservado − Obligaciones
+```
 
-- `Account.currentBalance` y `Account.openingBalance` son saldos firmados.
-- Cuentas de activo con saldo positivo suman a activos.
-- Cualquier cuenta con saldo negativo suma a pasivos por su valor absoluto.
-- Una tarjeta de credito con deuda debe tener saldo negativo.
-- Un pago de tarjeta se modela como transferencia desde la cuenta pagadora hacia la tarjeta; esa transferencia reduce la cuenta origen y aumenta el saldo de la tarjeta hacia cero.
-- El patrimonio neto se calcula como la suma de saldos firmados de cuentas activas, sin conversion automatica de moneda.
+Las pantallas no recalculan saldos o efectos financieros críticos por su cuenta.
 
 Efectos de transacciones:
 
-- `INCOME` y `ADJUSTMENT` aumentan la cuenta origen.
-- `EXPENSE`, `DEBT_PAYMENT`, `GOAL_CONTRIBUTION` e `INVESTMENT` reducen la cuenta origen.
-- `TRANSFER` reduce la cuenta origen y aumenta la cuenta destino.
-- `DEBT_PAYMENT` tambien reduce el saldo pendiente de la deuda asociada.
-- `GOAL_CONTRIBUTION` tambien aumenta el monto actual de la meta asociada.
+- `INCOME` / `ADJUSTMENT` — aumentan la cuenta origen.
+- `EXPENSE` / `DEBT_PAYMENT` / `GOAL_CONTRIBUTION` — reducen la cuenta origen.
+- `TRANSFER` — reduce cuenta origen, aumenta cuenta destino.
+- `DEBT_PAYMENT` — también reduce el saldo pendiente de la deuda asociada.
+- `GOAL_CONTRIBUTION` — también aumenta el monto actual de la meta asociada.
+
+Convención de saldos:
+
+- `Account.currentBalance` y `Account.openingBalance` son saldos firmados.
+- Cuentas de activo con saldo positivo suman a activos.
+- Tarjeta de crédito con deuda debe tener saldo negativo.
+- Patrimonio neto = suma de saldos firmados de cuentas activas.

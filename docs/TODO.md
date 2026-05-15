@@ -1,162 +1,76 @@
-# TODO
+# TODO — Estado Real de Meridian
 
-Roadmap del MVP organizado por fases pequenas. Al finalizar cada fase, este archivo debe actualizarse con avances, decisiones y nuevos pendientes.
+Estado actualizado post-Stabilization Phase (mayo 2026). Los módulos MVP están implementados. Este archivo registra el estado real, no el roadmap original.
 
-## Fase 0 - Base del Proyecto
+## Módulos Implementados (MVP Completo)
 
-- [x] Crear documentacion inicial en `/docs`.
-- [x] Crear `.env.example`.
-- [x] Inicializar proyecto Next.js con TypeScript.
-- [x] Configurar Tailwind CSS.
-- [x] Configurar shadcn/ui.
-- [x] Configurar Prisma.
-- [ ] Configurar conexion a Supabase PostgreSQL.
-- [x] Definir estructura base de carpetas.
+| Módulo | Estado | Notas |
+|--------|--------|-------|
+| Auth | ✅ | Login, registro, recuperación, onboarding |
+| Dashboard | ✅ | Resumen mensual, IA copilot, reflexión semanal, health signals |
+| Transacciones | ✅ | CRUD completo, filtros, exportación CSV, Smart Import |
+| Categorías | ✅ | CRUD con categoría padre opcional |
+| Presupuestos | ✅ | Por categoría, alertas visuales de exceso |
+| Gastos recurrentes | ✅ | Toggle activo/pausado, próximos pagos |
+| Metas | ✅ | Progreso, aportes, fecha objetivo |
+| Deudas | ✅ | Gestión de deudas y pagos |
+| Reportes | ✅ | Análisis mensual con Recharts |
+| Smart Import | ✅ | Importación IA desde PDF/CSV/imagen |
+| Hogar | ✅ | Gastos compartidos, balances, settlements, recurrentes del hogar |
+| Notificaciones | ✅ | Activity center, señales financieras |
+| Perfil | ✅ | Gestión de cuenta y preferencias |
 
-## Fase 1 - Autenticacion
+## Deuda Técnica Resuelta
 
-- [x] Configurar Supabase Auth. Parcial: helpers server/browser y validacion en APIs creados.
-- [x] Crear flujo de registro. Parcial: pantalla inicial creada, falta confirmacion/recuperacion avanzada.
-- [x] Crear flujo de login. Parcial: pantalla inicial creada.
-- [x] Crear logout.
-- [x] Proteger rutas privadas. Parcial: endpoints API y layout privado requieren usuario autenticado.
-- [x] Crear layout autenticado.
+| Área | Qué se hizo |
+|------|-------------|
+| Dashboard | Modularizado de 1666 → 415 líneas; hook useCountUp canonicalizado |
+| Household | Tipos, utils y PaymentRow extraídos; fechas Argentina consolidadas en lib/dates.ts |
+| Smart Import | Estabilizado: parsing, validación, UI de revisión |
+| Transactions | Estabilizado: import flow, filtros, exportación |
 
-Notas auth:
+## Próximos Módulos (No Construir Todavía)
 
-- Helpers Supabase creados en `lib/supabase/browser.ts` y `lib/supabase/server.ts`.
-- Helper server/API creado en `server/auth/current-user.ts`.
-- `UserProfile` se crea o actualiza automaticamente desde Supabase Auth.
-- Si el usuario no tiene household activo, se crea un household individual inicial.
-- Endpoints de categorias y transacciones validan membresia por `householdId`.
-- UI inicial de login/register creada en `app/login`.
-- Layout privado responsive creado con sidebar desktop y header movil.
+Estos módulos están fuera de scope hasta decisión explícita:
 
-## Fase 2 - Modelo de Datos Inicial
+- **Inversiones / activos financieros** — requiere modelo de datos separado y UX de portafolio
+- **Conversión multi-moneda automática** — requiere API de tipo de cambio confiable
+- **Open Banking / scraping bancario** — requiere integración por banco, compliance complejo
+- **App nativa móvil** — PWA cubre el caso de uso actual
 
-Estado: completada a nivel de modelo inicial. El schema Prisma, Prisma 7 config, migracion inicial y seed base estan definidos y ejecutados contra la base configurada.
+## Backlog de Mejoras (Priorizables)
 
-- [x] Definir schema Prisma para usuarios y cuentas.
-- [x] Definir schema Prisma para categorias.
-- [x] Definir schema Prisma para transacciones.
-- [x] Definir modelos iniciales para presupuestos, recurrentes, metas, deudas y snapshots mensuales.
-- [x] Preparar estructura futura para inversiones.
-- [x] Crear `prisma.config.ts` para Prisma 7.
-- [x] Agregar scripts de base de datos en `package.json`.
-- [x] Crear seed basico de categorias.
-- [x] Crear migracion inicial.
-- [x] Ejecutar seed contra la base real.
+Mejoras concretas sobre módulos existentes, en orden de impacto estimado:
 
-Notas de migracion:
+### Dashboard
+- [ ] Persistir periodo seleccionado (no siempre mes actual)
+- [ ] Comparativa mes anterior en hero
 
-- `.env.local` no existe, pero `.env` contiene `DATABASE_URL` y `DIRECT_URL`.
-- Migracion detectada: `prisma/migrations/20260427031516_initial_finance_schema/migration.sql`.
-- `npm run db:seed` ejecutado correctamente.
+### Transacciones
+- [ ] Búsqueda fulltext en descripción
+- [ ] Filtro por cuenta
 
-## Fase 3 - Transacciones y Categorias
+### Hogar
+- [ ] Historial de settlements anteriores
+- [ ] Notificación push cuando un miembro registra un pago
 
-Estado: parcialmente completada. Existen CRUD completos de categorias y transacciones con Zod, servicios, Prisma, autenticacion base y soft delete. Falta sumar reglas de negocio avanzadas.
+### Smart Import
+- [ ] Soporte multi-archivo en una sola importación
+- [ ] Mejorar detección de categorías desde PDF bancario
 
-- [x] Crear CRUD de categorias. Incluye listar, crear, editar, soft delete y categoria padre opcional.
-- [x] Crear CRUD de transacciones. Incluye listar, crear, editar, soft delete y filtros.
-- [x] Validar formularios con Zod.
-- [ ] Usar React Hook Form.
-- [x] Separar acciones server-side y componentes UI.
+### Presupuestos
+- [ ] Copiar presupuesto del mes anterior
+- [ ] Presupuesto anual con distribución mensual
 
-Notas backend:
+### Metas
+- [ ] Proyección de fecha de cumplimiento según aportes actuales
 
-- Cliente Prisma reutilizable creado en `lib/prisma.ts`.
-- Servicios creados en `server/services`.
-- Schemas Zod creados en `server/schemas`.
-- Handlers creados en `app/api/categories/route.ts` y `app/api/transactions/route.ts`.
-- UI de transacciones creada en `app/(private)/transactions`.
-- Endpoints dinamicos creados en `app/api/transactions/[id]/route.ts` para `PATCH` y `DELETE`.
-- UI de categorias creada en `app/(private)/categories`.
-- Endpoints dinamicos creados en `app/api/categories/[id]/route.ts` para `PATCH` y `DELETE`.
+### Notificaciones
+- [ ] Push notifications via web push API
 
-## Fase 4 - Dashboard Financiero
+## Notas Operativas
 
-Estado: parcialmente completada. Dashboard conectado a datos reales de transacciones y presupuestos del household actual; falta sumar metas y deudas al dinero disponible real.
-
-- [x] Mostrar resumen de ingresos.
-- [x] Mostrar resumen de gastos.
-- [x] Mostrar dinero reservado. Parcial: presupuesto restante reservado.
-- [ ] Mostrar deudas proximas. Pendiente: requiere modulo de deudas.
-- [ ] Calcular dinero disponible real. Parcial: ingresos - gastos - presupuesto restante reservado.
-- [x] Crear visualizaciones basicas con Recharts.
-
-Notas UI:
-
-- Componentes reutilizables creados: `AppShell`, `Sidebar`, `MobileHeader`, `StatCard`, `EmptyState`, `PageHeader`.
-- Navegacion mobile-first agregada con bottom navigation fija para Dashboard, Transacciones, Presupuestos y Metas.
-- Layout privado ajustado para evitar que el contenido quede tapado por la navegacion inferior.
-- Pantallas placeholder profesionales creadas para transacciones, categorias, presupuestos, metas y deudas.
-- Endpoint creado: `GET /api/dashboard/summary`.
-- Servicio creado: `server/services/dashboard.ts`.
-- Dashboard reemplaza mocks por transacciones reales, con loading, error y empty state.
-- Dashboard calcula `presupuestoRestanteReservado` y `dineroDisponibleReal` considerando presupuestos mensuales.
-- Dashboard prioriza en mobile dinero disponible real, gastos, ingresos y presupuesto reservado.
-
-## Fase 5 - Presupuesto Mensual
-
-Estado: parcialmente completada. CRUD visual y backend de presupuestos mensuales creado para el mes actual; falta integrarlo al cálculo avanzado de dinero disponible.
-
-- [x] Crear presupuestos por categoria.
-- [x] Comparar gasto real contra presupuesto.
-- [ ] Marcar dinero reservado por presupuesto.
-- [x] Mostrar alertas visuales de exceso.
-
-Notas presupuestos:
-
-- Endpoints creados: `GET /api/budgets`, `POST /api/budgets`, `PATCH /api/budgets/[id]`, `DELETE /api/budgets/[id]`.
-- Servicios y schemas creados en `server/services/budgets.ts` y `server/schemas/budgets.ts`.
-- UI creada en `app/(private)/budgets`.
-- Cards mobile mejoradas con presupuestado, gastado, restante y porcentaje usado.
-- El gasto real se calcula con transacciones `EXPENSE` del mes actual agrupadas por categoria.
-- Alertas visuales: 80% o mas y 100% o mas.
-
-## Fase 6 - Gastos Recurrentes
-
-- [ ] Crear gastos recurrentes.
-- [ ] Calcular pagos proximos.
-- [ ] Incluir pagos proximos en dinero disponible real.
-- [ ] Permitir activar o pausar recurrencias.
-
-## Fase 7 - Metas Financieras
-
-Estado: parcialmente completada. CRUD visual y backend de metas creado; falta conectar aportes como movimientos y sumar aportes obligatorios al dinero disponible real.
-
-- [x] Crear metas de ahorro.
-- [x] Definir monto objetivo.
-- [ ] Registrar aportes.
-- [ ] Incluir aportes obligatorios en dinero disponible real.
-
-Notas metas:
-
-- Endpoints creados: `GET /api/goals`, `POST /api/goals`, `PATCH /api/goals/[id]`, `DELETE /api/goals/[id]`.
-- Servicios y schemas creados en `server/services/goals.ts` y `server/schemas/goals.ts`.
-- UI creada en `app/(private)/goals`.
-- Cards mobile mejoradas con progreso, monto actual, objetivo, fecha objetivo y estado.
-- Las metas muestran progreso, objetivo, monto actual, fecha objetivo, aporte mensual y estado.
-- Las metas todavia no afectan el calculo de dinero disponible real.
-
-## Fase 8 - Deudas
-
-- [ ] Crear deudas.
-- [ ] Registrar pagos de deuda.
-- [ ] Calcular deuda pendiente.
-- [ ] Incluir pagos proximos de deuda en dinero disponible real.
-
-## Fase 9 - Reportes Basicos
-
-- [ ] Reporte mensual de ingresos y gastos.
-- [ ] Reporte por categoria.
-- [ ] Tendencia de gasto.
-- [ ] Evolucion de metas.
-- [ ] Resumen de deudas.
-
-## Fase 10 - Preparacion para Inversiones
-
-- [ ] Definir modelo futuro para activos de inversion.
-- [ ] Reservar espacio de navegacion para inversiones.
-- [ ] Documentar decisiones pendientes antes de implementar.
+- PWA deshabilitada por defecto en beta (`ENABLE_PWA=1` para activar).
+- Rate limiting en endpoints de IA con Upstash Redis.
+- Beta allowlist via `BETA_ALLOWLIST_EMAILS` (vacío = acceso libre).
+- Sentry activo en producción para error tracking.

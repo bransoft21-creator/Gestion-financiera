@@ -1,50 +1,61 @@
-# Finance Control
+# Meridian
 
-Finance Control es una aplicacion web profesional para gestion financiera personal y familiar. Su objetivo es ayudar a las personas a entender su situacion economica real, tomar mejores decisiones y preparar una base solida para futuras inversiones.
+**Tu dinero, con perspectiva.**
 
-## Vision del Producto
+Meridian es una aplicación web de finanzas personales y familiares. Va más allá de registrar ingresos y gastos: calcula el disponible real considerando reservas, obligaciones y compromisos futuros, y usa IA para generar contexto financiero accionable.
 
-La app busca convertirse en un centro de control financiero claro, confiable y accionable. No se limita a registrar ingresos y gastos: debe mostrar cuanto dinero esta realmente disponible despues de considerar gastos realizados, pagos proximos, presupuestos reservados, metas obligatorias y deudas pendientes.
+## Visión del Producto
 
-Finance Control debe ayudar al usuario a:
+La app muestra cuánto dinero está realmente disponible después de considerar gastos realizados, pagos próximos, presupuestos reservados, metas obligatorias, deudas pendientes y gastos del hogar compartido.
 
-- Controlar ingresos y gastos.
-- Organizar transacciones por categorias.
+Meridian ayuda al usuario a:
+
+- Controlar ingresos y gastos personales y del hogar.
+- Organizar transacciones por categorías.
 - Gestionar presupuestos mensuales.
-- Detectar gastos innecesarios.
-- Administrar gastos recurrentes.
+- Administrar gastos recurrentes (personales y del hogar).
 - Crear y seguir metas de ahorro.
-- Gestionar deudas y pagos proximos.
-- Visualizar reportes financieros basicos.
-- Preparar una futura etapa de inversiones.
+- Gestionar deudas y pagos próximos.
+- Visualizar reportes financieros.
+- Importar transacciones desde PDF, CSV o imagen con IA (Smart Import).
+- Obtener análisis mensuales y reflexiones semanales con IA.
 
 ## Principio Clave
 
-El dinero disponible real no debe calcularse como una simple resta entre ingresos y gastos.
+El dinero disponible real no se calcula como una simple resta entre ingresos y gastos.
 
-La aplicacion debe diferenciar entre:
+```
+Disponible real = Ingresos − Gastos − Reservado (presupuestos) − Obligaciones (recurrentes + metas + deudas)
+```
 
-- Dinero ingresado.
-- Gasto real.
-- Dinero reservado.
-- Dinero disponible.
-- Dinero destinado a metas.
-- Deuda pendiente.
+Esta fórmula vive en `server/services/financial-ledger.ts`. No se recalcula en UI.
 
 ## Stack
 
-- Next.js App Router
-- TypeScript
-- Tailwind CSS
-- shadcn/ui
-- Prisma ORM
-- PostgreSQL / Supabase
-- Supabase Auth
-- React Hook Form
-- Zod
-- TanStack Query
-- Recharts
+| Capa | Tecnología |
+|------|-----------|
+| Framework | Next.js App Router + TypeScript |
+| UI | Tailwind CSS + shadcn/ui + Design System V2 propio |
+| Base de datos | PostgreSQL via Supabase + Prisma ORM |
+| Auth | Supabase Auth |
+| Formularios | React Hook Form + Zod |
+| Charts | Recharts |
+| IA | OpenAI API (HTTP directo, sin SDK wrapper) |
+| Rate limiting | Upstash Redis |
+| Error tracking | Sentry |
+| Animaciones | Framer Motion |
+| PWA | @ducanh2912/next-pwa (deshabilitado por defecto en beta) |
 
-## Enfoque Inicial
+**No se usa TanStack Query.** El proyecto usa fetch directo.
 
-El proyecto debe avanzar por fases pequenas, priorizando un MVP solido, escalable y profesional. Cada fase debe cerrar una parte funcional clara y actualizar `docs/TODO.md` antes de continuar.
+## Documentación adicional
+
+| Documento | Descripción |
+|-----------|-------------|
+| `../README.md` | Setup rápido, comandos, variables de entorno |
+| `ARCHITECTURE.md` | Estructura técnica y reglas de implementación |
+| `FINANCIAL_FORMULAS.md` | Fórmulas financieras oficiales |
+| `TODO.md` | Estado real de cada módulo |
+| `PWA_AUDIT.md` | Estado y decisiones sobre PWA |
+| `BETA_OPERABILITY_CHECKLIST.md` | Checklist de operación en beta |
+| `LAUNCH_SAFETY_CHECKLIST.md` | Checklist de seguridad pre-lanzamiento |

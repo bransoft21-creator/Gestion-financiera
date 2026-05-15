@@ -2,45 +2,50 @@
 
 ## Proyecto
 
-Nombre: Finance Control
+Nombre: **Meridian**
 
-Aplicación web profesional para gestión financiera personal y familiar.
+Aplicación web de finanzas personales y familiares. Calcula el dinero disponible real considerando gastos realizados, reservas, obligaciones y compromisos futuros. Incluye IA para análisis mensual, reflexión semanal e importación inteligente de documentos.
 
-El objetivo es ayudar al usuario a:
-- controlar ingresos
-- controlar gastos
-- gestionar presupuestos
-- detectar gastos innecesarios
-- gestionar deudas
-- crear metas de ahorro
-- calcular dinero disponible real
-- preparar una futura etapa de inversiones
-
-## Stack obligatorio
+## Stack
 
 - Next.js App Router
 - TypeScript
 - Tailwind CSS
-- shadcn/ui
+- shadcn/ui + Design System V2 propio
 - Prisma ORM
 - PostgreSQL / Supabase
 - Supabase Auth
-- React Hook Form
+- React Hook Form + @hookform/resolvers
 - Zod
-- TanStack Query
 - Recharts
+- OpenAI API (HTTP directo, sin SDK wrapper)
+- Upstash Redis (rate limiting)
+- Framer Motion
+- Sentry
 
-## Enfoque inicial
+**No usar TanStack Query** — el proyecto no lo tiene instalado. Usar fetch directo.
 
-Construir primero un MVP sólido, escalable y profesional.
+## Estructura de carpetas real
 
-No desarrollar todo de golpe.
+```txt
+/app          — Next.js App Router (rutas, layouts, pages, API routes)
+/components   — UI organizada por dominio (ui/, ui-v2/, dashboard/, household/, etc.)
+/hooks        — React hooks compartidos
+/lib          — Utilidades (dates.ts, prisma.ts, feature-flags.ts, finance/)
+/server       — Lógica server-side (services/, schemas/, auth/)
+/prisma       — Schema, migraciones, seed
+/design-system — Tokens y principios de Design System V2
+/docs         — Documentación del proyecto
+/tests        — Tests automatizados
+```
+
+**No existe `/features/`** — la lógica de dominio vive en `/server/services/`.
 
 ## Control de tokens (crítico)
 
 Optimiza al máximo el uso de tokens. Obligatorio.
 
-1. Responde SIEMPRE de forma concisa, directa y accionable.
+1. Responde siempre de forma concisa, directa y accionable.
 2. No expliques teoría innecesaria.
 3. No repitas contexto ya mencionado.
 4. No hagas resúmenes largos.
@@ -51,77 +56,51 @@ Optimiza al máximo el uso de tokens. Obligatorio.
 9. Si algo es obvio o estándar, omítelo.
 10. Prioriza listas cortas sobre párrafos largos.
 
-Formato de respuesta obligatorio:
-
-```
-FASE ACTUAL: (1-2 líneas)
-CAMBIOS: - punto 1 / - punto 2
-ARCHIVOS: - archivo 1
-CÓDIGO (solo si aplica): (mínimo necesario)
-PRUEBA RÁPIDA: - paso 1
-RIESGOS: - punto 1 (si aplica)
-SIGUIENTE PASO: (una línea)
-```
-
-> Si la respuesta supera lo necesario → recórtala. Si dudas → responde menos, no más.
-
 ## Reglas de trabajo
 
 - Trabajar por fases pequeñas.
 - Antes de cambios grandes, explicar brevemente el plan.
 - No reescribir archivos completos si no es necesario.
 - Mantener código limpio, tipado y escalable.
-- Separar lógica de negocio, UI y acceso a datos.
+- Separar lógica de negocio (server/services/), validación (server/schemas/) y UI (/components).
 - Usar Zod para validar formularios y APIs.
 - Usar Prisma para acceso a base de datos.
-- Usar componentes reutilizables.
+- Usar componentes reutilizables — preferir primitivos de /components/ui-v2/.
 - Pensar mobile first.
-- Actualizar TODO.md al finalizar cada fase.
-
-## Funcionalidades MVP
-
-1. Autenticación de usuarios.
-2. Dashboard financiero.
-3. CRUD de transacciones.
-4. Categorías.
-5. Presupuesto mensual.
-6. Gastos recurrentes.
-7. Metas financieras.
-8. Deudas.
-9. Reportes básicos.
-10. Preparación futura para inversiones.
+- Montos sensibles siempre con `<SensitiveAmount>`.
+- Fechas con timezone Argentina siempre desde `lib/dates.ts`.
+- Formularios flotantes/panel siempre con `AppFormPanel` de `components/app/mobile-form.tsx`.
 
 ## Regla clave de negocio
 
-La app debe diferenciar entre:
+La app diferencia entre:
 
-- dinero ingresado
-- gasto real
-- dinero reservado
-- dinero disponible
-- dinero destinado a metas
-- deuda pendiente
+- Dinero ingresado (INCOME)
+- Gasto real (EXPENSE)
+- Dinero reservado (presupuestos activos)
+- Obligaciones (recurrentes + metas + deudas)
+- Disponible real = ingresos − gastos − reservado − obligaciones
 
-El dinero disponible real no debe ser simplemente ingresos menos gastos.
+Esta fórmula vive en `server/services/financial-ledger.ts` y `server/services/dashboard.ts`. No recalcular en UI.
 
-Debe considerar:
-- gastos realizados
-- pagos próximos
-- presupuestos reservados
-- metas obligatorias
-- deudas próximas
+## Módulos MVP implementados
 
-## Arquitectura esperada
+1. Autenticación (Supabase Auth, login, registro, recuperación, onboarding)
+2. Dashboard financiero (resumen mensual, IA copilot, reflexión semanal)
+3. Transacciones (CRUD completo, filtros, exportación, Smart Import)
+4. Categorías (CRUD con categoría padre)
+5. Presupuesto mensual (por categoría, alertas de exceso)
+6. Gastos recurrentes personales
+7. Metas financieras (con progreso)
+8. Deudas y pagos
+9. Reportes básicos
+10. Smart Import (importación IA desde PDF/CSV/imagen)
+11. Hogar (gastos compartidos, balances, settlements, pagos recurrentes del hogar)
+12. Notificaciones / Activity center
 
-Usar una estructura similar a:
+## Lo que NO construir todavía
 
-```txt
-/app
-/components
-/features
-/hooks
-/lib
-/server
-/prisma
-/types
-/docs
+- Inversiones / activos financieros
+- Conversión multi-moneda automática
+- Open Banking / scraping bancario
+- App nativa móvil
