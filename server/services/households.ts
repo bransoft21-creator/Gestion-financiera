@@ -7,7 +7,7 @@ import {
   HouseholdRole,
   SharedParticipantStatus,
 } from "@prisma/client";
-import { argentinaMonthRangeUtc } from "@/lib/dates";
+import { argentinaMonthRangeUtc, argentinaMonthParts } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { ApiError, ForbiddenError, NotFoundError } from "../api/errors";
 
@@ -357,7 +357,7 @@ export async function getHouseholdBalance(userProfileId: string, householdId: st
 export async function getHouseholdBriefing(userProfileId: string, householdId: string, now = new Date()) {
   await assertCollaborativeHouseholdAccess(userProfileId, householdId);
 
-  const { year, month } = getArgentinaMonthParts(now);
+  const { year, month } = argentinaMonthParts(now);
   const { start: monthStart, end: nextMonthStart } = argentinaMonthRangeUtc(year, month);
 
   const lastSettlement = await prisma.householdSettlement.findFirst({
@@ -778,15 +778,3 @@ function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-function getArgentinaMonthParts(date: Date) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
-    year: "numeric",
-    month: "2-digit",
-  }).formatToParts(date);
-
-  return {
-    year: Number(parts.find((part) => part.type === "year")?.value),
-    month: Number(parts.find((part) => part.type === "month")?.value),
-  };
-}

@@ -87,3 +87,40 @@ export function formatArgentinaDateInput(date = new Date()) {
 function argentinaDayStartUtc(year: number, month: number, day: number) {
   return new Date(Date.UTC(year, month - 1, day, ARGENTINA_UTC_OFFSET_HOURS));
 }
+
+export function argentinaMonthKey(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ARGENTINA_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(date);
+  const year = parts.find((p) => p.type === "year")?.value ?? "";
+  const month = parts.find((p) => p.type === "month")?.value ?? "";
+  return `${year}-${month}`;
+}
+
+export function argentinaMonthParts(date: Date): { year: number; month: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ARGENTINA_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(date);
+  return {
+    year: Number(parts.find((p) => p.type === "year")?.value),
+    month: Number(parts.find((p) => p.type === "month")?.value),
+  };
+}
+
+export function argentinaDayMonthYear(date: Date): { day: number; month: number; year: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ARGENTINA_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  return {
+    year: Number(parts.find((p) => p.type === "year")?.value),
+    month: Number(parts.find((p) => p.type === "month")?.value),
+    day: Number(parts.find((p) => p.type === "day")?.value),
+  };
+}

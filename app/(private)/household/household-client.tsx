@@ -10,126 +10,27 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-type Household = {
-  id: string;
-  name: string;
-  avatar: string | null;
-  createdAt: string | Date;
-  members: Array<{
-    id: string;
-    role: string;
-    status: string;
-    userProfileId: string;
-    userProfile: {
-      fullName: string | null;
-      email: string;
-      avatarUrl: string | null;
-    };
-  }>;
-  invites: Array<{
-    id: string;
-    email: string;
-    expiresAt: string | Date;
-    status: string;
-  }>;
-};
-
-type HouseholdBalance = {
-  summary: string;
-  lastSettledAt: string | null;
-  settlement: {
-    fromName: string;
-    toName: string;
-    amount: number;
-  } | null;
-  members: Array<{
-    userId: string;
-    name: string;
-    email: string;
-    balance: number;
-  }>;
-  recentSharedTransactions: Array<{
-    id: string;
-    description: string | null;
-    amount: number;
-    currency: "ARS" | "USD";
-    occurredAt: string;
-    paidByName: string;
-    participantCount: number;
-  }>;
-};
-
-type HouseholdSettlement = {
-  id: string;
-  amount: number;
-  notes: string | null;
-  createdAt: string;
-  settledBy: {
-    fullName: string | null;
-    email: string;
-  };
-};
-
-type HouseholdBriefingStatus = "STABLE" | "NEEDS_BALANCE" | "LOW_ACTIVITY" | "HIGH_SPEND";
-
-type HouseholdBriefing = {
-  status: HouseholdBriefingStatus;
-  tone: "emerald" | "amber" | "blue" | "zinc";
-  title: string;
-  summary: string;
-  metrics: {
-    totalSharedAmount: number;
-    transactionCount: number;
-    pendingAmount: number;
-    currency: "ARS" | "USD";
-    topPayer: { userId: string; name: string; amount: number } | null;
-  };
-  topCategories: Array<{ id: string; name: string; color: string | null; amount: number; count: number }>;
-  settlement: HouseholdBalance["settlement"];
-  memberBalances: HouseholdBalance["members"];
-  ctas: Array<{ label: string; href: string; intent: "primary" | "secondary" }>;
-};
-
-type RecurringPayment = {
-  id: string;
-  name: string;
-  estimatedAmount: number;
-  currency: "ARS" | "USD";
-  dueDay: number;
-  splitMode: "EQUAL" | "PERCENTAGE" | "CUSTOM_AMOUNT";
-  category: { id: string; name: string; color: string | null } | null;
-  participants: Array<{ userId: string; percentage: number | null; fixedAmount: number | null }>;
-  status: "PENDING" | "PAID" | "OVERDUE";
-  occurrence: {
-    id: string;
-    paidAt: string | null;
-    paidByUserId: string | null;
-    finalAmount: number | null;
-    sharedTransactionId: string | null;
-  } | null;
-};
-
-type RecurringPaymentsSummary = {
-  payments: RecurringPayment[];
-  paidCount: number;
-  pendingCount: number;
-  overdueCount: number;
-  totalCount: number;
-  summary: string;
-};
-
-type UserAccount = {
-  id: string;
-  householdId: string;
-  householdName: string | undefined;
-  name: string;
-  type: string;
-  currency: "ARS" | "USD";
-  currentBalance: number;
-};
-
-type HouseholdTab = "overview" | "payments" | "team";
+import { PaymentRow } from "@/components/household/payment-row";
+import {
+  formatMoney,
+  formatDate,
+  getBriefingSummary,
+  getBriefingBadgeClass,
+  getBriefingPanelClass,
+  getRecurringPanelClass,
+} from "./utils";
+import type {
+  Household,
+  HouseholdBalance,
+  HouseholdBriefing,
+  HouseholdBriefingStatus,
+  HouseholdSettlement,
+  HouseholdTab,
+  PayForm,
+  RecurringPayment,
+  RecurringPaymentsSummary,
+  UserAccount,
+} from "./types";
 
 export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Household[] }) {
   const [households, setHouseholds] = useState(initialHouseholds);
@@ -156,7 +57,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
   const [isLoadingRecurring, setIsLoadingRecurring] = useState(false);
   const [userAccounts, setUserAccounts] = useState<UserAccount[]>([]);
   const [payingOccurrenceId, setPayingOccurrenceId] = useState<string | null>(null);
-  const [payForm, setPayForm] = useState<{ paidByUserId: string; accountId: string; finalAmount: string }>({ paidByUserId: "", accountId: "", finalAmount: "" });
+  const [payForm, setPayForm] = useState<PayForm>({ paidByUserId: "", accountId: "", finalAmount: "" });
   const [isPaying, setIsPaying] = useState(false);
   const [isAddingRecurring, setIsAddingRecurring] = useState(false);
   const [newPaymentForm, setNewPaymentForm] = useState({ name: "", estimatedAmount: "", dueDay: "1", splitMode: "EQUAL" as const });
@@ -1068,191 +969,3 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
   );
 }
 
-// ── PAYMENT ROW COMPONENT ────────────────────────────────────────────────────
-
-type PaymentRowProps = {
-  payment: RecurringPayment;
-  isExpanded: boolean;
-  isPaying: boolean;
-  payForm: { paidByUserId: string; accountId: string; finalAmount: string };
-  setPayForm: React.Dispatch<React.SetStateAction<{ paidByUserId: string; accountId: string; finalAmount: string }>>;
-  members: Household["members"];
-  userAccounts: UserAccount[];
-  hideAmounts: boolean;
-  onPay: () => void;
-  onConfirmPay: () => void;
-  onCancel: () => void;
-};
-
-function PaymentRow({
-  payment,
-  isExpanded,
-  isPaying,
-  payForm,
-  setPayForm,
-  members,
-  userAccounts,
-  hideAmounts,
-  onPay,
-  onConfirmPay,
-  onCancel,
-}: PaymentRowProps) {
-  return (
-    <div>
-      <div className={`flex items-center gap-3 rounded-2xl border p-3 transition ${getPaymentRowClass(payment.status)}`}>
-        {/* Status icon */}
-        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${getPaymentIconClass(payment.status)}`}>
-          {payment.status === "PAID" ? (
-            <CheckCircle2 className="h-4 w-4" />
-          ) : payment.status === "OVERDUE" ? (
-            <Clock className="h-4 w-4" />
-          ) : (
-            <Circle className="h-4 w-4" />
-          )}
-        </div>
-        {/* Info */}
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">{payment.name}</p>
-          <p className="text-xs text-muted-foreground">
-            {payment.status === "PAID"
-              ? `Pagado${payment.occurrence?.paidAt ? ` · ${formatDate(payment.occurrence.paidAt)}` : ""}`
-              : payment.status === "OVERDUE"
-              ? `Venció el día ${payment.dueDay}`
-              : `Vence el día ${payment.dueDay}`}
-          </p>
-        </div>
-        {/* Amount */}
-        <p className="shrink-0 text-sm font-bold text-foreground">
-          {formatMoney(payment.occurrence?.finalAmount ?? payment.estimatedAmount, payment.currency, hideAmounts)}
-        </p>
-        {/* Pay CTA */}
-        {payment.status !== "PAID" ? (
-          <Button size="sm" variant="ghost" className="shrink-0 text-xs" onClick={onPay}>
-            Pagar
-          </Button>
-        ) : null}
-      </div>
-
-      {/* Inline pay form */}
-      {isExpanded ? (
-        <div className="mt-1 space-y-3 rounded-2xl border border-teal-300/20 bg-teal-300/[0.07] p-4">
-          <p className="text-sm font-semibold text-foreground">Registrar pago — {payment.name}</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Pagó</Label>
-              <select
-                className="flex h-10 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-base text-foreground md:text-sm"
-                value={payForm.paidByUserId || members[0]?.userProfileId}
-                onChange={(e) => setPayForm((p) => ({ ...p, paidByUserId: e.target.value }))}
-              >
-                {members.map((member) => (
-                  <option key={member.userProfileId} value={member.userProfileId}>
-                    {member.userProfile.fullName ?? member.userProfile.email}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label>Cuenta</Label>
-              <select
-                className="flex h-10 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-base text-foreground md:text-sm"
-                value={payForm.accountId}
-                onChange={(e) => setPayForm((p) => ({ ...p, accountId: e.target.value }))}
-              >
-                <option value="">Elegir cuenta…</option>
-                {userAccounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}{account.householdName ? ` — ${account.householdName}` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Monto final (opcional)</Label>
-            <Input
-              type="number"
-              value={payForm.finalAmount}
-              onChange={(e) => setPayForm((p) => ({ ...p, finalAmount: e.target.value }))}
-              placeholder={String(payment.estimatedAmount)}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              className="flex-1"
-              disabled={isPaying || !payForm.accountId}
-              onClick={onConfirmPay}
-            >
-              {isPaying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-              Confirmar
-            </Button>
-            <Button variant="ghost" onClick={onCancel}>
-              Cancelar
-            </Button>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-// ── HELPERS ──────────────────────────────────────────────────────────────────
-
-function formatMoney(value: number, currency: "ARS" | "USD", hidden = false) {
-  if (hidden) return "$••••";
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: currency === "ARS" ? 0 : 2,
-  }).format(value);
-}
-
-function formatDate(dateStr: string) {
-  return new Intl.DateTimeFormat("es-AR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "America/Argentina/Buenos_Aires",
-  }).format(new Date(dateStr));
-}
-
-function getBriefingSummary(briefing: HouseholdBriefing, hidden: boolean) {
-  if (!hidden) return briefing.summary;
-  if (briefing.status === "STABLE") return "El hogar viene estable este mes.";
-  if (briefing.status === "LOW_ACTIVITY") return "Todavía no hay suficientes movimientos compartidos.";
-  if (briefing.status === "HIGH_SPEND") return "El gasto compartido viene más alto que lo habitual.";
-  if (!briefing.settlement) return "Hay un saldo pendiente por equilibrar.";
-  return `${briefing.settlement.fromName} tiene un saldo pendiente con ${briefing.settlement.toName}.`;
-}
-
-function getBriefingBadgeClass(status: HouseholdBriefingStatus) {
-  if (status === "STABLE") return "border-emerald-300/20 bg-emerald-300/10 text-emerald-100";
-  if (status === "NEEDS_BALANCE") return "border-amber-300/20 bg-amber-300/10 text-amber-100";
-  if (status === "HIGH_SPEND") return "border-sky-300/20 bg-sky-300/10 text-sky-100";
-  return "border-white/10 bg-white/[0.06] text-zinc-200";
-}
-
-function getBriefingPanelClass(status: HouseholdBriefingStatus | undefined) {
-  if (status === "STABLE") return "border-emerald-300/15 bg-emerald-300/10";
-  if (status === "NEEDS_BALANCE") return "border-amber-300/15 bg-amber-300/10";
-  if (status === "HIGH_SPEND") return "border-sky-300/15 bg-sky-300/10";
-  return "border-white/10 bg-white/[0.04]";
-}
-
-function getRecurringPanelClass(rp: RecurringPaymentsSummary) {
-  if (rp.overdueCount > 0) return "border-amber-300/20 bg-amber-300/10";
-  if (rp.paidCount === rp.totalCount) return "border-emerald-300/20 bg-emerald-300/10";
-  return "border-white/10 bg-white/[0.04]";
-}
-
-function getPaymentRowClass(status: "PENDING" | "PAID" | "OVERDUE") {
-  if (status === "PAID") return "border-emerald-300/15 bg-emerald-300/[0.06] opacity-70";
-  if (status === "OVERDUE") return "border-amber-300/20 bg-amber-300/[0.07]";
-  return "border-white/10 bg-white/[0.04]";
-}
-
-function getPaymentIconClass(status: "PENDING" | "PAID" | "OVERDUE") {
-  if (status === "PAID") return "bg-emerald-300/15 text-emerald-300";
-  if (status === "OVERDUE") return "bg-amber-300/15 text-amber-300";
-  return "bg-white/[0.07] text-zinc-500";
-}

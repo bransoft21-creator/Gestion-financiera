@@ -1,4 +1,5 @@
 import { HouseholdMemberStatus } from "@prisma/client";
+import { argentinaMonthKey, argentinaDayMonthYear } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { ApiError, NotFoundError } from "../api/errors";
 import {
@@ -13,33 +14,6 @@ import { createTransaction } from "./transactions";
 // Helpers
 // ---------------------------------------------------------------------------
 
-export function getArgentinaMonthKey(date: Date): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
-    year: "numeric",
-    month: "2-digit",
-  }).formatToParts(date);
-
-  const year = parts.find((p) => p.type === "year")?.value ?? "";
-  const month = parts.find((p) => p.type === "month")?.value ?? "";
-  return `${year}-${month}`;
-}
-
-function getArgentinaDayMonthYear(date: Date): { day: number; month: number; year: number } {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-
-  const parts = formatter.formatToParts(date);
-  return {
-    year: Number(parts.find((p) => p.type === "year")?.value),
-    month: Number(parts.find((p) => p.type === "month")?.value),
-    day: Number(parts.find((p) => p.type === "day")?.value),
-  };
-}
 
 export function computeRecurringPaymentStatus(
   dueDay: number,
@@ -49,8 +23,8 @@ export function computeRecurringPaymentStatus(
 ): "PENDING" | "PAID" | "OVERDUE" {
   if (isPaid) return "PAID";
 
-  const currentMonthKey = getArgentinaMonthKey(now);
-  const { day: todayDay } = getArgentinaDayMonthYear(now);
+  const currentMonthKey = argentinaMonthKey(now);
+  const { day: todayDay } = argentinaDayMonthYear(now);
 
   if (monthKey < currentMonthKey) return "OVERDUE";
   if (monthKey === currentMonthKey && todayDay > dueDay) return "OVERDUE";
@@ -77,7 +51,7 @@ export async function listHouseholdRecurringPayments(
 ) {
   await assertCollaborativeHouseholdAccess(userProfileId, householdId);
 
-  const resolvedMonthKey = monthKey ?? getArgentinaMonthKey(new Date());
+  const resolvedMonthKey = monthKey ?? argentinaMonthKey(new Date());
 
   const payments = await prisma.householdRecurringPayment.findMany({
     where: { householdId, isActive: true, deletedAt: null },
