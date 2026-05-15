@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Filter, Loader2, Plus, Search } from "lucide-react";
+import { ChevronDown, CreditCard, Filter, Loader2, Plus, Search } from "lucide-react";
 import { ActionButton } from "@/components/ui-v2/action-button";
 import { PremiumCard, PremiumCardContent, PremiumCardHeader } from "@/components/ui-v2/premium-card";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ export function TransactionFilters({
   onSubmit,
   onClearFilters,
   onNew,
+  onPayCreditCard,
 }: {
   search: string;
   filters: Filters;
@@ -34,6 +35,7 @@ export function TransactionFilters({
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   onClearFilters: () => void;
   onNew: () => void;
+  onPayCreditCard?: () => void;
 }) {
   return (
     <PremiumCard>
@@ -65,6 +67,14 @@ export function TransactionFilters({
             Nueva
           </ActionButton>
         </div>
+        {onPayCreditCard ? (
+          <div className="mt-2">
+            <ActionButton type="button" variant="quiet" size="sm" onClick={onPayCreditCard}>
+              <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
+              Pagar tarjeta
+            </ActionButton>
+          </div>
+        ) : null}
       </PremiumCardHeader>
       {isFiltersOpen ? (
         <PremiumCardContent className="px-3 pb-3 pt-0">

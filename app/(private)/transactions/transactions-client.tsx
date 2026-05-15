@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
+  AlertTriangle,
+  CreditCard,
   Loader2,
   Plus,
   X,
@@ -68,6 +70,12 @@ import {
 
 const optionalEnumField = <T extends [string, ...string[]]>(values: T) =>
   z.preprocess((value) => value === "" ? undefined : value, z.enum(values).optional());
+
+const CARD_PAYMENT_KEYWORDS = [
+  "pago tarjeta", "pago de tarjeta", "abono tarjeta",
+  "pagar tarjeta", "saldar tarjeta", "pago visa",
+  "pago master", "pago amex", "pago crédito", "pago credito",
+];
 
 const formSchema = z.object({
   type: z.enum(transactionTypes as [TransactionType, ...TransactionType[]]),
@@ -146,6 +154,8 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   });
   const watchedType = (useWatch({ control, name: "type" }) as TransactionType | undefined) ?? "EXPENSE";
   const watchedAccountId = (useWatch({ control, name: "accountId" }) as string | undefined) ?? "";
+  const watchedTransferAccountId = (useWatch({ control, name: "transferAccountId" }) as string | undefined) ?? "";
+  const watchedDescription = (useWatch({ control, name: "description" }) as string | undefined) ?? "";
   const watchedIsInstallment = (useWatch({ control, name: "isInstallment" }) as boolean | undefined) ?? false;
   const watchedPaymentMethod = (useWatch({ control, name: "paymentMethod" }) as PaymentMethod | undefined);
   const watchedSharedHouseholdId = (useWatch({ control, name: "sharedHouseholdId" }) as string | undefined) ?? "";
@@ -172,6 +182,18 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   const filteredCategories = useMemo(() => {
     return categories.filter((category) => isCategoryAllowedForType(category.type, watchedType));
   }, [categories, watchedType]);
+
+  const creditCardAccounts = useMemo(() => accounts.filter((a) => a.type === "CREDIT_CARD"), [accounts]);
+  const selectedAccount = useMemo(() => accounts.find((a) => a.id === watchedAccountId), [accounts, watchedAccountId]);
+  const transferTargetAccount = useMemo(() => accounts.find((a) => a.id === watchedTransferAccountId), [accounts, watchedTransferAccountId]);
+
+  const isPotentialCardPayment = useMemo(() => (
+    watchedType === "EXPENSE" &&
+    selectedAccount?.type === "CREDIT_CARD" &&
+    CARD_PAYMENT_KEYWORDS.some((kw) => watchedDescription.toLowerCase().includes(kw))
+  ), [watchedType, selectedAccount, watchedDescription]);
+
+  const isTransferToCreditCard = watchedType === "TRANSFER" && transferTargetAccount?.type === "CREDIT_CARD";
 
   const selectedHousehold = useMemo(
     () => sharedHouseholds.find((h) => h.id === watchedSharedHouseholdId),
@@ -475,6 +497,44 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
     });
   }
 
+  function openCreditCardPaymentForm() {
+    const nonCCAccounts = accounts.filter((a) => a.type !== "CREDIT_CARD");
+    const sourceAccount = nonCCAccounts[0] ?? accounts[0];
+    const destAccount = creditCardAccounts[0];
+    setEditingTransactionId(null);
+    resetSplits();
+    reset({
+      type: "TRANSFER",
+      accountId: sourceAccount?.id ?? defaultAccount?.id ?? "",
+      transferAccountId: destAccount?.id ?? "",
+      categoryId: "",
+      currency: (sourceAccount?.currency ?? "ARS") as CurrencyCode,
+      amount: "",
+      occurredAt: formatArgentinaDateInput(),
+      description: "Pago tarjeta",
+      notes: "",
+      expenseType: undefined,
+      paymentMethod: undefined,
+      isInstallment: false,
+      installmentNumber: undefined,
+      totalInstallments: undefined,
+      isRecurring: false,
+      sharedHouseholdId: "",
+    });
+    setIsFormOpen(true);
+  }
+
+  function convertToCardPaymentTransfer() {
+    const nonCCAccount = accounts.find((a) => a.type !== "CREDIT_CARD" && a.id !== watchedAccountId)
+      ?? accounts.find((a) => a.id !== watchedAccountId);
+    setValue("type", "TRANSFER");
+    setValue("transferAccountId", watchedAccountId);
+    if (nonCCAccount) setValue("accountId", nonCCAccount.id);
+    setValue("categoryId", "");
+    setValue("expenseType", undefined as ExpenseType | undefined);
+    setValue("paymentMethod", undefined as PaymentMethod | undefined);
+  }
+
   function toggleGroup(label: string) {
     setCollapsedGroups((current) => {
       const next = new Set(current);
@@ -612,19 +672,27 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
             </Field>
 
             {watchedType === "TRANSFER" && !editingTransactionId ? (
-              <Field label="Cuenta destino" error={formErrors.transferAccountId?.message}>
-                <select
-                  className={transactionSelectClass}
-                  {...register("transferAccountId")}
-                >
-                  <option value="">Seleccioná cuenta destino</option>
-                  {accounts.filter((a) => a.id !== watchedAccountId).map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.name} · {account.currency}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+              <>
+                <Field label="Cuenta destino" error={formErrors.transferAccountId?.message}>
+                  <select
+                    className={transactionSelectClass}
+                    {...register("transferAccountId")}
+                  >
+                    <option value="">Seleccioná cuenta destino</option>
+                    {accounts.filter((a) => a.id !== watchedAccountId).map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name} · {account.currency}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                {isTransferToCreditCard ? (
+                  <div className="flex items-center gap-2 rounded-2xl border border-teal-300/20 bg-teal-400/10 px-3 py-2">
+                    <CreditCard className="h-4 w-4 shrink-0 text-teal-400" aria-hidden="true" />
+                    <p className="text-xs text-teal-100">Pago de tarjeta · reduce el saldo negativo, no genera gasto nuevo.</p>
+                  </div>
+                ) : null}
+              </>
             ) : null}
 
             {watchedType !== "TRANSFER" ? (
@@ -677,6 +745,30 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                 placeholder="Ej: Compra supermercado"
               />
             </Field>
+
+            {isPotentialCardPayment ? (
+              <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
+                  <div className="min-w-0 space-y-2">
+                    <p className="text-sm font-semibold text-foreground">¿Estás pagando una tarjeta?</p>
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      Los pagos de tarjeta son transferencias, no gastos nuevos. Convertilo para que el saldo se actualice correctamente y no se duplique como deuda.
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs"
+                      onClick={convertToCardPaymentTransfer}
+                    >
+                      <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
+                      Convertir a transferencia
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             <Field label="Notas" error={formErrors.notes?.message}>
               <textarea
@@ -860,6 +952,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
             resetForm();
             setIsFormOpen(true);
           }}
+          onPayCreditCard={creditCardAccounts.length > 0 ? openCreditCardPaymentForm : undefined}
         />
 
         <TransactionList
