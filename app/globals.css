@@ -70,34 +70,54 @@
 
   /* ── Light mode ── */
   .light {
-    --background: 220 20% 97%;
-    --foreground: 224 20% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 224 20% 12%;
-    --primary: 176 66% 30%;
+    /* ── Surfaces ─────────────────────────────────────────────────── */
+    --background:    220 16% 96%;     /* L0: page canvas — slate-tinted near-white  */
+    --foreground:    224 25% 10%;     /* Primary text — ~15:1 contrast on white     */
+    --card:          0   0% 100%;     /* L1: card/form surface — pure white          */
+    --card-foreground: 224 25% 10%;
+
+    /* ── Brand ─────────────────────────────────────────────────────── */
+    --primary:           176 66% 28%;   /* Teal — dark enough to read on white       */
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 93%;
-    --secondary-foreground: 224 20% 20%;
-    --muted: 220 14% 93%;
-    --muted-foreground: 220 10% 44%;
-    --accent: 176 66% 30%;
+
+    /* ── Neutral surfaces ──────────────────────────────────────────── */
+    --secondary:           220 13% 91%; /* Muted surface (chips, tags, bg fills)     */
+    --secondary-foreground: 224 25% 10%;
+    --muted:           220 13% 91%;     /* Same tone as secondary — simpler system   */
+    --muted-foreground: 220 12% 38%;    /* ~6:1 contrast on white — WCAG AA++        */
+
+    /* ── Accent / destructive ──────────────────────────────────────── */
+    --accent:           176 66% 28%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 46%;
+    --destructive:           0 75% 44%; /* Deeper red for light mode legibility      */
     --destructive-foreground: 0 0% 100%;
-    --border: 220 14% 86%;
-    --input: 220 14% 91%;
-    --ring: 176 66% 30%;
-    --surface: hsl(220 14% 96%);
-    --surface-el: hsl(220 14% 94%);
-    --surface-2: hsl(220 14% 92%);
-    --text: hsl(224 20% 12%);
-    --muted-color: hsl(220 10% 44%);
-    --glow-primary: rgba(13, 148, 136, 0.10);
-    --glow-emerald: rgba(16, 185, 129, 0.08);
-    --glow-rose: rgba(239, 68, 68, 0.08);
-    --glow-sky: rgba(14, 165, 233, 0.08);
-    /* Button shadow adapts to light mode */
-    --btn-default-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+
+    /* ── Form controls ─────────────────────────────────────────────── */
+    --border: 220 14% 80%;    /* Visible slate border — used as separator & field edge */
+    --input:  0   0% 100%;    /* White inputs on white card, border only for affordance */
+    --ring:   176 66% 28%;    /* Focus ring = brand teal                               */
+
+    /* ── Legacy aliases (kept for backward compat) ─────────────────── */
+    --surface:     hsl(220 14% 94%);
+    --surface-el:  hsl(220 14% 92%);
+    --surface-2:   hsl(220 14% 90%);
+    --text:        hsl(224 25% 10%);
+    --muted-color: hsl(220 12% 38%);
+
+    /* ── Semantic effects ──────────────────────────────────────────── */
+    --glow-primary: rgba(13, 148, 136, 0.08);
+    --glow-emerald: rgba(16, 185, 129, 0.07);
+    --glow-rose:    rgba(239,  68,  68, 0.07);
+    --glow-sky:     rgba( 14, 165, 233, 0.07);
+
+    /* ── Button shadow ─────────────────────────────────────────────── */
+    --btn-default-shadow: 0 1px 3px rgba(30,40,60,0.14), 0 8px 24px rgba(30,40,60,0.10);
+
+    /* ── Elevation scale (light mode only) ─────────────────────────── */
+    --elevation-1: 0 1px 3px rgba(30,40,60,0.07), 0 4px 16px rgba(30,40,60,0.05);
+    --elevation-2: 0 2px 8px rgba(30,40,60,0.09), 0 8px 32px rgba(30,40,60,0.07);
+    --elevation-3: 0 8px 24px rgba(30,40,60,0.12), 0 2px 6px rgba(30,40,60,0.08);
+
     color-scheme: light;
   }
 
@@ -178,120 +198,150 @@
 /* ── Text size scale ── */
 [data-text-size="large"] { font-size: 1.0625rem; }
 
-/* ── Light mode: structural nav overrides (beat inline styles) ── */
+/* ═══════════════════════════════════════════════════════════
+   LIGHT MODE OVERRIDES
+   All rules below are scoped to .light — dark mode is untouched.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Structural nav (beat inline styles on sidebar/header/nav) ── */
 .light aside {
-  background: rgba(246, 247, 250, 0.94) !important;
-  border-right-color: hsl(220 14% 86%) !important;
+  background: hsl(var(--background) / 0.96) !important;
+  border-right-color: hsl(var(--border)) !important;
 }
 .light header {
-  background: rgba(246, 247, 250, 0.94) !important;
-  border-bottom-color: hsl(220 14% 86%) !important;
+  background: hsl(var(--background) / 0.96) !important;
+  border-bottom-color: hsl(var(--border)) !important;
 }
 .light nav[data-tutorial="nav-mobile"] {
-  background: rgba(246, 247, 250, 0.94) !important;
-  border-top-color: hsl(220 14% 86%) !important;
+  background: hsl(var(--background) / 0.96) !important;
+  border-top-color: hsl(var(--border)) !important;
 }
 .light [data-bottom-drawer] {
-  background: rgba(248, 249, 252, 0.99) !important;
-  border-top-color: hsl(220 14% 86%) !important;
+  background: hsl(var(--card)) !important;
+  border-top-color: hsl(var(--border)) !important;
 }
-/* Desktop utility bar (privacy / notifications / logout) */
 .light .fixed.right-5.top-4 {
-  background: rgba(246, 247, 250, 0.92) !important;
-  border-color: hsl(220 14% 86%) !important;
+  background: hsl(var(--card) / 0.94) !important;
+  border-color: hsl(var(--border)) !important;
 }
 
-/* ── Light mode: glass pattern inversions ── */
-/* White-opacity patterns were designed for dark mode. In light mode they are
-   invisible, so we flip them to equivalent black-opacity values for depth. */
+/* ── Glass pattern inversions ─────────────────────────────────────
+   Dark-mode glass uses white-opacity overlays for shimmer. In light,
+   these are invisible. Flip to slate-tinted black-opacity for depth.
+   Values are 1.5× the original opacity for adequate visual presence.
+   ────────────────────────────────────────────────────────────────── */
+.light .bg-white\/\[0\.02\]   { background-color: rgba(30,40,60,0.03)  !important; }
+.light .bg-white\/\[0\.025\]  { background-color: rgba(30,40,60,0.04)  !important; }
+.light .bg-white\/\[0\.03\]   { background-color: rgba(30,40,60,0.045) !important; }
+.light .bg-white\/\[0\.035\]  { background-color: rgba(30,40,60,0.05)  !important; }
+.light .bg-white\/\[0\.04\]   { background-color: rgba(30,40,60,0.06)  !important; }
+.light .bg-white\/\[0\.045\]  { background-color: rgba(30,40,60,0.065) !important; }
+.light .bg-white\/\[0\.05\]   { background-color: rgba(30,40,60,0.07)  !important; }
+.light .bg-white\/\[0\.055\]  { background-color: rgba(30,40,60,0.08)  !important; }
+.light .bg-white\/\[0\.06\]   { background-color: rgba(30,40,60,0.09)  !important; }
+.light .bg-white\/\[0\.07\]   { background-color: rgba(30,40,60,0.10)  !important; }
+.light .bg-white\/\[0\.08\]   { background-color: rgba(30,40,60,0.11)  !important; }
+.light .bg-white\/\[0\.09\]   { background-color: rgba(30,40,60,0.12)  !important; }
+.light .bg-white\/\[0\.12\]   { background-color: rgba(30,40,60,0.11)  !important; }
+.light .bg-white\/5           { background-color: rgba(30,40,60,0.07)  !important; }
 
-/* Background opacity variants */
-.light .bg-white\/\[0\.02\]   { background-color: rgb(0 0 0 / 0.02)  !important; }
-.light .bg-white\/\[0\.025\]  { background-color: rgb(0 0 0 / 0.025) !important; }
-.light .bg-white\/\[0\.03\]   { background-color: rgb(0 0 0 / 0.03)  !important; }
-.light .bg-white\/\[0\.035\]  { background-color: rgb(0 0 0 / 0.035) !important; }
-.light .bg-white\/\[0\.04\]   { background-color: rgb(0 0 0 / 0.04)  !important; }
-.light .bg-white\/\[0\.045\]  { background-color: rgb(0 0 0 / 0.045) !important; }
-.light .bg-white\/\[0\.05\]   { background-color: rgb(0 0 0 / 0.05)  !important; }
-.light .bg-white\/\[0\.055\]  { background-color: rgb(0 0 0 / 0.055) !important; }
-.light .bg-white\/\[0\.06\]   { background-color: rgb(0 0 0 / 0.06)  !important; }
-.light .bg-white\/\[0\.07\]   { background-color: rgb(0 0 0 / 0.07)  !important; }
-.light .bg-white\/\[0\.08\]   { background-color: rgb(0 0 0 / 0.08)  !important; }
-.light .bg-white\/\[0\.09\]   { background-color: rgb(0 0 0 / 0.09)  !important; }
-.light .bg-white\/\[0\.12\]   { background-color: rgb(0 0 0 / 0.08)  !important; }
-.light .bg-white\/5           { background-color: rgb(0 0 0 / 0.05)  !important; }
+/* Hover bg variants */
+.light .hover\:bg-white\/\[0\.04\]:hover  { background-color: rgba(30,40,60,0.06) !important; }
+.light .hover\:bg-white\/\[0\.05\]:hover  { background-color: rgba(30,40,60,0.07) !important; }
+.light .hover\:bg-white\/\[0\.06\]:hover  { background-color: rgba(30,40,60,0.08) !important; }
+.light .hover\:bg-white\/\[0\.07\]:hover  { background-color: rgba(30,40,60,0.10) !important; }
+.light .hover\:bg-white\/\[0\.08\]:hover  { background-color: rgba(30,40,60,0.12) !important; }
+.light .hover\:bg-white\/\[0\.09\]:hover  { background-color: rgba(30,40,60,0.13) !important; }
+.light .hover\:bg-transparent:hover       { background-color: transparent          !important; }
 
-/* Hover background variants */
-.light .hover\:bg-white\/\[0\.04\]:hover  { background-color: rgb(0 0 0 / 0.04) !important; }
-.light .hover\:bg-white\/\[0\.05\]:hover  { background-color: rgb(0 0 0 / 0.05) !important; }
-.light .hover\:bg-white\/\[0\.06\]:hover  { background-color: rgb(0 0 0 / 0.06) !important; }
-.light .hover\:bg-white\/\[0\.07\]:hover  { background-color: rgb(0 0 0 / 0.07) !important; }
-.light .hover\:bg-white\/\[0\.08\]:hover  { background-color: rgb(0 0 0 / 0.08) !important; }
-.light .hover\:bg-white\/\[0\.09\]:hover  { background-color: rgb(0 0 0 / 0.09) !important; }
-.light .hover\:bg-transparent:hover       { background-color: transparent        !important; }
+/* Border variants */
+.light .border-white\/\[0\.04\] { border-color: rgba(30,40,60,0.08) !important; }
+.light .border-white\/\[0\.07\] { border-color: rgba(30,40,60,0.11) !important; }
+.light .border-white\/\[0\.08\] { border-color: rgba(30,40,60,0.12) !important; }
+.light .border-white\/10        { border-color: rgba(30,40,60,0.13) !important; }
+.light .border-white\/12        { border-color: rgba(30,40,60,0.15) !important; }
+.light .border-white\/20        { border-color: rgba(30,40,60,0.22) !important; }
 
-/* Border opacity variants */
-.light .border-white\/\[0\.04\] { border-color: rgb(0 0 0 / 0.05)  !important; }
-.light .border-white\/\[0\.07\] { border-color: rgb(0 0 0 / 0.08)  !important; }
-.light .border-white\/\[0\.08\] { border-color: rgb(0 0 0 / 0.09)  !important; }
-.light .border-white\/10        { border-color: rgb(0 0 0 / 0.10)  !important; }
-.light .border-white\/12        { border-color: rgb(0 0 0 / 0.12)  !important; }
-.light .border-white\/20        { border-color: rgb(0 0 0 / 0.16)  !important; }
+/* ── Text color overrides ─────────────────────────────────────────
+   Map dark-only hardcoded tokens to adaptive CSS variable equivalents.
+   ────────────────────────────────────────────────────────────────── */
+.light .text-white              { color: hsl(var(--foreground))              !important; }
+.light .text-white\/40          { color: hsl(var(--foreground) / 0.40)        !important; }
+.light .text-white\/50          { color: hsl(var(--foreground) / 0.50)        !important; }
+.light .text-zinc-100           { color: hsl(var(--foreground))              !important; }
+.light .text-zinc-300           { color: hsl(var(--muted-foreground))        !important; }
+.light .text-zinc-400           { color: hsl(var(--muted-foreground))        !important; }
+.light .text-zinc-500           { color: hsl(var(--muted-foreground))        !important; }
+.light .text-zinc-600           { color: hsl(var(--muted-foreground) / 0.75) !important; }
+.light .text-teal-100           { color: hsl(var(--primary))                 !important; }
+.light .text-teal-300           { color: hsl(var(--primary))                 !important; }
+.light .text-rose-100           { color: hsl(var(--destructive))             !important; }
+.light .text-rose-200           { color: hsl(var(--destructive))             !important; }
+.light .text-rose-300           { color: hsl(var(--destructive))             !important; }
 
-/* ── Light mode: text color overrides ── */
-/* Map dark-mode-only hardcoded colors to adaptive CSS variable equivalents */
-.light .text-white              { color: hsl(var(--foreground))               !important; }
-.light .text-white\/40          { color: hsl(var(--foreground) / 0.40)         !important; }
-.light .text-white\/50          { color: hsl(var(--foreground) / 0.50)         !important; }
-.light .text-zinc-100           { color: hsl(var(--foreground))               !important; }
-.light .text-zinc-300           { color: hsl(var(--muted-foreground))         !important; }
-.light .text-zinc-400           { color: hsl(var(--muted-foreground))         !important; }
-.light .text-zinc-500           { color: hsl(var(--muted-foreground))         !important; }
-.light .text-zinc-600           { color: hsl(var(--muted-foreground) / 0.72)  !important; }
-.light .text-teal-100           { color: hsl(var(--primary))                  !important; }
-.light .text-teal-300           { color: hsl(var(--primary))                  !important; }
-.light .text-rose-100           { color: hsl(var(--destructive))              !important; }
-.light .text-rose-200           { color: hsl(var(--destructive))              !important; }
-.light .text-rose-300           { color: hsl(var(--destructive))              !important; }
-
-/* Hover text overrides */
+/* Hover text */
 .light .hover\:text-white:hover      { color: hsl(var(--foreground))       !important; }
 .light .hover\:text-zinc-300:hover   { color: hsl(var(--muted-foreground)) !important; }
 .light .hover\:text-rose-200:hover   { color: hsl(var(--destructive))      !important; }
 
-/* Placeholder overrides (both Tailwind v2 and v3 syntax) */
-.light .placeholder\:text-zinc-600::placeholder  { color: hsl(var(--muted-foreground) / 0.55) !important; }
-.light .placeholder-zinc-600::placeholder        { color: hsl(var(--muted-foreground) / 0.55) !important; }
+/* Placeholders */
+.light .placeholder\:text-zinc-600::placeholder { color: hsl(var(--muted-foreground) / 0.55) !important; }
+.light .placeholder-zinc-600::placeholder       { color: hsl(var(--muted-foreground) / 0.55) !important; }
 
-/* ── Light mode: dark-zinc background overrides ── */
+/* ── Dark zinc background overrides ──────────────────────────────── */
 .light .bg-zinc-950             { background-color: hsl(var(--card))          !important; }
 .light .bg-zinc-900             { background-color: hsl(var(--muted))         !important; }
 .light .bg-zinc-950\/70         { background-color: hsl(var(--input))         !important; }
-.light .bg-zinc-950\/74         { background-color: rgba(246, 247, 250, 0.94) !important; }
-.light .bg-zinc-950\/72         { background-color: rgba(246, 247, 250, 0.92) !important; }
-.light .bg-zinc-950\/80         { background-color: rgba(246, 247, 250, 0.94) !important; }
-.light .bg-zinc-950\/88         { background-color: rgba(246, 247, 250, 0.94) !important; }
+.light .bg-zinc-950\/72         { background-color: hsl(var(--background) / 0.96) !important; }
+.light .bg-zinc-950\/74         { background-color: hsl(var(--background) / 0.96) !important; }
+.light .bg-zinc-950\/80         { background-color: hsl(var(--background) / 0.96) !important; }
+.light .bg-zinc-950\/88         { background-color: hsl(var(--background) / 0.96) !important; }
 .light .bg-zinc-950\/92         { background-color: hsl(var(--card) / 0.96)   !important; }
 .light .bg-zinc-950\/96         { background-color: hsl(var(--card) / 0.98)   !important; }
 .light .hover\:bg-zinc-900:hover { background-color: hsl(var(--secondary))   !important; }
 
-/* ── Light mode: Recharts chart overrides ── */
-/* Grid lines, axes, and labels need to flip from white-on-dark to dark-on-light */
-.light .recharts-cartesian-grid-horizontal line,
-.light .recharts-cartesian-grid-vertical line   { stroke: rgba(0, 0, 0, 0.07) !important; }
-.light .recharts-cartesian-axis-line,
-.light .recharts-cartesian-axis-tick-line       { stroke: rgba(0, 0, 0, 0.12) !important; }
-.light .recharts-text,
-.light .recharts-legend-item-text              { fill: hsl(var(--muted-foreground)) !important; color: hsl(var(--muted-foreground)) !important; }
-.light .recharts-tooltip-wrapper .recharts-default-tooltip {
-  background: hsl(var(--card))   !important;
-  border-color: hsl(var(--border)) !important;
-  color: hsl(var(--foreground))  !important;
+/* ── Active nav item: brand-tinted highlight ─────────────────────
+   The active sidebar and bottom-drawer nav items both carry
+   border-white/* + bg-white/* — targeting the combination gives
+   a precise brand-colored active state without affecting others.
+   ────────────────────────────────────────────────────────────────── */
+.light [data-tutorial="nav-desktop"] .border-white\/10.bg-white\/\[0\.07\] {
+  background-color: hsl(var(--primary) / 0.10) !important;
+  border-color:     hsl(var(--primary) / 0.30) !important;
+}
+.light [data-bottom-drawer] .border-white\/20.bg-white\/\[0\.09\] {
+  background-color: hsl(var(--primary) / 0.10) !important;
+  border-color:     hsl(var(--primary) / 0.30) !important;
 }
 
-/* ── Light mode: progress/track backgrounds ── */
-.light .bg-white\/\[0\.08\].h-1\.5,
-.light [class*="h-1"][class*="bg-white\/"] { background-color: rgb(0 0 0 / 0.09) !important; }
+/* ── Recharts ────────────────────────────────────────────────────── */
+.light .recharts-cartesian-grid-horizontal line,
+.light .recharts-cartesian-grid-vertical line   { stroke: rgba(30,40,60,0.08) !important; }
+.light .recharts-cartesian-axis-line,
+.light .recharts-cartesian-axis-tick-line       { stroke: rgba(30,40,60,0.14) !important; }
+.light .recharts-text,
+.light .recharts-legend-item-text              { fill: hsl(var(--muted-foreground)) !important;
+                                                 color: hsl(var(--muted-foreground)) !important; }
+.light .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background:   hsl(var(--card))   !important;
+  border-color: hsl(var(--border)) !important;
+  color:        hsl(var(--foreground)) !important;
+  box-shadow:   var(--elevation-2) !important;
+}
+
+/* ── Focus ring — accessible offset pattern for light mode ────────
+   White gap between element and ring = clearly perceivable on any bg
+   ────────────────────────────────────────────────────────────────── */
+.light .v2-focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px hsl(var(--background)),
+              0 0 0 4px hsl(var(--ring) / 0.60) !important;
+}
+
+/* ── Selection highlight ─────────────────────────────────────────── */
+.light ::selection {
+  background-color: hsl(var(--primary) / 0.15);
+  color: hsl(var(--foreground));
+}
 
 /* ── Privacy mode: blur monetary values ── */
 html[data-hide-amounts="true"] .tabular-nums {
@@ -313,11 +363,19 @@ html[data-hide-amounts="true"] .tabular-nums {
     text-wrap: balance;
   }
 
-  /* Glass morphism surface */
+  /* Glass morphism surface (dark mode: translucent + blur) */
   .glass {
     background: hsl(var(--card) / 0.8);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid hsl(var(--border) / 0.7);
+  }
+
+  /* Light mode: glass = solid card (blur adds noise, not depth, on light bg) */
+  .light .glass {
+    background: hsl(var(--card));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-color: hsl(var(--border));
   }
 }

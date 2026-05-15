@@ -31,31 +31,52 @@
 }
 
 .light {
-  --v2-bg: 220 20% 97%;
-  --v2-bg-soft: 220 16% 95%;
-  --v2-surface: 0 0% 100%;
-  --v2-surface-raised: 220 16% 99%;
-  --v2-surface-glass: 0 0% 0%;
-  --v2-border: 220 14% 86%;
-  --v2-border-strong: 220 12% 78%;
-  --v2-text: 224 20% 12%;
-  --v2-text-muted: 220 10% 44%;
-  --v2-text-subtle: 220 8% 58%;
-  --v2-brand: 176 66% 28%;
-  --v2-brand-2: 38 80% 42%;
-  --v2-brand-3: 263 64% 50%;
-  --v2-positive: 151 64% 32%;
-  --v2-warning: 39 86% 38%;
-  --v2-danger: 351 80% 46%;
-  --v2-info: 199 76% 38%;
-  --v2-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.05), 0 8px 32px rgba(0, 0, 0, 0.05);
-  --v2-shadow-card: 0 4px 16px rgba(0, 0, 0, 0.07), 0 12px 48px rgba(0, 0, 0, 0.06);
-  --v2-shadow-glow: 0 0 60px rgba(13, 148, 136, 0.07);
+  /* ── Surfaces ──────────────────────────────────────────────────── */
+  --v2-bg:            220 16% 96%;    /* L0: slate-tinted page canvas              */
+  --v2-bg-soft:       220 13% 91%;    /* Same as muted — chips, embedded areas     */
+  --v2-surface:       0 0% 100%;      /* L1: white card/form surface               */
+  --v2-surface-raised: 220 16% 99%;   /* Slightly off-white for raised cards       */
+  --v2-surface-glass: 0 0% 0%;        /* Glass gradient base — kept for calc       */
+
+  /* ── Borders ───────────────────────────────────────────────────── */
+  --v2-border:        220 14% 80%;    /* Standard border — clearly visible         */
+  --v2-border-strong: 220 16% 68%;    /* Emphasized border (inputs on focus, etc.) */
+
+  /* ── Typography ─────────────────────────────────────────────────── */
+  --v2-text:          224 25% 10%;    /* Primary — ~15:1 on white                  */
+  --v2-text-muted:    220 12% 38%;    /* Secondary — ~6:1 on white (WCAG AA+)      */
+  --v2-text-subtle:   220 10% 46%;    /* Captions — ~4.8:1 on white (WCAG AA)      */
+
+  /* ── Brand & semantic colors (darker for light bg readability) ─── */
+  --v2-brand:    176 66% 26%;   /* Teal primary — passes on white bg          */
+  --v2-brand-2:  38  80% 40%;   /* Amber                                       */
+  --v2-brand-3:  263 64% 48%;   /* Violet                                      */
+  --v2-positive: 151 64% 30%;   /* Green                                       */
+  --v2-warning:  39  88% 36%;   /* Amber/orange                                */
+  --v2-danger:   351 80% 44%;   /* Red                                         */
+  --v2-info:     199 76% 36%;   /* Blue                                        */
+
+  /* ── Elevation shadows (slate-tinted for warmth) ───────────────── */
+  --v2-shadow-soft: 0 1px 3px rgba(30,40,60,0.07), 0 4px 16px rgba(30,40,60,0.05);
+  --v2-shadow-card: 0 2px 8px rgba(30,40,60,0.09), 0 8px 32px rgba(30,40,60,0.07);
+  --v2-shadow-glow: 0 0 40px rgba(13, 148, 136, 0.08);
 }
 
-/* ── Light mode: card styles — clean surfaces, no glass blur needed ── */
+/* ── Light mode: body — remove colored gradient, keep clean canvas ── */
+.light body {
+  background: hsl(var(--v2-bg));
+}
+
+/* ── Light mode: shell — single subtle brand accent, top-left only ─ */
+.light .v2-shell {
+  background:
+    radial-gradient(ellipse at -5% -15%, hsl(var(--v2-brand) / 0.05), transparent 45%),
+    hsl(var(--v2-bg));
+}
+
+/* ── Light mode: cards — solid surfaces, real shadows, no glass blur ─ */
 .light .v2-card {
-  border: 1px solid hsl(var(--v2-border) / 0.80);
+  border: 1px solid hsl(var(--v2-border) / 0.85);
   background: hsl(var(--v2-surface));
   box-shadow: var(--v2-shadow-soft);
   backdrop-filter: none;
@@ -63,13 +84,26 @@
 }
 
 .light .v2-card-raised {
-  border: 1px solid hsl(var(--v2-border-strong) / 0.70);
+  border: 1px solid hsl(var(--v2-border) / 0.90);
   background:
-    radial-gradient(circle at 14% 0%, hsl(var(--v2-brand) / 0.05), transparent 14rem),
-    hsl(var(--v2-surface-raised));
+    radial-gradient(ellipse at 22% -15%, hsl(var(--v2-brand) / 0.04), transparent 35%),
+    hsl(var(--v2-surface));
   box-shadow: var(--v2-shadow-card);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+/* ── Light mode: hairline dividers ──────────────────────────────── */
+.light .v2-hairline {
+  border-color: hsl(var(--v2-border) / 0.80);
+}
+
+/* ── Light mode: focus ring — offset gap for accessibility ────────
+   2px white gap before the ring = clearly perceivable on any surface
+   ────────────────────────────────────────────────────────────────── */
+.light .v2-focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px hsl(var(--v2-bg)),
+              0 0 0 4px hsl(var(--v2-brand) / 0.55);
 }
 
 body {
