@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
+import { SensitiveText } from "@/components/app/sensitive-amount";
 import { PremiumCard } from "@/components/ui-v2/premium-card";
 import { cn } from "@/lib/utils";
 
@@ -67,9 +68,17 @@ export function InsightFeedCard({
           </div>
           <span className={cn("rounded-full border px-2.5 py-1 text-xs font-medium", styles.label)}>{priority}</span>
         </div>
-        <h3 className="text-balance text-lg font-semibold leading-tight text-white">{title}</h3>
-        <p className="mt-3 text-sm leading-6 text-zinc-400">{message}</p>
-        {detail && <p className="mt-4 text-xs leading-5 text-zinc-500">{detail}</p>}
+        <h3 className="text-balance text-lg font-semibold leading-tight text-white">
+          <SensitiveText text={title} />
+        </h3>
+        <p className="mt-3 text-sm leading-6 text-zinc-400">
+          <SensitiveText text={message} />
+        </p>
+        {detail && (
+          <p className="mt-4 text-xs leading-5 text-zinc-500">
+            <SensitiveText text={detail} />
+          </p>
+        )}
         {action && <div className="mt-5">{action}</div>}
       </PremiumCard>
     </motion.article>

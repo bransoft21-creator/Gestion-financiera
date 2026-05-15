@@ -35,6 +35,7 @@ import {
 import { formatArgentinaDateInput } from "@/lib/dates";
 import { onMoneyKeyDown } from "@/lib/input-utils";
 import { moneySchema } from "@/lib/money";
+import { SensitiveAmount } from "@/components/app/sensitive-amount";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -606,7 +607,9 @@ function RecurringBriefing({ summary, isLoading, onCreate }: { summary: Recurrin
               </div>
               <div className="rounded-[2rem] border border-white/10 bg-white/[0.055] p-4 text-right">
                 <p className="text-[11px] font-semibold uppercase text-zinc-500">Activo mensual</p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums text-white">{formatMoney(summary.activeMonthly, "ARS")}</p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-white">
+                  <SensitiveAmount value={formatMoney(summary.activeMonthly, "ARS")} />
+                </p>
                 <ActionButton type="button" variant="glass" size="sm" className="mt-3" onClick={onCreate}>
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   Nuevo
@@ -668,7 +671,9 @@ function DeleteRecurringDialog({ item, isDeleting, onCancel, onConfirm }: { item
               <PremiumCardContent>
                 <div className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
                   <p className="text-sm text-zinc-400">Monto recurrente</p>
-                  <p className="mt-2 text-xl font-semibold tabular-nums text-white">{formatMoney(item.amount, item.currency)}</p>
+                  <p className="mt-2 text-xl font-semibold tabular-nums text-white">
+                    <SensitiveAmount value={formatMoney(item.amount, item.currency)} />
+                  </p>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-2">
                   <ActionButton type="button" variant="glass" onClick={onCancel} disabled={isDeleting}>Cancelar</ActionButton>
@@ -766,7 +771,7 @@ function RecurringRow({
       </div>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-lg font-semibold tabular-nums text-rose-100">
-          -{formatMoney(item.amount, item.currency)}
+          <SensitiveAmount value={`-${formatMoney(item.amount, item.currency)}`} />
         </p>
         <div className="flex flex-wrap gap-2 sm:justify-end">
         <ActionButton

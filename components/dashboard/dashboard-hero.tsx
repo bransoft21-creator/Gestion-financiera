@@ -31,7 +31,7 @@ function FormulaPill({
         className="max-w-[8rem] truncate text-[13px] font-semibold tabular-nums"
         style={{ color }}
       >
-        {formatMoney(value)}
+        <SensitiveAmount value={formatMoney(value)} />
       </span>
     </Link>
   );

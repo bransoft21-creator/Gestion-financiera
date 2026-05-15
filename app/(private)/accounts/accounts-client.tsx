@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { z } from "zod";
 import { EmptyState } from "@/components/app/empty-state";
+import { SensitiveAmount } from "@/components/app/sensitive-amount";
 import { ActionButton } from "@/components/ui-v2/action-button";
 import {
   PremiumCard,
@@ -493,7 +494,7 @@ function AccountRow({
             <span className="text-xs text-zinc-500">{account.currency}</span>
             {account.creditLimit && (
               <span className="text-xs text-muted-foreground">
-                Límite: {formatMoney(account.creditLimit, account.currency)}
+                Límite: <SensitiveAmount value={formatMoney(account.creditLimit, account.currency)} />
               </span>
             )}
           </div>
@@ -502,7 +503,7 @@ function AccountRow({
       <div className="flex items-center gap-4">
         <div className="text-right">
           <p className={`text-sm font-bold ${account.currentBalance < 0 ? "text-rose-400" : "text-emerald-400"}`}>
-            {formatMoney(account.currentBalance, account.currency)}
+            <SensitiveAmount value={formatMoney(account.currentBalance, account.currency)} />
           </p>
           <p className="text-xs text-muted-foreground">saldo actual</p>
         </div>
@@ -546,7 +547,7 @@ function SummaryCard({
     <div className={`rounded-3xl border border-white/[0.08] p-4 ${highlight ? "bg-white/[0.055]" : "bg-white/[0.035]"}`}>
       <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{label}</p>
       <p className={`mt-2 text-xl font-bold tabular-nums ${highlight ? "text-foreground" : toneClass}`}>
-        {value}
+        <SensitiveAmount value={value} />
       </p>
     </div>
   );

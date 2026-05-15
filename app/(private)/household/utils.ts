@@ -1,7 +1,6 @@
 import type { HouseholdBriefing, HouseholdBriefingStatus, RecurringPaymentsSummary } from "./types";
 
-export function formatMoney(value: number, currency: "ARS" | "USD", hidden = false) {
-  if (hidden) return "$••••";
+export function formatMoney(value: number, currency: "ARS" | "USD") {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency,

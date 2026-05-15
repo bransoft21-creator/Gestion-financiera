@@ -4,6 +4,8 @@ import { CheckCircle2, Circle, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SensitiveAmount } from "@/components/app/sensitive-amount";
+import { useHideAmounts } from "@/hooks/use-hide-amounts";
 import { formatMoney, formatDate, getPaymentRowClass, getPaymentIconClass } from "@/app/(private)/household/utils";
 import type { Household, RecurringPayment, UserAccount, PayForm } from "@/app/(private)/household/types";
 
@@ -15,7 +17,6 @@ type PaymentRowProps = {
   setPayForm: React.Dispatch<React.SetStateAction<PayForm>>;
   members: Household["members"];
   userAccounts: UserAccount[];
-  hideAmounts: boolean;
   onPay: () => void;
   onConfirmPay: () => void;
   onCancel: () => void;
@@ -29,11 +30,12 @@ export function PaymentRow({
   setPayForm,
   members,
   userAccounts,
-  hideAmounts,
   onPay,
   onConfirmPay,
   onCancel,
 }: PaymentRowProps) {
+  const hideAmounts = useHideAmounts();
+
   return (
     <div>
       <div
@@ -61,7 +63,7 @@ export function PaymentRow({
           </p>
         </div>
         <p className="shrink-0 text-sm font-bold text-foreground">
-          {formatMoney(payment.occurrence?.finalAmount ?? payment.estimatedAmount, payment.currency, hideAmounts)}
+          <SensitiveAmount value={formatMoney(payment.occurrence?.finalAmount ?? payment.estimatedAmount, payment.currency)} />
         </p>
         {payment.status !== "PAID" ? (
           <Button size="sm" variant="ghost" className="shrink-0 text-xs" onClick={onPay}>
@@ -111,7 +113,7 @@ export function PaymentRow({
               type="number"
               value={payForm.finalAmount}
               onChange={(e) => setPayForm((p) => ({ ...p, finalAmount: e.target.value }))}
-              placeholder={String(payment.estimatedAmount)}
+              placeholder={hideAmounts ? "Monto estimado" : String(payment.estimatedAmount)}
             />
           </div>
           <div className="flex gap-2">

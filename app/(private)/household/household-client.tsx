@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PaymentRow } from "@/components/household/payment-row";
+import { SensitiveAmount, SensitiveText } from "@/components/app/sensitive-amount";
 import {
   formatMoney,
   formatDate,
@@ -222,7 +223,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
 
   async function openPayDialog(payment: RecurringPayment) {
     setPayingOccurrenceId(payment.id);
-    setPayForm({ paidByUserId: "", accountId: userAccounts[0]?.id ?? "", finalAmount: String(payment.estimatedAmount) });
+    setPayForm({ paidByUserId: "", accountId: userAccounts[0]?.id ?? "", finalAmount: hideAmounts ? "" : String(payment.estimatedAmount) });
     if (userAccounts.length === 0) await loadUserAccounts();
   }
 
@@ -451,7 +452,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                   {tab === "overview" && <WalletCards className="h-3.5 w-3.5" />}
                   {tab === "payments" && <CheckCircle2 className="h-3.5 w-3.5" />}
                   {tab === "team" && <Users className="h-3.5 w-3.5" />}
-                  <span>{tab === "overview" ? "Inicio" : tab === "payments" ? "Pagos" : "Equipo"}</span>
+                  <span>{tab === "overview" ? "Resumen" : tab === "payments" ? "Pagos" : "Equipo"}</span>
                 </button>
               ))}
             </div>
@@ -470,7 +471,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-foreground">
                         {briefing
-                          ? getBriefingSummary(briefing, hideAmounts)
+                          ? <SensitiveText text={getBriefingSummary(briefing, hideAmounts)} />
                           : isLoadingBriefing
                           ? "Leyendo el mes…"
                           : "Todavía no hay movimientos compartidos este mes."}
@@ -489,9 +490,9 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <CardTitle className="text-base">Balance</CardTitle>
+                        <CardTitle className="text-base">Cómo está repartido</CardTitle>
                         {balance?.lastSettledAt ? (
-                          <CardDescription>Desde {formatDate(balance.lastSettledAt)}</CardDescription>
+                          <CardDescription>Desde el último equilibrio, {formatDate(balance.lastSettledAt)}</CardDescription>
                         ) : null}
                       </div>
                       {/* Overdue payments alert chip */}
@@ -521,12 +522,12 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                     {balance?.settlement ? (
                       <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4">
                         <p className="text-sm font-semibold text-amber-100">
-                          {hideAmounts
-                            ? `${balance.settlement.fromName} tiene un saldo pendiente.`
-                            : `${balance.settlement.fromName} le debe ${formatMoney(balance.settlement.amount, "ARS")} a ${balance.settlement.toName}.`}
+                          {balance.settlement.fromName} le debe{" "}
+                          <SensitiveAmount value={formatMoney(balance.settlement.amount, "ARS")} />{" "}
+                          a {balance.settlement.toName}.
                         </p>
                         <p className="mt-1 text-xs leading-5 text-amber-100/70">
-                          Cuando lo resuelvan, marcá el hogar como equilibrado.
+                          Cuando lo compensen fuera de Meridian, dejá constancia para empezar de nuevo.
                         </p>
                         <Button
                           className="mt-3 w-full border-amber-300/20 bg-amber-300/15 text-amber-50 hover:bg-amber-300/25"
@@ -547,9 +548,9 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                           <div key={member.userId} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
                             <p className="truncate text-sm font-semibold text-foreground">{member.name}</p>
                             <p className={`mt-1.5 text-base font-bold ${member.balance >= 0 ? "text-emerald-200" : "text-amber-200"}`}>
-                              {formatMoney(Math.abs(member.balance), "ARS", hideAmounts)}
+                              <SensitiveAmount value={formatMoney(Math.abs(member.balance), "ARS")} />
                             </p>
-                            <p className="text-xs text-muted-foreground">{member.balance >= 0 ? "cubrió de más" : "por compensar"}</p>
+                            <p className="text-xs text-muted-foreground">{member.balance >= 0 ? "aportó más al hogar" : "queda por compensar"}</p>
                           </div>
                         ))}
                       </div>
@@ -576,14 +577,16 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                     {/* Recent shared transactions */}
                     {balance && balance.recentSharedTransactions.length > 0 ? (
                       <div className="space-y-1.5">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recientes</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Últimos gastos compartidos</p>
                         {balance.recentSharedTransactions.slice(0, 3).map((tx) => (
                           <div key={tx.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
                             <div className="min-w-0">
                               <p className="truncate text-sm font-semibold text-foreground">{tx.description ?? "Gasto compartido"}</p>
                               <p className="truncate text-xs text-muted-foreground">Pagó {tx.paidByName}</p>
                             </div>
-                            <p className="shrink-0 text-sm font-bold text-foreground">{formatMoney(tx.amount, tx.currency, hideAmounts)}</p>
+                            <p className="shrink-0 text-sm font-bold text-foreground">
+                              <SensitiveAmount value={formatMoney(tx.amount, tx.currency)} />
+                            </p>
                           </div>
                         ))}
                         <Button asChild variant="ghost" size="sm" className="w-full text-muted-foreground">
@@ -619,14 +622,18 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                                     {s.settledBy.fullName ?? s.settledBy.email} · {formatDate(s.createdAt)}
                                   </p>
                                 </div>
-                                <p className="shrink-0 text-xs font-bold text-emerald-200">{formatMoney(Number(s.amount), "ARS", hideAmounts)}</p>
+                                <p className="shrink-0 text-xs font-bold text-emerald-200">
+                                  <SensitiveAmount value={formatMoney(Number(s.amount), "ARS")} />
+                                </p>
                               </div>
                             ))}
                           </div>
                         ) : (
                           <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300/10 bg-emerald-300/5 p-2.5">
                             <p className="text-xs text-emerald-100/70">Último: {formatDate(settlements[0].createdAt)}</p>
-                            <p className="text-xs font-bold text-emerald-200">{formatMoney(Number(settlements[0].amount), "ARS", hideAmounts)}</p>
+                            <p className="text-xs font-bold text-emerald-200">
+                              <SensitiveAmount value={formatMoney(Number(settlements[0].amount), "ARS")} />
+                            </p>
                           </div>
                         )}
                       </div>
@@ -639,7 +646,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                   settlements.length > 0 ||
                   briefing?.status === "HIGH_SPEND") ? (
                   <div className="space-y-2.5 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground capitalize">{currentMonthLabel}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground capitalize">Historia del mes · {currentMonthLabel}</p>
                     <div className="space-y-2">
                       {settlements[0] ? (
                         <div className="flex items-start gap-2.5 text-xs text-emerald-200/80">
@@ -682,21 +689,21 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <CardTitle>Pagos del mes</CardTitle>
+                  <CardTitle>Compromisos del hogar</CardTitle>
                       <CardDescription className="capitalize">
-                        {currentMonthLabel} · fijos, variables y compras compartidas
+                        {currentMonthLabel} · fijos, servicios y compras compartidas
                       </CardDescription>
                     </div>
                     <div className="flex shrink-0 gap-2">
                       <Button asChild variant="outline" size="sm">
                         <Link href="/transactions?new=1">
                           <Plus className="h-4 w-4" />
-                          Gasto
+                          Gasto puntual
                         </Link>
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => setIsAddingRecurring((prev) => !prev)}>
                         <Plus className="h-4 w-4" />
-                        {isAddingRecurring ? "Cancelar" : "Pago"}
+                        {isAddingRecurring ? "Cancelar" : "Pago fijo"}
                       </Button>
                     </div>
                   </div>
@@ -705,7 +712,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                   <div className="rounded-2xl border border-teal-300/15 bg-teal-300/10 p-3">
                     <p className="text-sm font-semibold text-teal-50">Los pagos del hogar no tienen que ser todos fijos.</p>
                     <p className="mt-1 text-xs leading-5 text-teal-100/70">
-                      Usá “Gasto” para supermercado, farmacia o compras puntuales. Usá “Pago” para alquiler, servicios o compromisos que querés seguir mes a mes.
+                      Usá “Gasto puntual” para supermercado, farmacia o compras sueltas. Usá “Pago fijo” para alquiler, servicios o compromisos que vuelven cada mes.
                     </p>
                   </div>
                   {/* Add form */}
@@ -760,7 +767,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                         onClick={() => void createRecurringPayment()}
                       >
                         {isCreatingRecurring ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                        Agregar pago del hogar
+                        Guardar pago fijo
                       </Button>
                     </div>
                   ) : null}
@@ -768,7 +775,9 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                   {/* Summary banner */}
                   {recurringPayments && recurringPayments.totalCount > 0 ? (
                     <div className={`rounded-2xl border p-3 ${getRecurringPanelClass(recurringPayments)}`}>
-                      <p className="text-sm font-semibold text-foreground">{recurringPayments.summary}</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        <SensitiveText text={recurringPayments.summary} />
+                      </p>
                     </div>
                   ) : null}
 
@@ -802,7 +811,6 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                                 setPayForm={setPayForm}
                                 members={selectedHousehold.members}
                                 userAccounts={userAccounts}
-                                hideAmounts={hideAmounts}
                                 onPay={() => void openPayDialog(payment)}
                                 onConfirmPay={() => void confirmMarkAsPaid(payment.id)}
                                 onCancel={closePayDialog}
@@ -849,7 +857,6 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                                     setPayForm={setPayForm}
                                     members={selectedHousehold.members}
                                     userAccounts={userAccounts}
-                                    hideAmounts={hideAmounts}
                                     onPay={() => void openPayDialog(payment)}
                                     onConfirmPay={() => void confirmMarkAsPaid(payment.id)}
                                     onCancel={closePayDialog}
@@ -863,15 +870,15 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                   ) : (
                     <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5 text-center">
                       <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/[0.06] text-lg">📋</div>
-                      <p className="text-sm font-semibold text-foreground">Sin pagos del hogar aún</p>
+                      <p className="text-sm font-semibold text-foreground">Todavía no hay compromisos del hogar</p>
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        Registrá pagos mensuales acá o cargá gastos variables desde Movimientos.
+                        Agregá los pagos que vuelven todos los meses o cargá un gasto puntual cuando alguien pague algo compartido.
                       </p>
                       <div className="mt-4 grid gap-2 sm:grid-cols-2">
                         <Button asChild variant="outline" size="sm" className="w-full">
                           <Link href="/transactions?new=1">
                             <Plus className="h-4 w-4" />
-                            Agregar gasto
+                            Gasto puntual
                           </Link>
                         </Button>
                         <Button
@@ -881,7 +888,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                           onClick={() => setIsAddingRecurring(true)}
                         >
                           <Plus className="h-4 w-4" />
-                          Agregar pago
+                          Pago fijo
                         </Button>
                       </div>
                     </div>
@@ -974,4 +981,3 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
     </div>
   );
 }
-

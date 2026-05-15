@@ -1,6 +1,7 @@
 "use client";
 
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { SensitiveAmount } from "@/components/app/sensitive-amount";
 
 export type ExpenseCategoryChartItem = {
   id: string;
@@ -49,26 +50,37 @@ export function ExpenseCategoryChart({ data, activeCategoryId, onSelectCategory 
               />
             ))}
           </Pie>
-          <Tooltip
-            formatter={(value, name) => [formatMoney(Number(value)), String(name)]}
-            contentStyle={{
-              background: "hsl(var(--v2-surface-raised))",
-              border: "1px solid hsl(var(--v2-border-strong))",
-              borderRadius: 16,
-              color: "hsl(var(--v2-text))",
-              boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
-            }}
-          />
+          <Tooltip content={<ExpenseCategoryTooltip />} />
         </PieChart>
       </ResponsiveContainer>
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div className="flex h-[104px] w-[104px] flex-col items-center justify-center rounded-full border border-white/10 bg-zinc-950/88 text-center shadow-[0_18px_55px_rgba(0,0,0,0.35)] backdrop-blur">
           <span className={`${activeItem ? "text-2xl" : "max-w-[86px] truncate text-sm"} font-semibold tabular-nums text-white`}>
-            {activeItem ? `${activePercent}%` : formatMoney(total)}
+            {activeItem ? `${activePercent}%` : <SensitiveAmount value={formatMoney(total)} />}
           </span>
           <span className="mt-0.5 max-w-[76px] truncate text-[10px] font-medium text-zinc-500">{activeItem?.name ?? "Total"}</span>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ExpenseCategoryTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ name?: string; value?: number | string }>;
+}) {
+  const item = payload?.[0];
+  if (!active || !item) return null;
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-zinc-950/95 px-3 py-2 text-xs text-white shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+      <p className="font-medium text-zinc-300">{String(item.name ?? "Categoría")}</p>
+      <p className="mt-1 font-semibold tabular-nums">
+        <SensitiveAmount value={formatMoney(Number(item.value ?? 0))} />
+      </p>
     </div>
   );
 }

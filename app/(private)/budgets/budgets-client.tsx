@@ -29,6 +29,7 @@ import {
 } from "@/components/ui-v2/premium-card";
 import { onMoneyKeyDown } from "@/lib/input-utils";
 import { moneySchema } from "@/lib/money";
+import { SensitiveAmount } from "@/components/app/sensitive-amount";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -508,9 +509,9 @@ function PlanBriefing({
               </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <PlanMetric icon={Target} label="Planificado" value={formatMoney(summary.totalPlanned, "ARS")} />
-                <PlanMetric icon={WalletCards} label="Gastado" value={formatMoney(summary.totalSpent, "ARS")} />
-                <PlanMetric icon={CheckCircle2} label="A salvo" value={formatMoney(summary.totalReserved, "ARS")} />
+                <PlanMetric icon={Target} label="Intención" value={formatMoney(summary.totalPlanned, "ARS")} />
+                <PlanMetric icon={WalletCards} label="Ritmo actual" value={formatMoney(summary.totalSpent, "ARS")} />
+                <PlanMetric icon={CheckCircle2} label="Margen cuidado" value={formatMoney(summary.totalReserved, "ARS")} />
               </div>
             </>
           )}
@@ -533,7 +534,9 @@ function PlanMetric({
     <div className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
       <Icon className="h-4 w-4 text-zinc-400" aria-hidden />
       <p className="mt-3 text-[11px] font-medium uppercase text-zinc-500">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-white">{value}</p>
+      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-white">
+        <SensitiveAmount value={value} />
+      </p>
     </div>
   );
 }
@@ -598,12 +601,12 @@ function BudgetCard({
             <div className="min-w-0">
               <p className="truncate text-base font-semibold text-white">{budget.category.name}</p>
               <p className="mt-1 text-sm leading-5 text-zinc-400">
-                {formatMoney(budget.spentAmount, budget.currency)} gastado de{" "}
-                {formatMoney(budget.plannedAmount, budget.currency)}
+                <SensitiveAmount value={formatMoney(budget.spentAmount, budget.currency)} /> usados de{" "}
+                <SensitiveAmount value={formatMoney(budget.plannedAmount, budget.currency)} />
               </p>
               {exceededAmount > 0 ? (
                 <p className="mt-2 inline-flex rounded-full border border-rose-300/20 bg-rose-400/10 px-2.5 py-1 text-xs font-semibold text-rose-100">
-                  Excedido por {formatMoney(exceededAmount, budget.currency)}
+                  El gasto superó el plan por <SensitiveAmount value={formatMoney(exceededAmount, budget.currency)} />
                 </p>
               ) : null}
             </div>
@@ -611,7 +614,7 @@ function BudgetCard({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Badge className="border-white/10 bg-white/[0.06] text-zinc-200">{usage.toFixed(0)}% usado</Badge>
+          <Badge className="border-white/10 bg-white/[0.06] text-zinc-200">{usage.toFixed(0)}% del plan</Badge>
           <Badge className={alert.className}>{alert.label}</Badge>
         </div>
       </div>
@@ -625,12 +628,12 @@ function BudgetCard({
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <BudgetMetric label="Plan" value={formatMoney(budget.plannedAmount, budget.currency)} />
-        <BudgetMetric label="Gastado" value={formatMoney(budget.spentAmount, budget.currency)} />
+        <BudgetMetric label="Actual" value={formatMoney(budget.spentAmount, budget.currency)} />
         <BudgetMetric
-          label={exceededAmount > 0 ? "Excedido" : "Reservado"}
+          label={exceededAmount > 0 ? "Diferencia" : "Cuidado"}
           value={formatMoney(exceededAmount > 0 ? exceededAmount : remaining, budget.currency)}
         />
-        <BudgetMetric label="Uso" value={`${usage.toFixed(0)}%`} />
+        <BudgetMetric label="Ritmo" value={`${usage.toFixed(0)}%`} sensitive={false} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 sm:flex">
@@ -657,11 +660,13 @@ function BudgetCard({
   );
 }
 
-function BudgetMetric({ label, value }: { label: string; value: string }) {
+function BudgetMetric({ label, value, sensitive = true }: { label: string; value: string; sensitive?: boolean }) {
   return (
     <div className="min-w-0 rounded-2xl border border-white/[0.08] bg-black/15 p-3">
       <p className="text-[10px] font-medium uppercase text-zinc-500">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-white">{value}</p>
+      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-white">
+        {sensitive ? <SensitiveAmount value={value} /> : value}
+      </p>
     </div>
   );
 }
@@ -754,7 +759,7 @@ function DeleteBudgetDialog({
                     Plan actual
                   </div>
                   <p className="mt-2 text-xl font-semibold tabular-nums text-white">
-                    {formatMoney(budget.plannedAmount, budget.currency)}
+                    <SensitiveAmount value={formatMoney(budget.plannedAmount, budget.currency)} />
                   </p>
                 </div>
                 <div className="mt-5 grid grid-cols-2 gap-2">
@@ -801,24 +806,24 @@ function getPlanState(summary: PlanSummary, budgetCount: number) {
 
   if (summary.overLimitCount > 0 || summary.globalPct >= 100) {
     return {
-      title: "Hay categorías que ya pidieron atención.",
+      title: "Este mes el gasto superó lo planificado.",
       description: `${summary.overLimitCount} ${
-        summary.overLimitCount === 1 ? "categoría está" : "categorías están"
-      } por encima del plan. Conviene ajustar intención o ritmo hoy.`,
+        summary.overLimitCount === 1 ? "categoría quedó" : "categorías quedaron"
+      } por encima de la intención. Conviene mirar el ritmo antes de cerrar el mes.`,
       progressClass: "bg-gradient-to-r from-rose-400 via-orange-300 to-rose-300",
     };
   }
 
   if (summary.watchCount > 0 || summary.globalPct >= 80) {
     return {
-      title: "Tu plan sigue vivo, pero está cerca del borde.",
+      title: "El ritmo pide una mirada tranquila.",
       description: "Algunas categorías avanzan más rápido que el mes. Un ajuste chico ahora evita una corrección grande después.",
       progressClass: "bg-gradient-to-r from-amber-300 via-orange-300 to-rose-300",
     };
   }
 
   return {
-    title: "Tu plan viene en buen ritmo.",
+    title: "El ritmo de gasto sigue estable.",
     description: "El gasto todavía respeta la intención del mes. Lo importante está reservado y el margen sigue claro.",
     progressClass: "bg-gradient-to-r from-teal-300 via-emerald-300 to-lime-200",
   };

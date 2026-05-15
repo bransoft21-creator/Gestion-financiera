@@ -8,6 +8,7 @@ import {
   PremiumCardHeader,
   PremiumCardTitle,
 } from "@/components/ui-v2/premium-card";
+import { SensitiveAmount, SensitiveText } from "@/components/app/sensitive-amount";
 import { formatMoney, buildNarrative } from "@/app/(private)/dashboard/utils";
 import type { DashboardSummary } from "@/app/(private)/dashboard/types";
 
@@ -35,7 +36,9 @@ export function MonthProjection({ metrics }: { metrics: DashboardSummary["metric
       </PremiumCardHeader>
       <PremiumCardContent className="space-y-4">
         {narrative && (
-          <p className="text-sm leading-relaxed text-muted-foreground">{narrative}</p>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            <SensitiveText text={narrative} />
+          </p>
         )}
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
@@ -47,7 +50,7 @@ export function MonthProjection({ metrics }: { metrics: DashboardSummary["metric
                 projection.projectedExpenses > metrics.income ? "text-rose-400" : "text-foreground"
               }`}
             >
-              {formatMoney(projection.projectedExpenses)}
+              <SensitiveAmount value={formatMoney(projection.projectedExpenses)} />
             </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
@@ -59,7 +62,7 @@ export function MonthProjection({ metrics }: { metrics: DashboardSummary["metric
                 projection.projectedBalance >= 0 ? "text-emerald-400" : "text-rose-400"
               }`}
             >
-              {formatMoney(projection.projectedBalance)}
+              <SensitiveAmount value={formatMoney(projection.projectedBalance)} />
             </p>
           </div>
         </div>
@@ -67,7 +70,9 @@ export function MonthProjection({ metrics }: { metrics: DashboardSummary["metric
           Quedan{" "}
           <span className="font-semibold text-foreground">{projection.daysRemaining}</span>{" "}
           día{projection.daysRemaining !== 1 ? "s" : ""} del mes · Ritmo actual:{" "}
-          <span className="font-semibold text-foreground">{formatMoney(dailyRate)}</span>/día
+          <span className="font-semibold text-foreground">
+            <SensitiveAmount value={formatMoney(dailyRate)} />
+          </span>/día
         </p>
       </PremiumCardContent>
     </PremiumCard>

@@ -18,6 +18,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SensitiveText } from "@/components/app/sensitive-amount";
 import { cn } from "@/lib/utils";
 
 type DashboardSummary = {
@@ -480,7 +481,9 @@ function NotificationCard({
               </button>
             ) : null}
           </div>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.body}</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            <SensitiveText text={item.body} />
+          </p>
         </div>
       </div>
     </div>

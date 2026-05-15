@@ -8,6 +8,7 @@ import {
   PremiumCardHeader,
   PremiumCardTitle,
 } from "@/components/ui-v2/premium-card";
+import { SensitiveAmount } from "@/components/app/sensitive-amount";
 import { formatMoney } from "@/app/(private)/dashboard/utils";
 import type { DashboardSummary } from "@/app/(private)/dashboard/types";
 
@@ -79,7 +80,9 @@ export function ExpenseTypeBreakdown({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">{row.label}</span>
-                  <span className="font-semibold tabular-nums">{formatMoney(value)}</span>
+                  <span className="font-semibold tabular-nums">
+                    <SensitiveAmount value={formatMoney(value)} />
+                  </span>
                 </div>
                 <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary">
                   <div

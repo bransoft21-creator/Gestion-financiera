@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SensitiveAmount, SensitiveText } from "@/components/app/sensitive-amount";
 import { captureClientError, trackProductEvent } from "@/lib/observability/client";
 
 type AiFinancialAnalysis = {
@@ -488,8 +489,12 @@ function CollapsedCopilotPreview({
                 <primaryInsight.icon className="h-4 w-4" aria-hidden="true" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-zinc-100">{primaryInsight.title}</p>
-                <p className="truncate text-xs text-zinc-500">{primaryInsight.message}</p>
+                <p className="truncate text-sm font-semibold text-zinc-100">
+                  <SensitiveText text={primaryInsight.title} />
+                </p>
+                <p className="truncate text-xs text-zinc-500">
+                  <SensitiveText text={primaryInsight.message} />
+                </p>
               </div>
             </div>
           )}
@@ -581,7 +586,7 @@ function FinancialCopilotHero({
             {hero.title}
           </h2>
           <p className="mt-4 max-w-xl text-base leading-7 text-zinc-300 sm:text-lg">
-            {hero.subtitle}
+            <SensitiveText text={hero.subtitle} />
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
             <SignalPill icon={trendIsPositive ? ArrowUpRight : ArrowDownRight} label={hero.trend} tone={trendIsPositive ? "emerald" : "amber"} />
@@ -640,9 +645,15 @@ function InsightCard({ insight, featured }: { insight: NarrativeInsight; feature
         </div>
         <Badge className={`${styles.badge} shrink-0`}>{insight.priority}</Badge>
       </div>
-      <h3 className={`text-balance text-xl font-semibold leading-tight ${styles.text}`}>{insight.title}</h3>
-      <p className="mt-3 text-sm leading-6 text-zinc-300">{insight.message}</p>
-      <p className="mt-4 text-xs leading-5 text-zinc-500">{insight.detail}</p>
+      <h3 className={`text-balance text-xl font-semibold leading-tight ${styles.text}`}>
+        <SensitiveText text={insight.title} />
+      </h3>
+      <p className="mt-3 text-sm leading-6 text-zinc-300">
+        <SensitiveText text={insight.message} />
+      </p>
+      <p className="mt-4 text-xs leading-5 text-zinc-500">
+        <SensitiveText text={insight.detail} />
+      </p>
     </motion.article>
   );
 }
@@ -662,7 +673,9 @@ function InvisibleExpenses({
         <SectionHeader eyebrow="Revelador" title="Gastos invisibles" icon={Eye} />
         {items.length > 0 && (
           <div className="shrink-0 text-right">
-            <p className="text-lg font-semibold tabular-nums text-white">{formatMoney(total)}</p>
+            <p className="text-lg font-semibold tabular-nums text-white">
+              <SensitiveAmount value={formatMoney(total)} />
+            </p>
             <p className="text-[11px] text-zinc-500">{formatPercent(percentage(total, income))} del ingreso</p>
           </div>
         )}
@@ -702,9 +715,13 @@ function InvisibleExpenseRow({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-white">{item.description || "Movimiento repetido"}</p>
-          <p className="mt-1 truncate text-xs text-zinc-500">{item.count} veces · promedio {formatMoney(item.averageAmount)}</p>
+          <p className="mt-1 truncate text-xs text-zinc-500">
+            {item.count} veces · promedio <SensitiveAmount value={formatMoney(item.averageAmount)} />
+          </p>
         </div>
-        <p className="shrink-0 text-sm font-semibold tabular-nums text-zinc-100">{formatMoney(item.total)}</p>
+        <p className="shrink-0 text-sm font-semibold tabular-nums text-zinc-100">
+          <SensitiveAmount value={formatMoney(item.total)} />
+        </p>
       </div>
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/8">
         <motion.div
@@ -730,7 +747,7 @@ function MonthPrediction({ metrics }: { metrics: AiFinancialAnalysisMetrics }) {
       <div className={`rounded-[24px] border p-5 ${styles.card}`}>
         <SectionHeader eyebrow="Predicción" title="Si seguís así..." icon={Zap} />
         <p className="mt-5 text-3xl font-semibold leading-tight text-white tabular-nums">
-          {formatMoney(metrics.projectedMonthEndExpense)}
+          <SensitiveAmount value={formatMoney(metrics.projectedMonthEndExpense)} />
         </p>
         <p className="mt-2 text-sm leading-6 text-zinc-400">sería tu gasto estimado al cierre del mes.</p>
         <div className="mt-5 grid grid-cols-2 gap-2">
@@ -805,7 +822,8 @@ function MonthComparison({ comparison }: { comparison: AiFinancialAnalysisCompar
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           {categoryStories.map((story) => (
             <p key={story.id} className="rounded-2xl border border-white/8 bg-zinc-950/35 px-3 py-2.5 text-sm leading-6 text-zinc-300">
-              <span className={story.good ? "text-emerald-200" : "text-amber-100"}>{story.title}</span> {story.message}
+              <span className={story.good ? "text-emerald-200" : "text-amber-100"}>{story.title}</span>{" "}
+              <SensitiveText text={story.message} />
             </p>
           ))}
         </div>
@@ -836,9 +854,15 @@ function ActionPlan({
             <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-white/8 text-white">
               {index === 0 ? <Target className="h-5 w-5" aria-hidden="true" /> : index === 1 ? <ShieldCheck className="h-5 w-5" aria-hidden="true" /> : <Wallet className="h-5 w-5" aria-hidden="true" />}
             </div>
-            <h3 className="text-balance text-lg font-semibold leading-tight text-white">{item.title}</h3>
-            <p className="mt-3 text-sm leading-6 text-zinc-400">{item.message}</p>
-            <p className="mt-4 text-sm font-semibold text-teal-100">{item.estimatedImpact}</p>
+            <h3 className="text-balance text-lg font-semibold leading-tight text-white">
+              <SensitiveText text={item.title} />
+            </h3>
+            <p className="mt-3 text-sm leading-6 text-zinc-400">
+              <SensitiveText text={item.message} />
+            </p>
+            <p className="mt-4 text-sm font-semibold text-teal-100">
+              <SensitiveText text={item.estimatedImpact} />
+            </p>
           </motion.article>
         ))}
       </div>
@@ -947,7 +971,9 @@ function PredictionChip({ label, value, tone }: { label: string; value: string; 
   return (
     <div className={`min-w-0 rounded-2xl border p-3 ${styles.card}`}>
       <p className="truncate text-[11px] font-semibold uppercase text-zinc-500">{label}</p>
-      <p className={`mt-1 truncate text-sm font-semibold tabular-nums ${styles.text}`}>{value}</p>
+      <p className={`mt-1 truncate text-sm font-semibold tabular-nums ${styles.text}`}>
+        <SensitiveText text={value} />
+      </p>
     </div>
   );
 }
@@ -970,7 +996,7 @@ function ComparisonBlock({
         {isGood ? <TrendingDown className="h-4 w-4 shrink-0 text-emerald-200" aria-hidden="true" /> : <TrendingUp className="h-4 w-4 shrink-0 text-amber-100" aria-hidden="true" />}
       </div>
       <p className={isGood ? "truncate text-base font-semibold tabular-nums text-emerald-100" : "truncate text-base font-semibold tabular-nums text-amber-100"}>
-        {value}
+        <SensitiveText text={value} />
       </p>
       <p className="mt-1 truncate text-xs text-zinc-500">{detail}</p>
     </div>

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { ChevronLeft, ExternalLink, ReceiptText, Sparkles } from "lucide-react";
 import { EmptyState } from "@/components/app/empty-state";
+import { SensitiveAmount } from "@/components/app/sensitive-amount";
 import {
   PremiumCard,
   PremiumCardContent,
@@ -56,7 +57,7 @@ function ExpenseCategoryOption({
         </span>
         <span className="shrink-0 text-right">
           <span className="block text-sm font-semibold tabular-nums text-white">
-            {formatMoney(item.value)}
+            <SensitiveAmount value={formatMoney(item.value)} />
           </span>
           <span
             className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -121,7 +122,7 @@ function ExpenseCategoryDetailPanel({
           </p>
         </div>
         <p className="shrink-0 text-right text-base font-semibold tabular-nums text-white">
-          {formatMoney(category.total)}
+          <SensitiveAmount value={formatMoney(category.total)} />
         </p>
       </div>
 
@@ -142,7 +143,7 @@ function ExpenseCategoryDetailPanel({
             </span>
             <span className="flex shrink-0 items-center gap-2">
               <span className="text-xs font-semibold tabular-nums text-rose-300">
-                -{formatMoney(item.amount, item.currency as "ARS" | "USD")}
+                <SensitiveAmount value={`-${formatMoney(item.amount, item.currency as "ARS" | "USD")}`} />
               </span>
               <ExternalLink
                 className="h-3.5 w-3.5 text-zinc-600 transition group-hover:text-zinc-300"
@@ -195,7 +196,7 @@ export function ExpenseCategoryExplorer({
             <div className="rounded-2xl border border-white/10 bg-zinc-950/70 px-3 py-2 text-right">
               <p className="text-[10px] font-semibold uppercase text-zinc-500">Total leído</p>
               <p className="mt-0.5 text-sm font-semibold tabular-nums text-white">
-                {formatMoney(totalExpenses)}
+                <SensitiveAmount value={formatMoney(totalExpenses)} />
               </p>
             </div>
           </div>

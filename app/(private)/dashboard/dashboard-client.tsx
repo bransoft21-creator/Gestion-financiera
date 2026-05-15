@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import {
@@ -11,7 +11,7 @@ import {
   Plus,
   ReceiptText,
 } from "lucide-react";
-import { SensitiveAmount } from "@/components/app/sensitive-amount";
+import { SensitiveAmount, SensitiveText } from "@/components/app/sensitive-amount";
 import { useUser } from "@/components/app/user-context";
 import { EmptyState } from "@/components/app/empty-state";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,7 @@ function SectionCollapseButton({
   onToggle,
 }: {
   title: string;
-  summary?: string;
+  summary?: ReactNode;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -120,8 +120,8 @@ export function DashboardClient() {
   const firstName = userName?.split(" ")[0] ?? null;
   const [timeContext] = useState(() => getTimeContext(firstName));
   const shouldReduceMotion = useReducedMotion();
-  const sectionDistribucion = useSectionCollapse("distribucion", true);
-  const sectionMapa = useSectionCollapse("mapa", true);
+  const sectionDistribucion = useSectionCollapse("distribucion", false);
+  const sectionMapa = useSectionCollapse("mapa", false);
   const sectionMovimientos = useSectionCollapse("movimientos", true);
 
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
@@ -312,7 +312,9 @@ export function DashboardClient() {
       >
         <SectionCollapseButton
           title="Distribución"
-          summary={`${metrics.fixedToIncomeRatio}% en fijos · ${formatMoney(metrics.expenses)} gastados`}
+          summary={
+            <SensitiveText text={`${metrics.fixedToIncomeRatio}% en fijos · ${formatMoney(metrics.expenses)} gastados`} />
+          }
           expanded={sectionDistribucion.expanded}
           onToggle={() => {
             if (!sectionDistribucion.expanded) trackProductEvent("dashboard_section_expanded", { section: "distribucion" }, "dashboard");
