@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { AccountType, TransactionStatus, TransactionType } from "@prisma/client";
+import { AccountType, DebtStatus, DebtType, TransactionStatus, TransactionType } from "@prisma/client";
 import {
   computeAccountSummary,
   computeAvailableMoney,
@@ -8,6 +8,7 @@ import {
   computeDebtPaymentResult,
   computeFinancialHealth,
   computeMonthlyDebtPayment,
+  computeRealLiabilitySummary,
   getDebtPaymentAmountError,
   computeTransactionBalanceDeltas,
   computeTransactionLinkedEntityEffects,
@@ -42,6 +43,79 @@ describe("financial ledger", () => {
       liabilities: 25_000,
       netWorth: 95_000,
     });
+  });
+
+  it("computes real liabilities without paid/canceled debt or duplicated credit cards", () => {
+    const summary = computeRealLiabilitySummary(
+      [
+        {
+          type: AccountType.BANK,
+          currentBalance: 120_000,
+          isArchived: false,
+          deletedAt: null,
+        },
+        {
+          type: AccountType.CREDIT_CARD,
+          currentBalance: -25_000,
+          isArchived: false,
+          deletedAt: null,
+        },
+      ],
+      [
+        {
+          type: DebtType.CREDIT_CARD,
+          status: DebtStatus.ACTIVE,
+          outstandingAmount: 25_000,
+        },
+        {
+          type: DebtType.LOAN,
+          status: DebtStatus.ACTIVE,
+          outstandingAmount: 80_000,
+        },
+        {
+          type: DebtType.PERSONAL,
+          status: DebtStatus.PAID,
+          outstandingAmount: 12_000,
+        },
+        {
+          type: DebtType.OTHER,
+          status: DebtStatus.CANCELED,
+          outstandingAmount: 7_000,
+        },
+      ],
+    );
+
+    assert.deepEqual(summary, {
+      assets: 120_000,
+      accountLiabilities: 25_000,
+      debtLiabilities: 80_000,
+      duplicatedCreditCardDebt: 25_000,
+      liabilities: 105_000,
+      netWorth: 15_000,
+    });
+  });
+
+  it("keeps a negative paid-off card out of debt when both balances are zero", () => {
+    const summary = computeRealLiabilitySummary(
+      [
+        {
+          type: AccountType.CREDIT_CARD,
+          currentBalance: 0,
+          isArchived: false,
+          deletedAt: null,
+        },
+      ],
+      [
+        {
+          type: DebtType.CREDIT_CARD,
+          status: DebtStatus.PAID,
+          outstandingAmount: 0,
+        },
+      ],
+    );
+
+    assert.equal(summary.liabilities, 0);
+    assert.equal(summary.netWorth, 0);
   });
 
   it("moves transfer money out of origin and into destination", () => {

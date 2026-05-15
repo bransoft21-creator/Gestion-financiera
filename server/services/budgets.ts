@@ -15,7 +15,7 @@ const activeTransactionWhere = {
   status: { not: TransactionStatus.CANCELED },
 } satisfies Prisma.TransactionWhereInput;
 
-const SUGGESTION_HISTORY_MONTHS = 4;
+const SUGGESTION_HISTORY_MONTHS = 3;
 const MAX_SUGGESTIONS = 8;
 
 export async function listBudgets(userProfileId: string, input: BudgetPeriodInput) {
@@ -82,7 +82,11 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
   const { start: targetMonthStart } = argentinaMonthRangeUtc(period.year, period.month);
   const historyStart = addMonths(targetMonthStart, -SUGGESTION_HISTORY_MONTHS);
 
-  const [categories, existingBudgets, historicalTransactions, recurringExpenses] = await Promise.all([
+  const [household, categories, existingBudgets, historicalTransactions, recurringExpenses] = await Promise.all([
+    prisma.household.findFirst({
+      where: { id: input.householdId, deletedAt: null },
+      select: { kind: true },
+    }),
     prisma.category.findMany({
       where: {
         householdId: input.householdId,
@@ -113,6 +117,7 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
         type: true,
         amount: true,
         categoryId: true,
+        occurredAt: true,
       },
     }),
     prisma.recurringExpense.findMany({
@@ -132,19 +137,33 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
 
   const budgetedCategoryIds = new Set(existingBudgets.map((budget) => budget.categoryId));
   const availableCategories = categories.filter((category) => !budgetedCategoryIds.has(category.id));
-  const incomeTotal = historicalTransactions
-    .filter((transaction) => transaction.type === TransactionType.INCOME)
-    .reduce((sum, transaction) => sum + toFiniteNumber(transaction.amount), 0);
-  const recentMonthlyIncome = incomeTotal / SUGGESTION_HISTORY_MONTHS;
-  const spending = new Map<string, { total: number; count: number }>();
+  const incomeByMonth = new Map<string, number>();
+  const spending = new Map<string, { total: number; count: number; months: Map<string, number> }>();
 
   historicalTransactions.forEach((transaction) => {
+    const month = getHistoryMonthKey(transaction.occurredAt);
+    const amount = toFiniteNumber(transaction.amount);
+
+    if (transaction.type === TransactionType.INCOME) {
+      incomeByMonth.set(month, (incomeByMonth.get(month) ?? 0) + amount);
+      return;
+    }
+
     if (transaction.type !== TransactionType.EXPENSE || !transaction.categoryId) return;
-    const current = spending.get(transaction.categoryId) ?? { total: 0, count: 0 };
-    current.total += toFiniteNumber(transaction.amount);
+
+    const current = spending.get(transaction.categoryId) ?? {
+      total: 0,
+      count: 0,
+      months: new Map<string, number>(),
+    };
+    current.total += amount;
     current.count += 1;
+    current.months.set(month, (current.months.get(month) ?? 0) + amount);
     spending.set(transaction.categoryId, current);
   });
+
+  const incomeTotal = Array.from(incomeByMonth.values()).reduce((sum, amount) => sum + amount, 0);
+  const recentMonthlyIncome = incomeByMonth.size > 0 ? incomeTotal / incomeByMonth.size : 0;
 
   const recurringByCategory = recurringExpenses.reduce((totals, expense) => {
     if (!expense.categoryId) return totals;
@@ -155,14 +174,29 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
     return totals;
   }, new Map<string, number>());
 
-  const fallbackAmount = recentMonthlyIncome > 0 ? roundBudgetAmount(recentMonthlyIncome * 0.03) : 10000;
+  const isHouseholdPlan = household?.kind === "HOUSEHOLD";
   const suggestions = availableCategories
     .map((category) => {
       const historical = spending.get(category.id);
-      const recentAverage = historical ? historical.total / SUGGESTION_HISTORY_MONTHS : 0;
       const recurringAmount = recurringByCategory.get(category.id) ?? 0;
-      const baselineAmount = Math.max(recentAverage, recurringAmount);
-      const suggestedAmount = roundBudgetAmount(baselineAmount > 0 ? baselineAmount : fallbackAmount);
+      const activeMonths = historical?.months.size ?? 0;
+      const monthlyAmounts = historical ? Array.from(historical.months.values()) : [];
+      const recentAverage = historical ? historical.total / SUGGESTION_HISTORY_MONTHS : 0;
+      const activeAverage = activeMonths > 0 && historical ? historical.total / activeMonths : 0;
+      const medianAmount = getMedian(monthlyAmounts);
+      const variability = getVariability(monthlyAmounts, activeAverage);
+      const baselineAmount = getSuggestedBudgetAmount({
+        recurringAmount,
+        recentAverage,
+        activeAverage,
+        medianAmount,
+        activeMonths,
+        variability,
+      });
+
+      if (baselineAmount <= 0) return null;
+
+      const suggestedAmount = roundBudgetAmount(baselineAmount);
       const incomeSharePercent =
         recentMonthlyIncome > 0 ? Math.round((suggestedAmount / recentMonthlyIncome) * 100) : null;
 
@@ -173,11 +207,21 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
         suggestedAmount,
         recentAverage: Math.round(recentAverage),
         recurringAmount: Math.round(recurringAmount),
+        activeMonths,
+        transactionCount: historical?.count ?? 0,
+        variability: getVariabilityLabel(variability, activeMonths),
         incomeSharePercent,
-        confidence: getSuggestionConfidence(historical?.count ?? 0, recurringAmount),
-        reason: getSuggestionReason(historical?.count ?? 0, recurringAmount),
+        confidence: getSuggestionConfidence(historical?.count ?? 0, recurringAmount, activeMonths),
+        reason: getSuggestionReason({
+          transactionCount: historical?.count ?? 0,
+          recurringAmount,
+          activeMonths,
+          variability,
+          isHouseholdPlan,
+        }),
       };
     })
+    .filter((suggestion): suggestion is NonNullable<typeof suggestion> => suggestion !== null)
     .filter((suggestion) => suggestion.suggestedAmount > 0)
     .sort((a, b) => {
       const confidenceRank = confidenceScore(b.confidence) - confidenceScore(a.confidence);
@@ -207,6 +251,8 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
   return {
     period,
     recentMonthlyIncome: Math.round(recentMonthlyIncome),
+    historyMonths: SUGGESTION_HISTORY_MONTHS,
+    hasHistoricalActivity: spending.size > 0 || recurringByCategory.size > 0,
     suggestions: adjustedSuggestions,
   };
 }
@@ -359,6 +405,10 @@ function addMonths(date: Date, months: number) {
   return next;
 }
 
+function getHistoryMonthKey(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
 function monthlyRecurringAmount(expense: {
   amount: Prisma.Decimal | number;
   frequency: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
@@ -386,9 +436,55 @@ function roundBudgetAmount(value: number) {
   return Math.round(value / 5000) * 5000;
 }
 
-function getSuggestionConfidence(transactionCount: number, recurringAmount: number) {
-  if (recurringAmount > 0 || transactionCount >= 4) return "high" as const;
-  if (transactionCount > 0) return "medium" as const;
+function getMedian(values: number[]) {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+
+  return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+}
+
+function getVariability(values: number[], average: number) {
+  if (values.length < 2 || average <= 0) return 0;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  return (max - min) / average;
+}
+
+function getVariabilityLabel(variability: number, activeMonths: number) {
+  if (activeMonths < 2) return "partial" as const;
+  if (variability >= 0.8) return "variable" as const;
+  return "stable" as const;
+}
+
+function getSuggestedBudgetAmount({
+  recurringAmount,
+  recentAverage,
+  activeAverage,
+  medianAmount,
+  activeMonths,
+  variability,
+}: {
+  recurringAmount: number;
+  recentAverage: number;
+  activeAverage: number;
+  medianAmount: number;
+  activeMonths: number;
+  variability: number;
+}) {
+  if (recurringAmount > 0) {
+    return Math.max(recurringAmount, activeMonths > 0 ? Math.max(recentAverage, medianAmount) : recurringAmount);
+  }
+
+  if (activeMonths === 0) return 0;
+  if (activeMonths === 1) return recentAverage;
+  if (variability >= 0.8) return medianAmount;
+  return activeAverage;
+}
+
+function getSuggestionConfidence(transactionCount: number, recurringAmount: number, activeMonths: number) {
+  if (recurringAmount > 0 || (transactionCount >= 4 && activeMonths >= 2)) return "high" as const;
+  if (transactionCount > 0 && activeMonths >= 2) return "medium" as const;
   return "starter" as const;
 }
 
@@ -398,24 +494,42 @@ function confidenceScore(confidence: "high" | "medium" | "starter") {
   return 1;
 }
 
-function getSuggestionReason(transactionCount: number, recurringAmount: number) {
+function getSuggestionReason({
+  transactionCount,
+  recurringAmount,
+  activeMonths,
+  variability,
+  isHouseholdPlan,
+}: {
+  transactionCount: number;
+  recurringAmount: number;
+  activeMonths: number;
+  variability: number;
+  isHouseholdPlan: boolean;
+}) {
+  const ownerContext = isHouseholdPlan ? " del hogar" : "";
+
   if (recurringAmount > 0 && transactionCount > 0) {
-    return "Basado en gasto histórico y cargos recurrentes.";
+    return `Basado en gastos recientes${ownerContext} y pagos recurrentes activos.`;
   }
 
   if (recurringAmount > 0) {
-    return "Basado en cargos recurrentes activos.";
+    return `Basado en pagos recurrentes activos${ownerContext}.`;
   }
 
-  if (transactionCount >= 4) {
-    return "Basado en un patrón frecuente de gasto.";
+  if (activeMonths >= 2 && variability >= 0.8) {
+    return `Basado en actividad real${ownerContext}; usamos un monto moderado porque varía mes a mes.`;
+  }
+
+  if (activeMonths >= 2) {
+    return `Basado en actividad frecuente${ownerContext} durante los últimos meses.`;
   }
 
   if (transactionCount > 0) {
-    return "Basado en movimientos recientes.";
+    return `Hay poco historial${ownerContext}; es un punto de partida suave basado en movimientos reales.`;
   }
 
-  return "Punto de partida editable para no arrancar desde cero.";
+  return "Sin actividad suficiente para sugerir un monto confiable.";
 }
 
 function toFiniteNumber(value: Prisma.Decimal | number) {

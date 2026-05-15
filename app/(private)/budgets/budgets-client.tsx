@@ -62,6 +62,9 @@ type BudgetSuggestion = {
   suggestedAmount: number;
   recentAverage: number;
   recurringAmount: number;
+  activeMonths: number;
+  transactionCount: number;
+  variability: "stable" | "variable" | "partial";
   incomeSharePercent: number | null;
   confidence: "high" | "medium" | "starter";
   reason: string;
@@ -126,6 +129,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
   const [suggestionDrafts, setSuggestionDrafts] = useState<Record<string, string>>({});
   const [selectedSuggestionIds, setSelectedSuggestionIds] = useState<string[]>([]);
   const [recentMonthlyIncome, setRecentMonthlyIncome] = useState(0);
+  const [hasHistoricalActivity, setHasHistoricalActivity] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const availableCategories = useMemo(() => {
@@ -157,6 +161,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
       const payload = (await response.json()) as {
         data?: {
           recentMonthlyIncome: number;
+          hasHistoricalActivity: boolean;
           suggestions: BudgetSuggestion[];
         };
         error?: string;
@@ -170,6 +175,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
       const nextSuggestions = payload.data?.suggestions ?? [];
       setSuggestions(nextSuggestions);
       setRecentMonthlyIncome(payload.data?.recentMonthlyIncome ?? 0);
+      setHasHistoricalActivity(payload.data?.hasHistoricalActivity ?? false);
       setSuggestionDrafts(
         Object.fromEntries(
           nextSuggestions.map((suggestion) => [
@@ -462,6 +468,7 @@ export function BudgetsClient({ householdId, categories }: BudgetsClientProps) {
                       drafts={suggestionDrafts}
                       selectedIds={selectedSuggestionIds}
                       recentMonthlyIncome={recentMonthlyIncome}
+                      hasHistoricalActivity={hasHistoricalActivity}
                       isLoading={isLoadingSuggestions}
                       isApplying={isApplyingSuggestions}
                       onAmountChange={updateSuggestionDraft}
@@ -680,6 +687,7 @@ function SuggestedPlanPanel({
   drafts,
   selectedIds,
   recentMonthlyIncome,
+  hasHistoricalActivity,
   isLoading,
   isApplying,
   onAmountChange,
@@ -690,6 +698,7 @@ function SuggestedPlanPanel({
   drafts: Record<string, string>;
   selectedIds: string[];
   recentMonthlyIncome: number;
+  hasHistoricalActivity: boolean;
   isLoading: boolean;
   isApplying: boolean;
   onAmountChange: (categoryId: string, value: string) => void;
@@ -715,9 +724,13 @@ function SuggestedPlanPanel({
   if (suggestions.length === 0) {
     return (
       <div className="rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
-        <p className="text-sm font-semibold text-white">El mes ya tiene una base clara</p>
+        <p className="text-sm font-semibold text-white">
+          {hasHistoricalActivity ? "No quedan categorías reales para sugerir" : "Todavía no hay historial suficiente"}
+        </p>
         <p className="mt-1 text-xs leading-5 text-zinc-400">
-          No quedan categorías libres para sugerir. Podés ajustar cualquier intención activa cuando lo necesites.
+          {hasHistoricalActivity
+            ? "Las categorías con actividad ya tienen plan o no hay recurrentes libres. Podés ajustar cualquier intención activa."
+            : "Meridian necesita movimientos o recurrentes reales para preparar una distribución confiable."}
         </p>
       </div>
     );
@@ -731,7 +744,7 @@ function SuggestedPlanPanel({
           <div>
             <p className="text-sm font-semibold text-white">Meridian preparó una distribución inicial</p>
             <p className="mt-1 text-xs leading-5 text-zinc-300">
-              Basada en cómo suele moverse tu dinero. Ajustá, quitá o confirmá lo que tenga sentido.
+              Usa actividad real de los últimos meses y pagos recurrentes. Ajustá, quitá o confirmá lo que tenga sentido.
             </p>
             {recentMonthlyIncome > 0 ? (
               <p className="mt-2 text-xs text-teal-100/80">
@@ -770,6 +783,9 @@ function SuggestedPlanPanel({
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-white">{suggestion.category.name}</p>
                       <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-500">{suggestion.reason}</p>
+                      <p className="mt-1 text-[11px] text-zinc-600">
+                        {getSuggestionMeta(suggestion)}
+                      </p>
                     </div>
                     <Badge className={getSuggestionBadgeClass(suggestion.confidence)}>
                       {getSuggestionLabel(suggestion.confidence)}
@@ -1157,6 +1173,18 @@ function getSuggestionBadgeClass(confidence: BudgetSuggestion["confidence"]) {
   if (confidence === "high") return "border-emerald-300/20 bg-emerald-300/10 text-emerald-100";
   if (confidence === "medium") return "border-sky-300/20 bg-sky-300/10 text-sky-100";
   return "border-white/10 bg-white/[0.06] text-zinc-200";
+}
+
+function getSuggestionMeta(suggestion: BudgetSuggestion) {
+  if (suggestion.recurringAmount > 0) {
+    return `Recurrentes: ${formatMoney(suggestion.recurringAmount, suggestion.currency)}`;
+  }
+
+  if (suggestion.activeMonths > 1) {
+    return `${suggestion.activeMonths} meses con actividad · ${suggestion.variability === "variable" ? "variable" : "estable"}`;
+  }
+
+  return "Historial parcial";
 }
 
 function getProgressClass(usagePercent: number) {

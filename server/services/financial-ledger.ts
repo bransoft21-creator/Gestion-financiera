@@ -1,6 +1,7 @@
 import {
   AccountType,
   DebtStatus,
+  DebtType,
   GoalStatus,
   Prisma,
   TransactionStatus,
@@ -45,6 +46,12 @@ type AccountSummaryInput = {
   currentBalance: Prisma.Decimal | number;
   isArchived: boolean;
   deletedAt?: Date | null;
+};
+
+type DebtLiabilityInput = {
+  type: DebtType;
+  status: DebtStatus;
+  outstandingAmount: Prisma.Decimal | number;
 };
 
 type AvailableMoneyInput = {
@@ -195,6 +202,41 @@ export function computeAccountSummary(accounts: AccountSummaryInput[]) {
   };
 }
 
+export function computeRealLiabilitySummary(
+  accounts: AccountSummaryInput[],
+  debts: DebtLiabilityInput[],
+) {
+  const activeAccounts = accounts.filter((account) => !account.isArchived && !account.deletedAt);
+  const accountSummary = computeAccountSummary(activeAccounts);
+  const creditCardAccountLiabilities = activeAccounts
+    .filter((account) => account.type === AccountType.CREDIT_CARD)
+    .map((account) => toFiniteNumber(account.currentBalance))
+    .filter((balance) => balance < 0)
+    .reduce((sum, balance) => sum + Math.abs(balance), 0);
+
+  const currentDebts = debts.filter(
+    (debt) => isCurrentDebtStatus(debt.status) && toFiniteNumber(debt.outstandingAmount) > 0,
+  );
+  const creditCardDebtLiabilities = currentDebts
+    .filter((debt) => debt.type === DebtType.CREDIT_CARD)
+    .reduce((sum, debt) => sum + toFiniteNumber(debt.outstandingAmount), 0);
+  const otherDebtLiabilities = currentDebts
+    .filter((debt) => debt.type !== DebtType.CREDIT_CARD)
+    .reduce((sum, debt) => sum + toFiniteNumber(debt.outstandingAmount), 0);
+  const duplicatedCreditCardDebt = Math.min(creditCardAccountLiabilities, creditCardDebtLiabilities);
+  const debtLiabilities = otherDebtLiabilities + Math.max(creditCardDebtLiabilities - duplicatedCreditCardDebt, 0);
+  const liabilities = accountSummary.liabilities + debtLiabilities;
+
+  return {
+    assets: accountSummary.assets,
+    accountLiabilities: accountSummary.liabilities,
+    debtLiabilities,
+    duplicatedCreditCardDebt,
+    liabilities,
+    netWorth: accountSummary.assets - liabilities,
+  };
+}
+
 export function computeAvailableMoney(input: AvailableMoneyInput) {
   const balance = input.income - input.expenses;
   const upcomingObligations =
@@ -205,6 +247,14 @@ export function computeAvailableMoney(input: AvailableMoneyInput) {
     upcomingObligations,
     realAvailable: balance - input.reservedBudget - upcomingObligations,
   };
+}
+
+function isCurrentDebtStatus(status: DebtStatus) {
+  return (
+    status === DebtStatus.ACTIVE ||
+    status === DebtStatus.PAUSED ||
+    status === DebtStatus.DEFAULTED
+  );
 }
 
 export function computeBudgetReservation(input: BudgetReservationInput) {

@@ -2,7 +2,7 @@ import { DebtStatus, Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { NotFoundError } from "../api/errors";
 import type { CreateAccountInput, ListAccountsInput, UpdateAccountInput } from "../schemas/accounts";
-import { computeAccountSummary, toFiniteNumber } from "./financial-ledger";
+import { computeRealLiabilitySummary, toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
 
 type AccountRecord = Prisma.AccountGetPayload<Record<string, never>>;
@@ -26,7 +26,7 @@ function serializeAccount(account: AccountRecord) {
 export async function listAccounts(userProfileId: string, input: ListAccountsInput) {
   await assertHouseholdAccess(userProfileId, input.householdId);
 
-  const [accounts, debtAggregate] = await Promise.all([
+  const [accounts, debts] = await Promise.all([
     prisma.account.findMany({
       where: {
         householdId: input.householdId,
@@ -35,14 +35,14 @@ export async function listAccounts(userProfileId: string, input: ListAccountsInp
       },
       orderBy: [{ isArchived: "asc" }, { type: "asc" }, { name: "asc" }],
     }),
-    prisma.debt.aggregate({
-      _sum: { outstandingAmount: true },
+    prisma.debt.findMany({
       where: {
         householdId: input.householdId,
         status: { in: [DebtStatus.ACTIVE, DebtStatus.PAUSED, DebtStatus.DEFAULTED] },
         outstandingAmount: { gt: 0 },
         deletedAt: null,
       },
+      select: { type: true, status: true, outstandingAmount: true },
     }),
   ]);
 
@@ -51,17 +51,11 @@ export async function listAccounts(userProfileId: string, input: ListAccountsInp
     : await prisma.account.findMany({
         where: { householdId: input.householdId, deletedAt: null },
       });
-  const accountSummary = computeAccountSummary(allAccounts);
-  const debtLiabilities = toFiniteNumber(debtAggregate._sum.outstandingAmount ?? 0);
-  const liabilities = accountSummary.liabilities + debtLiabilities;
+  const liabilitySummary = computeRealLiabilitySummary(allAccounts, debts);
 
   return {
     accounts: accounts.map(serializeAccount),
-    ...accountSummary,
-    accountLiabilities: accountSummary.liabilities,
-    debtLiabilities,
-    liabilities,
-    netWorth: accountSummary.assets - liabilities,
+    ...liabilitySummary,
   };
 }
 

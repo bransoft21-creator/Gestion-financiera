@@ -1,7 +1,7 @@
 import { DebtStatus, GoalStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { argentinaMonthRangeUtc, formatArgentinaDateInput } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
-import { computeFinancialHealth, toFiniteNumber } from "./financial-ledger";
+import { computeFinancialHealth, computeRealLiabilitySummary, toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
 
 const chartColors = ["#f97316", "#ef4444", "#06b6d4", "#eab308", "#8b5cf6", "#14b8a6"];
@@ -44,7 +44,7 @@ export async function getDashboardSummary(
     monthTransactions,
     latestTransactions,
     budgets,
-    debtAggregate,
+    currentDebts,
     recurringExpenses,
     activeGoals,
     upcomingDebts,
@@ -75,14 +75,14 @@ export async function getDashboardSummary(
       where: { householdId, year, month, deletedAt: null },
       select: { categoryId: true, plannedAmount: true },
     }),
-    prisma.debt.aggregate({
-      _sum: { outstandingAmount: true },
+    prisma.debt.findMany({
       where: {
         householdId,
         status: { in: [DebtStatus.ACTIVE, DebtStatus.PAUSED, DebtStatus.DEFAULTED] },
         outstandingAmount: { gt: 0 },
         deletedAt: null,
       },
+      select: { type: true, status: true, outstandingAmount: true },
     }),
     prisma.recurringExpense.findMany({
       where: {
@@ -115,7 +115,7 @@ export async function getDashboardSummary(
     }),
     prisma.account.findMany({
       where: { householdId, deletedAt: null, isArchived: false },
-      select: { currency: true, currentBalance: true },
+      select: { type: true, currency: true, currentBalance: true, isArchived: true, deletedAt: true },
     }),
   ]);
 
@@ -126,6 +126,7 @@ export async function getDashboardSummary(
   const expensesByType = getExpensesByType(monthTransactions);
   const expensesByCategoryId = getExpenseTotalsByCategoryId(monthTransactions);
   const fixedToIncomeRatio = income > 0 ? Math.round((expensesByType.fixed / income) * 100) : 0;
+  const liabilitySummary = computeRealLiabilitySummary(accounts, currentDebts);
   const health = computeFinancialHealth({
     income,
     expenses,
@@ -136,7 +137,7 @@ export async function getDashboardSummary(
     recurringExpenses,
     goals: activeGoals,
     debts: upcomingDebts,
-    totalOutstandingDebt: debtAggregate._sum.outstandingAmount ?? 0,
+    totalOutstandingDebt: liabilitySummary.liabilities,
   });
 
   const argDateStr = formatArgentinaDateInput();

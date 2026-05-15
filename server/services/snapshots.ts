@@ -2,7 +2,7 @@ import { DebtStatus, GoalStatus, TransactionStatus, TransactionType } from "@pri
 import { argentinaMonthRangeUtc } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { assertHouseholdAccess } from "./households";
-import { computeFinancialHealth, toFiniteNumber } from "./financial-ledger";
+import { computeFinancialHealth, computeRealLiabilitySummary, toFiniteNumber } from "./financial-ledger";
 
 export async function captureMonthlySnapshot(
   userProfileId: string,
@@ -21,7 +21,7 @@ export async function captureMonthlySnapshot(
 
   const { start: monthStart, end: nextMonthStart } = argentinaMonthRangeUtc(year, month);
 
-  const [monthTransactions, budgets, recurringExpenses, activeGoals, upcomingDebts, debtAggregate] =
+  const [monthTransactions, budgets, recurringExpenses, activeGoals, upcomingDebts, currentDebts, accounts] =
     await Promise.all([
       prisma.transaction.findMany({
         where: {
@@ -66,14 +66,18 @@ export async function captureMonthlySnapshot(
         },
         select: { minimumPayment: true, outstandingAmount: true },
       }),
-      prisma.debt.aggregate({
-        _sum: { outstandingAmount: true },
+      prisma.debt.findMany({
         where: {
           householdId,
           status: { in: [DebtStatus.ACTIVE, DebtStatus.PAUSED, DebtStatus.DEFAULTED] },
           outstandingAmount: { gt: 0 },
           deletedAt: null,
         },
+        select: { type: true, status: true, outstandingAmount: true },
+      }),
+      prisma.account.findMany({
+        where: { householdId, deletedAt: null, isArchived: false },
+        select: { type: true, currentBalance: true, isArchived: true, deletedAt: true },
       }),
     ]);
 
@@ -94,6 +98,7 @@ export async function captureMonthlySnapshot(
     }
   }
 
+  const liabilitySummary = computeRealLiabilitySummary(accounts, currentDebts);
   const health = computeFinancialHealth({
     income,
     expenses,
@@ -104,7 +109,7 @@ export async function captureMonthlySnapshot(
     recurringExpenses,
     goals: activeGoals,
     debts: upcomingDebts,
-    totalOutstandingDebt: debtAggregate._sum.outstandingAmount ?? 0,
+    totalOutstandingDebt: liabilitySummary.liabilities,
   });
 
   return prisma.monthlySnapshot.upsert({
