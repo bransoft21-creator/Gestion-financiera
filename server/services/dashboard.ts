@@ -7,6 +7,8 @@ import { traceFinancialSource } from "./financial-debug";
 import { assertHouseholdAccess } from "./households";
 import { normalizeOnboardingGoals } from "../schemas/onboarding";
 import { buildNextStepRecommendation } from "./next-step-engine";
+import { EMPTY_NAVIGATION_AWARENESS } from "@/lib/navigation-awareness";
+import { getNavigationAwareness } from "./navigation-awareness";
 
 const chartColors = ["#f97316", "#ef4444", "#06b6d4", "#eab308", "#8b5cf6", "#14b8a6"];
 const activeTransactionWhere = {
@@ -309,6 +311,7 @@ export async function getDashboardSummary(
       canSmartImport: isSmartImportEnabled(profile.email),
       onboardingCompletedAt: profile.onboardingCompletedAt,
     }),
+    awareness: await getNavigationAwareness(userProfileId).catch(() => EMPTY_NAVIGATION_AWARENESS),
   };
 }
 

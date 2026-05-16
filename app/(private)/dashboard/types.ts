@@ -1,4 +1,5 @@
 import type { ExpenseCategoryChartItem } from "@/components/dashboard/expense-category-chart";
+import type { NavigationAwareness } from "@/lib/navigation-awareness";
 
 export type { ExpenseCategoryChartItem };
 
@@ -104,6 +105,7 @@ export type DashboardSummary = {
     href: string;
   }>;
   activation: NextStepRecommendation;
+  awareness: NavigationAwareness;
 };
 
 export type ActivityPreviewItem = {

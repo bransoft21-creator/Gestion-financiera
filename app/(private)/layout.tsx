@@ -3,6 +3,8 @@ import { AppShell } from "@/components/app/app-shell";
 import { safeUserId } from "@/lib/observability/user";
 import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { EMPTY_NAVIGATION_AWARENESS } from "@/lib/navigation-awareness";
+import { getNavigationAwareness } from "@/server/services/navigation-awareness";
 
 export default async function PrivateLayout({
   children,
@@ -27,8 +29,17 @@ export default async function PrivateLayout({
     redirect("/onboarding");
   }
 
+  const awareness = await getNavigationAwareness(profile.id).catch(() => EMPTY_NAVIGATION_AWARENESS);
+
   return (
-    <AppShell userId={safeUserId(profile.id)} userEmail={user.email} userName={getDisplayName(user.user_metadata)}>{children}</AppShell>
+    <AppShell
+      userId={safeUserId(profile.id)}
+      userEmail={user.email}
+      userName={getDisplayName(user.user_metadata)}
+      awareness={awareness}
+    >
+      {children}
+    </AppShell>
   );
 }
 

@@ -7,6 +7,7 @@ import {
   Gauge,
   Home,
   Landmark,
+  ListChecks,
   RefreshCw,
   ScanLine,
   Settings,
@@ -14,23 +15,136 @@ import {
   TrendingUp,
   User,
 } from "lucide-react";
+import type { AwarenessTarget } from "@/lib/navigation-awareness";
 
 export const navItems = [
-  { href: "/dashboard",     label: "Hoy",              icon: Gauge },
-  { href: "/transactions",  label: "Movimientos",      icon: CircleDollarSign },
-  { href: "/household",     label: "Hogar",            icon: Home },
-  { href: "/smart-import",  label: "Smart Import",     icon: ScanLine },
-  { href: "/accounts",      label: "Dinero",           icon: Landmark },
-  { href: "/categories",    label: "Categorías",       icon: FolderTree },
-  { href: "/budgets",       label: "Presupuesto",      icon: BarChart3 },
-  { href: "/goals",         label: "Metas",            icon: Sparkles },
-  { href: "/debts",         label: "Deudas",           icon: CreditCard },
-  { href: "/recurring",     label: "Recurrentes",      icon: RefreshCw },
-  { href: "/notifications", label: "Actividad",        icon: Bell },
-  { href: "/reports",       label: "Patrones",         icon: TrendingUp },
-  { href: "/profile",       label: "Mi perfil",        icon: User },
-  { href: "/settings",      label: "Ajustes",          icon: Settings },
-] as const;
+  {
+    href: "/dashboard",
+    label: "Hoy",
+    shortLabel: "Hoy",
+    icon: Gauge,
+    tier: "core",
+    mobile: "primary",
+  },
+  {
+    href: "/transactions",
+    label: "Movimientos",
+    shortLabel: "Movs.",
+    icon: CircleDollarSign,
+    tier: "core",
+    mobile: "primary",
+  },
+  {
+    href: "/smart-import",
+    label: "Smart Import",
+    shortLabel: "Import",
+    icon: ScanLine,
+    tier: "core",
+    mobile: "primary",
+    awarenessTarget: "smart-import",
+    featured: true,
+  },
+  {
+    href: "/household",
+    label: "Hogar",
+    shortLabel: "Hogar",
+    icon: Home,
+    tier: "core",
+    mobile: "primary",
+    awarenessTarget: "household",
+  },
+  {
+    href: "/notifications",
+    label: "Actividad",
+    shortLabel: "Actividad",
+    icon: Bell,
+    tier: "core",
+    awarenessTarget: "activity",
+  },
+  {
+    href: "/budgets",
+    label: "Presupuesto",
+    shortLabel: "Plan",
+    icon: BarChart3,
+    tier: "weekly",
+    awarenessTarget: "budgets",
+  },
+  {
+    href: "/recurring",
+    label: "Recurrentes",
+    shortLabel: "Recurrentes",
+    icon: RefreshCw,
+    tier: "weekly",
+    awarenessTarget: "recurring",
+  },
+  {
+    href: "/debts",
+    label: "Deudas",
+    shortLabel: "Deudas",
+    icon: CreditCard,
+    tier: "weekly",
+    awarenessTarget: "debts",
+  },
+  {
+    href: "/categories",
+    label: "Categorías",
+    shortLabel: "Categorías",
+    icon: FolderTree,
+    tier: "weekly",
+  },
+  {
+    href: "/accounts",
+    label: "Dinero",
+    shortLabel: "Dinero",
+    icon: Landmark,
+    tier: "advanced",
+  },
+  {
+    href: "/goals",
+    label: "Metas",
+    shortLabel: "Metas",
+    icon: Sparkles,
+    tier: "advanced",
+  },
+  {
+    href: "/settings/data-quality",
+    label: "Data Quality",
+    shortLabel: "Calidad",
+    icon: ListChecks,
+    tier: "advanced",
+    awarenessTarget: "data-quality",
+  },
+  {
+    href: "/reports",
+    label: "Patrones",
+    shortLabel: "Patrones",
+    icon: TrendingUp,
+    tier: "advanced",
+  },
+  {
+    href: "/profile",
+    label: "Mi perfil",
+    shortLabel: "Perfil",
+    icon: User,
+    tier: "advanced",
+  },
+  {
+    href: "/settings",
+    label: "Ajustes",
+    shortLabel: "Ajustes",
+    icon: Settings,
+    tier: "advanced",
+  },
+] satisfies Array<{
+  href: string;
+  label: string;
+  shortLabel: string;
+  icon: typeof Gauge;
+  tier: "core" | "weekly" | "advanced";
+  mobile?: "primary";
+  awarenessTarget?: AwarenessTarget;
+  featured?: boolean;
+}>;
 
 export const investmentsNavItem = {
   label: "Inversiones",

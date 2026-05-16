@@ -31,6 +31,7 @@ import { ExpenseCategoryExplorer } from "@/components/dashboard/expense-category
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { ActivityPreview } from "@/components/dashboard/activity-preview";
 import { GettingStartedCard } from "@/components/dashboard/getting-started-card";
+import { ContextualEntryPoints } from "@/components/dashboard/contextual-entry-points";
 import { useSectionCollapse } from "@/hooks/use-section-collapse";
 import { trackProductEvent } from "@/lib/observability/client";
 import {
@@ -281,6 +282,7 @@ export function DashboardClient() {
       <DashboardHero metrics={metrics} year={year} month={month} usdBalance={usdBalance} />
 
       <GettingStartedCard activation={summary.activation} />
+      <ContextualEntryPoints entryPoints={summary.awareness.entryPoints} />
 
       {/* Ambient signal */}
       {ambientHint && <AmbientSignal text={ambientHint} celebratory={isCelebratoryMonth} />}

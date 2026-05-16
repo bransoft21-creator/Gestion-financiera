@@ -12,15 +12,17 @@ import { Sidebar } from "./sidebar";
 import { TelemetryProvider } from "./telemetry-provider";
 import { UserProvider } from "./user-context";
 import { TutorialProvider, TutorialSpotlight } from "./tutorial";
+import type { NavigationAwareness } from "@/lib/navigation-awareness";
 
 type AppShellProps = {
   children: React.ReactNode;
   userId?: string | null;
   userName?: string | null;
   userEmail?: string | null;
+  awareness?: NavigationAwareness;
 };
 
-export function AppShell({ children, userId, userName, userEmail }: AppShellProps) {
+export function AppShell({ children, userId, userName, userEmail, awareness }: AppShellProps) {
   return (
     <UserProvider userName={userName ?? null}>
       <PreferencesProvider>
@@ -40,7 +42,7 @@ export function AppShell({ children, userId, userName, userEmail }: AppShellProp
             <LogoutButton compact />
           </div>
           <div className="lg:flex">
-            <Sidebar userName={userName} userEmail={userEmail} />
+            <Sidebar userName={userName} userEmail={userEmail} awareness={awareness} />
             <main className="min-w-0 flex-1 overflow-x-hidden">
               <PageTransition>
                 <div className="mx-auto w-full max-w-[1200px] px-4 pb-[calc(112px+env(safe-area-inset-bottom))] pt-5 lg:px-8 lg:py-7">
@@ -49,7 +51,7 @@ export function AppShell({ children, userId, userName, userEmail }: AppShellProp
               </PageTransition>
             </main>
           </div>
-          <BottomNav />
+          <BottomNav awareness={awareness} />
           <TutorialSpotlight />
           <Toaster
             position="top-center"

@@ -4,54 +4,27 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { MouseEvent } from "react";
 import { useState } from "react";
-import {
-  BarChart3,
-  Bell,
-  CircleDollarSign,
-  CreditCard,
-  FolderTree,
-  Gauge,
-  Home,
-  Landmark,
-  LogOut,
-  Menu,
-  RefreshCw,
-  ScanLine,
-  Settings,
-  Sparkles,
-  TrendingUp,
-  User,
-  X,
-} from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { navItems } from "./nav-items";
 import { LogoutDialog } from "./logout-dialog";
+import type { AwarenessSignal, NavigationAwareness } from "@/lib/navigation-awareness";
 
-const bottomNavItems = [
-  { href: "/dashboard",    label: "Hoy",          icon: Gauge },
-  { href: "/transactions", label: "Movimientos",  icon: CircleDollarSign },
-  { href: "/household",    label: "Hogar",        icon: Home },
-  { href: "/goals",        label: "Metas",        icon: Sparkles },
+const bottomNavItems = navItems.filter((item) => item.mobile === "primary");
+const drawerSections = [
+  { tier: "core", label: "También diario" },
+  { tier: "weekly", label: "Plan semanal" },
+  { tier: "advanced", label: "Sistema" },
 ] as const;
 
-const moreNavItems = [
-  { href: "/smart-import", label: "Smart Import", icon: ScanLine },
-  { href: "/budgets",      label: "Presupuesto",  icon: BarChart3 },
-  { href: "/accounts",     label: "Dinero",       icon: Landmark },
-  { href: "/categories",   label: "Categorías",   icon: FolderTree },
-  { href: "/debts",        label: "Deudas",       icon: CreditCard },
-  { href: "/recurring",    label: "Recurrentes",  icon: RefreshCw },
-  { href: "/notifications", label: "Actividad",   icon: Bell },
-  { href: "/reports",      label: "Patrones",     icon: TrendingUp },
-  { href: "/profile",      label: "Mi perfil",    icon: User },
-  { href: "/settings",     label: "Ajustes",      icon: Settings },
-] as const;
-
-export function BottomNav() {
+export function BottomNav({ awareness }: { awareness?: NavigationAwareness }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-  const isMoreActive = moreNavItems.some((item) => pathname === item.href);
+  const drawerItems = navItems.filter((item) => item.mobile !== "primary");
+  const isMoreActive = drawerItems.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  const moreHasSignal = drawerItems.some((item) => item.awarenessTarget && awareness?.signals[item.awarenessTarget]);
 
   function handleBottomNavClick(event: MouseEvent<HTMLAnchorElement>, href: string) {
     if (href !== "/dashboard" || pathname !== "/dashboard") return;
@@ -64,7 +37,6 @@ export function BottomNav() {
     <>
       <LogoutDialog open={logoutOpen} onClose={() => setLogoutOpen(false)} />
 
-      {/* Overlay */}
       {moreOpen && (
         <div
           className="fixed inset-0 z-[125] bg-black/60"
@@ -72,11 +44,10 @@ export function BottomNav() {
         />
       )}
 
-      {/* More drawer */}
       <div
         data-bottom-drawer
         className={cn(
-          "fixed inset-x-0 z-[130] rounded-t-[28px] border-t border-border transition-transform duration-300 ease-out lg:hidden",
+          "fixed inset-x-0 z-[130] max-h-[82vh] overflow-y-auto rounded-t-[28px] border-t border-border transition-transform duration-300 ease-out lg:hidden",
           moreOpen ? "translate-y-0" : "translate-y-full",
         )}
         style={{
@@ -87,37 +58,57 @@ export function BottomNav() {
         }}
       >
         <div className="flex items-center justify-between px-5 pb-2 pt-4">
-          <span className="text-[13px] font-semibold text-foreground">Más del sistema</span>
+          <span className="text-[13px] font-semibold text-foreground">Más de Meridian</span>
           <button
             type="button"
             onClick={() => setMoreOpen(false)}
             className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground"
+            aria-label="Cerrar navegación"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
-        <div className="grid grid-cols-1 gap-0.5 px-3 pb-[max(env(safe-area-inset-bottom),20px)] pt-1">
-          {moreNavItems.map((item) => {
-            const isActive = pathname === item.href;
-            const Icon = item.icon;
+
+        <div className="grid gap-4 px-3 pb-[max(env(safe-area-inset-bottom),20px)] pt-1">
+          {drawerSections.map((section) => {
+            const items = drawerItems.filter((item) => item.tier === section.tier);
+            if (items.length === 0) return null;
+
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMoreOpen(false)}
-                className={cn(
-                  "flex h-12 items-center gap-3 rounded-2xl px-4 text-[14px] font-medium transition-all duration-150",
-                  isActive
-                    ? "border border-border bg-muted/70 text-primary"
-                    : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
-                )}
-              >
-                <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
-                <span>{item.label}</span>
-              </Link>
+              <div key={section.tier}>
+                <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+                  {section.label}
+                </p>
+                <div className="grid grid-cols-1 gap-0.5">
+                  {items.map((item) => {
+                    const isActive = pathname === item.href || (item.href !== "/settings" && pathname.startsWith(`${item.href}/`));
+                    const Icon = item.icon;
+                    const signal = item.awarenessTarget ? awareness?.signals[item.awarenessTarget] : undefined;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMoreOpen(false)}
+                        className={cn(
+                          "flex h-12 items-center gap-3 rounded-2xl px-4 text-[14px] font-medium transition-all duration-150",
+                          item.featured && !isActive && "bg-primary/[0.06] text-foreground",
+                          isActive
+                            ? "border border-border bg-muted/70 text-primary"
+                            : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+                        )}
+                      >
+                        <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+                        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                        <AwarenessBadge signal={signal} />
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
-          <div className="mt-1 border-t border-border pt-1">
+
+          <div className="border-t border-border pt-1">
             <button
               type="button"
               onClick={() => { setMoreOpen(false); setLogoutOpen(true); }}
@@ -130,7 +121,6 @@ export function BottomNav() {
         </div>
       </div>
 
-      {/* Bottom nav bar */}
       <nav
         data-tutorial="nav-mobile"
         className="fixed inset-x-0 bottom-0 z-[120] border-t border-border lg:hidden"
@@ -142,33 +132,37 @@ export function BottomNav() {
       >
         <div className="grid grid-cols-5 px-1.5 pb-[max(env(safe-area-inset-bottom),6px)] pt-1">
           {bottomNavItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
+            const signal = item.awarenessTarget ? awareness?.signals[item.awarenessTarget] : undefined;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={(event) => handleBottomNavClick(event, item.href)}
                 className={cn(
-                  "relative flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 transition-all duration-200 active:scale-95",
+                  "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 transition-all duration-200 active:scale-95",
+                  item.featured && !isActive && "text-foreground",
                   isActive ? "text-primary" : "text-muted-foreground active:text-foreground",
                 )}
               >
                 {isActive && (
                   <span className="absolute inset-x-2 top-0 h-[2px] rounded-b-full bg-teal-400/70 transition-all duration-200" />
                 )}
-                <Icon className="h-6 w-6" aria-hidden="true" />
+                <span className="relative">
+                  <Icon className="h-6 w-6" aria-hidden="true" />
+                  <AwarenessDot signal={signal} />
+                </span>
                 <span className={cn(
-                  "text-[10px] font-medium transition-colors duration-200",
+                  "max-w-full truncate text-[10px] font-medium transition-colors duration-200",
                   isActive ? "text-primary/80" : "",
                 )}>
-                  {item.label}
+                  {item.shortLabel}
                 </span>
               </Link>
             );
           })}
 
-          {/* Más button */}
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
@@ -180,7 +174,10 @@ export function BottomNav() {
             {(isMoreActive || moreOpen) && (
               <span className="absolute inset-x-2 top-0 h-[2px] rounded-b-full bg-teal-400/70 transition-all duration-200" />
             )}
-            <Menu className="h-6 w-6" aria-hidden="true" />
+            <span className="relative">
+              <Menu className="h-6 w-6" aria-hidden="true" />
+              {moreHasSignal ? <span className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-amber-400/80" /> : null}
+            </span>
             <span className={cn(
               "text-[10px] font-medium transition-colors duration-200",
               isMoreActive || moreOpen ? "text-primary/80" : "",
@@ -191,5 +188,37 @@ export function BottomNav() {
         </div>
       </nav>
     </>
+  );
+}
+
+function AwarenessDot({ signal }: { signal?: AwarenessSignal }) {
+  if (!signal) return null;
+
+  return (
+    <span
+      className={cn(
+        "absolute -right-1 -top-0.5 h-2 w-2 rounded-full",
+        signal.tone === "attention" ? "bg-amber-400/80" : "bg-primary/70",
+      )}
+      aria-label={signal.label}
+      title={signal.label}
+    />
+  );
+}
+
+function AwarenessBadge({ signal }: { signal?: AwarenessSignal }) {
+  if (!signal) return null;
+
+  return (
+    <span
+      className={cn(
+        "shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none",
+        signal.tone === "attention"
+          ? "border-amber-300/20 bg-amber-300/10 text-amber-500"
+          : "border-border bg-muted/50 text-muted-foreground",
+      )}
+    >
+      {signal.label}
+    </span>
   );
 }
