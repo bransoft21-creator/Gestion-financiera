@@ -1,11 +1,12 @@
 import { CurrencyCode, HouseholdKind, HouseholdMemberStatus } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import type { UpdatePreferencesInput } from "../schemas/user-preferences";
+import { normalizeOnboardingGoals } from "../schemas/onboarding";
 
 export async function getUserPreferences(userProfileId: string) {
   const profile = await prisma.userProfile.findUniqueOrThrow({
     where: { id: userProfileId },
-    select: { theme: true, textSize: true, language: true, currency: true },
+    select: { theme: true, textSize: true, language: true, currency: true, onboardingGoals: true },
   });
 
   return {
@@ -13,6 +14,7 @@ export async function getUserPreferences(userProfileId: string) {
     textSize: profile.textSize as "normal" | "large",
     language: profile.language as "es" | "en",
     primaryCurrency: profile.currency as "ARS" | "USD",
+    onboardingGoals: normalizeOnboardingGoals(profile.onboardingGoals),
   };
 }
 
@@ -25,6 +27,7 @@ export async function updateUserPreferences(
   if (input.theme !== undefined) updates.theme = input.theme;
   if (input.textSize !== undefined) updates.textSize = input.textSize;
   if (input.language !== undefined) updates.language = input.language;
+  if (input.onboardingGoals !== undefined) updates.onboardingGoals = normalizeOnboardingGoals(input.onboardingGoals);
   if (input.primaryCurrency !== undefined) {
     updates.currency = input.primaryCurrency as CurrencyCode;
   }
@@ -32,7 +35,7 @@ export async function updateUserPreferences(
   const profile = await prisma.userProfile.update({
     where: { id: userProfileId },
     data: updates,
-    select: { theme: true, textSize: true, language: true, currency: true },
+    select: { theme: true, textSize: true, language: true, currency: true, onboardingGoals: true },
   });
 
   if (input.primaryCurrency !== undefined) {
@@ -59,5 +62,6 @@ export async function updateUserPreferences(
     textSize: profile.textSize as "normal" | "large",
     language: profile.language as "es" | "en",
     primaryCurrency: profile.currency as "ARS" | "USD",
+    onboardingGoals: normalizeOnboardingGoals(profile.onboardingGoals),
   };
 }

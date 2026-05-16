@@ -1,0 +1,2 @@
+ALTER TABLE "UserProfile"
+ADD COLUMN "onboardingGoals" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

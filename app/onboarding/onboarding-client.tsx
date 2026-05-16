@@ -19,12 +19,11 @@ import { ActionButton } from "@/components/ui-v2/action-button";
 /* ── Goals ───────────────────────────────────────────────────────────────── */
 
 const GOALS = [
-  { id: "expenses", label: "Entender mis gastos" },
-  { id: "save", label: "Ahorrar más" },
-  { id: "debts", label: "Organizar deudas" },
-  { id: "control", label: "Control mensual" },
-  { id: "excel", label: "Dejar el Excel" },
-  { id: "auto", label: "Automatizar el seguimiento" },
+  { id: "entender-gastos", label: "Entender mis gastos" },
+  { id: "ahorrar", label: "Ahorrar más" },
+  { id: "salir-excel", label: "Dejar el Excel" },
+  { id: "organizar-deudas", label: "Organizar deudas" },
+  { id: "compartir-hogar", label: "Compartir hogar" },
 ];
 
 /* ── Start options (dynamic — respects feature flags) ────────────────────── */
@@ -137,7 +136,12 @@ export function OnboardingClient({
   async function completeOnboarding(path: string) {
     if (pendingPath) return;
     setPendingPath(path);
-    trackProductEvent("onboarding_completed", { startOption: START_OPTION_MAP[path] ?? "unknown" }, "onboarding");
+    const goals = Array.from(selectedGoals);
+    trackProductEvent(
+      "onboarding_completed",
+      { startOption: START_OPTION_MAP[path] ?? "unknown", goalCount: goals.length },
+      "onboarding",
+    );
 
     // En replay no llamamos a la API — el onboarding ya está completado
     if (replayMode) {
@@ -146,7 +150,11 @@ export function OnboardingClient({
     }
 
     try {
-      const res = await fetch("/api/onboarding/complete", { method: "POST" });
+      const res = await fetch("/api/onboarding/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goals }),
+      });
       if (res.ok) {
         router.push(path);
         // Don't reset pendingPath — component will unmount on navigation

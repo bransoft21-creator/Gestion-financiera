@@ -183,6 +183,7 @@ model UserProfile {
   theme      String    @default("system")
   textSize   String    @default("normal")
   language   String    @default("es")
+  onboardingGoals      String[]  @default([])
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   deletedAt             DateTime?

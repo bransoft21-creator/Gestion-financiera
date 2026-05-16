@@ -8,6 +8,7 @@ type Preferences = {
   textSize: "normal" | "large";
   language: "es" | "en";
   primaryCurrency: "ARS" | "USD";
+  onboardingGoals: string[];
 };
 
 type PreferencesContextValue = {
@@ -29,6 +30,7 @@ const DEFAULT_PREFS: Preferences = {
   textSize: "normal",
   language: "es",
   primaryCurrency: "ARS",
+  onboardingGoals: [],
 };
 
 export function PreferencesProvider({ children }: { children: React.ReactNode }) {

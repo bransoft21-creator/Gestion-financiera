@@ -2,6 +2,33 @@ import type { ExpenseCategoryChartItem } from "@/components/dashboard/expense-ca
 
 export type { ExpenseCategoryChartItem };
 
+export type ActivationAction = {
+  id:
+    | "create-account"
+    | "first-income"
+    | "smart-import"
+    | "setup-household"
+    | "shared-expense"
+    | "invite-household"
+    | "setup-budgets"
+    | "organize-debts"
+    | "review-movements"
+    | "setup-recurring";
+  title: string;
+  description: string;
+  href: string;
+  reason: string;
+};
+
+export type NextStepRecommendation = {
+  shouldShow: boolean;
+  headline: string;
+  body: string;
+  actions: ActivationAction[];
+  primaryAction: ActivationAction | null;
+  isOnboardingFresh: boolean;
+};
+
 export type DashboardSummary = {
   metrics: {
     income: number;
@@ -76,6 +103,7 @@ export type DashboardSummary = {
     actionLabel: string;
     href: string;
   }>;
+  activation: NextStepRecommendation;
 };
 
 export type ActivityPreviewItem = {

@@ -280,9 +280,9 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
           <h2 id="merge-dialog-title" className="text-base font-semibold text-foreground">Unificar categorías</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Las transacciones y recurrentes de{" "}
-            <span className="font-semibold text-foreground">"{mergePending.from.name}"</span>{" "}
+            <span className="font-semibold text-foreground">&quot;{mergePending.from.name}&quot;</span>{" "}
             se van a mover a{" "}
-            <span className="font-semibold text-foreground">"{mergePending.to.name}"</span>.
+            <span className="font-semibold text-foreground">&quot;{mergePending.to.name}&quot;</span>.
             La categoría origen va a quedar desactivada.
           </p>
           <p className="mt-2 text-xs text-muted-foreground">Los presupuestos no se transfieren automáticamente.</p>
@@ -424,10 +424,10 @@ export function CategoriesClient({ householdId, initialCategories }: CategoriesC
                 </p>
                 <div className="flex shrink-0 gap-1.5">
                   <ActionButton type="button" size="sm" variant="glass" onClick={() => setMergePending({ from: a, to: b })}>
-                    Usar "{b.name}"
+                    Usar &quot;{b.name}&quot;
                   </ActionButton>
                   <ActionButton type="button" size="sm" variant="glass" onClick={() => setMergePending({ from: b, to: a })}>
-                    Usar "{a.name}"
+                    Usar &quot;{a.name}&quot;
                   </ActionButton>
                 </div>
               </div>

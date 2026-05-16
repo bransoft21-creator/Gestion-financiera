@@ -39,6 +39,8 @@ type ProductEvent =
   | "recurring_payment_paid"
   // Dashboard engagement
   | "dashboard_section_expanded"
+  | "getting_started_card_dismissed"
+  | "getting_started_action_clicked"
   | "reflection_opened"
   | "monthly_analysis_opened"
   | "hide_amounts_toggled"
@@ -66,6 +68,10 @@ const ALLOWED_PROPS = new Set([
   "goalCount",
   "startOption",
   "section",
+  "actionCount",
+  "actionId",
+  "actionIndex",
+  "isOnboardingFresh",
   "memberCount",
   "replayMode",
   "cached",

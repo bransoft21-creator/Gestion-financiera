@@ -1,9 +1,12 @@
-import { DebtStatus, GoalStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { DebtStatus, GoalStatus, HouseholdKind, HouseholdMemberStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { argentinaMonthRangeUtc, formatArgentinaDateInput } from "@/lib/dates";
+import { isSmartImportEnabled } from "@/lib/feature-flags";
 import { prisma } from "../../lib/prisma";
 import { computeFinancialHealth, computeRealLiabilitySummary, toFiniteNumber } from "./financial-ledger";
 import { traceFinancialSource } from "./financial-debug";
 import { assertHouseholdAccess } from "./households";
+import { normalizeOnboardingGoals } from "../schemas/onboarding";
+import { buildNextStepRecommendation } from "./next-step-engine";
 
 const chartColors = ["#f97316", "#ef4444", "#06b6d4", "#eab308", "#8b5cf6", "#14b8a6"];
 const activeTransactionWhere = {
@@ -50,6 +53,11 @@ export async function getDashboardSummary(
     activeGoals,
     upcomingDebts,
     accounts,
+    profile,
+    totalTransactionCount,
+    budgetCount,
+    recurringExpenseCount,
+    sharedHouseholdCount,
   ] = await Promise.all([
     prisma.transaction.findMany({
       where: {
@@ -117,6 +125,36 @@ export async function getDashboardSummary(
     prisma.account.findMany({
       where: { householdId, deletedAt: null, isArchived: false },
       select: { id: true, type: true, currency: true, currentBalance: true, isArchived: true, deletedAt: true },
+    }),
+    prisma.userProfile.findUniqueOrThrow({
+      where: { id: userProfileId },
+      select: { email: true, onboardingGoals: true, onboardingCompletedAt: true },
+    }),
+    prisma.transaction.count({
+      where: {
+        householdId,
+        ...activeTransactionWhere,
+        type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
+      },
+    }),
+    prisma.budget.count({
+      where: { householdId, deletedAt: null },
+    }),
+    prisma.recurringExpense.count({
+      where: { householdId, isActive: true, deletedAt: null },
+    }),
+    prisma.household.count({
+      where: {
+        kind: HouseholdKind.HOUSEHOLD,
+        deletedAt: null,
+        members: {
+          some: {
+            userProfileId,
+            status: HouseholdMemberStatus.ACTIVE,
+            deletedAt: null,
+          },
+        },
+      },
     }),
   ]);
 
@@ -259,6 +297,17 @@ export async function getDashboardSummary(
       realAvailable: health.realAvailable,
       totalOutstandingDebt: health.totalOutstandingDebt,
       fixedToIncomeRatio,
+    }),
+    activation: buildNextStepRecommendation({
+      onboardingGoals: normalizeOnboardingGoals(profile.onboardingGoals),
+      hasAccounts: accounts.length > 0,
+      hasTransactions: totalTransactionCount > 0,
+      hasSharedHousehold: sharedHouseholdCount > 0,
+      hasBudgets: budgetCount > 0,
+      hasRecurringExpenses: recurringExpenseCount > 0,
+      hasActiveDebts: currentDebts.length > 0,
+      canSmartImport: isSmartImportEnabled(profile.email),
+      onboardingCompletedAt: profile.onboardingCompletedAt,
     }),
   };
 }

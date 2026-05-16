@@ -40,6 +40,7 @@ type Preferences = {
   textSize: "normal" | "large";
   language: "es" | "en";
   primaryCurrency: "ARS" | "USD";
+  onboardingGoals: string[];
 };
 
 type SettingsClientProps = {

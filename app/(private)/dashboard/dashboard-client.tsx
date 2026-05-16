@@ -30,6 +30,7 @@ import { MonthProjection } from "@/components/dashboard/month-projection";
 import { ExpenseCategoryExplorer } from "@/components/dashboard/expense-category-explorer";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { ActivityPreview } from "@/components/dashboard/activity-preview";
+import { GettingStartedCard } from "@/components/dashboard/getting-started-card";
 import { useSectionCollapse } from "@/hooks/use-section-collapse";
 import { trackProductEvent } from "@/lib/observability/client";
 import {
@@ -278,6 +279,8 @@ export function DashboardClient() {
 
       {/* 1. Hero */}
       <DashboardHero metrics={metrics} year={year} month={month} usdBalance={usdBalance} />
+
+      <GettingStartedCard activation={summary.activation} />
 
       {/* Ambient signal */}
       {ambientHint && <AmbientSignal text={ambientHint} celebratory={isCelebratoryMonth} />}
