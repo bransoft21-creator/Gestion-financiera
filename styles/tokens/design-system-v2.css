@@ -1,11 +1,11 @@
 :root {
     --v2-bg: 224 34% 5%;
     --v2-bg-soft: 224 28% 7%;
-    --v2-surface: 224 24% 9%;
-    --v2-surface-raised: 222 22% 12%;
+    --v2-surface: 224 24% 10%;
+    --v2-surface-raised: 222 22% 13%;
     --v2-surface-glass: 0 0% 100%;
-    --v2-border: 220 18% 18%;
-    --v2-border-strong: 220 16% 24%;
+    --v2-border: 220 18% 23%;
+    --v2-border-strong: 220 16% 30%;
 
     --v2-text: 210 32% 96%;
     --v2-text-muted: 218 13% 58%;
@@ -121,7 +121,7 @@ body {
 }
 
 .v2-card {
-  border: 1px solid hsl(var(--v2-border) / 0.78);
+  border: 1px solid hsl(var(--v2-border) / 0.90);
   background:
     linear-gradient(180deg, hsl(var(--v2-surface-glass) / 0.07), hsl(var(--v2-surface-glass) / 0.028)),
     hsl(var(--v2-surface) / 0.82);
@@ -131,7 +131,7 @@ body {
 }
 
 .v2-card-raised {
-  border: 1px solid hsl(var(--v2-border-strong) / 0.82);
+  border: 1px solid hsl(var(--v2-border-strong) / 0.92);
   background:
     radial-gradient(circle at 12% 0%, hsl(var(--v2-brand) / 0.12), transparent 18rem),
     linear-gradient(180deg, hsl(var(--v2-surface-glass) / 0.09), hsl(var(--v2-surface-glass) / 0.03)),
@@ -142,7 +142,7 @@ body {
 }
 
 .v2-hairline {
-  border-color: hsl(var(--v2-border) / 0.72);
+  border-color: hsl(var(--v2-border) / 0.82);
 }
 
 .v2-focus-ring {
