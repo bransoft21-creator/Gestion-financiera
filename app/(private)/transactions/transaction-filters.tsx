@@ -38,13 +38,13 @@ export function TransactionFilters({
   onPayCreditCard?: () => void;
 }) {
   return (
-    <PremiumCard>
-      <PremiumCardHeader className="p-3">
+    <PremiumCard className="sticky top-2 z-20 overflow-hidden border-border/80 bg-background/95 backdrop-blur lg:static">
+      <PremiumCardHeader className="border-b border-border/60 bg-muted/[0.08] p-3 sm:p-4">
         <div className="flex min-w-0 items-center gap-2">
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <Input
-              className="h-10 min-w-0 rounded-2xl border-border bg-muted/40 pl-8 text-base md:text-xs"
+              className="h-10 min-w-0 rounded-2xl border-border/80 bg-background/60 pl-8 text-base transition focus:bg-background md:text-xs"
               placeholder="Buscar movimiento..."
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
@@ -77,7 +77,7 @@ export function TransactionFilters({
         ) : null}
       </PremiumCardHeader>
       {isFiltersOpen ? (
-        <PremiumCardContent className="px-3 pb-3 pt-0">
+        <PremiumCardContent className="px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
           <form className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-5" onSubmit={onSubmit}>
             <Field label="Tipo">
               <select

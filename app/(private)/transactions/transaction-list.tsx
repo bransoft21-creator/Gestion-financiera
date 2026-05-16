@@ -88,11 +88,11 @@ export function TransactionList({
   onNew: () => void;
 }) {
   return (
-    <>
+    <div className="space-y-4 sm:space-y-5">
       <TransactionFeedBriefing summary={feedSummary} totalAmount={totalAmount} activeFilterCount={activeFilterCount} />
 
-      <PremiumCard data-tutorial="transactions-feed">
-        <PremiumCardHeader>
+      <PremiumCard data-tutorial="transactions-feed" className="overflow-hidden border-border/80">
+        <PremiumCardHeader className="border-b border-border/70 bg-muted/[0.08]">
           <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <PremiumCardTitle>Feed de movimientos</PremiumCardTitle>
@@ -104,31 +104,36 @@ export function TransactionList({
                 />
               </PremiumCardDescription>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto"
-              onClick={onExportCsv}
-              disabled={transactions.length === 0}
-            >
-              <Download className="h-4 w-4" aria-hidden="true" />
-              CSV
-            </Button>
-            <Button type="button" size="sm" className="w-full sm:w-auto" onClick={onNew}>
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Nueva
-            </Button>
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={onExportCsv}
+                disabled={transactions.length === 0}
+              >
+                <Download className="h-4 w-4" aria-hidden="true" />
+                CSV
+              </Button>
+              <Button type="button" size="sm" className="w-full sm:w-auto" onClick={onNew}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Nueva
+              </Button>
+            </div>
           </div>
         </PremiumCardHeader>
-        <PremiumCardContent>
+        <PremiumCardContent className="p-3 pt-3 sm:p-4 sm:pt-4">
           {isLoading ? (
             <TransactionListSkeleton />
           ) : transactions.length === 0 ? (
             <TransactionsEmptyState search={search} onNew={onNew} />
           ) : (
-            <div className="space-y-6">
-              <div className="flex justify-end gap-2">
+            <div className="space-y-5">
+              <div className="flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-muted/[0.08] px-2 py-1.5">
+                <p className="pl-2 text-[11px] font-medium text-muted-foreground">
+                  Agrupado por fecha
+                </p>
                 <Button
                   type="button"
                   variant="ghost"
@@ -178,15 +183,15 @@ export function TransactionList({
           )}
         </PremiumCardContent>
       </PremiumCard>
-    </>
+    </div>
   );
 }
 
 function TransactionListSkeleton() {
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 rounded-[1.35rem] border border-border/50 bg-background/40 p-2">
       {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="rounded-2xl border border-border p-4 space-y-3">
+        <div key={i} className="space-y-3 rounded-2xl border border-border/40 bg-muted/20 p-4">
           <div className="flex gap-3">
             <Skeleton className="h-11 w-11 rounded-2xl shrink-0" />
             <div className="flex-1 space-y-2">
@@ -204,15 +209,15 @@ function TransactionListSkeleton() {
 
 function TransactionsEmptyState({ search, onNew }: { search: string; onNew: () => void }) {
   return (
-    <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-secondary/20 p-8 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-muted-foreground shadow-sm">
+    <div className="flex min-h-[300px] flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-border/80 bg-muted/[0.10] p-7 text-center sm:p-8">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-background/80 text-muted-foreground shadow-sm">
         <ReceiptText className="h-6 w-6" aria-hidden="true" />
       </div>
-      <h2 className="mt-4 text-lg font-semibold">{search ? "Sin resultados" : "Sin transacciones"}</h2>
-      <p className="mt-2 max-w-md text-sm text-muted-foreground">
+      <h2 className="mt-4 text-base font-semibold text-foreground">{search ? "Sin resultados claros" : "Todavía no hay movimientos"}</h2>
+      <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
         {search
-          ? "Ningún movimiento coincide con la búsqueda."
-          : "Creá el primer movimiento o ajustá los filtros para ver otros resultados."}
+          ? "Probá con otra palabra o limpiá filtros para volver al feed completo."
+          : "Registrá el primer movimiento o usá Smart Import para que el feed empiece a mostrar ritmo, categorías y cuentas."}
       </p>
       {!search ? (
         <Button type="button" className="mt-5 inline-flex" onClick={onNew}>
@@ -236,19 +241,19 @@ function TransactionFeedBriefing({
   const balanceTone = totalAmount >= 0 ? "text-emerald-400" : "text-rose-400";
 
   return (
-    <PremiumCard variant="raised" className="overflow-hidden p-5 sm:p-6">
-      <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
+    <PremiumCard variant="raised" className="overflow-hidden border-border/80 bg-muted/[0.06] p-4 sm:p-5">
+      <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="min-w-0">
-          <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
             <Badge className="border-primary/20 bg-primary/10 text-primary">Money feed</Badge>
             {activeFilterCount > 0 && (
               <Badge className="border-amber-500/20 bg-amber-500/10 text-amber-500">{activeFilterCount} filtros activos</Badge>
             )}
           </div>
-          <h2 className="text-balance text-2xl font-semibold leading-tight text-foreground sm:text-4xl">
+          <h2 className="text-balance text-lg font-semibold leading-tight text-foreground sm:text-xl">
             {summary.count === 0 ? "Todavía no hay movimientos para leer." : "Así se movió tu dinero."}
           </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             {summary.count === 0
               ? "Cuando registres movimientos, esta vista va a mostrar el pulso real del mes."
               : (
@@ -273,8 +278,8 @@ function TransactionFeedBriefing({
 
 function BriefingMetric({ label, value, className }: { label: string; value: string; className?: string }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-border bg-muted/40 p-3">
-      <p className="truncate text-[11px] font-semibold uppercase text-muted-foreground">{label}</p>
+    <div className="min-w-0 rounded-2xl border border-border/70 bg-background/55 p-3 shadow-sm">
+      <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={`mt-1 break-words text-xs font-semibold tabular-nums leading-tight sm:text-sm ${className ?? "text-foreground"}`}>
         <SensitiveAmount value={value} />
       </p>
@@ -298,21 +303,24 @@ function TransactionGroup({
   onDelete: (transaction: TransactionItem) => void;
 }) {
   return (
-    <section className="space-y-1.5">
+    <section className="space-y-2.5">
       <button
         type="button"
-        className="sticky top-2 z-10 flex w-full items-center justify-between rounded-full border border-border bg-background/90 px-3 py-2 text-xs font-semibold uppercase tracking-normal text-muted-foreground shadow-sm backdrop-blur transition hover:bg-secondary"
+        className="sticky top-2 z-10 flex w-full items-center justify-between rounded-2xl border border-border/70 bg-background/95 px-3 py-2.5 text-xs font-semibold text-muted-foreground shadow-sm backdrop-blur transition duration-150 hover:bg-muted/35"
         onClick={onToggle}
         aria-expanded={!isCollapsed}
       >
         <span className="flex items-center gap-2">
           <ChevronRight className={`h-3.5 w-3.5 transition ${isCollapsed ? "" : "rotate-90"}`} aria-hidden="true" />
+          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/35" aria-hidden="true" />
           {group.label}
         </span>
-        <span>{group.transactions.length}</span>
+        <span className="rounded-full border border-border/70 bg-muted/35 px-2 py-0.5 text-[10px] tabular-nums">
+          {group.transactions.length}
+        </span>
       </button>
       {!isCollapsed ? (
-        <div className="space-y-1.5">
+        <div className="space-y-2 rounded-[1.35rem] border border-border/45 bg-background/35 p-1.5">
           {group.transactions.map((transaction) => (
             <TransactionCard
               key={transaction.id}
@@ -347,7 +355,7 @@ function TransactionCard({
 
   return (
     <article
-      className="group min-w-0 cursor-pointer overflow-hidden rounded-2xl border border-border bg-muted/30 px-3 py-3 shadow-sm transition hover:-translate-y-0.5 hover:border-border hover:bg-muted/50 active:scale-[0.99]"
+      className="group min-w-0 cursor-pointer overflow-hidden rounded-[1.15rem] border border-transparent bg-muted/[0.18] px-3.5 py-3.5 transition duration-150 hover:border-border/70 hover:bg-muted/40 active:scale-[0.995] sm:px-4"
       role="button"
       tabIndex={0}
       onClick={() => onEdit(transaction)}
@@ -358,31 +366,31 @@ function TransactionCard({
         }
       }}
     >
-      <div className="flex min-w-0 items-center gap-2.5">
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${tone.icon}`}>
+      <div className="flex min-w-0 items-start gap-3">
+        <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${tone.icon}`}>
           <Icon className="h-4 w-4" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-start justify-between gap-2">
+          <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="truncate text-xs font-semibold sm:text-sm">{transaction.description ?? "Sin descripción"}</p>
-              <p className="truncate text-[11px] text-muted-foreground">
+              <p className="truncate text-sm font-semibold leading-5 text-foreground">{transaction.description ?? "Sin descripción"}</p>
+              <p className="mt-0.5 truncate text-xs leading-5 text-muted-foreground">
                 {transaction.type === "TRANSFER"
                   ? `${transaction.account.name}${transaction.transferAccount ? ` → ${transaction.transferAccount.name}` : ""}`
                   : `${transaction.category?.name ?? "Sin categoría"} · ${transaction.account.name}`}
               </p>
             </div>
-            <div className="max-w-[42%] shrink-0 text-right">
-              <p className={`max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs font-bold leading-none sm:text-sm ${tone.amount}`}>
+            <div className="max-w-[44%] shrink-0 text-right sm:min-w-[108px]">
+              <p className={`max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold leading-5 sm:text-[15px] ${tone.amount}`}>
                 <SensitiveAmount
                   value={`${isTransfer ? "" : signedAmount > 0 ? "+" : signedAmount < 0 ? "-" : ""}${formatMoney(isTransfer ? displayAmount : Math.abs(signedAmount), transaction.currency)}`}
                 />
               </p>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">{transaction.currency}</p>
+              <p className="text-[10px] font-medium text-muted-foreground">{transaction.currency}</p>
             </div>
           </div>
 
-          <div className="mt-1.5 flex min-w-0 items-center gap-1.5 overflow-hidden">
+          <div className="mt-2.5 flex min-w-0 flex-wrap items-center gap-1.5">
             <Badge className={`h-5 shrink-0 border-0 px-2 text-[11px] ${tone.badge}`}>{transactionTypeLabels[transaction.type]}</Badge>
             {transaction.status === "PENDING" && (
               <Badge className="h-5 shrink-0 border-amber-500/30 bg-amber-500/10 px-2 text-[11px] text-amber-400">Pendiente</Badge>
@@ -396,7 +404,7 @@ function TransactionCard({
                 {transaction.sharedTransaction.household.name}
               </Badge>
             ) : null}
-            <span className="inline-flex min-w-0 items-center gap-1 truncate rounded-md bg-secondary px-2 py-1 text-[11px] leading-none text-muted-foreground">
+            <span className="inline-flex min-w-0 items-center gap-1 truncate rounded-full border border-border/50 bg-background/55 px-2 py-1 text-[11px] leading-none text-muted-foreground">
               <CalendarDays className="h-3 w-3" aria-hidden="true" />
               {formatDate(transaction.occurredAt)}
             </span>
