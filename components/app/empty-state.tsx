@@ -20,11 +20,11 @@ export function EmptyState({ icon: Icon, title, description, actions }: EmptySta
   return (
     <Card>
       <CardContent className="flex min-h-[300px] flex-col items-center justify-center px-8 py-10 text-center sm:min-h-[320px]">
-        <div className="flex h-14 w-14 items-center justify-center rounded-[18px] border border-white/[0.10] bg-white/[0.05] text-zinc-400 shadow-[0_8px_28px_rgba(0,0,0,0.2)]">
+        <div className="flex h-14 w-14 items-center justify-center rounded-[18px] border border-border bg-muted/40 text-muted-foreground shadow-sm">
           <Icon className="h-6 w-6" aria-hidden="true" />
         </div>
-        <h2 className="mt-5 text-base font-semibold leading-snug text-white">{title}</h2>
-        <p className="mt-2 max-w-sm text-sm leading-6 text-zinc-500">{description}</p>
+        <h2 className="mt-5 text-base font-semibold leading-snug text-foreground">{title}</h2>
+        <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{description}</p>
         {actions && actions.length > 0 && (
           <div className="mt-7 flex flex-wrap justify-center gap-2">
             {actions.map((action) => (

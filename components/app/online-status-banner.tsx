@@ -30,7 +30,7 @@ export function OnlineStatusBanner() {
   if (online) return null;
 
   return (
-    <div className="fixed inset-x-4 top-[calc(64px+env(safe-area-inset-top))] z-[140] rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-100 shadow-2xl backdrop-blur-xl lg:left-auto lg:right-6 lg:top-6 lg:max-w-sm">
+    <div className="fixed inset-x-4 top-[calc(64px+env(safe-area-inset-top))] z-[140] rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm text-amber-500 shadow-2xl backdrop-blur-xl lg:left-auto lg:right-6 lg:top-6 lg:max-w-sm">
       <div className="flex items-start gap-3">
         <WifiOff className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <p>Sin conexión. Podés seguir mirando la app; para guardar o importar necesitás volver online.</p>

@@ -52,30 +52,30 @@ export function ProfileClient({
                   alt={displayName}
                   width={80}
                   height={80}
-                  className="h-20 w-20 shrink-0 rounded-3xl border border-white/10 object-cover shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+                  className="h-20 w-20 shrink-0 rounded-3xl border border-border object-cover shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
                 />
               ) : (
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl border border-white/10 bg-white/[0.07] text-2xl font-bold text-white shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl border border-border bg-muted/60 text-2xl font-bold text-foreground shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
                   {initials || <User className="h-8 w-8" aria-hidden="true" />}
                 </div>
               )}
 
               <div className="min-w-0 flex-1 pt-1">
-                <h2 className="text-xl font-bold leading-tight text-white sm:text-2xl">
+                <h2 className="text-xl font-bold leading-tight text-foreground sm:text-2xl">
                   {displayName}
                 </h2>
                 {userEmail ? (
-                  <p className="mt-1 flex items-center gap-1.5 truncate text-sm text-zinc-400">
+                  <p className="mt-1 flex items-center gap-1.5 truncate text-sm text-muted-foreground">
                     <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                     {userEmail}
                   </p>
                 ) : null}
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  <Badge className="border-white/10 bg-white/[0.06] text-zinc-300">
+                  <Badge className="border-border bg-muted/50 text-muted-foreground">
                     <User className="mr-1 h-3 w-3" aria-hidden="true" />
                     Cuenta activa
                   </Badge>
-                  <Badge className="border-white/10 bg-white/[0.06] text-zinc-400">
+                  <Badge className="border-border bg-muted/50 text-muted-foreground">
                     {providerLabel}
                   </Badge>
                   {isAiEnabled && (
@@ -99,8 +99,8 @@ export function ProfileClient({
                   <Sparkles className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-teal-100">Funciones IA activas</p>
-                  <p className="mt-1 text-xs leading-5 text-zinc-400">
+                  <p className="text-sm font-semibold text-primary">Funciones IA activas</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     Tenés acceso al análisis mensual con IA y Smart Import.
                   </p>
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -121,12 +121,12 @@ export function ProfileClient({
           <PremiumCard>
             <PremiumCardContent className="p-5">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-zinc-500">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/30 text-muted-foreground">
                   <Sparkles className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-zinc-300">Funciones IA no disponibles</p>
-                  <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  <p className="text-sm font-semibold text-muted-foreground">Funciones IA no disponibles</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     Las funciones de IA están disponibles para usuarios beta. Tu cuenta está en lista de espera.
                   </p>
                 </div>
@@ -141,17 +141,17 @@ export function ProfileClient({
             {/* Ajustes */}
             <div className="flex items-center justify-between gap-3 px-5 py-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
                   <Settings className="h-4 w-4" aria-hidden="true" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-zinc-200">Ajustes</p>
-                  <p className="text-xs text-zinc-500">Apariencia, región, privacidad y más.</p>
+                  <p className="text-sm font-medium text-muted-foreground">Ajustes</p>
+                  <p className="text-xs text-muted-foreground">Apariencia, región, privacidad y más.</p>
                 </div>
               </div>
               <Link
                 href="/settings"
-                className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-zinc-300 transition hover:bg-white/[0.08] hover:text-white"
+                className="shrink-0 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
               >
                 Ir a ajustes
               </Link>
@@ -160,8 +160,8 @@ export function ProfileClient({
             {/* Cerrar sesión */}
             <div className="flex items-center justify-between gap-3 px-5 py-4">
               <div>
-                <p className="text-sm font-semibold text-zinc-200">Cerrar sesión</p>
-                <p className="mt-0.5 text-xs text-zinc-500">Salir de esta cuenta en este dispositivo.</p>
+                <p className="text-sm font-semibold text-muted-foreground">Cerrar sesión</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">Salir de esta cuenta en este dispositivo.</p>
               </div>
               <ActionButton
                 variant="danger"

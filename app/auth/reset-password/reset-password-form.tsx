@@ -133,7 +133,7 @@ export function ResetPasswordForm() {
       <section className="fade-in w-full max-w-[460px]">
         <div className="mb-8 flex flex-col items-center text-center">
           <Image src="/icons/Meridian.png" alt="Meridian" width={60} height={60} className="mb-4 select-none" priority />
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-100/80">Meridian</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">Meridian</p>
         </div>
 
         <div className="v2-card-raised rounded-[28px] p-6 sm:p-8">
@@ -149,7 +149,7 @@ export function ResetPasswordForm() {
 
           {recoveryState === "invalid" && (
             <div className="flex min-h-[360px] flex-col items-center justify-center text-center">
-              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-[22px] border border-rose-300/20 bg-rose-400/10 text-rose-100">
+              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-[22px] border border-destructive/20 bg-destructive/10 text-destructive">
                 <KeyRound className="h-6 w-6" aria-hidden="true" />
               </div>
               <h1 className="text-2xl font-semibold text-foreground">{INVALID_LINK_MESSAGE}</h1>
@@ -158,7 +158,7 @@ export function ResetPasswordForm() {
               </p>
               <a
                 href="/login"
-                className="v2-focus-ring mt-7 flex h-12 w-full items-center justify-center rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.12)] transition hover:bg-zinc-100"
+                className="v2-focus-ring mt-7 flex h-12 w-full items-center justify-center rounded-2xl bg-white text-sm font-bold text-background shadow-[var(--btn-default-shadow)] transition hover:opacity-90"
               >
                 Ir al login
               </a>
@@ -167,7 +167,7 @@ export function ResetPasswordForm() {
 
           {recoveryState === "success" && (
             <div className="flex min-h-[360px] flex-col items-center justify-center text-center">
-              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-[22px] border border-emerald-300/20 bg-emerald-400/10 text-emerald-100">
+              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-[22px] border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
                 <CheckCircle2 className="h-7 w-7" aria-hidden="true" />
               </div>
               <h1 className="text-2xl font-semibold text-foreground">Contraseña actualizada</h1>
@@ -180,7 +180,7 @@ export function ResetPasswordForm() {
           {recoveryState === "ready" && (
             <>
               <div className="mb-7">
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-[20px] border border-white/10 bg-white/[0.06] text-teal-100">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-[20px] border border-border bg-muted/50 text-primary">
                   <ShieldCheck className="h-6 w-6" aria-hidden="true" />
                 </div>
                 <h1 className="text-2xl font-semibold text-foreground">Creá una nueva contraseña</h1>
@@ -200,7 +200,7 @@ export function ResetPasswordForm() {
                       type={showPassword ? "text" : "password"}
                       autoComplete="new-password"
                       placeholder="••••••••"
-                      className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 pr-12 text-base md:text-sm text-foreground outline-none transition hover:bg-white/[0.07]"
+                      className="v2-focus-ring h-[46px] w-full rounded-2xl border border-border bg-muted/40 px-4 pr-12 text-base md:text-sm text-foreground outline-none transition hover:bg-muted/60"
                     />
                     <button
                       type="button"
@@ -224,7 +224,7 @@ export function ResetPasswordForm() {
                       type={showConfirmPassword ? "text" : "password"}
                       autoComplete="new-password"
                       placeholder="••••••••"
-                      className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 pr-12 text-base md:text-sm text-foreground outline-none transition hover:bg-white/[0.07]"
+                      className="v2-focus-ring h-[46px] w-full rounded-2xl border border-border bg-muted/40 px-4 pr-12 text-base md:text-sm text-foreground outline-none transition hover:bg-muted/60"
                     />
                     <button
                       type="button"
@@ -239,7 +239,7 @@ export function ResetPasswordForm() {
                 </div>
 
                 {message && (
-                  <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">
+                  <p className="rounded-2xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
                     {message}
                   </p>
                 )}
@@ -247,7 +247,7 @@ export function ResetPasswordForm() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="v2-focus-ring flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.12)] transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="v2-focus-ring flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white text-sm font-bold text-background shadow-[var(--btn-default-shadow)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
                   {isSubmitting ? "Actualizando..." : "Actualizar contraseña"}

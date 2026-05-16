@@ -20,7 +20,7 @@ export function LogoutButton({ compact = false, className }: LogoutButtonProps) 
         variant={compact ? "ghost" : "secondary"}
         size={compact ? "icon" : "sm"}
         className={cn(
-          compact && "h-9 w-9 rounded-full border-0 bg-transparent text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
+          compact && "h-9 w-9 rounded-full border-0 bg-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
           !compact && "rounded-full bg-secondary/70 px-3 text-muted-foreground hover:text-foreground",
           className,
         )}

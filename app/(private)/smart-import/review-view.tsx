@@ -128,8 +128,8 @@ export function ReviewView({
       />
 
       {displayedCandidates.length === 0 ? (
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 text-center">
-          <p className="text-sm text-zinc-500">No hay transacciones en esta vista.</p>
+        <div className="rounded-2xl border border-border bg-muted/15 p-10 text-center">
+          <p className="text-sm text-muted-foreground">No hay transacciones en esta vista.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -167,7 +167,7 @@ export function ReviewView({
 
       <div className="fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 px-4 sm:hidden">
         <div
-          className="rounded-2xl border border-white/10 p-3 shadow-2xl"
+          className="rounded-2xl border border-border p-3 shadow-2xl"
           style={{
             background: "rgba(5,8,15,0.92)",
             backdropFilter: "blur(20px)",
@@ -221,11 +221,11 @@ function NarrativeSummary({
             <p className="text-xs font-semibold uppercase tracking-wider text-teal-400/80">
               {sourceTypeLabel(metadata.sourceType)}
             </p>
-            <p className="text-2xl font-bold tabular-nums text-white">
+            <p className="text-2xl font-bold tabular-nums text-foreground">
               {currency === "USD" ? "USD " : "$ "}
               {Math.round(total).toLocaleString("es-AR")}
             </p>
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               {candidates.length} movimiento{candidates.length !== 1 ? "s" : ""} detectado
               {candidates.length !== 1 ? "s" : ""}
             </p>
@@ -259,7 +259,7 @@ function NarrativeSummary({
         </div>
 
         {selectedCount < candidates.length && (
-          <p className="mt-3 border-t border-white/[0.06] pt-3 text-xs text-zinc-500">
+          <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
             {selectedCount} de {candidates.length} seleccionadas para importar.{" "}
             {candidates.length - selectedCount} se van a descartar.
           </p>
@@ -307,7 +307,7 @@ function QuickActionsBar({
               "shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors duration-150",
               activeFilter === f.key
                 ? "border border-teal-400/30 bg-teal-400/15 text-teal-300"
-                : "border border-white/10 bg-white/[0.04] text-zinc-400 hover:bg-white/[0.07] hover:text-zinc-300",
+                : "border border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-muted-foreground",
             )}
           >
             {f.label}
@@ -319,7 +319,7 @@ function QuickActionsBar({
         <button
           type="button"
           onClick={() => onSelectAll(!allSelected)}
-          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:bg-white/[0.08]"
+          className="flex items-center gap-1.5 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted/70"
         >
           {allSelected ? <Minus className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
           {allSelected ? "Deseleccionar todo" : "Seleccionar todo"}
@@ -366,18 +366,18 @@ function ConfirmBar({
     return (
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-white">
+          <p className="text-sm font-medium text-foreground">
             {selectedCount > 0 ? (
               <>
                 <span className="text-teal-300">{selectedCount}</span>{" "}
                 seleccionada{selectedCount !== 1 ? "s" : ""}
               </>
             ) : (
-              <span className="text-zinc-500">Ninguna seleccionada</span>
+              <span className="text-muted-foreground">Ninguna seleccionada</span>
             )}
           </p>
           {selectedCount > 0 && (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               $ {Math.round(selectedTotal).toLocaleString("es-AR")}
             </p>
           )}
@@ -443,7 +443,7 @@ function CandidateCard({
               "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors duration-150",
               c.selected
                 ? "border-teal-400/60 bg-teal-400/20 text-teal-300"
-                : "border-white/20 bg-white/[0.04]",
+                : "border-white/20 bg-muted/30",
             )}
           >
             {c.selected && <CheckCircle2 className="h-3.5 w-3.5" />}
@@ -489,11 +489,11 @@ function CandidateCard({
               onChange={(e) => onPatch({ editDescription: e.target.value })}
               maxLength={80}
               placeholder="Descripción"
-              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-base md:text-sm text-white placeholder-zinc-600 outline-none focus:border-teal-400/40 focus:bg-white/[0.07]"
+              className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2 text-base md:text-sm text-foreground placeholder-zinc-600 outline-none focus:border-teal-400/40 focus:bg-muted/60"
             />
 
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-500">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">
                 {c.currency === "USD" ? "USD" : "$"}
               </span>
               <input
@@ -502,7 +502,7 @@ function CandidateCard({
                 onChange={(e) => onPatch({ editAmount: e.target.value })}
                 step="0.01"
                 min="0.01"
-                className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-12 pr-3 text-base font-bold tabular-nums text-white outline-none focus:border-teal-400/40 focus:bg-white/[0.07]"
+                className="w-full rounded-xl border border-border bg-muted/30 py-2.5 pl-12 pr-3 text-base font-bold tabular-nums text-foreground outline-none focus:border-teal-400/40 focus:bg-muted/60"
               />
             </div>
 
@@ -510,7 +510,7 @@ function CandidateCard({
               type="date"
               value={c.editDate}
               onChange={(e) => onPatch({ editDate: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-base md:text-sm text-white outline-none focus:border-teal-400/40 focus:bg-white/[0.07] [color-scheme:dark]"
+              className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2 text-base md:text-sm text-foreground outline-none focus:border-teal-400/40 focus:bg-muted/60 [color-scheme:dark]"
             />
 
             <div className="grid grid-cols-2 gap-2">
@@ -521,7 +521,7 @@ function CandidateCard({
                 <select
                   value={c.editAccountId}
                   onChange={(e) => onPatch({ editAccountId: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-base md:text-xs text-white outline-none focus:border-teal-400/40 [&>option]:bg-zinc-900"
+                  className="w-full rounded-xl border border-border bg-muted/30 px-2.5 py-2 text-base md:text-xs text-foreground outline-none focus:border-teal-400/40 [&>option]:bg-zinc-900"
                 >
                   <option value="">Sin cuenta</option>
                   {accounts.map((a) => (
@@ -538,7 +538,7 @@ function CandidateCard({
                 <select
                   value={c.editCategoryId}
                   onChange={(e) => onPatch({ editCategoryId: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-2 text-base md:text-xs text-white outline-none focus:border-teal-400/40 [&>option]:bg-zinc-900"
+                  className="w-full rounded-xl border border-border bg-muted/30 px-2.5 py-2 text-base md:text-xs text-foreground outline-none focus:border-teal-400/40 [&>option]:bg-zinc-900"
                 >
                   <option value="">Sin categoría</option>
                   {expenseCategories.map((cat) => (
@@ -559,7 +559,7 @@ function CandidateCard({
                   </span>
                 )}
                 {c.possibleDuplicate && c.duplicateInfo && (
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-muted-foreground">
                     Ya existe: {c.duplicateInfo.date} · ${" "}
                     {c.duplicateInfo.amount.toLocaleString("es-AR")}
                   </span>

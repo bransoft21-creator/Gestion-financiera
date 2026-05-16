@@ -19,7 +19,7 @@ function ConfidenceBadge({ confidence }: { confidence: "high" | "medium" | "low"
       ? "border-teal-300/20 bg-teal-300/10 text-teal-400"
       : confidence === "medium"
         ? "border-amber-300/20 bg-amber-300/10 text-amber-400"
-        : "border-white/10 bg-white/[0.04] text-zinc-500";
+        : "border-border bg-muted/30 text-muted-foreground";
   return (
     <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${cls}`}>
       Confianza: {label}
@@ -51,7 +51,7 @@ export function MonthProjection({ metrics }: { metrics: DashboardSummary["metric
     <PremiumCard>
       <PremiumCardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-teal-300/12 text-teal-100">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-teal-300/12 text-primary">
             <TrendingUp className="h-4 w-4" aria-hidden="true" />
           </div>
           <div>
@@ -67,7 +67,7 @@ export function MonthProjection({ metrics }: { metrics: DashboardSummary["metric
           </p>
         )}
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+          <div className="rounded-2xl border border-border bg-muted/25 p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Gasto proyectado
             </p>
@@ -79,7 +79,7 @@ export function MonthProjection({ metrics }: { metrics: DashboardSummary["metric
               <SensitiveAmount value={formatMoney(projection.projectedExpenses)} />
             </p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+          <div className="rounded-2xl border border-border bg-muted/25 p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Saldo estimado
             </p>

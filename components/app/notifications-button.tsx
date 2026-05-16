@@ -226,7 +226,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
         size={compact ? "icon" : "sm"}
         className={cn(
           compact &&
-            "relative h-9 w-9 rounded-full border-0 bg-transparent text-muted-foreground hover:bg-white/[0.06] hover:text-foreground",
+            "relative h-9 w-9 rounded-full border-0 bg-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
           !compact && "rounded-full bg-secondary/70 px-3 text-muted-foreground hover:text-foreground",
           className,
         )}
@@ -266,11 +266,11 @@ export function NotificationsButton({ compact = false, className, panelClassName
           /> : null}
           <div className={cn(
             embedded
-              ? "w-full overflow-hidden rounded-[var(--v2-radius-lg)] border border-white/[0.14] bg-zinc-950 shadow-2xl shadow-black/40"
-              : "absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(420px,calc(100vw-24px))] overflow-hidden rounded-[var(--v2-radius-lg)] border border-white/[0.14] bg-zinc-950 shadow-2xl shadow-black/60",
+              ? "w-full overflow-hidden rounded-[var(--v2-radius-lg)] border border-border bg-card shadow-2xl shadow-black/40"
+              : "absolute right-0 top-[calc(100%+8px)] z-[70] w-[min(420px,calc(100vw-24px))] overflow-hidden rounded-[var(--v2-radius-lg)] border border-border bg-card shadow-2xl shadow-black/60",
             panelClassName,
           )}>
-          <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-950 px-4 py-3">
+          <div className="flex items-center justify-between gap-3 border-b border-border bg-card px-4 py-3">
             <div>
               <p className="text-sm font-semibold">Centro financiero</p>
               <p className="text-xs text-muted-foreground">
@@ -307,7 +307,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
             </div>
           </div>
 
-          <div className="flex border-b border-white/10 bg-zinc-950 p-1">
+          <div className="flex border-b border-border bg-card p-1">
             {(["alerts", "settings"] as const).map((item) => (
               <button
                 key={item}
@@ -315,7 +315,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
                 className={cn(
                   "flex-1 rounded-xl px-3 py-2 text-xs font-semibold transition",
                   tab === item
-                    ? "bg-zinc-800 text-teal-100"
+                    ? "bg-muted text-primary"
                     : "text-muted-foreground hover:text-foreground",
                 )}
                 onClick={() => setTab(item)}
@@ -327,7 +327,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
 
           {tab === "alerts" ? (
             <>
-            <div className={cn("space-y-2 bg-zinc-950 p-3", !embedded && "max-h-[360px] overflow-y-auto")}>
+            <div className={cn("space-y-2 bg-card p-3", !embedded && "max-h-[360px] overflow-y-auto")}>
                 {notifications.length === 1 && notifications[0].id === "all-good" ? (
                   <EmptyNotifications />
                 ) : (
@@ -342,7 +342,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
                 )}
               </div>
 
-              <div className="grid gap-2 border-t border-white/10 bg-zinc-950 p-3 sm:grid-cols-2">
+              <div className="grid gap-2 border-t border-border bg-card p-3 sm:grid-cols-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -362,7 +362,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
               </div>
             </>
           ) : (
-            <div className={cn("space-y-3 bg-zinc-950 p-3", !embedded && "max-h-[430px] overflow-y-auto")}>
+            <div className={cn("space-y-3 bg-card p-3", !embedded && "max-h-[430px] overflow-y-auto")}>
               <PushStatus
                 permission={permission}
                 browserPush={preferences.browserPush}
@@ -370,7 +370,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
                 onEnable={enableBrowserPush}
                 onDisable={disableBrowserPush}
               />
-              <section className="rounded-2xl border border-white/[0.14] bg-zinc-900 p-3 shadow-inner shadow-black/20">
+              <section className="rounded-2xl border border-border bg-muted p-3 shadow-inner shadow-black/20">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold">Señales que querés recibir</p>
@@ -378,7 +378,7 @@ export function NotificationsButton({ compact = false, className, panelClassName
                       Elegí qué merece interrumpirte y qué puede esperar.
                     </p>
                   </div>
-                  <span className="shrink-0 rounded-full border border-teal-300/20 bg-teal-300/10 px-2.5 py-1 text-[11px] font-semibold text-teal-100">
+                  <span className="shrink-0 rounded-full border border-teal-300/20 bg-teal-300/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
                     {activeRuleCount}/5
                   </span>
                 </div>
@@ -474,7 +474,7 @@ function NotificationCard({
             {!isRead ? (
               <button
                 type="button"
-                className="text-[11px] font-semibold text-teal-200 hover:text-teal-100"
+                className="text-[11px] font-semibold text-teal-200 hover:text-primary"
                 onClick={onRead}
               >
                 Leída
@@ -492,7 +492,7 @@ function NotificationCard({
 
 function EmptyNotifications() {
   return (
-    <div className="rounded-2xl border border-white/[0.14] bg-zinc-900 p-5 text-center">
+    <div className="rounded-2xl border border-border bg-muted p-5 text-center">
       <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
         <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
       </div>
@@ -521,9 +521,9 @@ function PushStatus({
 
   if (permission === "unsupported") {
     return (
-      <div className="rounded-2xl border border-white/[0.14] bg-zinc-900 p-4">
+      <div className="rounded-2xl border border-border bg-muted p-4">
         <div className="flex gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-zinc-800 text-zinc-300">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted text-muted-foreground">
             <BellOff className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
@@ -541,12 +541,12 @@ function PushStatus({
     return (
       <div className="rounded-2xl border border-rose-500/25 bg-rose-500/10 p-4">
         <div className="flex gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-300/12 text-rose-100">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-rose-300/12 text-destructive">
             <BellOff className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-rose-100">Permiso bloqueado</p>
-            <p className="mt-1 text-xs leading-5 text-zinc-300">
+            <p className="text-sm font-semibold text-destructive">Permiso bloqueado</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
               Activá el permiso desde la configuración del sitio para recibir avisos del navegador.
             </p>
           </div>
@@ -560,14 +560,14 @@ function PushStatus({
       "overflow-hidden rounded-2xl border p-4",
       isEnabled
         ? "border-teal-300/25 bg-teal-950/50"
-        : "border-white/[0.14] bg-zinc-900",
+        : "border-border bg-muted",
     )}>
       <div className="flex gap-3">
         <div className={cn(
           "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border",
           isEnabled
-            ? "border-teal-300/20 bg-teal-300/10 text-teal-100"
-            : "border-white/10 bg-zinc-800 text-zinc-300",
+            ? "border-teal-300/20 bg-teal-300/10 text-primary"
+            : "border-border bg-muted text-muted-foreground",
         )}>
           {isEnabled ? <Radio className="h-5 w-5" aria-hidden="true" /> : <BellRing className="h-5 w-5" aria-hidden="true" />}
         </div>
@@ -585,21 +585,21 @@ function PushStatus({
             </div>
             <span className={cn(
               "shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase",
-              isEnabled ? "bg-teal-300/15 text-teal-100" : "bg-zinc-800 text-zinc-400",
+              isEnabled ? "bg-teal-300/15 text-primary" : "bg-muted text-muted-foreground",
             )}>
               {isEnabled ? "Activo" : "Pausado"}
             </span>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-2.5">
-              <p className="text-[10px] font-semibold uppercase text-zinc-500">Modo</p>
-              <p className="mt-1 truncate text-xs font-semibold text-zinc-100">
+            <div className="rounded-2xl border border-border bg-card/70 p-2.5">
+              <p className="text-[10px] font-semibold uppercase text-muted-foreground">Modo</p>
+              <p className="mt-1 truncate text-xs font-semibold text-foreground">
                 {isEnabled ? "Navegador + app" : "Solo app"}
               </p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-2.5">
-              <p className="text-[10px] font-semibold uppercase text-zinc-500">Reglas</p>
-              <p className="mt-1 text-xs font-semibold text-zinc-100">{activeRuleCount} activas</p>
+            <div className="rounded-2xl border border-border bg-card/70 p-2.5">
+              <p className="text-[10px] font-semibold uppercase text-muted-foreground">Reglas</p>
+              <p className="mt-1 text-xs font-semibold text-foreground">{activeRuleCount} activas</p>
             </div>
           </div>
           <div className="mt-3">
@@ -635,18 +635,18 @@ function RuleToggle({
   onChange: () => void;
 }) {
   const toneClass = {
-    danger: "bg-rose-300/12 text-rose-100",
-    warning: "bg-amber-300/12 text-amber-100",
-    info: "bg-sky-300/12 text-sky-100",
-    neutral: "bg-zinc-300/10 text-zinc-200",
+    danger: "bg-rose-300/12 text-destructive",
+    warning: "bg-amber-300/12 text-amber-500",
+    info: "bg-sky-300/12 text-sky-400",
+    neutral: "bg-zinc-300/10 text-muted-foreground",
   }[tone];
 
   return (
     <label className={cn(
       "flex cursor-pointer items-center gap-3 rounded-2xl border p-3 transition",
       checked
-        ? "border-white/[0.16] bg-zinc-800"
-        : "border-white/10 bg-zinc-950/70 opacity-80 hover:opacity-100",
+        ? "border-border bg-muted"
+        : "border-border bg-card/70 opacity-80 hover:opacity-100",
     )}>
       <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl", toneClass)}>
         <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
@@ -665,7 +665,7 @@ function RuleToggle({
         aria-hidden="true"
         className={cn(
           "relative h-6 w-10 shrink-0 rounded-full border transition",
-          checked ? "border-teal-300/30 bg-teal-300/25" : "border-white/10 bg-zinc-700",
+          checked ? "border-teal-300/30 bg-teal-300/25" : "border-border bg-zinc-700",
         )}
       >
         <span className={cn(
@@ -688,14 +688,14 @@ function ExpenseLimitSlider({
 }) {
   return (
     <div className={cn(
-      "rounded-2xl border border-white/10 bg-zinc-950/70 p-3 transition",
+      "rounded-2xl border border-border bg-card/70 p-3 transition",
       disabled && "opacity-45",
     )}>
       <div className="flex items-center justify-between gap-3">
         <label className="text-xs font-semibold text-muted-foreground" htmlFor="expense-limit">
           Umbral de gasto
         </label>
-        <span className="rounded-full border border-white/10 bg-zinc-800 px-2 py-1 text-[11px] font-semibold text-zinc-100">
+        <span className="rounded-full border border-border bg-muted px-2 py-1 text-[11px] font-semibold text-foreground">
           {value}%
         </span>
       </div>
@@ -710,7 +710,7 @@ function ExpenseLimitSlider({
         onChange={(event) => onChange(event.target.value)}
         className="mt-3 w-full accent-teal-300 disabled:cursor-not-allowed"
       />
-      <div className="mt-1 flex justify-between text-[10px] font-medium text-zinc-600">
+      <div className="mt-1 flex justify-between text-[10px] font-medium text-muted-foreground">
         <span>50%</span>
         <span>100%</span>
       </div>

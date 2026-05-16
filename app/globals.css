@@ -316,9 +316,9 @@
 
 /* ── Recharts ────────────────────────────────────────────────────── */
 .light .recharts-cartesian-grid-horizontal line,
-.light .recharts-cartesian-grid-vertical line   { stroke: rgba(30,40,60,0.08) !important; }
+.light .recharts-cartesian-grid-vertical line   { stroke: rgba(30,40,60,0.07) !important; }
 .light .recharts-cartesian-axis-line,
-.light .recharts-cartesian-axis-tick-line       { stroke: rgba(30,40,60,0.14) !important; }
+.light .recharts-cartesian-axis-tick-line       { stroke: rgba(30,40,60,0.12) !important; }
 .light .recharts-text,
 .light .recharts-legend-item-text              { fill: hsl(var(--muted-foreground)) !important;
                                                  color: hsl(var(--muted-foreground)) !important; }
@@ -328,6 +328,21 @@
   color:        hsl(var(--foreground)) !important;
   box-shadow:   var(--elevation-2) !important;
 }
+/* Custom tooltip containers in dark mode: ensure label text is legible */
+.recharts-tooltip-wrapper { filter: none; }
+
+/* ── Missing light-mode text overrides ───────────────────────────── */
+.light .text-teal-200           { color: hsl(var(--primary))                  !important; }
+.light .text-sky-200            { color: hsl(221 83% 55%)                      !important; }
+.light .text-rose-200           { color: hsl(var(--destructive))               !important; }
+.light .text-emerald-200        { color: hsl(152 60% 36%)                      !important; }
+.light .text-amber-200          { color: hsl(38 80% 40%)                       !important; }
+
+/* ── Missing dark-bg variants ────────────────────────────────────── */
+.light .bg-zinc-950\/55         { background-color: hsl(var(--card) / 0.80)   !important; }
+.light .bg-zinc-950\/65         { background-color: hsl(var(--card) / 0.88)   !important; }
+.light .bg-zinc-900\/75         { background-color: hsl(var(--muted) / 0.70)  !important; }
+.light .hover\:bg-zinc-900\/75:hover { background-color: hsl(var(--muted) / 0.85) !important; }
 
 /* ── Focus ring — accessible offset pattern for light mode ────────
    White gap between element and ring = clearly perceivable on any bg

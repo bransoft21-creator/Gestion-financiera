@@ -173,7 +173,7 @@ export function OnboardingClient({
         <button
           type="button"
           onClick={() => router.push("/profile")}
-          className="absolute left-5 top-8 flex items-center gap-1.5 text-sm text-zinc-500 transition hover:text-zinc-300"
+          className="absolute left-5 top-8 flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-muted-foreground"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Volver
@@ -251,7 +251,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
       </motion.div>
 
       <motion.p
-        className="mb-8 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-500"
+        className="mb-8 text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1, transition: { delay: 0.18, duration: 0.55 } }}
       >
@@ -259,16 +259,16 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
       </motion.p>
 
       <motion.h1
-        className="text-balance text-[40px] font-semibold leading-[1.1] tracking-tight text-white sm:text-[48px]"
+        className="text-balance text-[40px] font-semibold leading-[1.1] tracking-tight text-foreground sm:text-[48px]"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0, transition: { delay: 0.26, duration: 0.55, ease: easeOut } }}
       >
         Tu dinero,{" "}
-        <span className="text-zinc-500">con perspectiva.</span>
+        <span className="text-muted-foreground">con perspectiva.</span>
       </motion.h1>
 
       <motion.p
-        className="mx-auto mt-5 max-w-[280px] text-[15px] leading-relaxed text-zinc-500"
+        className="mx-auto mt-5 max-w-[280px] text-[15px] leading-relaxed text-muted-foreground"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1, transition: { delay: 0.36, duration: 0.5 } }}
       >
@@ -302,10 +302,10 @@ function GoalsStep({
 }) {
   return (
     <div>
-      <h2 className="text-balance text-[26px] font-semibold leading-tight text-white">
+      <h2 className="text-balance text-[26px] font-semibold leading-tight text-foreground">
         ¿Qué querés mejorar?
       </h2>
-      <p className="mt-2.5 text-sm text-zinc-500">Elegí todo lo que aplique.</p>
+      <p className="mt-2.5 text-sm text-muted-foreground">Elegí todo lo que aplique.</p>
 
       <div className="mt-7 flex flex-wrap gap-2">
         {GOALS.map((goal) => {
@@ -318,8 +318,8 @@ function GoalsStep({
               className={cn(
                 "flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition duration-150",
                 isSelected
-                  ? "border-white/20 bg-white/[0.09] text-white shadow-[0_0_0_1px_rgba(255,255,255,0.07)]"
-                  : "border-white/[0.07] bg-white/[0.025] text-zinc-500 hover:border-white/12 hover:bg-white/[0.05] hover:text-zinc-300",
+                  ? "border-border bg-muted/70 text-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.07)]"
+                  : "border-border bg-muted/20 text-muted-foreground hover:border-white/12 hover:bg-muted/40 hover:text-muted-foreground",
               )}
               aria-pressed={isSelected}
             >
@@ -338,7 +338,7 @@ function GoalsStep({
         <button
           type="button"
           onClick={onNext}
-          className="text-sm text-zinc-700 transition hover:text-zinc-400"
+          className="text-sm text-muted-foreground transition hover:text-muted-foreground"
         >
           Saltar
         </button>
@@ -360,10 +360,10 @@ function StartStep({
 }) {
   return (
     <div>
-      <h2 className="text-balance text-[26px] font-semibold leading-tight text-white">
+      <h2 className="text-balance text-[26px] font-semibold leading-tight text-foreground">
         ¿Cómo querés empezar?
       </h2>
-      <p className="mt-2.5 text-sm text-zinc-500">Podés cambiar en cualquier momento.</p>
+      <p className="mt-2.5 text-sm text-muted-foreground">Podés cambiar en cualquier momento.</p>
 
       <div className="mt-7 space-y-2.5">
         {options.map((option) => {
@@ -381,7 +381,7 @@ function StartStep({
                 "group w-full rounded-2xl border p-4 text-left transition duration-150",
                 option.featured
                   ? "border-teal-300/20 bg-teal-300/[0.05] hover:border-teal-300/30 hover:bg-teal-300/[0.09]"
-                  : "border-white/[0.07] bg-white/[0.025] hover:border-white/[0.13] hover:bg-white/[0.045]",
+                  : "border-border bg-muted/20 hover:border-border hover:bg-muted/40",
                 isDisabled && !isLoading && "opacity-40",
               )}
             >
@@ -390,8 +390,8 @@ function StartStep({
                   className={cn(
                     "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
                     option.featured
-                      ? "bg-teal-300/15 text-teal-100"
-                      : "bg-white/[0.06] text-zinc-400 group-hover:text-zinc-200",
+                      ? "bg-teal-300/15 text-primary"
+                      : "bg-muted/50 text-muted-foreground group-hover:text-muted-foreground",
                   )}
                 >
                   {isLoading ? (
@@ -407,19 +407,19 @@ function StartStep({
                   <p
                     className={cn(
                       "text-sm font-semibold",
-                      option.featured ? "text-teal-50" : "text-zinc-100",
+                      option.featured ? "text-teal-50" : "text-foreground",
                     )}
                   >
                     {option.label}
                   </p>
-                  <p className="mt-0.5 text-xs leading-5 text-zinc-600">{option.description}</p>
+                  <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{option.description}</p>
                 </div>
                 <ArrowRight
                   className={cn(
                     "h-4 w-4 shrink-0 transition",
                     option.featured
                       ? "text-teal-400/40 group-hover:text-teal-400/70"
-                      : "text-zinc-800 group-hover:text-zinc-500",
+                      : "text-foreground group-hover:text-muted-foreground",
                   )}
                   aria-hidden="true"
                 />

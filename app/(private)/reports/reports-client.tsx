@@ -146,9 +146,9 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
     return (
       <PremiumCard variant="raised">
         <PremiumCardContent className="flex h-72 flex-col items-center justify-center p-8 text-center">
-          <AlertTriangle className="h-8 w-8 text-rose-200" aria-hidden="true" />
-          <h2 className="mt-4 text-lg font-semibold text-white">No se pudo cargar la memoria</h2>
-          <p className="mt-2 text-sm text-zinc-400">{error}</p>
+          <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />
+          <h2 className="mt-4 text-lg font-semibold text-foreground">No se pudo cargar la memoria</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{error}</p>
         </PremiumCardContent>
       </PremiumCard>
     );
@@ -178,21 +178,21 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
         <PremiumCardContent className="relative p-5 sm:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-2xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-zinc-300">
-                <Sparkles className="h-3.5 w-3.5 text-sky-200" aria-hidden="true" />
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-semibold text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5 text-sky-400" aria-hidden="true" />
                 Lectura del período
               </div>
-              <h2 className="text-balance text-2xl font-semibold leading-tight text-white sm:text-3xl">
+              <h2 className="text-balance text-2xl font-semibold leading-tight text-foreground sm:text-3xl">
                 {hasTrend ? getMemoryTitle(totalSavings, avgSavingsRate) : "Tu memoria financiera se está formando."}
               </h2>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">
+              <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
                 {hasTrend
                   ? "Miramos ingresos, gastos, ahorro y categorías para encontrar el pulso real del período."
                   : "Registrá movimientos y snapshots para que la app pueda narrar tendencias con más precisión."}
               </p>
             </div>
 
-            <div className="flex w-full overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.045] p-1 sm:w-fit">
+            <div className="flex w-full overflow-x-auto rounded-2xl border border-border bg-muted/40 p-1 sm:w-fit">
               {PERIODS.map(({ value, label }) => (
                 <button
                   key={value}
@@ -200,7 +200,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                   disabled={isLoading}
                   onClick={() => setMonths(value)}
                   className={`shrink-0 rounded-[14px] px-4 py-2 text-xs font-semibold transition disabled:opacity-50 ${
-                    months === value ? "bg-white text-zinc-950" : "text-zinc-400 hover:bg-white/[0.06] hover:text-white"
+                    months === value ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                 >
                   {label}
@@ -221,7 +221,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
 
       {isLoading ? (
         <PremiumCard>
-          <PremiumCardContent className="flex h-72 items-center justify-center text-sm text-zinc-400">
+          <PremiumCardContent className="flex h-72 items-center justify-center text-sm text-muted-foreground">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
             Generando memoria
           </PremiumCardContent>
@@ -299,12 +299,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                         formatMoney(Number(value ?? 0)),
                         name === "income" ? "Ingresos" : "Gastos",
                       ]}
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "0.75rem",
-                        fontSize: 12,
-                      }}
+                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12, color: "hsl(var(--foreground))", padding: "8px 12px" }}
                     />
                     <Bar dataKey="income" name="income" fill="#34d399" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="expenses" name="expenses" fill="#f87171" radius={[4, 4, 0, 0]} />
@@ -340,12 +335,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                     />
                     <Tooltip
                       formatter={(value) => [`${String(value ?? 0)}%`, "Tasa de ahorro"]}
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "0.75rem",
-                        fontSize: 12,
-                      }}
+                      contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12, color: "hsl(var(--foreground))", padding: "8px 12px" }}
                     />
                     <Line
                       type="monotone"
@@ -391,12 +381,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                           </Pie>
                           <Tooltip
                             formatter={(value) => [formatMoney(Number(value)), ""]}
-                            contentStyle={{
-                              backgroundColor: "hsl(var(--card))",
-                              border: "1px solid hsl(var(--border))",
-                              borderRadius: "0.75rem",
-                              fontSize: 12,
-                            }}
+                            contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12, color: "hsl(var(--foreground))", padding: "8px 12px" }}
                           />
                         </PieChart>
                       </ResponsiveContainer>
@@ -520,10 +505,10 @@ function MemoryMetric({
   value: string;
 }) {
   return (
-    <div className="min-w-0 rounded-3xl border border-white/[0.08] bg-white/[0.04] p-4">
-      <Icon className="h-4 w-4 text-zinc-400" aria-hidden="true" />
-      <p className="mt-3 text-[11px] font-medium uppercase text-zinc-500">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-white">{value}</p>
+    <div className="min-w-0 rounded-3xl border border-border bg-muted/30 p-4">
+      <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+      <p className="mt-3 text-[11px] font-medium uppercase text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-foreground">{value}</p>
     </div>
   );
 }
@@ -545,10 +530,10 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
   }));
 
   return (
-    <div className="space-y-6 border-t border-white/[0.07] pt-6">
+    <div className="space-y-6 border-t border-border pt-6">
       <div>
-        <h2 className="text-base font-semibold text-white">Historial de patrimonio</h2>
-        <p className="mt-0.5 text-sm leading-6 text-zinc-400">
+        <h2 className="text-base font-semibold text-foreground">Historial de patrimonio</h2>
+        <p className="mt-0.5 text-sm leading-6 text-muted-foreground">
           Snapshot mensual capturado al cierre de cada período. Refleja el dinero disponible real y la deuda total en ese momento.
         </p>
       </div>
@@ -573,7 +558,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                 <YAxis tickFormatter={formatMoneyShort} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={70} />
                 <Tooltip
                   formatter={(value) => [formatMoney(Number(value)), "Disponible"]}
-                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12 }}
+                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12, color: "hsl(var(--foreground))", padding: "8px 12px" }}
                 />
                 <Area type="monotone" dataKey="disponible" stroke="#818cf8" strokeWidth={2.5} fill="url(#gradDisp)" dot={{ fill: "#818cf8", r: 3 }} activeDot={{ r: 5 }} />
               </AreaChart>
@@ -597,7 +582,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                   <YAxis tickFormatter={formatMoneyShort} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={70} />
                   <Tooltip
                     formatter={(value, name) => [formatMoney(Number(value)), name === "ingresos" ? "Ingresos" : "Gastos"]}
-                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12 }}
+                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12, color: "hsl(var(--foreground))", padding: "8px 12px" }}
                   />
                   <Bar dataKey="ingresos" fill="#34d399" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="gastos" fill="#f87171" radius={[4, 4, 0, 0]} />
@@ -627,7 +612,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                   <YAxis tickFormatter={formatMoneyShort} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={70} />
                   <Tooltip
                     formatter={(value) => [formatMoney(Number(value)), "Deuda total"]}
-                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12 }}
+                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12, color: "hsl(var(--foreground))", padding: "8px 12px" }}
                   />
                   <Area type="monotone" dataKey="deuda" stroke="#f87171" strokeWidth={2.5} fill="url(#gradDeuda)" dot={{ fill: "#f87171", r: 3 }} activeDot={{ r: 5 }} />
                 </AreaChart>
@@ -652,7 +637,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                   <th className="pb-2 pr-4 text-right font-medium text-rose-400">Gastos</th>
                   <th className="pb-2 pr-4 text-right font-medium text-amber-400">Reservado</th>
                   <th className="pb-2 pr-4 text-right font-medium text-rose-400">Deuda</th>
-                  <th className="pb-2 text-right font-medium text-teal-200">Disponible real</th>
+                  <th className="pb-2 text-right font-medium text-primary">Disponible real</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -663,7 +648,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                     <td className="py-2 pr-4 text-right tabular-nums text-rose-400">{formatMoney(s.expenseAmount)}</td>
                     <td className="py-2 pr-4 text-right tabular-nums text-amber-400">{formatMoney(s.reservedAmount)}</td>
                     <td className="py-2 pr-4 text-right tabular-nums text-rose-400">{formatMoney(s.debtOutstandingAmount)}</td>
-                    <td className={`py-2 text-right tabular-nums font-semibold ${s.availableAmount >= 0 ? "text-teal-200" : "text-rose-400"}`}>
+                    <td className={`py-2 text-right tabular-nums font-semibold ${s.availableAmount >= 0 ? "text-primary" : "text-rose-400"}`}>
                       {formatMoney(s.availableAmount)}
                     </td>
                   </tr>

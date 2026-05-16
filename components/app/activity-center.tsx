@@ -76,10 +76,10 @@ const TONE: Record<ActivityTone, { dot: string; border: string; bg: string; text
   },
   neutral: {
     dot:    "bg-zinc-500",
-    border: "border-white/[0.07]",
-    bg:     "bg-white/[0.025]",
-    text:   "text-zinc-400",
-    label:  "text-zinc-500",
+    border: "border-border",
+    bg:     "bg-muted/20",
+    text:   "text-muted-foreground",
+    label:  "text-muted-foreground",
   },
   warning: {
     dot:    "bg-amber-400",
@@ -148,11 +148,11 @@ function ActivityCard({
               <Icon className="h-3 w-3" aria-hidden="true" />
               {TYPE_LABEL[item.type]}
             </span>
-            <span className="text-[10px] text-zinc-700">{relativeTime(item.createdAt)}</span>
+            <span className="text-[10px] text-muted-foreground">{relativeTime(item.createdAt)}</span>
           </div>
 
           {/* Title */}
-          <p className="text-sm font-semibold leading-snug text-zinc-100">{item.title}</p>
+          <p className="text-sm font-semibold leading-snug text-foreground">{item.title}</p>
 
           {/* Body */}
           <p className={cn("mt-1 text-sm leading-5", tone.text)}>{item.body}</p>
@@ -162,7 +162,7 @@ function ActivityCard({
             {item.actionLabel && item.actionLink && (
               <Link
                 href={item.actionLink}
-                className="text-xs font-semibold text-zinc-300 underline-offset-2 hover:text-white hover:underline"
+                className="text-xs font-semibold text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
               >
                 {item.actionLabel} →
               </Link>
@@ -171,7 +171,7 @@ function ActivityCard({
               <button
                 type="button"
                 onClick={() => onRead(item.id)}
-                className="text-xs text-zinc-600 hover:text-zinc-300"
+                className="text-xs text-muted-foreground hover:text-muted-foreground"
               >
                 Marcar leída
               </button>
@@ -180,7 +180,7 @@ function ActivityCard({
               <button
                 type="button"
                 onClick={() => onResolve(item.id)}
-                className="text-xs text-zinc-600 hover:text-zinc-300"
+                className="text-xs text-muted-foreground hover:text-muted-foreground"
               >
                 Resolver
               </button>
@@ -189,7 +189,7 @@ function ActivityCard({
               <button
                 type="button"
                 onClick={() => onDismiss(item.id)}
-                className="text-xs text-zinc-700 hover:text-zinc-400"
+                className="text-xs text-muted-foreground hover:text-muted-foreground"
               >
                 Archivar
               </button>
@@ -216,9 +216,9 @@ function EmptyState({ filter }: { filter: Filter }) {
   return (
     <PremiumCard>
       <PremiumCardContent className="flex flex-col items-center justify-center py-16 text-center">
-        <CheckCircle2 className="h-10 w-10 text-zinc-700" aria-hidden="true" />
-        <p className="mt-4 text-base font-semibold text-zinc-300">{title}</p>
-        <p className="mt-1.5 max-w-xs text-sm text-zinc-500">{body}</p>
+        <CheckCircle2 className="h-10 w-10 text-muted-foreground" aria-hidden="true" />
+        <p className="mt-4 text-base font-semibold text-muted-foreground">{title}</p>
+        <p className="mt-1.5 max-w-xs text-sm text-muted-foreground">{body}</p>
       </PremiumCardContent>
     </PremiumCard>
   );
@@ -287,8 +287,8 @@ export function ActivityCenter() {
               className={cn(
                 "rounded-full border px-3 py-1 text-xs font-semibold transition duration-150",
                 filter === f.id
-                  ? "border-white/20 bg-white/[0.09] text-white"
-                  : "border-white/[0.07] bg-white/[0.025] text-zinc-500 hover:border-white/12 hover:text-zinc-300",
+                  ? "border-border bg-muted/70 text-foreground"
+                  : "border-border bg-muted/20 text-muted-foreground hover:border-white/12 hover:text-muted-foreground",
               )}
             >
               {f.label}
@@ -307,7 +307,7 @@ export function ActivityCenter() {
             <button
               type="button"
               onClick={() => void handleMarkAllRead()}
-              className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-muted-foreground"
             >
               <CheckCheck className="h-3.5 w-3.5" aria-hidden="true" />
               Marcar todas leídas
@@ -316,7 +316,7 @@ export function ActivityCenter() {
           <button
             type="button"
             onClick={() => void load(filter)}
-            className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-300"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-muted-foreground"
             aria-label="Actualizar"
           >
             <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
@@ -328,7 +328,7 @@ export function ActivityCenter() {
       {status === "loading" && (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
+            <div key={i} className="rounded-2xl border border-border bg-muted/20 p-4">
               <div className="flex items-start gap-3">
                 <Skeleton className="mt-1.5 h-1.5 w-1.5 rounded-full" />
                 <div className="flex-1 space-y-2">
@@ -345,12 +345,12 @@ export function ActivityCenter() {
       {status === "error" && (
         <PremiumCard>
           <PremiumCardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Lightbulb className="h-8 w-8 text-zinc-700" aria-hidden="true" />
-            <p className="mt-3 text-sm text-zinc-400">No se pudo cargar la actividad.</p>
+            <Lightbulb className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+            <p className="mt-3 text-sm text-muted-foreground">No se pudo cargar la actividad.</p>
             <button
               type="button"
               onClick={() => void load(filter)}
-              className="mt-3 text-xs text-zinc-500 underline hover:text-zinc-300"
+              className="mt-3 text-xs text-muted-foreground underline hover:text-muted-foreground"
             >
               Intentar de nuevo
             </button>

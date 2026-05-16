@@ -43,17 +43,17 @@ export function RecentTransactions({
           <div
             key={tx.id}
             className={`flex items-center gap-3 py-3 ${
-              i < transactions.length - 1 ? "border-b border-white/[0.04]" : ""
+              i < transactions.length - 1 ? "border-b border-border" : ""
             }`}
           >
             <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${style.icon}`}>
               <TxIcon type={tx.type} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-medium text-zinc-100">
+              <p className="truncate text-[13px] font-medium text-foreground">
                 {tx.description ?? "Sin descripción"}
               </p>
-              <p className="text-[11px] text-zinc-600">
+              <p className="text-[11px] text-muted-foreground">
                 {tx.category?.name ?? "Sin categoría"} · {formatDate(tx.occurredAt)}
               </p>
             </div>

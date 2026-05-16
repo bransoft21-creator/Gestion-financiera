@@ -79,7 +79,7 @@ export function PaymentRow({
             <div className="space-y-2">
               <Label>Pagó</Label>
               <select
-                className="flex h-10 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-base text-foreground md:text-sm"
+                className="flex h-10 w-full rounded-2xl border border-border bg-muted/30 px-3 py-2 text-base text-foreground md:text-sm"
                 value={payForm.paidByUserId || members[0]?.userProfileId}
                 onChange={(e) => setPayForm((p) => ({ ...p, paidByUserId: e.target.value }))}
               >
@@ -93,7 +93,7 @@ export function PaymentRow({
             <div className="space-y-2">
               <Label>Cuenta</Label>
               <select
-                className="flex h-10 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-base text-foreground md:text-sm"
+                className="flex h-10 w-full rounded-2xl border border-border bg-muted/30 px-3 py-2 text-base text-foreground md:text-sm"
                 value={payForm.accountId}
                 onChange={(e) => setPayForm((p) => ({ ...p, accountId: e.target.value }))}
               >

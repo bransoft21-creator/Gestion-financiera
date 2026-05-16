@@ -78,7 +78,7 @@ export function InviteClient({ token }: { token: string }) {
 
   if (error || !invite) {
     return (
-      <div className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-4 text-sm text-rose-100">
+      <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
         {error || "La invitación no está disponible."}
       </div>
     );
@@ -86,8 +86,8 @@ export function InviteClient({ token }: { token: string }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.07] text-lg">
+      <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 p-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/60 text-lg">
           {invite.household.avatar || <Home className="h-5 w-5" />}
         </div>
         <div className="min-w-0">

@@ -43,9 +43,9 @@ export function ExpenseCategoryChart({ data, activeCategoryId, onSelectCategory 
               <Cell
                 key={entry.id}
                 fill={entry.color}
-                opacity={!activeCategoryId || activeCategoryId === entry.id ? 1 : 0.45}
+                opacity={!activeCategoryId || activeCategoryId === entry.id ? 1 : 0.35}
                 stroke={activeCategoryId === entry.id ? "hsl(var(--v2-text))" : "hsl(var(--v2-bg))"}
-                strokeWidth={activeCategoryId === entry.id ? 3 : 2}
+                strokeWidth={activeCategoryId === entry.id ? 3 : 1.5}
                 style={{ cursor: onSelectCategory ? "pointer" : "default" }}
               />
             ))}
@@ -54,11 +54,11 @@ export function ExpenseCategoryChart({ data, activeCategoryId, onSelectCategory 
         </PieChart>
       </ResponsiveContainer>
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div className="flex h-[104px] w-[104px] flex-col items-center justify-center rounded-full border border-white/10 bg-zinc-950/88 text-center shadow-[0_18px_55px_rgba(0,0,0,0.35)] backdrop-blur">
-          <span className={`${activeItem ? "text-2xl" : "max-w-[86px] truncate text-sm"} font-semibold tabular-nums text-white`}>
+        <div className="flex h-[104px] w-[104px] flex-col items-center justify-center rounded-full border border-border bg-card/95 text-center shadow-md">
+          <span className={`${activeItem ? "text-2xl" : "max-w-[86px] truncate text-sm"} font-semibold tabular-nums text-foreground`}>
             {activeItem ? `${activePercent}%` : <SensitiveAmount value={formatMoney(total)} />}
           </span>
-          <span className="mt-0.5 max-w-[76px] truncate text-[10px] font-medium text-zinc-500">{activeItem?.name ?? "Total"}</span>
+          <span className="mt-0.5 max-w-[76px] truncate text-[10px] font-medium text-muted-foreground">{activeItem?.name ?? "Total"}</span>
         </div>
       </div>
     </div>
@@ -76,8 +76,8 @@ function ExpenseCategoryTooltip({
   if (!active || !item) return null;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-zinc-950/95 px-3 py-2 text-xs text-white shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
-      <p className="font-medium text-zinc-300">{String(item.name ?? "Categoría")}</p>
+    <div className="rounded-xl border border-border bg-card px-3 py-2 text-xs text-foreground shadow-lg">
+      <p className="font-medium text-muted-foreground">{String(item.name ?? "Categoría")}</p>
       <p className="mt-1 font-semibold tabular-nums">
         <SensitiveAmount value={formatMoney(Number(item.value ?? 0))} />
       </p>

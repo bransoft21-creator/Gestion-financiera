@@ -21,14 +21,14 @@ type Status = "idle" | "loading" | "done" | "empty" | "error";
 
 const TONE_DOT: Record<ReflectionInsight["tone"], string> = {
   positive: "bg-teal-400",
-  neutral:  "bg-zinc-500",
+  neutral:  "bg-muted-foreground",
   warning:  "bg-amber-400",
 };
 
 const TONE_TEXT: Record<ReflectionInsight["tone"], string> = {
-  positive: "text-zinc-200",
-  neutral:  "text-zinc-400",
-  warning:  "text-zinc-200",
+  positive: "text-muted-foreground",
+  neutral:  "text-muted-foreground",
+  warning:  "text-muted-foreground",
 };
 
 export function WeeklyReflectionCard() {
@@ -100,7 +100,7 @@ export function WeeklyReflectionCard() {
 
   if (status === "loading") {
     return (
-      <div className="mb-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] px-5 py-4">
+      <div className="mb-3 rounded-2xl border border-border bg-muted/20 px-5 py-4">
         <div className="mb-3 flex items-center gap-2">
           <Skeleton className="h-3.5 w-3.5 rounded-full" />
           <Skeleton className="h-3 w-28 rounded" />
@@ -115,17 +115,17 @@ export function WeeklyReflectionCard() {
   }
 
   return (
-    <div className="mb-3 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-5 py-4">
+    <div className="mb-3 rounded-2xl border border-border bg-muted/15 px-5 py-4">
       {/* Header */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Sparkles className="h-3.5 w-3.5 shrink-0 text-teal-400" aria-hidden="true" />
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
             Tu semana
           </span>
         </div>
         {weekLabel && (
-          <span className="text-[11px] text-zinc-600">{weekLabel}</span>
+          <span className="text-[11px] text-muted-foreground">{weekLabel}</span>
         )}
       </div>
 

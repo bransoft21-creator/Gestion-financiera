@@ -42,8 +42,8 @@ export function SplitEditor({
               onClick={() => onModeChange(option.value)}
               className={`rounded-xl border px-2 py-2 text-xs font-semibold transition ${
                 splitMode === option.value
-                  ? "border-teal-300/30 bg-teal-300/15 text-teal-100"
-                  : "border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/[0.07]"
+                  ? "border-teal-300/30 bg-teal-300/15 text-primary"
+                  : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60"
               }`}
             >
               {option.label}
@@ -79,7 +79,7 @@ export function SplitEditor({
                       [member.userProfileId]: event.target.value,
                     }))
                   }
-                  className={`v2-focus-ring h-9 rounded-xl border border-white/10 bg-white/[0.05] px-3 text-base md:text-sm text-white outline-none ${splitMode === "PERCENTAGE" ? "w-24 pr-7" : "w-32"}`}
+                  className={`v2-focus-ring h-9 rounded-xl border border-border bg-muted/40 px-3 text-base md:text-sm text-foreground outline-none ${splitMode === "PERCENTAGE" ? "w-24 pr-7" : "w-32"}`}
                 />
                 {splitMode === "PERCENTAGE" ? (
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
@@ -87,7 +87,7 @@ export function SplitEditor({
               </div>
             </div>
           ))}
-          <div className={`rounded-xl px-3 py-2 text-xs font-semibold ${splitIsValid ? "bg-emerald-300/10 text-emerald-100" : "bg-amber-300/10 text-amber-200"}`}>
+          <div className={`rounded-xl px-3 py-2 text-xs font-semibold ${splitIsValid ? "bg-emerald-300/10 text-emerald-400" : "bg-amber-300/10 text-amber-200"}`}>
             {splitMode === "PERCENTAGE"
               ? `${splitTotal.toFixed(1)}% de 100%${splitIsValid ? " ✓" : " — debe sumar 100%"}`
               : `${splitTotal.toLocaleString("es-AR")} de ${parseFloat(amount || "0").toLocaleString("es-AR")}${splitIsValid ? " ✓" : " — debe sumar el total"}`}

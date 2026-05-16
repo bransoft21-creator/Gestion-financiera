@@ -61,17 +61,17 @@ function SectionCollapseButton({
   return (
     <div className="mb-3 flex items-center justify-between">
       <div className="flex min-w-0 items-center gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-600">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
           {title}
         </span>
         {!expanded && summary ? (
-          <span className="truncate text-[11px] text-zinc-600">— {summary}</span>
+          <span className="truncate text-[11px] text-muted-foreground">— {summary}</span>
         ) : null}
       </div>
       <button
         type="button"
         onClick={onToggle}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-zinc-500 transition hover:bg-white/[0.08] hover:text-zinc-300"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted/30 text-muted-foreground transition hover:bg-muted/70 hover:text-muted-foreground"
         aria-label={expanded ? `Colapsar ${title}` : `Expandir ${title}`}
         aria-expanded={expanded}
       >
@@ -88,18 +88,18 @@ function AmbientSignal({ text, celebratory = false }: { text: string; celebrator
   return (
     <div className="mb-8 flex items-center gap-3 sm:mb-10">
       <span
-        className={`h-px flex-1 ${celebratory ? "bg-emerald-500/[0.12]" : "bg-white/[0.04]"}`}
+        className={`h-px flex-1 ${celebratory ? "bg-emerald-500/[0.12]" : "bg-muted/30"}`}
         aria-hidden="true"
       />
       <p
         className={`shrink-0 text-[11px] italic tracking-wide ${
-          celebratory ? "text-emerald-500/70" : "text-zinc-600"
+          celebratory ? "text-emerald-500/70" : "text-muted-foreground"
         }`}
       >
         {text}
       </p>
       <span
-        className={`h-px flex-1 ${celebratory ? "bg-emerald-500/[0.12]" : "bg-white/[0.04]"}`}
+        className={`h-px flex-1 ${celebratory ? "bg-emerald-500/[0.12]" : "bg-muted/30"}`}
         aria-hidden="true"
       />
     </div>
@@ -172,7 +172,7 @@ export function DashboardClient() {
   const monthNav = (
     <div className="mb-6">
       {isCurrentMonth && (
-        <p className="mb-3 text-sm font-medium text-zinc-400" suppressHydrationWarning>
+        <p className="mb-3 text-sm font-medium text-muted-foreground" suppressHydrationWarning>
           {timeContext.greeting}
         </p>
       )}
@@ -181,7 +181,7 @@ export function DashboardClient() {
           <button
             type="button"
             onClick={navigatePrev}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-muted-foreground transition-colors hover:bg-white/[0.10] hover:text-foreground"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
             aria-label="Mes anterior"
           >
             <ArrowLeftCircle className="h-4 w-4" aria-hidden="true" />
@@ -193,7 +193,7 @@ export function DashboardClient() {
             type="button"
             onClick={navigateNext}
             disabled={isCurrentMonth}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-muted-foreground transition-colors hover:bg-white/[0.10] hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
             aria-label="Mes siguiente"
           >
             <ArrowRightCircle className="h-4 w-4" aria-hidden="true" />
@@ -365,20 +365,20 @@ export function DashboardClient() {
               <div className="grid grid-cols-2 gap-3">
                 <Link href="/goals" className="block min-w-0">
                   <PremiumCard interactive className="p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Ahorro est.</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Ahorro est.</p>
                     <p className="mt-2 text-lg font-bold tabular-nums text-emerald-400">
                       <SensitiveAmount value={formatMoney(metrics.estimatedSavings)} />
                     </p>
-                    <p className="mt-1 text-[10px] text-zinc-600">este mes →</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">este mes →</p>
                   </PremiumCard>
                 </Link>
                 <Link href="/debts" className="block min-w-0">
                   <PremiumCard interactive className="p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Deuda total</p>
-                    <p className="mt-2 text-lg font-bold tabular-nums text-zinc-400">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Deuda total</p>
+                    <p className="mt-2 text-lg font-bold tabular-nums text-muted-foreground">
                       <SensitiveAmount value={formatMoney(metrics.totalOutstandingDebt)} />
                     </p>
-                    <p className="mt-1 text-[10px] text-zinc-600">ver deudas →</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">ver deudas →</p>
                   </PremiumCard>
                 </Link>
               </div>
@@ -406,12 +406,12 @@ export function DashboardClient() {
         {sectionMovimientos.expanded && (
           <PremiumCard>
             <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
-              <h3 className="text-sm font-semibold text-white">Movimientos recientes</h3>
+              <h3 className="text-sm font-semibold text-foreground">Movimientos recientes</h3>
               <Button
                 asChild
                 size="sm"
                 variant="ghost"
-                className="h-7 shrink-0 px-2 text-xs text-zinc-600 hover:bg-transparent hover:text-zinc-200"
+                className="h-7 shrink-0 px-2 text-xs text-muted-foreground hover:bg-transparent hover:text-muted-foreground"
               >
                 <Link href="/transactions">Ver todas →</Link>
               </Button>

@@ -15,7 +15,7 @@ import type { DashboardSummary } from "@/app/(private)/dashboard/types";
 const expenseTypeRows = [
   { key: "fixed" as const, label: "Fijos", icon: Repeat, iconBg: "bg-sky-500/15 text-sky-400", barColor: "#38bdf8" },
   { key: "variable" as const, label: "Variables", icon: ShoppingCart, iconBg: "bg-amber-500/15 text-amber-400", barColor: "#fbbf24" },
-  { key: "extraordinary" as const, label: "Extraordinarios", icon: Zap, iconBg: "bg-teal-300/12 text-teal-100", barColor: "#5eead4" },
+  { key: "extraordinary" as const, label: "Extraordinarios", icon: Zap, iconBg: "bg-teal-500/10 text-teal-500", barColor: "#5eead4" },
   { key: "unclassified" as const, label: "Sin clasificar", icon: HelpCircle, iconBg: "bg-secondary text-muted-foreground", barColor: "#6b7280" },
 ] as const;
 
@@ -51,7 +51,7 @@ export function ExpenseTypeBreakdown({
       </PremiumCardHeader>
       <PremiumCardContent className="space-y-3">
         {income > 0 && (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3">
+          <div className="rounded-2xl border border-border bg-muted/30 px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Fijos del ingreso
             </p>

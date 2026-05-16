@@ -9,7 +9,7 @@ type PremiumCardProps = React.HTMLAttributes<HTMLDivElement> & {
 const variants = {
   default: "v2-card rounded-[var(--v2-radius-lg)]",
   raised: "v2-card-raised rounded-[var(--v2-radius-xl)]",
-  quiet: "rounded-[var(--v2-radius-lg)] border border-white/[0.08] bg-white/[0.035]",
+  quiet: "rounded-[var(--v2-radius-lg)] border border-border bg-muted/25",
 } as const;
 
 export function PremiumCard({
@@ -23,7 +23,7 @@ export function PremiumCard({
       className={cn(
         "min-w-0 text-foreground",
         variants[variant],
-        interactive && "cursor-pointer transition duration-200 hover:-translate-y-0.5 hover:border-white/[0.18] hover:bg-white/[0.055] active:scale-[0.985]",
+        interactive && "cursor-pointer transition duration-200 hover:-translate-y-0.5 hover:border-border hover:bg-muted/40 active:scale-[0.985]",
         className,
       )}
       {...props}

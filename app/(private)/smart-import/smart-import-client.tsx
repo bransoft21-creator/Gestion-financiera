@@ -215,7 +215,7 @@ function UploadZone({
         onDrop={onDrop}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
-        className="relative flex min-h-[320px] cursor-pointer flex-col items-center justify-center gap-6 rounded-3xl border-2 border-dashed p-10 text-center transition-colors duration-200 hover:bg-white/[0.02]"
+        className="relative flex min-h-[320px] cursor-pointer flex-col items-center justify-center gap-6 rounded-3xl border-2 border-dashed p-10 text-center transition-colors duration-200 hover:bg-muted/15"
         onClick={onClickUpload}
       >
         {isDragging && (
@@ -237,21 +237,21 @@ function UploadZone({
             "flex h-20 w-20 items-center justify-center rounded-3xl border transition-colors duration-200",
             isDragging
               ? "border-teal-400/30 bg-teal-400/10 shadow-[0_0_40px_rgba(45,212,191,0.2)]"
-              : "border-white/10 bg-white/[0.06]",
+              : "border-border bg-muted/50",
           )}
         >
           {isDragging ? (
             <Scan className="h-9 w-9 text-teal-300" />
           ) : (
-            <FileScan className="h-9 w-9 text-zinc-400" />
+            <FileScan className="h-9 w-9 text-muted-foreground" />
           )}
         </motion.div>
 
         <div className="space-y-2">
-          <p className="text-lg font-semibold text-white">
+          <p className="text-lg font-semibold text-foreground">
             {isDragging ? "Soltá el archivo para analizarlo" : "Subí tu comprobante"}
           </p>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             {isDragging
               ? "La IA lo va a leer y detectar los movimientos"
               : "Arrastrá y soltá, o tocá para seleccionar"}
@@ -262,7 +262,7 @@ function UploadZone({
           {["JPG", "PNG", "WEBP", "PDF"].map((fmt) => (
             <span
               key={fmt}
-              className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-semibold text-zinc-500"
+              className="rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-semibold text-muted-foreground"
             >
               {fmt}
             </span>
@@ -290,12 +290,12 @@ function UploadZone({
         ].map(({ icon: Icon, title, desc }) => (
           <PremiumCard key={title} variant="quiet" className="p-4">
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 shrink-0 rounded-xl border border-white/10 bg-white/[0.05] p-2">
-                <Icon className="h-4 w-4 text-zinc-400" />
+              <div className="mt-0.5 shrink-0 rounded-xl border border-border bg-muted/40 p-2">
+                <Icon className="h-4 w-4 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">{title}</p>
-                <p className="mt-0.5 text-xs leading-5 text-zinc-500">{desc}</p>
+                <p className="text-sm font-semibold text-foreground">{title}</p>
+                <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{desc}</p>
               </div>
             </div>
           </PremiumCard>
@@ -306,7 +306,7 @@ function UploadZone({
         <RecoveryNotice message={lastError} onRetry={onClickUpload} actionLabel="Elegir archivo" />
       )}
 
-      <p className="text-center text-xs text-zinc-600">
+      <p className="text-center text-xs text-muted-foreground">
         La IA nunca guarda automáticamente. Siempre revisás y confirmás antes de importar.
       </p>
     </div>
@@ -338,9 +338,9 @@ function FilePreviewState({
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={v2MotionTokens.spring}
-        className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.02]"
+        className="overflow-hidden rounded-3xl border border-border bg-muted/15"
       >
-        <div className="flex min-h-[200px] items-center justify-center bg-zinc-950/40">
+        <div className="flex min-h-[200px] items-center justify-center bg-card/40">
           {previewUrl ? (
             <Image
               src={previewUrl}
@@ -352,18 +352,18 @@ function FilePreviewState({
             />
           ) : (
             <div className="flex flex-col items-center gap-4 py-14">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06]">
-                <FileScan className="h-8 w-8 text-zinc-400" />
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-muted/50">
+                <FileScan className="h-8 w-8 text-muted-foreground" />
               </div>
-              <p className="text-sm text-zinc-500">Documento PDF listo para analizar</p>
+              <p className="text-sm text-muted-foreground">Documento PDF listo para analizar</p>
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-white/[0.06] px-5 py-4">
+        <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4">
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-white">{file.name}</p>
-            <p className="mt-0.5 text-xs text-zinc-500">
+            <p className="truncate text-sm font-medium text-foreground">{file.name}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
               {formatFileSize(file.size)} · {isPDF ? "PDF" : file.type.split("/")[1]?.toUpperCase()}
             </p>
           </div>
@@ -371,7 +371,7 @@ function FilePreviewState({
             type="button"
             onClick={onClear}
             aria-label="Cambiar archivo"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-zinc-400 transition hover:text-white"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground transition hover:text-foreground"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -386,7 +386,7 @@ function FilePreviewState({
 
       {lastError && <RecoveryNotice message={lastError} onRetry={onAnalyze} actionLabel="Reintentar análisis" />}
 
-      <p className="text-center text-xs text-zinc-600">
+      <p className="text-center text-xs text-muted-foreground">
         La IA nunca guarda automáticamente. Siempre revisás y confirmás antes de importar.
       </p>
     </div>
@@ -453,8 +453,8 @@ function ProcessingView({ isSlow, onCancel }: { isSlow: boolean; onCancel: () =>
                 className={cn(
                   "text-sm font-medium transition-colors duration-300",
                   done && "text-teal-400",
-                  active && "text-white",
-                  pending && "text-zinc-600",
+                  active && "text-foreground",
+                  pending && "text-muted-foreground",
                 )}
               >
                 {label}
@@ -465,7 +465,7 @@ function ProcessingView({ isSlow, onCancel }: { isSlow: boolean; onCancel: () =>
       </div>
 
       <div className="space-y-3 text-center">
-        <p className="text-xs text-zinc-600">
+        <p className="text-xs text-muted-foreground">
           {isSlow
             ? "Está tardando más de lo normal. Podés cancelar y reintentar sin perder el archivo."
             : "Esto puede tomar unos segundos…"}
@@ -473,7 +473,7 @@ function ProcessingView({ isSlow, onCancel }: { isSlow: boolean; onCancel: () =>
         <button
           type="button"
           onClick={onCancel}
-          className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-zinc-300 transition hover:bg-white/[0.08] hover:text-white"
+          className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-border bg-muted/30 px-4 text-sm font-semibold text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
         >
           Cancelar
         </button>
@@ -495,13 +495,13 @@ function ConfirmingView({ count }: { count: number }) {
           transition={{ duration: 1.4, repeat: Infinity }}
           className="absolute inset-0 rounded-full bg-teal-400/15 blur-2xl"
         />
-        <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/[0.05]">
+        <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-border bg-muted/40">
           <Loader2 className="h-8 w-8 animate-spin text-teal-300" />
         </div>
       </div>
       <div className="space-y-1 text-center">
-        <p className="text-lg font-semibold text-white">Guardando transacciones</p>
-        <p className="text-sm text-zinc-500">
+        <p className="text-lg font-semibold text-foreground">Guardando transacciones</p>
+        <p className="text-sm text-muted-foreground">
           Procesando {count} movimiento{count !== 1 ? "s" : ""}…
         </p>
       </div>
@@ -539,9 +539,9 @@ function DoneView({
       label: "Descartadas",
       value: discarded,
       icon: X,
-      textClass: "text-zinc-400",
-      borderClass: "border-white/10",
-      bgClass: "bg-white/[0.03]",
+      textClass: "text-muted-foreground",
+      borderClass: "border-border",
+      bgClass: "bg-muted/20",
     },
     {
       label: "Duplicados evitados",
@@ -581,12 +581,12 @@ function DoneView({
         transition={{ delay: 0.18, duration: 0.4 }}
         className="space-y-2 text-center"
       >
-        <p className="text-2xl font-semibold text-white">
+        <p className="text-2xl font-semibold text-foreground">
           {imported === 0
             ? "Sin transacciones importadas"
             : `Listo. ${imported} movimiento${imported !== 1 ? "s" : ""} guardado${imported !== 1 ? "s" : ""}.`}
         </p>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           Ya están disponibles en tus movimientos con todos los detalles detectados.
         </p>
       </motion.div>
@@ -609,7 +609,7 @@ function DoneView({
             <Icon className={cn("h-4 w-4", textClass)} />
             <div>
               <p className={cn("text-xl font-bold tabular-nums", textClass)}>{value}</p>
-              <p className="mt-0.5 text-[10px] font-medium text-zinc-500">{label}</p>
+              <p className="mt-0.5 text-[10px] font-medium text-muted-foreground">{label}</p>
             </div>
           </div>
         ))}
@@ -666,12 +666,12 @@ function RecoveryNotice({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
-          <p className="text-sm leading-5 text-amber-100">{message}</p>
+          <p className="text-sm leading-5 text-amber-500">{message}</p>
         </div>
         <button
           type="button"
           onClick={onRetry}
-          className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-amber-200/20 bg-amber-200/10 px-4 text-sm font-semibold text-amber-100 transition hover:bg-amber-200/15"
+          className="inline-flex min-h-10 items-center justify-center rounded-2xl border border-amber-200/20 bg-amber-200/10 px-4 text-sm font-semibold text-amber-500 transition hover:bg-amber-200/15"
         >
           {actionLabel}
         </button>

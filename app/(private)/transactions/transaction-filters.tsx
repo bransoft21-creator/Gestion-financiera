@@ -44,7 +44,7 @@ export function TransactionFilters({
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <Input
-              className="h-10 min-w-0 rounded-2xl border-white/10 bg-white/[0.045] pl-8 text-base md:text-xs"
+              className="h-10 min-w-0 rounded-2xl border-border bg-muted/40 pl-8 text-base md:text-xs"
               placeholder="Buscar movimiento..."
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}

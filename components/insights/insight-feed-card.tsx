@@ -21,29 +21,29 @@ type InsightFeedCardProps = {
 
 const toneConfig = {
   neutral: {
-    card: "border-white/10 bg-white/[0.045]",
-    icon: "bg-white/10 text-zinc-100",
-    label: "border-white/10 bg-white/10 text-zinc-200",
+    card: "border-border bg-muted/40",
+    icon: "bg-muted text-foreground",
+    label: "border-border bg-muted text-muted-foreground",
   },
   positive: {
     card: "border-emerald-300/20 bg-emerald-300/[0.07]",
-    icon: "bg-emerald-300/12 text-emerald-100",
-    label: "border-emerald-300/20 bg-emerald-300/10 text-emerald-100",
+    icon: "bg-emerald-300/12 text-emerald-400",
+    label: "border-emerald-300/20 bg-emerald-300/10 text-emerald-400",
   },
   warning: {
     card: "border-amber-300/20 bg-amber-300/[0.08]",
-    icon: "bg-amber-300/12 text-amber-100",
-    label: "border-amber-300/20 bg-amber-300/10 text-amber-100",
+    icon: "bg-amber-300/12 text-amber-500",
+    label: "border-amber-300/20 bg-amber-300/10 text-amber-500",
   },
   danger: {
     card: "border-rose-300/20 bg-rose-300/[0.08]",
-    icon: "bg-rose-300/12 text-rose-100",
-    label: "border-rose-300/20 bg-rose-300/10 text-rose-100",
+    icon: "bg-rose-300/12 text-destructive",
+    label: "border-rose-300/20 bg-rose-300/10 text-destructive",
   },
   info: {
     card: "border-sky-300/20 bg-sky-300/[0.08]",
-    icon: "bg-sky-300/12 text-sky-100",
-    label: "border-sky-300/20 bg-sky-300/10 text-sky-100",
+    icon: "bg-sky-300/12 text-sky-400",
+    label: "border-sky-300/20 bg-sky-300/10 text-sky-400",
   },
 } as const;
 
@@ -68,14 +68,14 @@ export function InsightFeedCard({
           </div>
           <span className={cn("rounded-full border px-2.5 py-1 text-xs font-medium", styles.label)}>{priority}</span>
         </div>
-        <h3 className="text-balance text-lg font-semibold leading-tight text-white">
+        <h3 className="text-balance text-lg font-semibold leading-tight text-foreground">
           <SensitiveText text={title} />
         </h3>
-        <p className="mt-3 text-sm leading-6 text-zinc-400">
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
           <SensitiveText text={message} />
         </p>
         {detail && (
-          <p className="mt-4 text-xs leading-5 text-zinc-500">
+          <p className="mt-4 text-xs leading-5 text-muted-foreground">
             <SensitiveText text={detail} />
           </p>
         )}
