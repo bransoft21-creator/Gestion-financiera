@@ -30,26 +30,26 @@ export function getBriefingBadgeClass(status: HouseholdBriefingStatus) {
   if (status === "STABLE") return "border-emerald-300/20 bg-emerald-300/10 text-emerald-100";
   if (status === "NEEDS_BALANCE") return "border-amber-300/20 bg-amber-300/10 text-amber-100";
   if (status === "HIGH_SPEND") return "border-sky-300/20 bg-sky-300/10 text-sky-100";
-  return "border-white/10 bg-white/[0.06] text-zinc-200";
+  return "border-border bg-white/[0.06] text-muted-foreground";
 }
 
 export function getBriefingPanelClass(status: HouseholdBriefingStatus | undefined) {
   if (status === "STABLE") return "border-emerald-300/15 bg-emerald-300/10";
   if (status === "NEEDS_BALANCE") return "border-amber-300/15 bg-amber-300/10";
   if (status === "HIGH_SPEND") return "border-sky-300/15 bg-sky-300/10";
-  return "border-white/10 bg-white/[0.04]";
+  return "border-border bg-white/[0.04]";
 }
 
 export function getRecurringPanelClass(rp: RecurringPaymentsSummary) {
   if (rp.overdueCount > 0) return "border-amber-300/20 bg-amber-300/10";
   if (rp.paidCount === rp.totalCount) return "border-emerald-300/20 bg-emerald-300/10";
-  return "border-white/10 bg-white/[0.04]";
+  return "border-border bg-white/[0.04]";
 }
 
 export function getPaymentRowClass(status: "PENDING" | "PAID" | "OVERDUE") {
   if (status === "PAID") return "border-emerald-300/15 bg-emerald-300/[0.06] opacity-70";
   if (status === "OVERDUE") return "border-amber-300/20 bg-amber-300/[0.07]";
-  return "border-white/10 bg-white/[0.04]";
+  return "border-border bg-white/[0.04]";
 }
 
 export function getPaymentIconClass(status: "PENDING" | "PAID" | "OVERDUE") {

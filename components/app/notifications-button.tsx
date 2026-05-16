@@ -665,7 +665,7 @@ function RuleToggle({
         aria-hidden="true"
         className={cn(
           "relative h-6 w-10 shrink-0 rounded-full border transition",
-          checked ? "border-teal-300/30 bg-teal-300/25" : "border-border bg-zinc-700",
+          checked ? "border-teal-300/30 bg-teal-300/25" : "border-border bg-muted-foreground/20",
         )}
       >
         <span className={cn(
