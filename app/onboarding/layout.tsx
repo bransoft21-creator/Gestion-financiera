@@ -10,7 +10,7 @@ export default function OnboardingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-zinc-950 antialiased">
+    <div className="min-h-screen bg-background antialiased">
       {children}
     </div>
   );

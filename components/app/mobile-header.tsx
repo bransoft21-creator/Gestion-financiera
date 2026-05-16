@@ -14,7 +14,7 @@ export function MobileHeader({ userName }: MobileHeaderProps) {
   const subtitle = userName ? `para ${userName.split(" ")[0]}` : "personal";
 
   return (
-    <header className="sticky top-0 z-20 shrink-0 border-b border-white/10 bg-zinc-950/80 px-5 backdrop-blur-xl lg:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+    <header className="sticky top-0 z-20 shrink-0 border-b border-border bg-background/80 px-5 backdrop-blur-xl lg:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <div className="flex h-[72px] items-center justify-between">
         <Link href="/dashboard" className="flex min-w-0 items-center gap-3.5">
           <Image src="/icons/Meridian.png" alt="Meridian" width={50} height={50} className="shrink-0 select-none" />
@@ -22,7 +22,7 @@ export function MobileHeader({ userName }: MobileHeaderProps) {
             <span className="block truncate text-[17px] font-semibold leading-snug tracking-tight text-foreground">
               Meridian
             </span>
-            <span className="block truncate text-[13px] font-medium leading-snug text-zinc-400">
+            <span className="block truncate text-[13px] font-medium leading-snug text-muted-foreground">
               Copilot {subtitle}
             </span>
           </span>

@@ -195,7 +195,7 @@ export function OnboardingClient({
               key={dot}
               className={cn(
                 "h-[3px] rounded-full transition-all duration-300",
-                step >= dot ? "w-7 bg-white/50" : "w-2 bg-white/12",
+                step >= dot ? "w-7 bg-primary/70" : "w-2 bg-muted-foreground/30",
               )}
             />
           ))}
@@ -319,7 +319,7 @@ function GoalsStep({
                 "flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition duration-150",
                 isSelected
                   ? "border-border bg-muted/70 text-foreground shadow-[0_0_0_1px_rgba(255,255,255,0.07)]"
-                  : "border-border bg-muted/20 text-muted-foreground hover:border-white/12 hover:bg-muted/40 hover:text-muted-foreground",
+                  : "border-border bg-muted/20 text-muted-foreground hover:border-border hover:bg-muted/40 hover:text-muted-foreground",
               )}
               aria-pressed={isSelected}
             >

@@ -113,7 +113,7 @@ export function MeridianMark({
     <div
       style={{ width: dim, height: dim }}
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.07] shadow-[0_10px_34px_rgba(45,212,191,0.12)]",
+        "flex shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/60 shadow-[0_10px_34px_rgba(45,212,191,0.12)]",
         containerClassName,
       )}
     >

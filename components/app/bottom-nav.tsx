@@ -76,12 +76,12 @@ export function BottomNav() {
       <div
         data-bottom-drawer
         className={cn(
-          "fixed inset-x-0 z-[130] rounded-t-[28px] border-t border-white/10 transition-transform duration-300 ease-out lg:hidden",
+          "fixed inset-x-0 z-[130] rounded-t-[28px] border-t border-border transition-transform duration-300 ease-out lg:hidden",
           moreOpen ? "translate-y-0" : "translate-y-full",
         )}
         style={{
           bottom: 0,
-          background: "rgba(5,8,15,.97)",
+          background: "hsl(var(--background) / 0.97)",
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
         }}
@@ -91,7 +91,7 @@ export function BottomNav() {
           <button
             type="button"
             onClick={() => setMoreOpen(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-muted-foreground"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground"
           >
             <X className="h-4 w-4" />
           </button>
@@ -108,8 +108,8 @@ export function BottomNav() {
                 className={cn(
                   "flex h-12 items-center gap-3 rounded-2xl px-4 text-[14px] font-medium transition-all duration-150",
                   isActive
-                    ? "border border-white/10 bg-white/[0.08] text-teal-100"
-                    : "text-muted-foreground hover:bg-white/[0.05] hover:text-foreground",
+                    ? "border border-border bg-muted/70 text-primary"
+                    : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
                 )}
               >
                 <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -117,11 +117,11 @@ export function BottomNav() {
               </Link>
             );
           })}
-          <div className="mt-1 border-t border-white/10 pt-1">
+          <div className="mt-1 border-t border-border pt-1">
             <button
               type="button"
               onClick={() => { setMoreOpen(false); setLogoutOpen(true); }}
-              className="flex h-12 w-full items-center gap-3 rounded-2xl px-4 text-[14px] font-medium text-rose-300 transition-all duration-150 hover:bg-rose-400/10 hover:text-rose-200"
+              className="flex h-12 w-full items-center gap-3 rounded-2xl px-4 text-[14px] font-medium text-destructive transition-all duration-150 hover:bg-destructive/10 hover:text-destructive"
             >
               <LogOut className="h-5 w-5 shrink-0" aria-hidden="true" />
               <span>Cerrar sesión</span>
@@ -133,9 +133,9 @@ export function BottomNav() {
       {/* Bottom nav bar */}
       <nav
         data-tutorial="nav-mobile"
-        className="fixed inset-x-0 bottom-0 z-[120] border-t border-white/10 lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-[120] border-t border-border lg:hidden"
         style={{
-          background: "rgba(5,8,15,.88)",
+          background: "hsl(var(--background) / 0.88)",
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
         }}
@@ -151,7 +151,7 @@ export function BottomNav() {
                 onClick={(event) => handleBottomNavClick(event, item.href)}
                 className={cn(
                   "relative flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 transition-all duration-200 active:scale-95",
-                  isActive ? "text-teal-100" : "text-muted-foreground active:text-foreground",
+                  isActive ? "text-primary" : "text-muted-foreground active:text-foreground",
                 )}
               >
                 {isActive && (
@@ -160,7 +160,7 @@ export function BottomNav() {
                 <Icon className="h-6 w-6" aria-hidden="true" />
                 <span className={cn(
                   "text-[10px] font-medium transition-colors duration-200",
-                  isActive ? "text-teal-300" : "",
+                  isActive ? "text-primary/80" : "",
                 )}>
                   {item.label}
                 </span>
@@ -174,7 +174,7 @@ export function BottomNav() {
             onClick={() => setMoreOpen(true)}
             className={cn(
               "relative flex flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1.5 transition-all duration-200 active:scale-95",
-              isMoreActive || moreOpen ? "text-teal-100" : "text-muted-foreground active:text-foreground",
+              isMoreActive || moreOpen ? "text-primary" : "text-muted-foreground active:text-foreground",
             )}
           >
             {(isMoreActive || moreOpen) && (
@@ -183,7 +183,7 @@ export function BottomNav() {
             <Menu className="h-6 w-6" aria-hidden="true" />
             <span className={cn(
               "text-[10px] font-medium transition-colors duration-200",
-              isMoreActive || moreOpen ? "text-teal-300" : "",
+              isMoreActive || moreOpen ? "text-primary/80" : "",
             )}>
               Más
             </span>

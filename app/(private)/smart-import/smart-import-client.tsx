@@ -447,7 +447,7 @@ function ProcessingView({ isSlow, onCancel }: { isSlow: boolean; onCancel: () =>
                     className="h-2.5 w-2.5 rounded-full bg-teal-400"
                   />
                 )}
-                {pending && <div className="h-2 w-2 rounded-full bg-white/15" />}
+                {pending && <div className="h-2 w-2 rounded-full bg-muted-foreground/30" />}
               </div>
               <span
                 className={cn(

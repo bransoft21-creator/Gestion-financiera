@@ -30,7 +30,7 @@ export function AppShell({ children, userId, userName, userEmail }: AppShellProp
           <GlobalProcessingIndicator />
           <OnlineStatusBanner />
           <MobileHeader userName={userName} />
-          <div className="fixed right-5 top-4 z-30 hidden items-center gap-1 rounded-full border border-white/10 bg-zinc-950/72 p-1 shadow-lg shadow-black/20 backdrop-blur-xl lg:flex">
+          <div className="fixed right-5 top-4 z-30 hidden items-center gap-1 rounded-full border border-border bg-background/80 p-1 shadow-lg shadow-black/20 backdrop-blur-xl lg:flex">
             <span data-tutorial="privacy-toggle-desktop">
               <PrivacyToggle compact />
             </span>

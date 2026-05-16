@@ -309,11 +309,10 @@ export function TutorialSpotlight() {
             onClick={(e) => e.stopPropagation()}
           >
             <div
-              className="overflow-hidden rounded-[18px] border border-white/[0.16]"
+              className="overflow-hidden rounded-[18px] border border-border"
               style={{
-                background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.036) 100%), hsl(222 22% 10% / 0.95)",
-                boxShadow: "0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06) inset",
+                background: "hsl(var(--card) / 0.97)",
+                boxShadow: "0 32px 80px rgba(0,0,0,0.55), inset 0 0 0 1px hsl(var(--border))",
                 backdropFilter: "blur(24px)",
                 WebkitBackdropFilter: "blur(24px)",
               }}
@@ -324,14 +323,14 @@ export function TutorialSpotlight() {
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-teal-400">
                     Paso {state.step + 1} de {total}
                   </p>
-                  <h3 className="mt-1.5 text-[15px] font-semibold leading-snug text-white">
+                  <h3 className="mt-1.5 text-[15px] font-semibold leading-snug text-foreground">
                     {currentStep.title}
                   </h3>
                 </div>
                 <button
                   type="button"
                   onClick={skip}
-                  className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.06] text-zinc-500 transition hover:bg-white/[0.12] hover:text-zinc-200"
+                  className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground transition hover:bg-muted hover:text-foreground"
                   aria-label="Saltar tutorial"
                 >
                   <X className="h-3.5 w-3.5" aria-hidden="true" />
@@ -339,12 +338,12 @@ export function TutorialSpotlight() {
               </div>
 
               {/* Description */}
-              <p className="px-5 pb-4 pt-2 text-[13px] leading-[1.55] text-zinc-400">
+              <p className="px-5 pb-4 pt-2 text-[13px] leading-[1.55] text-muted-foreground">
                 {currentStep.description}
               </p>
 
               {/* Footer — step dots + navigation */}
-              <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] px-4 py-3">
+              <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
                 {/* Step indicators */}
                 <div className="flex items-center gap-1.5">
                   {Array.from({ length: total }).map((_, i) => (
@@ -353,10 +352,10 @@ export function TutorialSpotlight() {
                       className={cn(
                         "rounded-full transition-all duration-300",
                         i === state.step
-                          ? "h-[5px] w-[18px] bg-teal-400"
+                          ? "h-[5px] w-[18px] bg-primary"
                           : i < state.step
-                            ? "h-[5px] w-[5px] bg-teal-400/40"
-                            : "h-[5px] w-[5px] bg-white/[0.15]",
+                            ? "h-[5px] w-[5px] bg-primary/40"
+                            : "h-[5px] w-[5px] bg-muted-foreground/30",
                       )}
                     />
                   ))}
@@ -368,7 +367,7 @@ export function TutorialSpotlight() {
                     <button
                       type="button"
                       onClick={back}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.05] text-zinc-400 transition hover:bg-white/[0.10] hover:text-white"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-muted/40 text-muted-foreground transition hover:bg-muted hover:text-foreground"
                       aria-label="Paso anterior"
                     >
                       <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
@@ -380,8 +379,8 @@ export function TutorialSpotlight() {
                     className={cn(
                       "flex h-8 items-center justify-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition",
                       isLast
-                        ? "bg-teal-400 text-zinc-950 shadow-[0_8px_24px_rgba(45,212,191,0.28)] hover:bg-teal-300"
-                        : "border border-white/[0.15] bg-white/[0.07] text-white hover:bg-white/[0.13]",
+                        ? "bg-primary text-primary-foreground shadow-[0_8px_24px_rgba(45,212,191,0.28)] hover:opacity-90"
+                        : "border border-border bg-muted/60 text-foreground hover:bg-muted",
                     )}
                     aria-label={isLast ? (currentStep.ctaLabel ?? "Finalizar tutorial") : "Siguiente paso"}
                   >

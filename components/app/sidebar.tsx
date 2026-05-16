@@ -19,13 +19,13 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
   const accountLabel = userEmail ?? "Hogar principal";
 
   return (
-    <aside data-tutorial="nav-desktop" className="hidden h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-zinc-950/74 shadow-[1px_0_34px_rgba(0,0,0,0.34)] backdrop-blur-xl lg:sticky lg:top-0 lg:flex">
+    <aside data-tutorial="nav-desktop" className="hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-background/95 shadow-[1px_0_34px_rgba(0,0,0,0.34)] backdrop-blur-xl lg:sticky lg:top-0 lg:flex">
       {/* Logo */}
-      <div className="flex h-[68px] shrink-0 items-center gap-3 border-b border-white/10 px-5">
+      <div className="flex h-[68px] shrink-0 items-center gap-3 border-b border-border px-5">
         <Image src="/icons/Meridian.png" alt="Meridian" width={40} height={40} className="shrink-0 select-none" />
         <div>
           <p className="text-[14px] font-semibold leading-snug tracking-tight text-foreground">Meridian</p>
-          <p className="text-[12px] leading-snug text-zinc-400">Perspectiva diaria</p>
+          <p className="text-[12px] leading-snug text-muted-foreground">Perspectiva diaria</p>
         </div>
       </div>
 
@@ -42,8 +42,8 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
               className={cn(
                 "mb-[3px] flex h-[40px] items-center gap-2.5 rounded-2xl border border-transparent px-3 text-[13px] font-medium transition-all duration-150",
                 isActive
-                  ? "border-white/10 bg-white/[0.07] text-teal-100 shadow-[0_10px_30px_rgba(45,212,191,0.07)]"
-                  : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
+                  ? "border-border bg-muted/60 text-primary shadow-[0_10px_30px_rgba(45,212,191,0.07)]"
+                  : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
               )}
             >
               <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -58,23 +58,23 @@ export function Sidebar({ userName, userEmail }: SidebarProps) {
         >
           <TrendingUp className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="flex-1">Inversiones</span>
-          <span className="rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+          <span className="rounded-full bg-muted/60 px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
             Pronto
           </span>
         </div>
       </nav>
 
       {/* User footer */}
-      <div className="shrink-0 border-t border-white/10 px-4 py-3.5">
+      <div className="shrink-0 border-t border-border px-4 py-3.5">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.07]">
-            <span className="text-xs font-bold text-white">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted/60">
+            <span className="text-xs font-bold text-foreground">
               {displayName.slice(0, 1).toUpperCase()}
             </span>
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-semibold text-foreground">{displayName}</p>
-            <p className="truncate text-[12px] text-zinc-400">{accountLabel}</p>
+            <p className="truncate text-[12px] text-muted-foreground">{accountLabel}</p>
           </div>
           <LogoutButton compact />
         </div>

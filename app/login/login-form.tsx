@@ -247,7 +247,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
   return (
     <div className="flex min-h-screen bg-background">
       {/* ── Panel izquierdo (solo desktop) ── */}
-      <div className="relative hidden flex-col justify-center overflow-hidden border-r border-white/10 bg-zinc-950 px-16 py-16 lg:flex lg:w-[58%]">
+      <div className="relative hidden flex-col justify-center overflow-hidden border-r border-border bg-card px-16 py-16 lg:flex lg:w-[58%]">
         <div className="mb-14 flex items-center gap-4">
           <Image src="/icons/Meridian.png" alt="Meridian" width={64} height={64} className="select-none" priority />
           <span className="text-[26px] font-bold tracking-tight text-foreground">Meridian</span>
@@ -264,7 +264,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
         <div className="space-y-6">
           {bullets.map(({ icon: Icon, title, desc }) => (
             <div key={title} className="flex gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] text-teal-100">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/50 text-primary">
                 <Icon className="h-5 w-5" aria-hidden="true" />
               </div>
               <div>
@@ -283,7 +283,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
           <div className="mb-12 flex flex-col items-center pt-4 lg:hidden">
             <Image src="/icons/Meridian.png" alt="Meridian" width={120} height={120} className="mb-6 select-none" priority />
             <p className="text-[32px] font-bold tracking-tight text-foreground">Meridian</p>
-            <p className="mt-2.5 text-[15px] text-zinc-400">Tu perspectiva financiera</p>
+            <p className="mt-2.5 text-[15px] text-muted-foreground">Tu perspectiva financiera</p>
           </div>
 
           {/* ── Google button — visible in login + register, hidden in forgot ── */}
@@ -293,7 +293,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
                 type="button"
                 disabled={isAnyLoading}
                 onClick={handleGoogleLogin}
-                className="v2-focus-ring mb-5 flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.055] text-sm font-semibold text-foreground transition hover:bg-white/[0.09] disabled:cursor-not-allowed disabled:opacity-50"
+                className="v2-focus-ring mb-5 flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-border bg-muted/40 text-sm font-semibold text-foreground transition hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isGoogleLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -304,16 +304,16 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
               </button>
 
               <div className="relative mb-5 flex items-center gap-3">
-                <div className="h-px flex-1 bg-white/[0.08]" />
-                <span className="text-xs text-zinc-500">o continuá con email</span>
-                <div className="h-px flex-1 bg-white/[0.08]" />
+                <div className="h-px flex-1 bg-muted/50" />
+                <span className="text-xs text-muted-foreground">o continuá con email</span>
+                <div className="h-px flex-1 bg-muted/50" />
               </div>
             </>
           )}
 
           {/* ── Tabs login / register ── */}
           {mode !== "forgot" ? (
-            <div className="mb-7 grid grid-cols-2 rounded-2xl border border-white/10 bg-white/[0.045] p-1">
+            <div className="mb-7 grid grid-cols-2 rounded-2xl border border-border bg-muted/30 p-1">
               {(["login", "register"] as const).map((tab) => (
                 <button
                   key={tab}
@@ -322,7 +322,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
                   onClick={() => switchMode(tab)}
                   className={`rounded-[14px] py-2.5 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed ${
                     mode === tab
-                      ? "bg-white text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.10)]"
+                      ? "bg-foreground text-background shadow-[var(--btn-default-shadow)]"
                       : "text-muted-foreground"
                   }`}
                 >
@@ -361,13 +361,13 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
                   placeholder="nombre@ejemplo.com"
                   required
                   disabled={isLoading}
-                  className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-white/[0.07] disabled:opacity-60"
+                  className="v2-focus-ring h-[46px] w-full rounded-2xl border border-border bg-muted/40 px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-muted/60 disabled:opacity-60"
                 />
                 {fieldErrors.email && <p className="mt-1.5 text-xs text-destructive">{fieldErrors.email}</p>}
               </div>
 
               {message && (
-                <p className="rounded-2xl border border-teal-300/20 bg-teal-400/10 p-3 text-sm text-teal-50">
+                <p className="rounded-2xl border border-primary/20 bg-primary/10 p-3 text-sm text-primary">
                   {message}
                 </p>
               )}
@@ -375,7 +375,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="v2-focus-ring mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.12)] transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="v2-focus-ring mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-foreground text-sm font-bold text-background shadow-[var(--btn-default-shadow)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLoading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
                 {isLoading ? "Enviando..." : "Enviar enlace"}
@@ -394,7 +394,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
                     autoComplete="name"
                     placeholder="Tu nombre"
                     disabled={isAnyLoading}
-                    className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-white/[0.07] disabled:opacity-60"
+                    className="v2-focus-ring h-[46px] w-full rounded-2xl border border-border bg-muted/40 px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-muted/60 disabled:opacity-60"
                   />
                   {fieldErrors.name && <p className="mt-1.5 text-xs text-destructive">{fieldErrors.name}</p>}
                 </div>
@@ -411,7 +411,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
                   placeholder="nombre@ejemplo.com"
                   required
                   disabled={isAnyLoading}
-                  className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-white/[0.07] disabled:opacity-60"
+                  className="v2-focus-ring h-[46px] w-full rounded-2xl border border-border bg-muted/40 px-4 text-base md:text-sm text-foreground outline-none transition hover:bg-muted/60 disabled:opacity-60"
                 />
                 {fieldErrors.email && <p className="mt-1.5 text-xs text-destructive">{fieldErrors.email}</p>}
               </div>
@@ -428,7 +428,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
                     placeholder="••••••••"
                     required
                     disabled={isAnyLoading}
-                    className="v2-focus-ring h-[46px] w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 pr-12 text-sm text-foreground outline-none transition hover:bg-white/[0.07] disabled:opacity-60"
+                    className="v2-focus-ring h-[46px] w-full rounded-2xl border border-border bg-muted/40 px-4 pr-12 text-sm text-foreground outline-none transition hover:bg-muted/60 disabled:opacity-60"
                   />
                   <button
                     type="button"
@@ -449,7 +449,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
                   <button
                     type="button"
                     onClick={() => switchMode("forgot")}
-                    className="text-sm font-semibold text-teal-200 transition hover:text-teal-100"
+                    className="text-sm font-semibold text-primary transition hover:text-primary/80"
                   >
                     Olvidé mi contraseña
                   </button>
@@ -457,7 +457,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
               )}
 
               {message && (
-                <p className="rounded-2xl border border-rose-300/20 bg-rose-400/10 p-3 text-sm text-rose-100">
+                <p className="rounded-2xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
                   {message}
                 </p>
               )}
@@ -465,7 +465,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
               <button
                 type="submit"
                 disabled={isAnyLoading}
-                className="v2-focus-ring mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white text-sm font-bold text-zinc-950 shadow-[0_16px_42px_rgba(255,255,255,0.12)] transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="v2-focus-ring mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-foreground text-sm font-bold text-background shadow-[var(--btn-default-shadow)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLoading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
                 {isLoading
@@ -481,7 +481,7 @@ export function LoginForm({ initialError, nextPath }: LoginFormProps) {
                   <button
                     type="button"
                     onClick={() => switchMode("register")}
-                    className="font-semibold text-teal-200"
+                    className="font-semibold text-primary"
                   >
                     Registrarse
                   </button>

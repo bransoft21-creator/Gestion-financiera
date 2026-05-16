@@ -43,7 +43,7 @@ export function MeridianLoader({
         />
       </motion.div>
       {label && (
-        <p className="text-sm font-medium tracking-wide text-zinc-400">{label}</p>
+        <p className="text-sm font-medium tracking-wide text-muted-foreground">{label}</p>
       )}
     </motion.div>
   );

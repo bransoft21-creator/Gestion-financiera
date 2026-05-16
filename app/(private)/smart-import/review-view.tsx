@@ -105,7 +105,7 @@ export function ReviewView({
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
             <div className="space-y-1">
               {metadata.warnings.map((w, i) => (
-                <p key={i} className="text-sm text-amber-200">
+                <p key={i} className="text-sm text-amber-400">
                   {w}
                 </p>
               ))}
@@ -169,7 +169,7 @@ export function ReviewView({
         <div
           className="rounded-2xl border border-border p-3 shadow-2xl"
           style={{
-            background: "rgba(5,8,15,0.92)",
+            background: "hsl(var(--background) / 0.92)",
             backdropFilter: "blur(20px)",
             WebkitBackdropFilter: "blur(20px)",
           }}
@@ -443,7 +443,7 @@ function CandidateCard({
               "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors duration-150",
               c.selected
                 ? "border-teal-400/60 bg-teal-400/20 text-teal-300"
-                : "border-white/20 bg-muted/30",
+                : "border-border bg-muted/30",
             )}
           >
             {c.selected && <CheckCircle2 className="h-3.5 w-3.5" />}
@@ -510,18 +510,18 @@ function CandidateCard({
               type="date"
               value={c.editDate}
               onChange={(e) => onPatch({ editDate: e.target.value })}
-              className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2 text-base md:text-sm text-foreground outline-none focus:border-teal-400/40 focus:bg-muted/60 [color-scheme:dark]"
+              className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2 text-base md:text-sm text-foreground outline-none focus:border-teal-400/40 focus:bg-muted/60 "
             />
 
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <label className="text-[10px] font-semibold uppercase tracking-wide text-zinc-600">
+                <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Cuenta
                 </label>
                 <select
                   value={c.editAccountId}
                   onChange={(e) => onPatch({ editAccountId: e.target.value })}
-                  className="w-full rounded-xl border border-border bg-muted/30 px-2.5 py-2 text-base md:text-xs text-foreground outline-none focus:border-teal-400/40 [&>option]:bg-zinc-900"
+                  className="w-full rounded-xl border border-border bg-muted/30 px-2.5 py-2 text-base md:text-xs text-foreground outline-none focus:border-teal-400/40 [&>option]:bg-card"
                 >
                   <option value="">Sin cuenta</option>
                   {accounts.map((a) => (
@@ -532,13 +532,13 @@ function CandidateCard({
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-semibold uppercase tracking-wide text-zinc-600">
+                <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Categoría
                 </label>
                 <select
                   value={c.editCategoryId}
                   onChange={(e) => onPatch({ editCategoryId: e.target.value })}
-                  className="w-full rounded-xl border border-border bg-muted/30 px-2.5 py-2 text-base md:text-xs text-foreground outline-none focus:border-teal-400/40 [&>option]:bg-zinc-900"
+                  className="w-full rounded-xl border border-border bg-muted/30 px-2.5 py-2 text-base md:text-xs text-foreground outline-none focus:border-teal-400/40 [&>option]:bg-card"
                 >
                   <option value="">Sin categoría</option>
                   {expenseCategories.map((cat) => (

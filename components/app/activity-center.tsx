@@ -288,7 +288,7 @@ export function ActivityCenter() {
                 "rounded-full border px-3 py-1 text-xs font-semibold transition duration-150",
                 filter === f.id
                   ? "border-border bg-muted/70 text-foreground"
-                  : "border-border bg-muted/20 text-muted-foreground hover:border-white/12 hover:text-muted-foreground",
+                  : "border-border bg-muted/20 text-muted-foreground hover:border-border hover:text-muted-foreground",
               )}
             >
               {f.label}
