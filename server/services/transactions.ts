@@ -232,6 +232,9 @@ export async function updateTransaction(
   return prisma.$transaction(async (tx) => {
     const current = await tx.transaction.findFirst({
       where: { id: transactionId, householdId: input.householdId, deletedAt: null },
+      include: {
+        sharedTransaction: { select: { id: true, householdId: true } },
+      },
     });
 
     if (!current) throw new NotFoundError("Transaction not found");
@@ -354,7 +357,41 @@ export async function updateTransaction(
       }),
     );
 
-    await syncSharedTransactionAfterUpdate(tx, updated);
+    // Resolve the shared-household state before and after the update.
+    const prevSharedHouseholdId = current.sharedTransaction?.householdId ?? null;
+    const nextSharedHouseholdId =
+      input.sharedHouseholdId !== undefined ? input.sharedHouseholdId : prevSharedHouseholdId;
+
+    // Sharing is only valid for non-canceled EXPENSE transactions.
+    const effectiveNextSharedHouseholdId =
+      nextSharedHouseholdId &&
+      updated.type === TransactionType.EXPENSE &&
+      updated.status !== TransactionStatus.CANCELED
+        ? nextSharedHouseholdId
+        : null;
+
+    const wasShared = Boolean(prevSharedHouseholdId);
+    const willBeShared = Boolean(effectiveNextSharedHouseholdId);
+    const householdChanged = prevSharedHouseholdId !== effectiveNextSharedHouseholdId;
+
+    if (wasShared && (!willBeShared || householdChanged)) {
+      // Case D/E: user unmarked hogar, or type changed to non-EXPENSE, or household switched.
+      await removeSharedTransactionForTransaction(tx, transactionId);
+    }
+
+    if (willBeShared && (!wasShared || householdChanged)) {
+      // Case B: newly marked as shared (or household changed) — create SharedTransaction.
+      await createSharedTransaction(tx, {
+        householdId: effectiveNextSharedHouseholdId!,
+        transactionId: updated.id,
+        paidByUserId: userProfileId,
+        amount: updated.amount,
+        splitConfig: input.splitConfig,
+      });
+    } else if (wasShared && willBeShared && !householdChanged) {
+      // Case C: already shared, recalculate participant amounts.
+      await syncSharedTransactionAfterUpdate(tx, updated);
+    }
 
     return updated;
   });
