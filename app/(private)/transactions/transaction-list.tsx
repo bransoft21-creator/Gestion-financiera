@@ -355,7 +355,7 @@ function TransactionCard({
 
   return (
     <article
-      className="group min-w-0 cursor-pointer overflow-hidden rounded-[1.15rem] border border-transparent bg-muted/[0.18] px-3.5 py-3.5 transition duration-150 hover:border-border/70 hover:bg-muted/40 active:scale-[0.995] sm:px-4"
+      className="group min-w-0 cursor-pointer overflow-hidden rounded-[1.15rem] border border-border/40 bg-muted/[0.30] px-3.5 py-3.5 transition duration-150 hover:border-border/75 hover:bg-muted/45 active:scale-[0.995] sm:px-4"
       role="button"
       tabIndex={0}
       onClick={() => onEdit(transaction)}
