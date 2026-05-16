@@ -16,6 +16,7 @@ import {
   Monitor,
   Moon,
   Palette,
+  ScanLine,
   Settings,
   Sun,
   TriangleAlert,
@@ -429,6 +430,20 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
           action={
             <Link
               href="/categories"
+              className="flex shrink-0 items-center gap-1 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
+            >
+              Ir
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          }
+        />
+        <SettingRow
+          icon={ScanLine}
+          label="Revisar movimientos"
+          description="Detectá sin categoría, categorías similares y datos que afectan reportes"
+          action={
+            <Link
+              href="/settings/data-quality"
               className="flex shrink-0 items-center gap-1 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
             >
               Ir
