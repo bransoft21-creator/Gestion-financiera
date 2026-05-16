@@ -118,11 +118,12 @@ function GoogleLogo({ className }: { className?: string }) {
 
 type LoginFormProps = {
   initialError?: string;
+  initialMode?: AuthMode;
   nextPath?: string | null;
 };
 
-export function LoginForm({ initialError, nextPath }: LoginFormProps) {
-  const [mode, setMode] = useState<AuthMode>("login");
+export function LoginForm({ initialError, initialMode = "login", nextPath }: LoginFormProps) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);

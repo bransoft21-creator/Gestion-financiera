@@ -6,14 +6,15 @@ import { LoginForm } from "./login-form";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; next?: string }>;
+  searchParams: Promise<{ error?: string; next?: string; mode?: string }>;
 }) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { error, next } = await searchParams;
+  const { error, next, mode } = await searchParams;
   const nextPath = getSafeNextPath(next);
+  const initialMode = mode === "forgot" ? "forgot" : "login";
 
   if (user) {
     const profile = await prisma.userProfile.findUnique({
@@ -23,7 +24,7 @@ export default async function LoginPage({
     redirect(nextPath ?? (profile?.onboardingCompletedAt ? "/dashboard" : "/onboarding"));
   }
 
-  return <LoginForm initialError={error} nextPath={nextPath} />;
+  return <LoginForm initialError={error} initialMode={initialMode} nextPath={nextPath} />;
 }
 
 function getSafeNextPath(value: string | undefined) {

@@ -82,10 +82,10 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
     await updatePreference(key, value);
   }
 
-  async function handleExport() {
+  async function handleExport(format: "json" | "transactions-csv") {
     setIsExporting(true);
     try {
-      const response = await fetch("/api/user/export");
+      const response = await fetch(format === "json" ? "/api/user/export" : "/api/user/export?format=transactions-csv");
       if (!response.ok) {
         toast.error("No se pudo generar el export. Intentá de nuevo.");
         return;
@@ -95,12 +95,12 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `meridian-export-${date}.json`;
+      a.download = format === "json" ? `meridian-export-${date}.json` : `meridian-movimientos-${date}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("Datos exportados correctamente.");
+      toast.success(format === "json" ? "Export JSON generado." : "CSV de movimientos generado.");
     } catch {
       toast.error("Error de red. Verificá tu conexión.");
     } finally {
@@ -117,7 +117,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
         toast.error("No se pudo borrar la información. Intentá de nuevo.");
         return;
       }
-      toast.success("Información financiera eliminada.");
+      toast.success("Información financiera eliminada. Tu cuenta de acceso sigue activa.");
       setDeleteOpen(false);
       setDeleteInput("");
       router.push("/dashboard");
@@ -298,25 +298,25 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
         <SettingRow
           icon={KeyRound}
           label="Contraseña"
-          description="Cambiala si sospechás acceso no autorizado"
+          description="Solicitá un enlace seguro para crear una contraseña nueva"
           action={
-            <a
-              href="/login"
+            <Link
+              href="/login?mode=forgot"
               className="shrink-0 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
             >
-              Cambiar
-            </a>
+              Recuperar
+            </Link>
           }
         />
         <SettingRow
           icon={Download}
           label="Exportar datos"
-          description="Descargá un JSON con todas tus cuentas, movimientos, metas y más"
+          description="JSON completo con metadata, versión de esquema, fecha, zona horaria y conteos"
           action={
             <ActionButton
               variant="glass"
               size="sm"
-              onClick={() => void handleExport()}
+              onClick={() => void handleExport("json")}
               disabled={isExporting}
             >
               {isExporting ? (
@@ -328,9 +328,29 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
             </ActionButton>
           }
         />
+        <SettingRow
+          icon={Download}
+          label="CSV de movimientos"
+          description="Archivo simple para revisar movimientos en planillas sin incluir credenciales"
+          action={
+            <ActionButton
+              variant="glass"
+              size="sm"
+              onClick={() => void handleExport("transactions-csv")}
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              CSV
+            </ActionButton>
+          }
+        />
         <div className="px-5 py-3">
           <p className="text-xs leading-5 text-muted-foreground">
-            Tus datos financieros son privados y nunca se comparten con terceros. El export no incluye contraseñas, tokens ni datos de otros usuarios.
+            Tus datos financieros son privados y nunca se comparten con terceros. Los exports incluyen timestamp y timezone; no incluyen contraseñas, tokens ni datos de otros usuarios.
           </p>
         </div>
       </Section>

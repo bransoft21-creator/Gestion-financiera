@@ -3,12 +3,21 @@ import { getCurrentUser } from "../../../../server/auth/current-user";
 import { prisma } from "../../../../lib/prisma";
 import { HouseholdKind, HouseholdMemberStatus } from "@prisma/client";
 import { toFiniteNumber } from "../../../../server/services/financial-ledger";
+import packageJson from "../../../../package.json";
+import {
+  buildExportMetadata,
+  EXPORT_SCHEMA_VERSION,
+  formatTransactionsCsv,
+} from "../../../../server/services/export-format";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const { userProfile } = await getCurrentUser();
+    const url = new URL(request.url);
+    const requestedFormat = url.searchParams.get("format");
+    const exportFormat = requestedFormat === "transactions-csv" ? "transactions-csv" : "json";
 
     const membership = await prisma.householdMember.findFirst({
       where: {
@@ -110,10 +119,94 @@ export async function GET() {
     ]);
 
     const exportDate = new Date().toISOString().slice(0, 10);
+    const exportedAt = new Date().toISOString();
+
+    const normalizedAccounts = accounts.map((a) => ({
+      ...a,
+      currentBalance: toFiniteNumber(a.currentBalance),
+      openingBalance: toFiniteNumber(a.openingBalance),
+      creditLimit: a.creditLimit != null ? toFiniteNumber(a.creditLimit) : null,
+    }));
+    const normalizedTransactions = transactions.map((t) => ({
+      ...t,
+      amount: toFiniteNumber(t.amount),
+      accountName: t.account.name,
+      categoryName: t.category?.name ?? null,
+      account: undefined,
+      category: undefined,
+    }));
+    const normalizedBudgets = budgets.map((b) => ({
+      ...b,
+      plannedAmount: toFiniteNumber(b.plannedAmount),
+      categoryName: b.category.name,
+      category: undefined,
+    }));
+    const normalizedGoals = goals.map((g) => ({
+      ...g,
+      targetAmount: toFiniteNumber(g.targetAmount),
+      currentAmount: toFiniteNumber(g.currentAmount),
+    }));
+    const normalizedDebts = debts.map((d) => ({
+      ...d,
+      originalAmount: toFiniteNumber(d.originalAmount),
+      outstandingAmount: toFiniteNumber(d.outstandingAmount),
+      minimumPayment: d.minimumPayment != null ? toFiniteNumber(d.minimumPayment) : null,
+      interestRate: d.interestRate != null ? toFiniteNumber(d.interestRate) : null,
+    }));
+    const normalizedRecurringExpenses = recurringExpenses.map((r) => ({
+      ...r,
+      amount: toFiniteNumber(r.amount),
+      categoryName: r.category?.name ?? null,
+      category: undefined,
+    }));
+    const normalizedHouseholdPayments = householdPayments.map((p) => ({
+      ...p,
+      estimatedAmount: toFiniteNumber(p.estimatedAmount),
+      categoryName: p.category?.name ?? null,
+      category: undefined,
+    }));
+    const normalizedSettlements = settlements.map((s) => ({
+      ...s,
+      amount: toFiniteNumber(s.amount),
+    }));
+
+    const recordCounts = {
+      accounts: normalizedAccounts.length,
+      categories: categories.length,
+      transactions: normalizedTransactions.length,
+      budgets: normalizedBudgets.length,
+      goals: normalizedGoals.length,
+      debts: normalizedDebts.length,
+      recurringExpenses: normalizedRecurringExpenses.length,
+      householdPayments: normalizedHouseholdPayments.length,
+      settlements: normalizedSettlements.length,
+      activityItems: activityItems.length,
+    };
+    const metadata = buildExportMetadata({
+      exportedAt,
+      timezone: userProfile.timezone,
+      locale: userProfile.locale,
+      appVersion: packageJson.version,
+      format: exportFormat,
+      householdId,
+      recordCounts,
+    });
+
+    if (exportFormat === "transactions-csv") {
+      const csv = formatTransactionsCsv(normalizedTransactions);
+      return new Response(csv, {
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="meridian-movimientos-${exportDate}.csv"`,
+          "X-Meridian-Export-Schema": EXPORT_SCHEMA_VERSION,
+        },
+      });
+    }
 
     const exportData = {
-      exportedAt: new Date().toISOString(),
-      exportVersion: "1.0",
+      metadata,
+      exportedAt,
+      exportVersion: EXPORT_SCHEMA_VERSION,
       user: {
         email: userProfile.email,
         fullName: userProfile.fullName,
@@ -122,55 +215,15 @@ export async function GET() {
         timezone: userProfile.timezone,
       },
       household: membership?.household ?? null,
-      accounts: accounts.map((a) => ({
-        ...a,
-        currentBalance: toFiniteNumber(a.currentBalance),
-        openingBalance: toFiniteNumber(a.openingBalance),
-        creditLimit: a.creditLimit != null ? toFiniteNumber(a.creditLimit) : null,
-      })),
+      accounts: normalizedAccounts,
       categories,
-      transactions: transactions.map((t) => ({
-        ...t,
-        amount: toFiniteNumber(t.amount),
-        accountName: t.account.name,
-        categoryName: t.category?.name ?? null,
-        account: undefined,
-        category: undefined,
-      })),
-      budgets: budgets.map((b) => ({
-        ...b,
-        plannedAmount: toFiniteNumber(b.plannedAmount),
-        categoryName: b.category.name,
-        category: undefined,
-      })),
-      goals: goals.map((g) => ({
-        ...g,
-        targetAmount: toFiniteNumber(g.targetAmount),
-        currentAmount: toFiniteNumber(g.currentAmount),
-      })),
-      debts: debts.map((d) => ({
-        ...d,
-        originalAmount: toFiniteNumber(d.originalAmount),
-        outstandingAmount: toFiniteNumber(d.outstandingAmount),
-        minimumPayment: d.minimumPayment != null ? toFiniteNumber(d.minimumPayment) : null,
-        interestRate: d.interestRate != null ? toFiniteNumber(d.interestRate) : null,
-      })),
-      recurringExpenses: recurringExpenses.map((r) => ({
-        ...r,
-        amount: toFiniteNumber(r.amount),
-        categoryName: r.category?.name ?? null,
-        category: undefined,
-      })),
-      householdPayments: householdPayments.map((p) => ({
-        ...p,
-        estimatedAmount: toFiniteNumber(p.estimatedAmount),
-        categoryName: p.category?.name ?? null,
-        category: undefined,
-      })),
-      settlements: settlements.map((s) => ({
-        ...s,
-        amount: toFiniteNumber(s.amount),
-      })),
+      transactions: normalizedTransactions,
+      budgets: normalizedBudgets,
+      goals: normalizedGoals,
+      debts: normalizedDebts,
+      recurringExpenses: normalizedRecurringExpenses,
+      householdPayments: normalizedHouseholdPayments,
+      settlements: normalizedSettlements,
       activityItems,
     };
 

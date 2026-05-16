@@ -12,6 +12,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PremiumCard, PremiumCardContent } from "@/components/ui-v2/premium-card";
 import type { ActivityType, ActivityTone } from "@prisma/client";
@@ -90,6 +91,11 @@ const TONE: Record<ActivityTone, { dot: string; border: string; bg: string; text
   },
 };
 
+const PRIORITY_LABELS = [
+  { min: 2, label: "Prioritario", className: "border-amber-300/25 bg-amber-300/10 text-amber-200" },
+  { min: 1, label: "Atención", className: "border-teal-300/20 bg-teal-300/10 text-teal-200" },
+];
+
 // ── Relative time ────────────────────────────────────────────────────────────
 
 function relativeTime(iso: string): string {
@@ -122,6 +128,7 @@ function ActivityCard({
   const Icon = TYPE_ICON[item.type];
   const isRead = !!item.readAt;
   const isResolved = !!item.resolvedAt;
+  const priority = PRIORITY_LABELS.find((p) => item.priority >= p.min);
 
   return (
     <div
@@ -148,6 +155,11 @@ function ActivityCard({
               <Icon className="h-3 w-3" aria-hidden="true" />
               {TYPE_LABEL[item.type]}
             </span>
+            {priority && (
+              <span className={cn("rounded-full border px-1.5 py-0.5 text-[10px] font-semibold", priority.className)}>
+                {priority.label}
+              </span>
+            )}
             <span className="text-[10px] text-muted-foreground">{relativeTime(item.createdAt)}</span>
           </div>
 
@@ -205,11 +217,11 @@ function ActivityCard({
 
 function EmptyState({ filter }: { filter: Filter }) {
   const messages: Record<Filter, { title: string; body: string }> = {
-    all:       { title: "Todo al día",         body: "No hay actividad reciente para mostrar." },
-    important: { title: "Nada importante",     body: "No hay elementos marcados como importantes." },
-    positive:  { title: "Aún sin positivas",   body: "Seguí usando la app para recibir señales positivas." },
-    pending:   { title: "Nada pendiente",      body: "No hay señales esperando revisión." },
-    archived:  { title: "Archivo vacío",       body: "Las actividades archivadas van a aparecer acá." },
+    all:       { title: "Todo al día",         body: "Las señales útiles van a aparecer acá cuando haya algo concreto para mirar." },
+    important: { title: "Nada urgente por ahora", body: "Pagos, presupuestos y deudas importantes se agrupan acá sin ruido extra." },
+    positive:  { title: "Sin señales positivas aún", body: "Cuando el mes venga ordenado o baje el gasto, lo vas a ver acá." },
+    pending:   { title: "Nada esperando revisión", body: "Las señales pendientes desaparecen cuando las resolvés o dejan de aplicar." },
+    archived:  { title: "Archivo vacío",       body: "Las señales archivadas quedan separadas para no ensuciar tu vista diaria." },
   };
   const { title, body } = messages[filter];
 
@@ -252,23 +264,47 @@ export function ActivityCenter() {
 
   async function handleRead(id: string) {
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, readAt: new Date().toISOString() } : i));
-    await fetch(`/api/activity/${id}/read`, { method: "POST" }).catch(() => {});
+    try {
+      const res = await fetch(`/api/activity/${id}/read`, { method: "POST" });
+      if (!res.ok) throw new Error("read failed");
+      toast.success("Señal marcada como leída.");
+    } catch {
+      toast.error("No se pudo actualizar la señal.");
+    }
   }
 
   async function handleDismiss(id: string) {
     setItems((prev) => prev.filter((i) => i.id !== id));
-    await fetch(`/api/activity/${id}/dismiss`, { method: "POST" }).catch(() => {});
+    try {
+      const res = await fetch(`/api/activity/${id}/dismiss`, { method: "POST" });
+      if (!res.ok) throw new Error("dismiss failed");
+      toast.success("Señal archivada.");
+    } catch {
+      toast.error("No se pudo archivar la señal.");
+    }
   }
 
   async function handleResolve(id: string) {
     const now = new Date().toISOString();
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, readAt: i.readAt ?? now, resolvedAt: now } : i));
-    await fetch(`/api/activity/${id}/resolve`, { method: "POST" }).catch(() => {});
+    try {
+      const res = await fetch(`/api/activity/${id}/resolve`, { method: "POST" });
+      if (!res.ok) throw new Error("resolve failed");
+      toast.success("Señal resuelta.");
+    } catch {
+      toast.error("No se pudo resolver la señal.");
+    }
   }
 
   async function handleMarkAllRead() {
     setItems((prev) => prev.map((i) => ({ ...i, readAt: i.readAt ?? new Date().toISOString() })));
-    await fetch("/api/activity/read-all", { method: "POST" }).catch(() => {});
+    try {
+      const res = await fetch("/api/activity/read-all", { method: "POST" });
+      if (!res.ok) throw new Error("read all failed");
+      toast.success("Actividad marcada como leída.");
+    } catch {
+      toast.error("No se pudo actualizar la actividad.");
+    }
   }
 
   const pendingCount = items.filter((i) => !i.readAt && !i.resolvedAt && !i.dismissedAt).length;

@@ -645,9 +645,9 @@ function RecurringEmptyState({ onCreate }: { onCreate: () => void }) {
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-muted/50 text-muted-foreground">
         <CalendarClock className="h-5 w-5" aria-hidden="true" />
       </div>
-      <h3 className="mt-4 text-base font-semibold text-foreground">Sin gastos fijos invisibles</h3>
+      <h3 className="mt-4 text-base font-semibold text-foreground">Sin recurrentes por ahora</h3>
       <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-        Agregá suscripciones, alquileres o servicios para revelar cuánto se va solo.
+        Agregá suscripciones, alquileres o servicios para que los próximos pagos aparezcan como señales útiles, no como sorpresas.
       </p>
       <ActionButton type="button" className="mt-5" onClick={onCreate}>
         <Plus className="h-4 w-4" aria-hidden="true" />

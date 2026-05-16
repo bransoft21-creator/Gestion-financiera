@@ -231,8 +231,12 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
           <PremiumCardContent>
             <EmptyState
               icon={TrendingUp}
-              title="Todavía no hay historial."
-              description="La evolución mensual aparece acá cuando hay movimientos en al menos dos meses."
+              title="La memoria mensual está esperando datos."
+              description="Cuando tengas movimientos en al menos dos meses, Meridian va a mostrar evolución, ahorro y cambios relevantes sin que parezca una pantalla rota."
+              actions={[
+                { label: "Registrar movimiento", href: "/transactions?new=1", primary: true },
+                { label: "Usar Smart Import", href: "/smart-import" },
+              ]}
             />
           </PremiumCardContent>
         </PremiumCard>

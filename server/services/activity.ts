@@ -123,6 +123,18 @@ export async function markAllRead(userId: string) {
   });
 }
 
+async function resolveReminderIfPresent(userId: string, dedupeKey: string) {
+  await prisma.activityItem.updateMany({
+    where: {
+      userId,
+      dedupeKey,
+      resolvedAt: null,
+      dismissedAt: null,
+    },
+    data: { resolvedAt: new Date(), readAt: new Date() },
+  });
+}
+
 // ── Financial signal generation ─────────────────────────────────────────────
 
 /**
@@ -212,7 +224,10 @@ export async function upsertReminderActivities(params: {
   const monthStart = new Date(Date.UTC(year, month - 1, 1, 3, 0, 0, 0)); // 00:00 ART
   const monthEnd   = new Date(Date.UTC(year, month,     0, 26, 59, 59, 999)); // ~23:59 ART last day
 
-  const [incomeAgg, expensesAgg, debts, accounts] = await Promise.all([
+  const nextWeek = new Date(now);
+  nextWeek.setDate(nextWeek.getDate() + 7);
+
+  const [incomeAgg, expensesAgg, debts, accounts, upcomingRecurringCount] = await Promise.all([
     prisma.transaction.aggregate({
       where: {
         householdId,
@@ -240,18 +255,28 @@ export async function upsertReminderActivities(params: {
         outstandingAmount: { gt: 0 },
         deletedAt: null,
       },
-      select: { id: true, type: true, status: true, currency: true, outstandingAmount: true },
+      select: { id: true, type: true, status: true, currency: true, outstandingAmount: true, nextDueDate: true },
     }),
     prisma.account.findMany({
       where: { householdId, deletedAt: null, isArchived: false },
       select: { id: true, type: true, currency: true, currentBalance: true, isArchived: true, deletedAt: true },
     }),
+    prisma.recurringExpense.count({
+      where: {
+        householdId,
+        isActive: true,
+        nextDueDate: { gte: now, lte: nextWeek },
+        deletedAt: null,
+      },
+    }),
   ]);
 
   const income   = Number(incomeAgg._sum.amount ?? 0);
   const expenses = Number(expensesAgg._sum.amount ?? 0);
+  const budgetRatio = income > 0 ? expenses / income : 0;
   const liabilitySummary = computeRealLiabilitySummary(accounts, debts);
   const debt = liabilitySummary.liabilities;
+  const hasOverdueDebt = debts.some((item) => item.nextDueDate && item.nextDueDate < now);
   traceFinancialSource({
     endpoint: "/api/activity",
     householdId,
@@ -267,25 +292,31 @@ export async function upsertReminderActivities(params: {
 
   const upserts: Promise<unknown>[] = [];
 
-  // Budget pressure warning (≥ 80% of income spent)
-  if (income > 0 && expenses / income >= 0.80) {
-    const pct = Math.round((expenses / income) * 100);
+  // Budget pressure warning (P0 if exceeded, P1 if approaching)
+  if (income > 0 && budgetRatio >= 0.80) {
+    const pct = Math.round(budgetRatio * 100);
+    const exceeded = budgetRatio >= 1;
     upserts.push(
       upsertActivity({
         userId,
         type: ActivityType.REMINDER,
         source: "monthly-reminders",
         tone: ActivityTone.warning,
-        priority: 1,
-        title: "Gastos cerca del límite del mes",
-        body: `Ya usaste el ${pct}% de tus ingresos de ${MONTH_NAMES[month - 1]}.`,
+        priority: exceeded ? 2 : 1,
+        title: exceeded ? "Presupuesto excedido este mes" : "Gastos cerca del límite del mes",
+        body: `Ya usaste el ${pct}% de tus ingresos de ${MONTH_NAMES[month - 1]}. Te lo marcamos sin urgencia para revisar a tiempo.`,
         dedupeKey: `reminder-budget-${periodKey}`,
         periodKey,
         actionLabel: "Ver movimientos",
         actionLink: "/transactions",
       }),
+      resolveReminderIfPresent(userId, `reminder-budget-good-${periodKey}`),
     );
-  } else if (income > 0 && expenses / income < 0.55) {
+  } else {
+    upserts.push(resolveReminderIfPresent(userId, `reminder-budget-${periodKey}`));
+  }
+
+  if (income > 0 && budgetRatio < 0.55) {
     // Positive: good spending discipline
     upserts.push(
       upsertActivity({
@@ -302,25 +333,52 @@ export async function upsertReminderActivities(params: {
         actionLink: "/dashboard",
       }),
     );
+  } else {
+    upserts.push(resolveReminderIfPresent(userId, `reminder-budget-good-${periodKey}`));
   }
 
-  // Outstanding debt reminder (monthly, neutral)
-  if (debt > 0) {
+  // Upcoming recurring payments (P1)
+  if (upcomingRecurringCount > 0) {
     upserts.push(
       upsertActivity({
         userId,
         type: ActivityType.REMINDER,
         source: "monthly-reminders",
         tone: ActivityTone.neutral,
-        priority: 0,
-        title: "Deuda activa registrada",
-        body: formatARS(debt) + " de deuda activa este mes.",
+        priority: 1,
+        title: "Recurrentes próximos",
+        body: `${upcomingRecurringCount} pago${upcomingRecurringCount !== 1 ? "s" : ""} recurrente${upcomingRecurringCount !== 1 ? "s" : ""} vence${upcomingRecurringCount === 1 ? "" : "n"} en los próximos 7 días.`,
+        dedupeKey: `reminder-recurring-${periodKey}`,
+        periodKey,
+        actionLabel: "Ver recurrentes",
+        actionLink: "/recurring",
+      }),
+    );
+  } else {
+    upserts.push(resolveReminderIfPresent(userId, `reminder-recurring-${periodKey}`));
+  }
+
+  // Outstanding debt reminder (P0 if overdue, P1 if active)
+  if (debt > 0) {
+    upserts.push(
+      upsertActivity({
+        userId,
+        type: ActivityType.REMINDER,
+        source: "monthly-reminders",
+        tone: hasOverdueDebt ? ActivityTone.warning : ActivityTone.neutral,
+        priority: hasOverdueDebt ? 2 : 1,
+        title: hasOverdueDebt ? "Deuda vencida registrada" : "Deuda activa registrada",
+        body: hasOverdueDebt
+          ? formatARS(debt) + " de deuda activa. Hay al menos un vencimiento para revisar."
+          : formatARS(debt) + " de deuda activa este mes.",
         dedupeKey: `reminder-debt-${periodKey}`,
         periodKey,
         actionLabel: "Ver deudas",
         actionLink: "/debts",
       }),
     );
+  } else {
+    upserts.push(resolveReminderIfPresent(userId, `reminder-debt-${periodKey}`));
   }
 
   if (upserts.length > 0) {

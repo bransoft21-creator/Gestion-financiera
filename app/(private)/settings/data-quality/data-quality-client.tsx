@@ -318,7 +318,7 @@ export function DataQualityClient({
       {activeTab === "uncategorized" && (
         <div className="space-y-3">
           {uncatRows.length === 0 ? (
-            <PremiumCard><PremiumCardContent><EmptyCheck message="Sin movimientos sin categoría — tus datos están bien organizados." /></PremiumCardContent></PremiumCard>
+            <PremiumCard><PremiumCardContent><EmptyCheck message="Todo categorizado. Si aparece algo nuevo, lo vamos a separar acá para corregirlo rápido." /></PremiumCardContent></PremiumCard>
           ) : (
             <>
               {/* Bulk action bar */}
@@ -463,7 +463,7 @@ export function DataQualityClient({
       {activeTab === "frequent" && (
         <div className="space-y-3">
           {freqRows.length === 0 ? (
-            <PremiumCard><PremiumCardContent><EmptyCheck message="No hay descripciones repetidas sin categoría." /></PremiumCardContent></PremiumCard>
+            <PremiumCard><PremiumCardContent><EmptyCheck message="No hay patrones repetidos pendientes. Las reglas sugeridas van a aparecer cuando haya suficientes movimientos similares." /></PremiumCardContent></PremiumCard>
           ) : (
             freqRows.map((group) => {
               const isApplying = freqApplying === group.key;
@@ -524,7 +524,7 @@ export function DataQualityClient({
       {activeTab === "similar" && (
         <div className="space-y-3">
           {simRows.length === 0 ? (
-            <PremiumCard><PremiumCardContent><EmptyCheck message="No hay categorías con nombres similares." /></PremiumCardContent></PremiumCard>
+            <PremiumCard><PremiumCardContent><EmptyCheck message="Categorías claras. Si detectamos nombres duplicados o demasiado parecidos, te los mostramos acá." /></PremiumCardContent></PremiumCard>
           ) : (
             <>
               <p className="text-xs text-muted-foreground">
