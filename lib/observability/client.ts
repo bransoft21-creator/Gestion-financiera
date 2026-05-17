@@ -47,6 +47,9 @@ type ProductEvent =
   // Weekly Pulse
   | "weekly_pulse_viewed"
   | "weekly_pulse_dismissed"
+  // Monthly Close
+  | "monthly_close_viewed"
+  | "monthly_close_dismissed"
   // AI
   | "ai_analysis_started"
   | "ai_analysis_succeeded"

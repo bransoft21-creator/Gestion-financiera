@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/app/empty-state";
 import { Button } from "@/components/ui/button";
 import { FinancialAiAnalysisCard } from "@/components/dashboard/financial-ai-analysis-card";
 import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse-card";
+import { MonthlyCloseCard } from "@/components/dashboard/monthly-close-card";
 import {
   PremiumCard,
   PremiumCardContent,
@@ -286,6 +287,9 @@ export function DashboardClient() {
 
       {/* Ambient signal */}
       {ambientHint && <AmbientSignal text={ambientHint} celebratory={isCelebratoryMonth} />}
+
+      {/* Cierre de mes anterior — solo mes actual, primeros 10 días */}
+      {isCurrentMonth && <MonthlyCloseCard />}
 
       {/* 2. Financial Copilot */}
       <FinancialAiAnalysisCard month={selectedMonth} />
