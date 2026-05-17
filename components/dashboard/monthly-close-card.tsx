@@ -32,18 +32,17 @@ function buildPreviewText(close: MonthlyCloseData): string {
 type Status = "idle" | "loading" | "done" | "empty";
 
 export function MonthlyCloseCard() {
-  const [status, setStatus] = useState<Status>("idle");
+  const dayOfMonth = new Date().getDate();
+  const shouldShow = dayOfMonth <= 10;
+  const [status, setStatus] = useState<Status>(shouldShow ? "loading" : "empty");
   const [close, setClose] = useState<MonthlyCloseData | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   // Only show during the first 10 days of the month — after that, the user
   // has had enough time to process the close and the card becomes noise.
-  const dayOfMonth = new Date().getDate();
-  if (dayOfMonth > 10) return null;
-
   useEffect(() => {
+    if (!shouldShow) return;
     let cancelled = false;
-    setStatus("loading");
 
     fetch("/api/monthly-close")
       .then((r) => r.json())
@@ -63,8 +62,7 @@ export function MonthlyCloseCard() {
       });
 
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [shouldShow]);
 
   if (status === "empty" || status === "idle") return null;
 

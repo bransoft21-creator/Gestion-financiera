@@ -47,9 +47,15 @@ type ProductEvent =
   // Weekly Pulse
   | "weekly_pulse_viewed"
   | "weekly_pulse_dismissed"
+  | "pulse_notification_opened"
   // Monthly Close
   | "monthly_close_viewed"
   | "monthly_close_dismissed"
+  | "monthly_close_notification_opened"
+  // Notifications
+  | "notification_received"
+  | "notification_opened"
+  | "notification_dismissed"
   // AI
   | "ai_analysis_started"
   | "ai_analysis_succeeded"
@@ -109,6 +115,10 @@ const ALLOWED_PROPS = new Set([
   "tone",
   "signalCount",
   "insightCount",
+  // Notifications
+  "count",
+  "type",
+  "priority",
 ]);
 
 export function setTelemetryUser(userId?: string | null) {

@@ -38,13 +38,12 @@ function buildPreviewText(pulse: WeeklyPulseData): string {
 type Status = "idle" | "loading" | "done" | "empty";
 
 export function WeeklyPulseCard() {
-  const [status, setStatus] = useState<Status>("idle");
+  const [status, setStatus] = useState<Status>("loading");
   const [pulse, setPulse] = useState<WeeklyPulseData | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    setStatus("loading");
 
     fetch("/api/weekly-pulse")
       .then((r) => r.json())

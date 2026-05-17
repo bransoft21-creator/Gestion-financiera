@@ -3,6 +3,8 @@ import { handleApiError, ok } from "@/server/api/http";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getPrimaryHousehold } from "@/server/services/workspace";
 import {
+  expireStaleActivities,
+  getActivitySummary,
   listActivities,
   upsertReminderActivities,
   upsertWeeklySignalActivities,
@@ -39,14 +41,18 @@ export async function GET(request: NextRequest) {
         }),
       ]);
     }
+    await expireStaleActivities(userProfile.id);
 
-    const items = await listActivities({
-      userId: userProfile.id,
-      filter,
-      limit,
-    });
+    const [items, summary] = await Promise.all([
+      listActivities({
+        userId: userProfile.id,
+        filter,
+        limit,
+      }),
+      getActivitySummary(userProfile.id),
+    ]);
 
-    return ok({ items });
+    return ok({ items, summary });
   } catch (error) {
     return handleApiError(error);
   }

@@ -2,6 +2,8 @@ import { handleApiError, ok } from "@/server/api/http";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getPrimaryHousehold } from "@/server/services/workspace";
 import { prisma } from "@/lib/prisma";
+import { ActivityTone, ActivityType } from "@prisma/client";
+import { upsertActivity } from "@/server/services/activity";
 import {
   getWeekWindow,
   getISOWeekKey,
@@ -94,6 +96,27 @@ export async function GET() {
 
     const expensesChange = comparison.available ? comparison.expensesPct : null;
     const overallTone = deriveOverallTone(signals, expensesChange);
+    await upsertActivity({
+      userId: userProfile.id,
+      type: ActivityType.INSIGHT,
+      source: "weekly-pulse",
+      tone: overallTone === "warning"
+        ? ActivityTone.warning
+        : overallTone === "positive"
+          ? ActivityTone.positive
+          : ActivityTone.neutral,
+      priority: overallTone === "warning" ? 1 : 0,
+      title: "Tu Weekly Pulse está listo.",
+      body: "Un resumen corto de la semana para mirar sin apuro.",
+      metadata: {
+        tone: overallTone,
+        signalCount: signals.length,
+      },
+      dedupeKey: `weekly-pulse-${weekKey}`,
+      periodKey: weekKey,
+      actionLabel: "Ver dashboard",
+      actionLink: "/dashboard",
+    });
 
     return ok<WeeklyPulseData>({
       weekLabel,

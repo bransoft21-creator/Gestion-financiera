@@ -6,11 +6,12 @@
  * Falls back to a live transaction query if no snapshot exists yet.
  * No AI, no cost — safe to call on every dashboard render.
  */
-import { type Prisma } from "@prisma/client";
+import { ActivityTone, ActivityType, type Prisma } from "@prisma/client";
 import { handleApiError, ok } from "@/server/api/http";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getPrimaryHousehold } from "@/server/services/workspace";
 import { prisma } from "@/lib/prisma";
+import { upsertActivity } from "@/server/services/activity";
 import { toFiniteNumber } from "@/server/services/financial-ledger";
 import {
   generateMonthlySignals,
@@ -144,6 +145,27 @@ export async function GET() {
       previous && previous.available !== 0
         ? current.available - previous.available
         : null;
+    await upsertActivity({
+      userId: userProfile.id,
+      type: ActivityType.INSIGHT,
+      source: "monthly-close",
+      tone: overallTone === "warning"
+        ? ActivityTone.warning
+        : overallTone === "positive"
+          ? ActivityTone.positive
+          : ActivityTone.neutral,
+      priority: overallTone === "warning" ? 1 : 0,
+      title: "Tu cierre de mes está disponible.",
+      body: `Ya podés revisar ${monthLabel} con señales claras y sin ruido.`,
+      metadata: {
+        tone: overallTone,
+        signalCount: signals.length,
+      },
+      dedupeKey: `monthly-close-${monthKey}`,
+      periodKey: monthKey,
+      actionLabel: "Ver dashboard",
+      actionLink: "/dashboard",
+    });
 
     return ok<MonthlyCloseData>({
       monthLabel,

@@ -47,12 +47,11 @@ interface AiSummaryItem {
 }
 
 function MonthlyAiSection({ monthKey }: { monthKey: string }) {
-  const [status, setStatus] = useState<AiStatus>("idle");
+  const [status, setStatus] = useState<AiStatus>("loading");
   const [items, setItems] = useState<AiSummaryItem[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    setStatus("loading");
 
     async function load() {
       try {

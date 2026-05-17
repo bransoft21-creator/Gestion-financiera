@@ -35,6 +35,11 @@ export interface UpsertActivityParams {
 
 export type ActivityFilter = "all" | "important" | "positive" | "pending" | "archived";
 
+type ActivitySummary = {
+  unreadCount: number;
+  pendingCount: number;
+};
+
 /** Creates or updates an activity item. Idempotent — safe to call repeatedly. */
 export async function upsertActivity(params: UpsertActivityParams) {
   const {
@@ -75,7 +80,6 @@ export async function listActivities(params: {
   }
 
   if (filter === "pending") {
-    where.readAt = null;
     where.resolvedAt = null;
   }
   if (filter === "positive")  where.tone = ActivityTone.positive;
@@ -93,6 +97,19 @@ export async function countUnreadActivities(userId: string): Promise<number> {
   return prisma.activityItem.count({
     where: { userId, readAt: null, dismissedAt: null },
   });
+}
+
+export async function getActivitySummary(userId: string): Promise<ActivitySummary> {
+  const [unreadCount, pendingCount] = await Promise.all([
+    prisma.activityItem.count({
+      where: { userId, readAt: null, dismissedAt: null },
+    }),
+    prisma.activityItem.count({
+      where: { userId, resolvedAt: null, dismissedAt: null },
+    }),
+  ]);
+
+  return { unreadCount, pendingCount };
 }
 
 export async function markActivityRead(userId: string, id: string) {
@@ -121,6 +138,51 @@ export async function markAllRead(userId: string) {
     where: { userId, readAt: null, dismissedAt: null },
     data: { readAt: new Date() },
   });
+}
+
+/**
+ * Removes old low-value signals from the active feed.
+ * Reading means "seen"; resolving means "handled"; expiration means "no longer useful".
+ */
+export async function expireStaleActivities(userId: string) {
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const weeklyCutoff = new Date(now);
+  weeklyCutoff.setDate(weeklyCutoff.getDate() - 21);
+  const positiveCutoff = new Date(now);
+  positiveCutoff.setDate(positiveCutoff.getDate() - 14);
+
+  await Promise.all([
+    prisma.activityItem.updateMany({
+      where: {
+        userId,
+        source: "financial-signals",
+        dismissedAt: null,
+        createdAt: { lt: weeklyCutoff },
+      },
+      data: { dismissedAt: now, readAt: now },
+    }),
+    prisma.activityItem.updateMany({
+      where: {
+        userId,
+        source: "financial-signals",
+        tone: ActivityTone.positive,
+        dismissedAt: null,
+        createdAt: { lt: positiveCutoff },
+      },
+      data: { dismissedAt: now, readAt: now },
+    }),
+    prisma.activityItem.updateMany({
+      where: {
+        userId,
+        source: "monthly-reminders",
+        priority: { lt: 2 },
+        dismissedAt: null,
+        periodKey: { not: currentMonthKey },
+      },
+      data: { dismissedAt: now, readAt: now },
+    }),
+  ]);
 }
 
 async function resolveReminderIfPresent(userId: string, dedupeKey: string) {
@@ -303,8 +365,8 @@ export async function upsertReminderActivities(params: {
         source: "monthly-reminders",
         tone: ActivityTone.warning,
         priority: exceeded ? 2 : 1,
-        title: exceeded ? "Presupuesto excedido este mes" : "Gastos cerca del límite del mes",
-        body: `Ya usaste el ${pct}% de tus ingresos de ${MONTH_NAMES[month - 1]}. Te lo marcamos sin urgencia para revisar a tiempo.`,
+        title: exceeded ? "El mes quedó por encima de los ingresos" : "Gastos cerca del límite del mes",
+        body: `Ya se usó el ${pct}% de los ingresos de ${MONTH_NAMES[month - 1]}. Te lo dejamos visible para revisar con contexto.`,
         dedupeKey: `reminder-budget-${periodKey}`,
         periodKey,
         actionLabel: "Ver movimientos",
@@ -325,8 +387,8 @@ export async function upsertReminderActivities(params: {
         source: "monthly-reminders",
         tone: ActivityTone.positive,
         priority: 0,
-        title: "Buen ritmo de gasto este mes",
-        body: `Gastaste menos del 55% de tus ingresos de ${MONTH_NAMES[month - 1]}.`,
+        title: "El mes viene con margen",
+        body: `Los gastos van por debajo del 55% de los ingresos de ${MONTH_NAMES[month - 1]}.`,
         dedupeKey: `reminder-budget-good-${periodKey}`,
         periodKey,
         actionLabel: "Ver dashboard",
@@ -346,7 +408,7 @@ export async function upsertReminderActivities(params: {
         source: "monthly-reminders",
         tone: ActivityTone.neutral,
         priority: 1,
-        title: "Recurrentes próximos",
+        title: "Hay pagos próximos",
         body: `${upcomingRecurringCount} pago${upcomingRecurringCount !== 1 ? "s" : ""} recurrente${upcomingRecurringCount !== 1 ? "s" : ""} vence${upcomingRecurringCount === 1 ? "" : "n"} en los próximos 7 días.`,
         dedupeKey: `reminder-recurring-${periodKey}`,
         periodKey,
@@ -367,7 +429,7 @@ export async function upsertReminderActivities(params: {
         source: "monthly-reminders",
         tone: hasOverdueDebt ? ActivityTone.warning : ActivityTone.neutral,
         priority: hasOverdueDebt ? 2 : 1,
-        title: hasOverdueDebt ? "Deuda vencida registrada" : "Deuda activa registrada",
+        title: hasOverdueDebt ? "Hay un vencimiento de deuda para revisar" : "Deuda activa registrada",
         body: hasOverdueDebt
           ? formatARS(debt) + " de deuda activa. Hay al menos un vencimiento para revisar."
           : formatARS(debt) + " de deuda activa este mes.",

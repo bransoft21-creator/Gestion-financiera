@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Bell,
@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PremiumCard, PremiumCardContent } from "@/components/ui-v2/premium-card";
+import { trackProductEvent } from "@/lib/observability/client";
 import type { ActivityType, ActivityTone } from "@prisma/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -23,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 type ActivityItem = {
   id: string;
   type: ActivityType;
+  source: string;
   tone: ActivityTone;
   priority: number;
   title: string;
@@ -37,7 +39,13 @@ type ActivityItem = {
 };
 
 type ApiResponse = {
-  data?: { items: ActivityItem[] } | null;
+  data?: {
+    items: ActivityItem[];
+    summary?: {
+      unreadCount: number;
+      pendingCount: number;
+    };
+  } | null;
   error?: string;
 };
 
@@ -116,11 +124,13 @@ function relativeTime(iso: string): string {
 function ActivityCard({
   item,
   onRead,
+  onOpen,
   onResolve,
   onDismiss,
 }: {
   item: ActivityItem;
   onRead: (id: string) => void;
+  onOpen: (item: ActivityItem) => void;
   onResolve: (id: string) => void;
   onDismiss: (id: string) => void;
 }) {
@@ -174,6 +184,7 @@ function ActivityCard({
             {item.actionLabel && item.actionLink && (
               <Link
                 href={item.actionLink}
+                onClick={() => onOpen(item)}
                 className="text-xs font-semibold text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
               >
                 {item.actionLabel} →
@@ -241,7 +252,9 @@ function EmptyState({ filter }: { filter: Filter }) {
 export function ActivityCenter() {
   const [filter, setFilter] = useState<Filter>("all");
   const [items, setItems] = useState<ActivityItem[]>([]);
+  const [summary, setSummary] = useState({ unreadCount: 0, pendingCount: 0 });
   const [status, setStatus] = useState<"loading" | "done" | "error">("loading");
+  const markedReadSignature = useRef<string | null>(null);
 
   const load = useCallback(async (f: Filter) => {
     await Promise.resolve();
@@ -251,6 +264,7 @@ export function ActivityCenter() {
       if (!res.ok) { setStatus("error"); return; }
       const json = (await res.json()) as ApiResponse;
       setItems(json.data?.items ?? []);
+      setSummary(json.data?.summary ?? { unreadCount: 0, pendingCount: 0 });
       setStatus("done");
     } catch {
       setStatus("error");
@@ -262,8 +276,32 @@ export function ActivityCenter() {
     return () => window.clearTimeout(id);
   }, [filter, load]);
 
+  const unreadVisibleIds = useMemo(
+    () => items.filter((item) => !item.readAt && !item.dismissedAt).map((item) => item.id),
+    [items],
+  );
+
+  useEffect(() => {
+    if (status !== "done" || unreadVisibleIds.length === 0) return;
+
+    const signature = unreadVisibleIds.join(",");
+    if (markedReadSignature.current === signature) return;
+    markedReadSignature.current = signature;
+
+    const timeout = window.setTimeout(() => {
+      const readAt = new Date().toISOString();
+      setItems((prev) => prev.map((item) => unreadVisibleIds.includes(item.id) ? { ...item, readAt } : item));
+      setSummary((prev) => ({ ...prev, unreadCount: 0 }));
+      trackProductEvent("notification_received", { count: unreadVisibleIds.length }, "analytics");
+      void fetch("/api/activity/read-all", { method: "POST" }).catch(() => {});
+    }, 900);
+
+    return () => window.clearTimeout(timeout);
+  }, [status, unreadVisibleIds]);
+
   async function handleRead(id: string) {
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, readAt: new Date().toISOString() } : i));
+    setSummary((prev) => ({ ...prev, unreadCount: Math.max(prev.unreadCount - 1, 0) }));
     try {
       const res = await fetch(`/api/activity/${id}/read`, { method: "POST" });
       if (!res.ok) throw new Error("read failed");
@@ -274,7 +312,19 @@ export function ActivityCenter() {
   }
 
   async function handleDismiss(id: string) {
+    const item = items.find((i) => i.id === id);
     setItems((prev) => prev.filter((i) => i.id !== id));
+    setSummary((prev) => ({
+      unreadCount: item && !item.readAt ? Math.max(prev.unreadCount - 1, 0) : prev.unreadCount,
+      pendingCount: item && !item.resolvedAt ? Math.max(prev.pendingCount - 1, 0) : prev.pendingCount,
+    }));
+    if (item) {
+      trackProductEvent(
+        "notification_dismissed",
+        { type: item.type, tone: item.tone, priority: item.priority },
+        "analytics",
+      );
+    }
     try {
       const res = await fetch(`/api/activity/${id}/dismiss`, { method: "POST" });
       if (!res.ok) throw new Error("dismiss failed");
@@ -285,8 +335,13 @@ export function ActivityCenter() {
   }
 
   async function handleResolve(id: string) {
+    const item = items.find((i) => i.id === id);
     const now = new Date().toISOString();
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, readAt: i.readAt ?? now, resolvedAt: now } : i));
+    setSummary((prev) => ({
+      unreadCount: item && !item.readAt ? Math.max(prev.unreadCount - 1, 0) : prev.unreadCount,
+      pendingCount: item && !item.resolvedAt ? Math.max(prev.pendingCount - 1, 0) : prev.pendingCount,
+    }));
     try {
       const res = await fetch(`/api/activity/${id}/resolve`, { method: "POST" });
       if (!res.ok) throw new Error("resolve failed");
@@ -298,6 +353,7 @@ export function ActivityCenter() {
 
   async function handleMarkAllRead() {
     setItems((prev) => prev.map((i) => ({ ...i, readAt: i.readAt ?? new Date().toISOString() })));
+    setSummary((prev) => ({ ...prev, unreadCount: 0 }));
     try {
       const res = await fetch("/api/activity/read-all", { method: "POST" });
       if (!res.ok) throw new Error("read all failed");
@@ -307,7 +363,21 @@ export function ActivityCenter() {
     }
   }
 
-  const pendingCount = items.filter((i) => !i.readAt && !i.resolvedAt && !i.dismissedAt).length;
+  function handleOpen(item: ActivityItem) {
+    trackProductEvent(
+      "notification_opened",
+      { type: item.type, tone: item.tone, priority: item.priority },
+      "analytics",
+    );
+    if (item.source === "weekly-pulse") {
+      trackProductEvent("pulse_notification_opened", { tone: item.tone }, "dashboard");
+    }
+    if (item.source === "monthly-close") {
+      trackProductEvent("monthly_close_notification_opened", { tone: item.tone }, "dashboard");
+    }
+  }
+
+  const pendingCount = summary.pendingCount;
 
   return (
     <div data-tutorial="activity-center" className="space-y-5">
@@ -403,6 +473,7 @@ export function ActivityCenter() {
               key={item.id}
               item={item}
               onRead={(id) => void handleRead(id)}
+              onOpen={handleOpen}
               onResolve={(id) => void handleResolve(id)}
               onDismiss={(id) => void handleDismiss(id)}
             />
