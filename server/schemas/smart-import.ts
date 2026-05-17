@@ -51,7 +51,7 @@ export const importCandidatesSchema = z.object({
   candidates: z
     .array(importCandidateSchema)
     .min(1, "Seleccioná al menos una transacción.")
-    .max(50, "Podés importar hasta 50 transacciones a la vez."),
+    .max(500, "Podés importar hasta 500 transacciones a la vez."),
 });
 
 export type ImportCandidateInput = z.infer<typeof importCandidateSchema>;

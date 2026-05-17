@@ -34,6 +34,10 @@ export type ImportMetadata = {
   currency: Currency;
   warnings: string[];
   totalDetected: number;
+  mappingConfidence?: number;
+  aiAssisted?: boolean;
+  aiFallbackUsed?: boolean;
+  aiReasoning?: string | null;
 };
 
 export type WorkspaceAccount = { id: string; name: string; type: string; currency: Currency };

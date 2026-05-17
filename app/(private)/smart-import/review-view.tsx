@@ -6,6 +6,7 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowRight,
+  BrainCircuit,
   CheckCircle2,
   CircleDollarSign,
   Copy,
@@ -109,6 +110,42 @@ export function ReviewView({
                   {w}
                 </p>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(metadata.aiAssisted || metadata.aiFallbackUsed) && (
+        <div
+          className={cn(
+            "rounded-2xl border p-4",
+            metadata.aiAssisted
+              ? "border-teal-400/20 bg-teal-400/[0.07]"
+              : "border-amber-400/20 bg-amber-400/[0.07]",
+          )}
+        >
+          <div className="flex items-start gap-3">
+            <BrainCircuit
+              className={cn(
+                "mt-0.5 h-4 w-4 shrink-0",
+                metadata.aiAssisted ? "text-teal-300" : "text-amber-300",
+              )}
+              aria-hidden="true"
+            />
+            <div className="space-y-1">
+              <p className={cn("text-sm font-semibold", metadata.aiAssisted ? "text-teal-300" : "text-amber-300")}>
+                {metadata.aiAssisted ? "IA contextual ayudó con el mapping" : "Modo determinístico sin IA contextual"}
+              </p>
+              <p className="text-sm leading-5 text-muted-foreground">
+                {metadata.aiAssisted
+                  ? metadata.aiReasoning ?? "Usamos nombres de columnas y perfiles estadísticos, no filas completas."
+                  : "No se pudo usar la ayuda contextual. El preview queda editable para que revises antes de importar."}
+              </p>
+              {typeof metadata.mappingConfidence === "number" && (
+                <p className="text-xs text-muted-foreground">
+                  Confianza de estructura: {Math.round(metadata.mappingConfidence * 100)}%.
+                </p>
+              )}
             </div>
           </div>
         </div>

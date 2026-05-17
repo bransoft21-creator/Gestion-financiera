@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { inflateRawSync } from "node:zlib";
 import {
   AccountType,
   CurrencyCode,
@@ -11,13 +12,24 @@ import {
 import { prisma } from "@/lib/prisma";
 import { captureServerMessage } from "@/lib/observability/server";
 import { ApiError } from "@/server/api/errors";
-import { estimateTextTokens, recordAiUsage } from "@/server/services/ai-usage";
+import { assertAiQuota, estimateTextTokens, recordAiUsage } from "@/server/services/ai-usage";
 import { traceAi, traceUserId } from "@/server/services/ai-trace";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-4o-mini";
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_SPREADSHEET_ROWS = 500;
+const MAX_DAILY_IMPORT_ANALYSES = 5;
+const SPREADSHEET_HIGH_CONFIDENCE = 0.9;
+const SPREADSHEET_AI_THRESHOLD = 0.6;
+const MAX_MAPPING_PROFILE_ROWS = 20;
 const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const SUPPORTED_SPREADSHEET_TYPES = [
+  "text/csv",
+  "application/csv",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+];
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -55,7 +67,42 @@ export type SmartImportResult = {
     currency: CurrencyCode;
     warnings: string[];
     totalDetected: number;
+    mappingConfidence?: number;
+    aiAssisted?: boolean;
+    aiFallbackUsed?: boolean;
+    aiReasoning?: string | null;
   };
+};
+
+type SpreadsheetRow = Record<string, string>;
+
+type ColumnMapping = {
+  date: string | null;
+  description: string | null;
+  amount: string | null;
+  debit: string | null;
+  credit: string | null;
+  currency: string | null;
+  category: string | null;
+  account: string | null;
+  type: string | null;
+  paymentMethod: string | null;
+};
+
+type MappingDecision = {
+  mapping: ColumnMapping;
+  confidence: number;
+  warnings: string[];
+  aiAssisted: boolean;
+  aiFallbackUsed: boolean;
+  aiReasoning: string | null;
+};
+
+type AiMappingOutput = {
+  confidence: number;
+  reasoning: string;
+  mapping: ColumnMapping;
+  warnings: string[];
 };
 
 type WorkspaceAccount = {
@@ -109,6 +156,7 @@ export async function analyzeFile(
   buffer: Buffer,
   mimeType: string,
   workspace: {
+    fileName?: string;
     userProfileId: string;
     householdId: string;
     accounts: WorkspaceAccount[];
@@ -127,9 +175,10 @@ export async function analyzeFile(
 
   const isImage = SUPPORTED_IMAGE_TYPES.includes(mimeType);
   const isPdf = mimeType === "application/pdf";
+  const isSpreadsheet = isSpreadsheetUpload(mimeType, workspace.fileName);
 
-  if (!isImage && !isPdf) {
-    throw new ApiError(400, "Formato no soportado. Usá JPG, PNG, WEBP o PDF.");
+  if (!isImage && !isPdf && !isSpreadsheet) {
+    throw new ApiError(400, "Formato no soportado. Usá CSV, XLSX, JPG, PNG, WEBP o PDF.");
   }
 
   const fileHash = createHash("sha256").update(buffer).digest("hex");
@@ -154,6 +203,17 @@ export async function analyzeFile(
     household: workspace.householdId,
   });
 
+  if (isSpreadsheet) {
+    const result = await analyzeSpreadsheet(buffer, mimeType, workspace.fileName, workspace);
+    await writeSmartImportCache({
+      householdId: workspace.householdId,
+      fileHash,
+      mimeType,
+      result,
+    });
+    return result;
+  }
+
   traceAi("AI_SMART_IMPORT_PARSE_START", {
     user: traceUserId(workspace.userProfileId),
     kind: isImage ? "image" : "pdf",
@@ -173,18 +233,11 @@ export async function analyzeFile(
     household: workspace.householdId,
   });
   try {
-    await prisma.smartImportCache.upsert({
-      where: { householdId_fileHash: { householdId: workspace.householdId, fileHash } },
-      create: {
-        householdId: workspace.householdId,
-        fileHash,
-        mimeType,
-        result: result as unknown as Prisma.InputJsonValue,
-      },
-      update: {
-        mimeType,
-        result: result as unknown as Prisma.InputJsonValue,
-      },
+    await writeSmartImportCache({
+      householdId: workspace.householdId,
+      fileHash,
+      mimeType,
+      result,
     });
     traceAi("AI_SMART_IMPORT_CACHE_WRITE_OK", {
       user: traceUserId(workspace.userProfileId),
@@ -203,6 +256,665 @@ export async function analyzeFile(
   }
 
   return result;
+}
+
+export function isSpreadsheetUpload(mimeType: string, fileName?: string | null) {
+  const name = fileName?.toLowerCase() ?? "";
+  return (
+    SUPPORTED_SPREADSHEET_TYPES.includes(mimeType) ||
+    name.endsWith(".csv") ||
+    name.endsWith(".xlsx")
+  );
+}
+
+export async function assertSmartImportDailyLimit(householdId: string) {
+  const since = new Date();
+  since.setHours(0, 0, 0, 0);
+  const count = await prisma.smartImportCache.count({
+    where: {
+      householdId,
+      createdAt: { gte: since },
+    },
+  });
+  if (count >= MAX_DAILY_IMPORT_ANALYSES) {
+    throw new ApiError(
+      429,
+      "Llegaste al límite diario de Smart Import. Probá de nuevo mañana o importá manualmente los movimientos más importantes.",
+    );
+  }
+}
+
+async function writeSmartImportCache(params: {
+  householdId: string;
+  fileHash: string;
+  mimeType: string;
+  result: SmartImportResult;
+}) {
+  await prisma.smartImportCache.upsert({
+    where: { householdId_fileHash: { householdId: params.householdId, fileHash: params.fileHash } },
+    create: {
+      householdId: params.householdId,
+      fileHash: params.fileHash,
+      mimeType: params.mimeType,
+      result: params.result as unknown as Prisma.InputJsonValue,
+    },
+    update: {
+      mimeType: params.mimeType,
+      result: params.result as unknown as Prisma.InputJsonValue,
+    },
+  });
+}
+
+async function analyzeSpreadsheet(
+  buffer: Buffer,
+  mimeType: string,
+  fileName: string | undefined,
+  workspace: {
+    userProfileId: string;
+    householdId: string;
+    accounts: WorkspaceAccount[];
+    categories: WorkspaceCategory[];
+  },
+): Promise<SmartImportResult> {
+  const parsed = isCsvUpload(mimeType, fileName)
+    ? parseCsv(buffer)
+    : parseXlsx(buffer);
+  const { rows, warnings } = rowsFromMatrix(parsed.rows);
+  if (rows.length === 0) {
+    throw new ApiError(422, "No encontramos filas de movimientos. Probá exportar una hoja simple con fecha, concepto e importe.");
+  }
+  if (rows.length > MAX_SPREADSHEET_ROWS) {
+    throw new ApiError(413, "Este MVP acepta hasta 500 filas por importación. Probá subir los últimos 3 meses o dividir el archivo.");
+  }
+
+  const mappingDecision = await resolveColumnMapping({
+    headers: Object.keys(rows[0] ?? {}),
+    rows,
+    userProfileId: workspace.userProfileId,
+  });
+  const { mapping } = mappingDecision;
+  if (!mapping.date || !mapping.description || (!mapping.amount && (!mapping.debit || !mapping.credit))) {
+    throw new ApiError(
+      422,
+      "No pudimos detectar fecha, concepto e importe con suficiente claridad. Renombrá esas columnas o exportá CSV simple.",
+    );
+  }
+
+  const rawTransactions = rows
+    .map((row, index) => transactionFromSpreadsheetRow(row, mapping, index))
+    .filter((tx): tx is AiTransaction => Boolean(tx));
+
+  if (rawTransactions.length === 0) {
+    throw new ApiError(422, "No encontramos movimientos importables. Revisá que los importes no sean totales o subtotales.");
+  }
+
+  const result = await normalizeResult({
+    source_type: "BANK",
+    currency: detectDominantCurrency(rawTransactions),
+    transactions: rawTransactions,
+    warnings: [
+      ...warnings,
+      ...mappingDecision.warnings,
+      `Se procesaron ${rawTransactions.length} de ${rows.length} filas detectadas.`,
+      "Preview obligatorio: revisá moneda, cuenta y categoría antes de confirmar.",
+    ],
+  }, workspace);
+
+  return {
+    ...result,
+    metadata: {
+      ...result.metadata,
+      sourceType: parsed.sourceType,
+      totalDetected: rawTransactions.length,
+      mappingConfidence: mappingDecision.confidence,
+      aiAssisted: mappingDecision.aiAssisted,
+      aiFallbackUsed: mappingDecision.aiFallbackUsed,
+      aiReasoning: mappingDecision.aiReasoning,
+    },
+  };
+}
+
+function isCsvUpload(mimeType: string, fileName?: string | null) {
+  const name = fileName?.toLowerCase() ?? "";
+  return mimeType === "text/csv" || mimeType === "application/csv" || name.endsWith(".csv");
+}
+
+function parseCsv(buffer: Buffer): { rows: string[][]; sourceType: string } {
+  const text = stripBom(buffer.toString("utf8"));
+  const delimiter = detectDelimiter(text);
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const next = text[i + 1];
+    if (char === "\"") {
+      if (inQuotes && next === "\"") {
+        cell += "\"";
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+    if (!inQuotes && char === delimiter) {
+      row.push(cell.trim());
+      cell = "";
+      continue;
+    }
+    if (!inQuotes && (char === "\n" || char === "\r")) {
+      if (char === "\r" && next === "\n") i++;
+      row.push(cell.trim());
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
+      cell = "";
+      continue;
+    }
+    cell += char;
+  }
+
+  row.push(cell.trim());
+  if (row.some(Boolean)) rows.push(row);
+  return { rows, sourceType: "CSV" };
+}
+
+function parseXlsx(buffer: Buffer): { rows: string[][]; sourceType: string } {
+  const entries = readZipEntries(buffer);
+  const workbookXml = entries.get("xl/workbook.xml")?.toString("utf8");
+  const relsXml = entries.get("xl/_rels/workbook.xml.rels")?.toString("utf8");
+  if (!workbookXml || !relsXml) {
+    throw new ApiError(422, "El XLSX no parece válido. Probá exportarlo nuevamente como CSV.");
+  }
+
+  const sheets = [...workbookXml.matchAll(/<sheet\b([^>]*)\/?>/g)]
+    .map((match) => ({
+      name: getXmlAttr(match[1], "name") ?? "Hoja",
+      rid: getXmlAttr(match[1], "r:id"),
+    }))
+    .filter((sheet) => sheet.rid);
+  if (sheets.length > 1) {
+    throw new ApiError(413, "Este MVP acepta una sola hoja por archivo. Dejá solo la hoja de movimientos y volvé a subirlo.");
+  }
+
+  const rels = new Map(
+    [...relsXml.matchAll(/<Relationship\b([^>]*)\/?>/g)].map((match) => [
+      getXmlAttr(match[1], "Id") ?? "",
+      getXmlAttr(match[1], "Target") ?? "",
+    ]),
+  );
+  const target = rels.get(sheets[0]?.rid ?? "") ?? "worksheets/sheet1.xml";
+  const sheetPath = target.startsWith("/") ? target.slice(1) : `xl/${target.replace(/^xl\//, "")}`;
+  const sheetXml = entries.get(sheetPath)?.toString("utf8") ?? entries.get("xl/worksheets/sheet1.xml")?.toString("utf8");
+  if (!sheetXml) {
+    throw new ApiError(422, "No pudimos leer la hoja del XLSX. Probá exportarla como CSV.");
+  }
+
+  const sharedStrings = parseSharedStrings(entries.get("xl/sharedStrings.xml")?.toString("utf8") ?? "");
+  return { rows: parseSheetRows(sheetXml, sharedStrings), sourceType: "XLSX" };
+}
+
+function readZipEntries(buffer: Buffer) {
+  const entries = new Map<string, Buffer>();
+  const eocdOffset = buffer.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+  if (eocdOffset < 0) throw new ApiError(422, "El XLSX no parece válido. Probá exportarlo nuevamente.");
+
+  const centralDirectorySize = buffer.readUInt32LE(eocdOffset + 12);
+  const centralDirectoryOffset = buffer.readUInt32LE(eocdOffset + 16);
+  let offset = centralDirectoryOffset;
+  const end = centralDirectoryOffset + centralDirectorySize;
+
+  while (offset < end && buffer.readUInt32LE(offset) === 0x02014b50) {
+    const method = buffer.readUInt16LE(offset + 10);
+    const compressedSize = buffer.readUInt32LE(offset + 20);
+    const fileNameLength = buffer.readUInt16LE(offset + 28);
+    const extraLength = buffer.readUInt16LE(offset + 30);
+    const commentLength = buffer.readUInt16LE(offset + 32);
+    const localHeaderOffset = buffer.readUInt32LE(offset + 42);
+    const fileName = buffer.subarray(offset + 46, offset + 46 + fileNameLength).toString("utf8");
+
+    if (!fileName.endsWith("/")) {
+      const localFileNameLength = buffer.readUInt16LE(localHeaderOffset + 26);
+      const localExtraLength = buffer.readUInt16LE(localHeaderOffset + 28);
+      const dataStart = localHeaderOffset + 30 + localFileNameLength + localExtraLength;
+      const compressed = buffer.subarray(dataStart, dataStart + compressedSize);
+      if (method === 0) entries.set(fileName, compressed);
+      if (method === 8) entries.set(fileName, inflateRawSync(compressed));
+    }
+
+    offset += 46 + fileNameLength + extraLength + commentLength;
+  }
+
+  return entries;
+}
+
+function parseSharedStrings(xml: string) {
+  return [...xml.matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g)].map((match) =>
+    decodeXml(
+      [...match[1].matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)]
+        .map((textMatch) => textMatch[1])
+        .join(""),
+    ),
+  );
+}
+
+function parseSheetRows(xml: string, sharedStrings: string[]) {
+  const rows: string[][] = [];
+  for (const rowMatch of xml.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)) {
+    const row: string[] = [];
+    for (const cellMatch of rowMatch[1].matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>/g)) {
+      const attrs = cellMatch[1];
+      const body = cellMatch[2];
+      const ref = getXmlAttr(attrs, "r");
+      const type = getXmlAttr(attrs, "t");
+      const col = ref ? columnIndex(ref.replace(/\d+/g, "")) : row.length;
+      const rawValue = body.match(/<v>([\s\S]*?)<\/v>/)?.[1] ?? body.match(/<t\b[^>]*>([\s\S]*?)<\/t>/)?.[1] ?? "";
+      const value = type === "s" ? sharedStrings[Number(rawValue)] ?? "" : decodeXml(rawValue);
+      row[col] = value.trim();
+    }
+    if (row.some(Boolean)) rows.push(row.map((cell) => cell ?? ""));
+  }
+  return rows;
+}
+
+function rowsFromMatrix(matrix: string[][]): { rows: SpreadsheetRow[]; warnings: string[] } {
+  const clean = matrix
+    .map((row) => row.map((cell) => cell.trim()))
+    .filter((row) => row.some(Boolean));
+  const headerIndex = detectHeaderRow(clean);
+  if (headerIndex < 0) {
+    throw new ApiError(422, "No pudimos detectar encabezados. Usá una fila con columnas como Fecha, Concepto e Importe.");
+  }
+
+  const headers = clean[headerIndex].map((header, index) => normalizeHeader(header || `columna_${index + 1}`));
+  const rows = clean.slice(headerIndex + 1).map((row) =>
+    Object.fromEntries(headers.map((header, index) => [header, row[index] ?? ""])),
+  );
+  return {
+    rows: rows.filter((row) => Object.values(row).some(Boolean)),
+    warnings: headerIndex > 0 ? [`Ignoramos ${headerIndex} fila${headerIndex === 1 ? "" : "s"} antes de los encabezados.`] : [],
+  };
+}
+
+function detectHeaderRow(rows: string[][]) {
+  let bestIndex = -1;
+  let bestScore = 0;
+  rows.slice(0, 10).forEach((row, index) => {
+    const normalized = row.map(normalizeHeader);
+    const score = Number(normalized.some((h) => HEADER_ALIASES.date.has(h))) +
+      Number(normalized.some((h) => HEADER_ALIASES.description.has(h))) +
+      Number(normalized.some((h) => HEADER_ALIASES.amount.has(h) || HEADER_ALIASES.debit.has(h) || HEADER_ALIASES.credit.has(h)));
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = index;
+    }
+  });
+  return bestScore >= 2 ? bestIndex : -1;
+}
+
+const HEADER_ALIASES = {
+  date: new Set(["fecha", "date", "dia", "f movimiento", "fecha movimiento", "fecha operacion", "fecha de operacion"]),
+  description: new Set(["descripcion", "description", "concepto", "detalle", "comercio", "merchant", "movimiento", "observacion", "nombre"]),
+  amount: new Set(["monto", "importe", "amount", "valor", "total", "pesos", "ars", "usd"]),
+  debit: new Set(["debe", "debito", "debit", "egreso", "egresos", "salida", "gasto", "consumo"]),
+  credit: new Set(["haber", "credito", "credit", "ingreso", "ingresos", "entrada", "cobro"]),
+  currency: new Set(["moneda", "currency", "divisa"]),
+  category: new Set(["categoria", "category", "rubro", "tipo gasto"]),
+  account: new Set(["cuenta", "account", "banco", "wallet", "medio"]),
+  type: new Set(["tipo", "type", "operacion"]),
+  paymentMethod: new Set(["metodo", "medio de pago", "payment method", "forma de pago"]),
+};
+
+function detectColumnMapping(headers: string[]): ColumnMapping {
+  const find = (key: keyof typeof HEADER_ALIASES) =>
+    headers.find((header) => HEADER_ALIASES[key].has(normalizeHeader(header))) ?? null;
+  return {
+    date: find("date"),
+    description: find("description"),
+    amount: find("amount"),
+    debit: find("debit"),
+    credit: find("credit"),
+    currency: find("currency"),
+    category: find("category"),
+    account: find("account"),
+    type: find("type"),
+    paymentMethod: find("paymentMethod"),
+  };
+}
+
+async function resolveColumnMapping(params: {
+  headers: string[];
+  rows: SpreadsheetRow[];
+  userProfileId: string;
+}): Promise<MappingDecision> {
+  const deterministic = detectColumnMapping(params.headers);
+  const deterministicConfidence = scoreColumnMapping(deterministic, params.headers);
+  const deterministicWarnings = mappingWarnings(deterministic, deterministicConfidence);
+
+  if (deterministicConfidence >= SPREADSHEET_HIGH_CONFIDENCE) {
+    return {
+      mapping: deterministic,
+      confidence: deterministicConfidence,
+      warnings: deterministicWarnings,
+      aiAssisted: false,
+      aiFallbackUsed: false,
+      aiReasoning: null,
+    };
+  }
+
+  if (deterministicConfidence >= SPREADSHEET_AI_THRESHOLD) {
+    return {
+      mapping: deterministic,
+      confidence: deterministicConfidence,
+      warnings: [
+        ...deterministicWarnings,
+        "La estructura se detectó sin IA, pero algunas columnas conviene revisarlas en el preview.",
+      ],
+      aiAssisted: false,
+      aiFallbackUsed: false,
+      aiReasoning: null,
+    };
+  }
+
+  try {
+    await assertAiQuota(params.userProfileId, "ai.smart-import.mapping");
+    const ai = await requestMappingAi(
+      {
+        headers: params.headers,
+        profiles: buildColumnProfiles(params.headers, params.rows),
+        deterministic,
+        deterministicConfidence,
+      },
+      params.userProfileId,
+    );
+    const mapping = sanitizeAiMapping(ai.mapping, params.headers, deterministic);
+    const aiConfidence = Math.max(deterministicConfidence, Math.min(0.95, ai.confidence));
+    return {
+      mapping,
+      confidence: aiConfidence,
+      warnings: [
+        `IA contextual: ${ai.reasoning.slice(0, 140)}`,
+        ...mappingWarnings(mapping, aiConfidence),
+        ...(ai.warnings ?? []).slice(0, 2),
+      ],
+      aiAssisted: true,
+      aiFallbackUsed: false,
+      aiReasoning: ai.reasoning.slice(0, 180),
+    };
+  } catch (error) {
+    traceAi("AI_SMART_IMPORT_MAPPING_FALLBACK", {
+      user: traceUserId(params.userProfileId),
+      name: error instanceof Error ? error.name : "UnknownError",
+    });
+    return {
+      mapping: deterministic,
+      confidence: deterministicConfidence,
+      warnings: [
+        ...deterministicWarnings,
+        "No usamos IA contextual esta vez. Podés renombrar columnas como Fecha, Concepto e Importe si el mapping no queda claro.",
+      ],
+      aiAssisted: false,
+      aiFallbackUsed: true,
+      aiReasoning: null,
+    };
+  }
+}
+
+function scoreColumnMapping(mapping: ColumnMapping, headers: string[]) {
+  let score = 0;
+  if (mapping.date) score += 0.25;
+  if (mapping.description) score += 0.25;
+  if (mapping.amount) score += 0.25;
+  if (mapping.debit || mapping.credit) score += 0.18;
+  if (mapping.currency) score += 0.04;
+  if (mapping.category) score += 0.04;
+  if (mapping.account || mapping.paymentMethod) score += 0.04;
+
+  const normalizedHeaders = headers.map(normalizeHeader);
+  const ambiguous = normalizedHeaders.filter((header) =>
+    /^(imp|mov|det|desc|oper|mto|valor|salida|entrada)$/.test(header),
+  ).length;
+  return Math.max(0, Math.min(1, score - ambiguous * 0.04));
+}
+
+function mappingWarnings(mapping: ColumnMapping, confidence: number) {
+  const warnings: string[] = [];
+  if (confidence < SPREADSHEET_HIGH_CONFIDENCE) {
+    warnings.push(`Confianza de estructura: ${Math.round(confidence * 100)}%. Revisá las columnas sugeridas antes de confirmar.`);
+  }
+  if (!mapping.currency) warnings.push("No encontramos columna de moneda. Usamos ARS salvo que el importe indique USD.");
+  if (!mapping.category) warnings.push("No encontramos categoría confiable. Meridian sugiere categorías editables en el preview.");
+  return warnings;
+}
+
+function buildColumnProfiles(headers: string[], rows: SpreadsheetRow[]) {
+  const sample = rows.slice(0, MAX_MAPPING_PROFILE_ROWS);
+  return headers.map((header) => {
+    const values = sample.map((row) => row[header] ?? "").filter(Boolean);
+    const count = Math.max(values.length, 1);
+    return {
+      header,
+      fillRate: values.length / Math.max(sample.length, 1),
+      dateLikePct: values.filter((value) => parseSpreadsheetDate(value)).length / count,
+      moneyLikePct: values.filter((value) => parseMoney(value) !== null).length / count,
+      currencyLikePct: values.filter((value) => /ars|usd|u\$s|us\$|\$/i.test(value)).length / count,
+      shortTextPct: values.filter((value) => value.length > 0 && value.length <= 24 && parseMoney(value) === null).length / count,
+      longTextPct: values.filter((value) => value.length > 24 && parseMoney(value) === null).length / count,
+    };
+  });
+}
+
+function sanitizeAiMapping(aiMapping: ColumnMapping, headers: string[], fallback: ColumnMapping): ColumnMapping {
+  const headerSet = new Set(headers);
+  const pick = (value: string | null | undefined, fallbackValue: string | null) =>
+    value && headerSet.has(value) ? value : fallbackValue;
+  return {
+    date: pick(aiMapping.date, fallback.date),
+    description: pick(aiMapping.description, fallback.description),
+    amount: pick(aiMapping.amount, fallback.amount),
+    debit: pick(aiMapping.debit, fallback.debit),
+    credit: pick(aiMapping.credit, fallback.credit),
+    currency: pick(aiMapping.currency, fallback.currency),
+    category: pick(aiMapping.category, fallback.category),
+    account: pick(aiMapping.account, fallback.account),
+    type: pick(aiMapping.type, fallback.type),
+    paymentMethod: pick(aiMapping.paymentMethod, fallback.paymentMethod),
+  };
+}
+
+function transactionFromSpreadsheetRow(row: SpreadsheetRow, mapping: ColumnMapping, index: number): AiTransaction | null {
+  const description = cleanDescription(row[mapping.description ?? ""]);
+  if (!description || /^(total|subtotal|saldo|balance)/i.test(description)) return null;
+
+  const debit = parseMoney(row[mapping.debit ?? ""]);
+  const credit = parseMoney(row[mapping.credit ?? ""]);
+  const amountCell = row[mapping.amount ?? ""];
+  const signedAmount = parseMoney(amountCell);
+  const hasSplitAmount = debit !== null || credit !== null;
+  const amount = hasSplitAmount ? Math.abs(debit ?? credit ?? 0) : Math.abs(signedAmount ?? 0);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+
+  const type = inferTxType({
+    explicit: row[mapping.type ?? ""],
+    debit,
+    credit,
+    signedAmount,
+  });
+  const currency = detectCurrency(row[mapping.currency ?? ""], amountCell);
+  const date = parseSpreadsheetDate(row[mapping.date ?? ""]);
+  const category = cleanDescription(row[mapping.category ?? ""]) || suggestCategoryFromDescription(description);
+  const paymentMethod = inferPaymentMethod(row[mapping.paymentMethod ?? ""], row[mapping.account ?? ""], description);
+
+  return {
+    description: description.slice(0, 80),
+    amount,
+    currency,
+    date: date ?? "unknown",
+    type,
+    payment_method: paymentMethod,
+    is_installment: false,
+    installment_number: 0,
+    total_installments: 0,
+    expense_type: "UNKNOWN",
+    suggested_category: category,
+    suggested_account_type: inferAccountType(row[mapping.account ?? ""], paymentMethod),
+    confidence: date ? 0.88 : 0.72,
+    is_charge: /comision|mantenimiento|cargo|interes/i.test(description),
+    is_tax: /iva|iibb|percepcion|retencion|impuesto|pais|ganancias/i.test(description),
+    warning: date ? "" : `Fila ${index + 1}: revisá la fecha antes de importar.`,
+  };
+}
+
+function inferTxType(params: {
+  explicit: string;
+  debit: number | null;
+  credit: number | null;
+  signedAmount: number | null;
+}) {
+  const explicit = normName(params.explicit);
+  if (/ingreso|haber|entrada|cobro|income|credit/.test(explicit)) return "INCOME";
+  if (/transfer/.test(explicit)) return "TRANSFER";
+  if (params.credit !== null && params.credit > 0) return "INCOME";
+  if (params.debit !== null && params.debit > 0) return "EXPENSE";
+  if (params.signedAmount !== null && params.signedAmount > 0 && /ingreso|haber|credit/.test(explicit)) return "INCOME";
+  return "EXPENSE";
+}
+
+function parseMoney(value: string | undefined): number | null {
+  if (!value?.trim()) return null;
+  const raw = value.trim();
+  const negative = raw.includes("-") || /^\(.+\)$/.test(raw);
+  const cleaned = raw
+    .replace(/\((.*)\)/, "$1")
+    .replace(/ars|usd|u\$s|us\$|\$/gi, "")
+    .replace(/\s/g, "")
+    .replace(/[^\d,.-]/g, "");
+  if (!/\d/.test(cleaned)) return null;
+
+  const lastComma = cleaned.lastIndexOf(",");
+  const lastDot = cleaned.lastIndexOf(".");
+  const hasComma = lastComma >= 0;
+  const hasDot = lastDot >= 0;
+  if (hasComma !== hasDot) {
+    const separator = hasComma ? "," : ".";
+    const separatorIndex = hasComma ? lastComma : lastDot;
+    const digitsAfter = cleaned.length - separatorIndex - 1;
+    if (digitsAfter === 3) {
+      const parsedThousands = Number(cleaned.replace(new RegExp(`\\${separator}`, "g"), ""));
+      if (Number.isFinite(parsedThousands)) return negative ? -Math.abs(parsedThousands) : parsedThousands;
+    }
+  }
+  const decimalSeparator = lastComma > lastDot ? "," : ".";
+  const normalized = cleaned
+    .replace(new RegExp(`\\${decimalSeparator === "," ? "." : ","}`, "g"), "")
+    .replace(decimalSeparator, ".");
+  const parsed = Number(normalized.replace(/(?!^)-/g, ""));
+  if (!Number.isFinite(parsed)) return null;
+  return negative ? -Math.abs(parsed) : parsed;
+}
+
+function parseSpreadsheetDate(value: string | undefined): string | null {
+  if (!value?.trim()) return null;
+  const raw = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const serial = Number(raw);
+  if (Number.isFinite(serial) && serial > 20_000 && serial < 80_000) {
+    const date = new Date(Date.UTC(1899, 11, 30 + Math.floor(serial)));
+    return date.toISOString().slice(0, 10);
+  }
+  const match = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3].length === 2 ? `20${match[3]}` : match[3]);
+  if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function detectCurrency(currencyCell: string | undefined, amountCell: string | undefined) {
+  const text = `${currencyCell ?? ""} ${amountCell ?? ""}`.toLowerCase();
+  if (text.includes("usd") || text.includes("u$s") || text.includes("us$")) return "USD";
+  return "ARS";
+}
+
+function detectDominantCurrency(transactions: AiTransaction[]) {
+  const usd = transactions.filter((tx) => tx.currency === "USD").length;
+  return usd > transactions.length / 2 ? "USD" : "ARS";
+}
+
+function inferPaymentMethod(value: string | undefined, account: string | undefined, description: string) {
+  const text = normName(`${value ?? ""} ${account ?? ""} ${description}`);
+  if (/credito|credit|visa|master|amex|tarjeta/.test(text)) return "CREDIT";
+  if (/debito|debit/.test(text)) return "DEBIT";
+  if (/efectivo|cash/.test(text)) return "CASH";
+  if (/transfer|cbu|alias|mp|mercado pago/.test(text)) return "TRANSFER";
+  return "UNKNOWN";
+}
+
+function inferAccountType(account: string | undefined, paymentMethod: string) {
+  const text = normName(account);
+  if (paymentMethod === "CREDIT") return "CREDIT_CARD";
+  if (/mercado pago|uala|brubank|wallet|billetera/.test(text)) return "DIGITAL_WALLET";
+  if (paymentMethod === "CASH") return "CASH";
+  if (/banco|bank|cuenta|caja/.test(text) || paymentMethod === "DEBIT" || paymentMethod === "TRANSFER") return "BANK";
+  return "UNKNOWN";
+}
+
+function suggestCategoryFromDescription(description: string) {
+  const text = normName(description);
+  const rules: Array<[RegExp, string]> = [
+    [/carrefour|coto|dia|jumbo|vea|disco|super|mercado/, "Supermercado"],
+    [/ypf|shell|axion|nafta|combustible|estacion/, "Transporte"],
+    [/uber|cabify|didi|sube|tren|colectivo|taxi/, "Transporte"],
+    [/pedidosya|rappi|delivery|mostaza|mcdonald|burger|restaurant|bar|cafe/, "Comida"],
+    [/farmacity|farmacia|medic|osde|swiss medical/, "Salud"],
+    [/netflix|spotify|youtube|prime|disney|hbo|flow/, "Suscripciones"],
+    [/edenor|edesur|metrogas|aysa|personal|movistar|claro|internet/, "Servicios"],
+    [/alquiler|expensas|inmobiliaria/, "Vivienda"],
+    [/sueldo|salario|honorarios|cobro/, "Ingresos"],
+  ];
+  return rules.find(([regex]) => regex.test(text))?.[1] ?? "";
+}
+
+function cleanDescription(value: string | undefined) {
+  return (value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeHeader(value: string) {
+  return normName(value).replace(/\b(de|del|la|el)\b/g, "").replace(/\s+/g, " ").trim();
+}
+
+function detectDelimiter(text: string) {
+  const sample = text.split(/\r?\n/).slice(0, 5).join("\n");
+  const candidates = [",", ";", "\t"] as const;
+  return candidates
+    .map((delimiter) => ({ delimiter, count: sample.split(delimiter).length }))
+    .sort((a, b) => b.count - a.count)[0]?.delimiter ?? ",";
+}
+
+function stripBom(text: string) {
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+}
+
+function getXmlAttr(attrs: string, name: string) {
+  return attrs.match(new RegExp(`${name}="([^"]*)"`))?.[1] ?? null;
+}
+
+function decodeXml(value: string) {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&apos;/g, "'");
+}
+
+function columnIndex(letters: string) {
+  return letters
+    .toUpperCase()
+    .split("")
+    .reduce((sum, char) => sum * 26 + char.charCodeAt(0) - 64, 0) - 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -358,6 +1070,45 @@ const aiSchema = {
   },
 } as const;
 
+const aiMappingSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["confidence", "reasoning", "mapping", "warnings"],
+  properties: {
+    confidence: { type: "number", minimum: 0, maximum: 1 },
+    reasoning: { type: "string" },
+    mapping: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "date",
+        "description",
+        "amount",
+        "debit",
+        "credit",
+        "currency",
+        "category",
+        "account",
+        "type",
+        "paymentMethod",
+      ],
+      properties: {
+        date: { type: ["string", "null"] },
+        description: { type: ["string", "null"] },
+        amount: { type: ["string", "null"] },
+        debit: { type: ["string", "null"] },
+        credit: { type: ["string", "null"] },
+        currency: { type: ["string", "null"] },
+        category: { type: ["string", "null"] },
+        account: { type: ["string", "null"] },
+        type: { type: ["string", "null"] },
+        paymentMethod: { type: ["string", "null"] },
+      },
+    },
+    warnings: { type: "array", items: { type: "string" }, maxItems: 3 },
+  },
+} as const;
+
 function systemPrompt(): string {
   return [
     "Sos un asistente de importación de transacciones para Meridian, una app de finanzas personales argentina.",
@@ -396,6 +1147,101 @@ function userPrompt(): string {
     "- is_charge / is_tax: si es cargo o impuesto",
     "- warning: advertencia si algo no es claro (vacío si todo está bien)",
   ].join("\n");
+}
+
+function mappingSystemPrompt(): string {
+  return [
+    "Sos una capa contextual de mapping para Meridian.",
+    "Deterministico es la fuente de verdad; vos solo sugeris columnas cuando hay ambiguedad.",
+    "No proceses filas completas, no inventes movimientos, no corrijas montos.",
+    "Usa solo headers y perfiles estadisticos sin valores sensibles.",
+    "Devolve JSON estricto, reasoning corto y warnings accionables.",
+  ].join("\n");
+}
+
+async function requestMappingAi(input: unknown, userProfileId: string): Promise<AiMappingOutput> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new ApiError(503, "La ayuda contextual de IA no está configurada.");
+
+  const model = process.env.OPENAI_MAPPING_MODEL ?? process.env.OPENAI_MODEL ?? DEFAULT_MODEL;
+  let res: Response;
+  try {
+    traceAi("OPENAI_SMART_IMPORT_MAPPING_FETCH_START", { model, user: traceUserId(userProfileId) });
+    res = await fetch(OPENAI_RESPONSES_URL, {
+      method: "POST",
+      signal: AbortSignal.timeout(12_000),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        max_output_tokens: 700,
+        input: [
+          { role: "system", content: mappingSystemPrompt() },
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: JSON.stringify(input).slice(0, 6_000),
+              },
+            ],
+          },
+        ],
+        text: {
+          format: {
+            type: "json_schema",
+            name: "smart_import_mapping",
+            strict: true,
+            schema: aiMappingSchema,
+          },
+        },
+      }),
+    });
+  } catch (err) {
+    if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      throw new ApiError(504, "La ayuda contextual tardó más de lo esperado.");
+    }
+    throw err;
+  }
+
+  if (!res.ok) {
+    const providerError = await readOpenAiError(res);
+    traceAi("OPENAI_SMART_IMPORT_MAPPING_FETCH_ERROR", {
+      model,
+      status: res.status,
+      code: providerError.code,
+      user: traceUserId(userProfileId),
+    });
+    throw new ApiError(providerError.status, providerError.message);
+  }
+
+  const payload = (await res.json()) as {
+    output_text?: string;
+    output?: unknown;
+    usage?: { input_tokens?: number; output_tokens?: number };
+  };
+  const text = payload.output_text ?? extractOutputText(payload.output);
+  if (!text) throw new ApiError(502, "La ayuda contextual no devolvió un mapping válido.");
+
+  let parsed: AiMappingOutput;
+  try {
+    parsed = JSON.parse(text) as AiMappingOutput;
+  } catch {
+    throw new ApiError(502, "La ayuda contextual devolvió un formato inválido.");
+  }
+
+  await recordAiUsage({
+    userId: userProfileId,
+    endpoint: "ai.smart-import.mapping",
+    model,
+    inputTokens: payload.usage?.input_tokens ?? estimateTextTokens(input),
+    outputTokens: payload.usage?.output_tokens ?? estimateTextTokens(text),
+  });
+  traceAi("OPENAI_SMART_IMPORT_MAPPING_FETCH_OK", { model, user: traceUserId(userProfileId) });
+
+  return parsed;
 }
 
 async function requestOpenAi(userContent: unknown[], userProfileId: string): Promise<AiOutput> {

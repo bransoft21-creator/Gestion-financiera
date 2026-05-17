@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { handleApiError, ok } from "@/server/api/http";
 import { ApiError, ForbiddenError } from "@/server/api/errors";
 import { getCurrentUser } from "@/server/auth/current-user";
-import { analyzeFile } from "@/server/services/smart-import";
+import { analyzeFile, assertSmartImportDailyLimit, isSpreadsheetUpload } from "@/server/services/smart-import";
 import { getTransactionWorkspace } from "@/server/services/workspace";
 import { isSmartImportEnabled } from "@/lib/feature-flags";
 import { assertAiQuota } from "@/server/services/ai-usage";
@@ -45,9 +45,13 @@ export async function POST(request: NextRequest) {
       accounts: accounts.length,
       categories: categories.length,
     });
-    await assertAiQuota(userProfile.id, "ai.smart-import");
+    await assertSmartImportDailyLimit(household.id);
+    if (!isSpreadsheetUpload(mimeType, file.name)) {
+      await assertAiQuota(userProfile.id, "ai.smart-import");
+    }
 
     const result = await analyzeFile(buffer, mimeType, {
+      fileName: file.name,
       userProfileId: userProfile.id,
       householdId: household.id,
       accounts,

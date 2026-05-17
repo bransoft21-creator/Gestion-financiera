@@ -12,6 +12,7 @@ const ENDPOINT_DAILY_LIMITS: Record<string, number> = {
   "ai.weekly-reflection": Number(process.env.AI_WEEKLY_REFLECTION_DAILY_LIMIT ?? 4),
   "ai.monthly-analysis": Number(process.env.AI_MONTHLY_ANALYSIS_DAILY_LIMIT ?? 6),
   "ai.smart-import": Number(process.env.AI_SMART_IMPORT_DAILY_LIMIT ?? 10),
+  "ai.smart-import.mapping": Number(process.env.AI_SMART_IMPORT_MAPPING_DAILY_LIMIT ?? 5),
 };
 
 const MODEL_PRICING_USD_PER_TOKEN: Record<string, { input: number; output: number }> = {

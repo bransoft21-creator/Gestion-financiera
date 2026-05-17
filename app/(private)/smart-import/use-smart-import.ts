@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { captureClientError, trackProductEvent } from "@/lib/observability/client";
 import {
   SMART_IMPORT_ALLOWED_TYPES,
+  SMART_IMPORT_ALLOWED_EXTENSIONS,
+  SMART_IMPORT_MAX_FILE_BYTES,
   SMART_IMPORT_SLOW_MS,
   SMART_IMPORT_TIMEOUT_MS,
 } from "./constants";
@@ -49,11 +51,15 @@ export function useSmartImport({ householdId, accounts }: Options) {
 
   const handleFileSelect = useCallback(
     (file: File) => {
-      if (!SMART_IMPORT_ALLOWED_TYPES.includes(file.type as (typeof SMART_IMPORT_ALLOWED_TYPES)[number])) {
-        toast.error("Formato no soportado. Usá JPG, PNG, WEBP o PDF.");
+      const lowerName = file.name.toLowerCase();
+      const hasSupportedExtension = SMART_IMPORT_ALLOWED_EXTENSIONS.some((extension) =>
+        lowerName.endsWith(extension),
+      );
+      if (!SMART_IMPORT_ALLOWED_TYPES.includes(file.type as (typeof SMART_IMPORT_ALLOWED_TYPES)[number]) && !hasSupportedExtension) {
+        toast.error("Formato no soportado. Usá CSV, XLSX, JPG, PNG, WEBP o PDF.");
         return;
       }
-      if (file.size > 10 * 1024 * 1024) {
+      if (file.size > SMART_IMPORT_MAX_FILE_BYTES) {
         toast.error("El archivo es demasiado grande. Máximo 10 MB.");
         return;
       }
@@ -119,6 +125,11 @@ export function useSmartImport({ householdId, accounts }: Options) {
         { fileType: selectedFile.type || "unknown", fileSizeBucket: fileSizeBucket(selectedFile.size) },
         "smart-import",
       );
+      trackProductEvent(
+        "smart_import_file_uploaded",
+        { fileType: selectedFile.type || "unknown", fileSizeBucket: fileSizeBucket(selectedFile.size) },
+        "smart-import",
+      );
       const form = new FormData();
       form.append("file", selectedFile);
       form.append("householdId", householdId);
@@ -153,6 +164,19 @@ export function useSmartImport({ householdId, accounts }: Options) {
 
       setCandidates(stateList);
       setMetadata(data.metadata);
+      if (data.metadata.aiAssisted) {
+        trackProductEvent("smart_import_ai_invoked", { status: "used" }, "smart-import");
+        trackProductEvent(
+          "smart_import_ai_mapping_suggested",
+          { status: confidenceStatus(data.metadata.mappingConfidence) },
+          "smart-import",
+        );
+      }
+      if (data.metadata.aiFallbackUsed) {
+        trackProductEvent("smart_import_ai_fallback_used", { reason: "mapping_unavailable" }, "smart-import");
+      }
+      trackProductEvent("smart_import_mapping_completed", { candidateCount: stateList.length }, "smart-import");
+      trackProductEvent("smart_import_preview_opened", { candidateCount: stateList.length }, "smart-import");
       trackProductEvent(
         "smart_import_succeeded",
         { candidateCount: stateList.length, status: data.metadata.warnings.length > 0 ? "partial" : "ok" },
@@ -287,6 +311,10 @@ export function useSmartImport({ householdId, accounts }: Options) {
         })),
       };
 
+      trackProductEvent("smart_import_confirmed", { selectedCount: toImport.length }, "smart-import");
+      if (metadata?.aiAssisted) {
+        trackProductEvent("smart_import_ai_mapping_accepted", { status: confidenceStatus(metadata.mappingConfidence) }, "smart-import");
+      }
       trackProductEvent("smart_import_confirm_started", { selectedCount: toImport.length }, "smart-import");
 
       const res = await fetch("/api/transactions/import-candidates", {
@@ -324,6 +352,11 @@ export function useSmartImport({ householdId, accounts }: Options) {
         },
         "smart-import",
       );
+      trackProductEvent(
+        "smart_import_completed",
+        { selectedCount: toImport.length, createdCount: created, errorCount: errors.length },
+        "smart-import",
+      );
       setImportedCount(created);
       setDiscardedCount(notSelected.length);
       setDuplicatesAvoided(dupsAvoided.length);
@@ -334,9 +367,12 @@ export function useSmartImport({ householdId, accounts }: Options) {
       toast.error(err instanceof Error ? err.message : "Error al guardar.");
       setStep("review");
     }
-  }, [householdId, candidates]);
+  }, [householdId, candidates, metadata]);
 
   const reset = useCallback(() => {
+    if (metadata?.aiAssisted && step === "review") {
+      trackProductEvent("smart_import_ai_mapping_rejected", { status: confidenceStatus(metadata.mappingConfidence) }, "smart-import");
+    }
     revokePreviewUrl();
     abortRef.current?.abort("reset");
     setSelectedFile(null);
@@ -349,7 +385,7 @@ export function useSmartImport({ householdId, accounts }: Options) {
     setLastError(null);
     setIsSlowProcessing(false);
     setStep("upload");
-  }, [revokePreviewUrl]);
+  }, [metadata, revokePreviewUrl, step]);
 
   useEffect(
     () => () => {
@@ -388,4 +424,11 @@ export function useSmartImport({ householdId, accounts }: Options) {
     handleConfirm,
     reset,
   };
+}
+
+function confidenceStatus(value: number | undefined) {
+  if (typeof value !== "number") return "unknown";
+  if (value >= 0.9) return "high";
+  if (value >= 0.6) return "medium";
+  return "low";
 }

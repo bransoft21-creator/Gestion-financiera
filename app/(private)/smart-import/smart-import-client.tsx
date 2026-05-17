@@ -21,7 +21,7 @@ import { ActionButton } from "@/components/ui-v2/action-button";
 import { V2PageShell } from "@/components/layout/v2-page-shell";
 import { v2MotionTokens } from "@/design-system/tokens";
 import { cn } from "@/lib/utils";
-import { PROCESSING_STEPS } from "./constants";
+import { PROCESSING_STEPS, SMART_IMPORT_MAX_FILE_BYTES } from "./constants";
 import { ReviewView } from "./review-view";
 import type { WorkspaceAccount, WorkspaceCategory } from "./types";
 import { useSmartImport } from "./use-smart-import";
@@ -84,14 +84,14 @@ export function SmartImportClient({ householdId, accounts, categories }: Props) 
 
   return (
     <V2PageShell
-      eyebrow="IA"
+      eyebrow="Excel Migration"
       title="Smart Import"
-      description="Subí un comprobante, ticket o screenshot y la IA detecta las transacciones automáticamente."
+      description="Pasá de Excel a Meridian en minutos. Subí CSV, XLSX o un comprobante y revisá todo antes de importar."
     >
       <input
         ref={fileInputRef}
         type="file"
-        accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+        accept=".csv,.xlsx,.jpg,.jpeg,.png,.webp,.pdf,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/jpeg,image/png,image/webp,application/pdf"
         className="sr-only"
         onChange={handleInputChange}
       />
@@ -213,7 +213,7 @@ function UploadZone({
         onClick={onClickUpload}
         role="button"
         tabIndex={0}
-        aria-label="Subir comprobante — clic o arrastrá el archivo"
+        aria-label="Subir archivo financiero — clic o arrastrá el archivo"
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClickUpload(); } }}
         className={cn(
           "relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center gap-5 rounded-3xl border-2 border-dashed p-8 text-center outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
@@ -248,11 +248,11 @@ function UploadZone({
 
         <div className="space-y-1.5">
           <p className="text-base font-semibold text-foreground">
-            {isDragging ? "Soltá el archivo para analizarlo" : "Subí tu comprobante"}
+            {isDragging ? "Soltá el archivo para analizarlo" : "Subí tu Excel o comprobante"}
           </p>
           <p className="text-sm text-muted-foreground">
             {isDragging
-              ? "La IA lo va a leer y detectar los movimientos"
+              ? "Meridian va a detectar columnas y movimientos"
               : "Arrastrá y soltá o usá el botón de abajo"}
           </p>
         </div>
@@ -270,7 +270,7 @@ function UploadZone({
         </div>
 
         <div className="flex flex-wrap justify-center gap-1.5">
-          {["JPG", "PNG", "WEBP", "PDF"].map((fmt) => (
+          {["CSV", "XLSX", "JPG", "PNG", "WEBP", "PDF"].map((fmt) => (
             <span
               key={fmt}
               className="rounded-full border border-border/50 bg-muted/30 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground"
@@ -290,7 +290,7 @@ function UploadZone({
           {[
             { icon: FileImage, title: "Screenshots", desc: "Capturas de Mercado Pago, Visa o Mastercard" },
             { icon: FileScan,  title: "Resúmenes",  desc: "PDFs de resúmenes bancarios y de tarjeta" },
-            { icon: Scan,      title: "Tickets",    desc: "Fotos de tickets y comprobantes físicos" },
+            { icon: Scan,      title: "Excel simple", desc: "CSV o XLSX con fecha, concepto e importe" },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="flex items-start gap-2.5 rounded-2xl border border-border/40 bg-muted/15 p-3">
               <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
@@ -308,7 +308,7 @@ function UploadZone({
       )}
 
       <p className="text-center text-xs text-muted-foreground">
-        La IA nunca guarda automáticamente. Siempre revisás y confirmás antes de importar.
+        Meridian nunca guarda automáticamente. Siempre revisás y confirmás antes de importar.
       </p>
     </div>
   );
@@ -332,6 +332,10 @@ function FilePreviewState({
   lastError: string | null;
 }) {
   const isPDF = file.type === "application/pdf";
+  const lowerName = file.name.toLowerCase();
+  const isCsv = lowerName.endsWith(".csv") || file.type === "text/csv";
+  const isXlsx = lowerName.endsWith(".xlsx") || file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  const fileKind = isPDF ? "PDF" : isCsv ? "CSV" : isXlsx ? "XLSX" : file.type.split("/")[1]?.toUpperCase();
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -356,7 +360,9 @@ function FilePreviewState({
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-muted/50">
                 <FileScan className="h-8 w-8 text-muted-foreground" />
               </div>
-              <p className="text-sm text-muted-foreground">Documento PDF listo para analizar</p>
+              <p className="text-sm text-muted-foreground">
+                {isCsv || isXlsx ? "Planilla lista para revisar" : "Documento PDF listo para analizar"}
+              </p>
             </div>
           )}
         </div>
@@ -365,7 +371,7 @@ function FilePreviewState({
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-foreground">{file.name}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {formatFileSize(file.size)} · {isPDF ? "PDF" : file.type.split("/")[1]?.toUpperCase()}
+              {formatFileSize(file.size)} · {fileKind}
             </p>
           </div>
           <button
@@ -381,14 +387,14 @@ function FilePreviewState({
 
       <ActionButton className="w-full" onClick={onAnalyze}>
         <Sparkles className="h-4 w-4" />
-        Analizar documento
+        Preparar preview
         <ArrowRight className="h-4 w-4" />
       </ActionButton>
 
       {lastError && <RecoveryNotice message={lastError} onRetry={onAnalyze} actionLabel="Reintentar análisis" />}
 
       <p className="text-center text-xs text-muted-foreground">
-        La IA nunca guarda automáticamente. Siempre revisás y confirmás antes de importar.
+        Límite MVP: hasta 500 filas, una hoja y {formatFileSize(SMART_IMPORT_MAX_FILE_BYTES)} por archivo.
       </p>
     </div>
   );
