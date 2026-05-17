@@ -16,7 +16,7 @@ import { useUser } from "@/components/app/user-context";
 import { EmptyState } from "@/components/app/empty-state";
 import { Button } from "@/components/ui/button";
 import { FinancialAiAnalysisCard } from "@/components/dashboard/financial-ai-analysis-card";
-import { WeeklyReflectionCard } from "@/components/dashboard/weekly-reflection-card";
+import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse-card";
 import {
   PremiumCard,
   PremiumCardContent,
@@ -291,7 +291,7 @@ export function DashboardClient() {
       <FinancialAiAnalysisCard month={selectedMonth} />
 
       {/* Pulso semanal — solo mes actual */}
-      {isCurrentMonth && <WeeklyReflectionCard />}
+      {isCurrentMonth && <WeeklyPulseCard />}
 
       {/* Activity preview */}
       <ActivityPreview />

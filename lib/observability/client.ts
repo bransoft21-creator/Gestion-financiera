@@ -44,6 +44,9 @@ type ProductEvent =
   | "reflection_opened"
   | "monthly_analysis_opened"
   | "hide_amounts_toggled"
+  // Weekly Pulse
+  | "weekly_pulse_viewed"
+  | "weekly_pulse_dismissed"
   // AI
   | "ai_analysis_started"
   | "ai_analysis_succeeded"
@@ -99,6 +102,10 @@ const ALLOWED_PROPS = new Set([
   "format",
   // Financial entity types
   "entityType",
+  // Weekly Pulse
+  "tone",
+  "signalCount",
+  "insightCount",
 ]);
 
 export function setTelemetryUser(userId?: string | null) {
