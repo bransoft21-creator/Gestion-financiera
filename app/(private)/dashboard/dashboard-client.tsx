@@ -346,6 +346,8 @@ export function DashboardClient() {
               total={metrics.expenses}
               income={metrics.income}
               fixedToIncomeRatio={metrics.fixedToIncomeRatio}
+              year={year}
+              month={month}
             />
             <MonthProjection metrics={metrics} />
           </div>

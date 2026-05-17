@@ -91,6 +91,10 @@ type ProductEvent =
   | "tutorial_started"
   | "tutorial_completed"
   | "tutorial_skipped"
+  // Distribution Drilldown
+  | "distribution_group_opened"
+  | "distribution_transaction_reclassified"
+  | "distribution_data_quality_clicked"
   // System
   | "offline_detected"
   | "online_restored"
@@ -140,6 +144,8 @@ const ALLOWED_PROPS = new Set([
   "educationId",
   "surface",
   "category",
+  // Distribution Drilldown
+  "expenseGroup",
 ]);
 
 export function setTelemetryUser(userId?: string | null) {
