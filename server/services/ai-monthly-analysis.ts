@@ -9,6 +9,7 @@ import { traceAi, traceUserId } from "@/server/services/ai-trace";
 import { toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
 import { buildMonthlySystemPrompt } from "@/lib/ai/prompt-governance";
+import { normalizeMerchant } from "@/lib/merchant/normalize";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
@@ -613,11 +614,12 @@ function detectRecurringExpenses(transactions: AnalysisTransaction[]) {
   const groups = new Map<string, AnalysisTransaction[]>();
 
   transactions.forEach((tx) => {
-    const description = normalizeDescription(tx.description);
+    const merchantKey = normalizeMerchant(tx.description);
+    const description = merchantKey.length >= 4 ? merchantKey : normalizeDescription(tx.description).toUpperCase();
     if (!description) return;
 
     const amountBucket = Math.round(toFiniteNumber(tx.amount) / 100) * 100;
-    const key = `${description.toLowerCase()}|${tx.category?.name ?? "Sin categoría"}|${amountBucket}`;
+    const key = `${description}|${tx.category?.name ?? "Sin categoría"}|${amountBucket}`;
     groups.set(key, [...(groups.get(key) ?? []), tx]);
   });
 
@@ -705,7 +707,9 @@ function getRepeatedSmallExpenses(transactions: AnalysisTransaction[], totalInco
     // Essential purchases (supermarkets, pharmacies, services) are never "invisible expenses"
     if (isEssentialTransaction(tx)) return;
 
-    const normalizedDescription = normalizeRepeatedDescription(tx.description);
+    // Use merchant canonicalization first, fall back to description stripping
+    const merchantKey = normalizeMerchant(tx.description);
+    const normalizedDescription = merchantKey.length >= 4 ? merchantKey : normalizeRepeatedDescription(tx.description);
     if (!normalizedDescription) return;
 
     groups.set(normalizedDescription, [...(groups.get(normalizedDescription) ?? []), tx]);

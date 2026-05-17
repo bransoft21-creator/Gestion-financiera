@@ -236,7 +236,7 @@ export function MonthlyCloseSheet({ isOpen, onClose, close }: MonthlyCloseSheetP
     <div>
       {/* Overlay */}
       <div
-        className="fixed inset-0 z-[90] bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+        className="fixed inset-0 z-[125] bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={handleDismiss}
         aria-hidden="true"
       />
@@ -246,7 +246,7 @@ export function MonthlyCloseSheet({ isOpen, onClose, close }: MonthlyCloseSheetP
         role="dialog"
         aria-modal="true"
         aria-label={`Cierre de ${close.monthLabel}`}
-        className="fixed inset-x-0 bottom-0 z-[100] flex max-h-[90dvh] flex-col rounded-t-2xl border-t border-border bg-card/[0.98] shadow-2xl animate-in slide-in-from-bottom duration-300 pb-[env(safe-area-inset-bottom)]"
+        className="fixed inset-x-0 bottom-0 z-[130] flex max-h-[90dvh] flex-col rounded-t-2xl border-t border-border bg-card/[0.98] shadow-2xl animate-in slide-in-from-bottom duration-300 pb-[env(safe-area-inset-bottom)]"
       >
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">

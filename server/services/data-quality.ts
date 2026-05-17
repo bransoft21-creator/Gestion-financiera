@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma";
+import { normalizeMerchant } from "@/lib/merchant/normalize";
 import { assertHouseholdAccess } from "./households";
 
 const MERCHANT_HINTS: Array<{ pattern: RegExp; hint: string }> = [
@@ -65,6 +66,14 @@ export type QualitySignals = {
   similarCategoryPairs: number;
   unusedCategoryCount: number;
   frequentGroupCount: number;
+  similarMerchantGroupCount: number;
+};
+
+export type SimilarMerchantGroup = {
+  canonical: string;
+  variants: string[];
+  transactionCount: number;
+  categoryNames: string[];
 };
 
 export type UncategorizedTransaction = {
@@ -109,7 +118,10 @@ export type UnusedCategory = {
 export async function getQualitySignals(userProfileId: string, householdId: string): Promise<QualitySignals> {
   await assertHouseholdAccess(userProfileId, householdId);
 
-  const [uncategorizedCount, categories, uncategorizedDescs] = await Promise.all([
+  const since90 = new Date();
+  since90.setDate(since90.getDate() - 90);
+
+  const [uncategorizedCount, categories, uncategorizedDescs, recentDescs] = await Promise.all([
     prisma.transaction.count({
       where: { householdId, deletedAt: null, status: { not: "CANCELED" }, categoryId: null, type: { in: ["EXPENSE", "INCOME"] } },
     }),
@@ -122,6 +134,11 @@ export async function getQualitySignals(userProfileId: string, householdId: stri
       where: { householdId, deletedAt: null, status: { not: "CANCELED" }, categoryId: null, type: { in: ["EXPENSE", "INCOME"] }, description: { not: null } },
       select: { description: true },
       take: 500,
+    }),
+    prisma.transaction.findMany({
+      where: { householdId, deletedAt: null, status: { not: "CANCELED" }, type: { in: ["EXPENSE", "INCOME"] }, description: { not: null }, occurredAt: { gte: since90 } },
+      select: { description: true },
+      take: 1000,
     }),
   ]);
 
@@ -153,7 +170,22 @@ export async function getQualitySignals(userProfileId: string, householdId: stri
   }
   const frequentGroupCount = Array.from(descMap.values()).filter((c) => c >= 2).length;
 
-  return { uncategorizedCount, similarCategoryPairs: similarCount, unusedCategoryCount, frequentGroupCount };
+  // similar merchant groups (multiple raw descriptions → same canonical)
+  const merchantVariants = new Map<string, Set<string>>();
+  for (const t of recentDescs) {
+    if (!t.description) continue;
+    const canonical = normalizeMerchant(t.description);
+    if (canonical.length < 4) continue;
+    const existing = merchantVariants.get(canonical);
+    if (existing) {
+      existing.add(t.description);
+    } else {
+      merchantVariants.set(canonical, new Set([t.description]));
+    }
+  }
+  const similarMerchantGroupCount = Array.from(merchantVariants.values()).filter((v) => v.size >= 2).length;
+
+  return { uncategorizedCount, similarCategoryPairs: similarCount, unusedCategoryCount, frequentGroupCount, similarMerchantGroupCount };
 }
 
 export async function getUncategorizedTransactions(userProfileId: string, householdId: string): Promise<UncategorizedTransaction[]> {
@@ -294,6 +326,61 @@ export async function getUnusedCategories(userProfileId: string, householdId: st
     .filter((c) => c._count.transactions === 0)
     .map((c) => ({ id: c.id, name: c.name, type: c.type, color: c.color, createdAt: c.createdAt.toISOString() }))
     .slice(0, 30);
+}
+
+export async function getSimilarMerchants(userProfileId: string, householdId: string): Promise<SimilarMerchantGroup[]> {
+  await assertHouseholdAccess(userProfileId, householdId);
+
+  const since = new Date();
+  since.setDate(since.getDate() - 90);
+
+  const transactions = await prisma.transaction.findMany({
+    where: {
+      householdId,
+      deletedAt: null,
+      status: { not: "CANCELED" },
+      type: { in: ["EXPENSE", "INCOME"] },
+      description: { not: null },
+      occurredAt: { gte: since },
+    },
+    select: { description: true, category: { select: { name: true } } },
+    take: 1000,
+    orderBy: { occurredAt: "desc" },
+  });
+
+  const groups = new Map<string, { variants: Set<string>; count: number; categories: Set<string> }>();
+
+  for (const tx of transactions) {
+    if (!tx.description) continue;
+    const canonical = normalizeMerchant(tx.description);
+    if (canonical.length < 4) continue;
+
+    const existing = groups.get(canonical);
+    if (existing) {
+      existing.variants.add(tx.description);
+      existing.count += 1;
+      if (tx.category?.name) existing.categories.add(tx.category.name);
+    } else {
+      groups.set(canonical, {
+        variants: new Set([tx.description]),
+        count: 1,
+        categories: tx.category?.name ? new Set([tx.category.name]) : new Set(),
+      });
+    }
+  }
+
+  const result: SimilarMerchantGroup[] = [];
+  for (const [canonical, group] of groups) {
+    if (group.variants.size < 2) continue;
+    result.push({
+      canonical,
+      variants: Array.from(group.variants).slice(0, 5),
+      transactionCount: group.count,
+      categoryNames: Array.from(group.categories).slice(0, 3),
+    });
+  }
+
+  return result.sort((a, b) => b.transactionCount - a.transactionCount).slice(0, 20);
 }
 
 export async function bulkCategorizeTransactions(

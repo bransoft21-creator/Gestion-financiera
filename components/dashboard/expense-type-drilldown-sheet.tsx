@@ -172,26 +172,24 @@ function TransactionRow({
         <SensitiveAmount value={formatMoney(tx.amount, tx.currency)} />
       </span>
 
-      {/* Reclassify select — hidden for unclassified (uses CTA instead) */}
-      {group !== "unclassified" && (
-        <div className="w-full shrink-0 sm:w-auto">
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          ) : (
-            <select
-              defaultValue=""
-              onChange={(e) => { if (e.target.value) void handleReclassify(e.target.value); }}
-              className="w-full rounded-xl border border-border bg-muted/30 px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary/40 sm:w-auto [&>option]:bg-card"
-              aria-label="Cambiar clasificación"
-            >
-              <option value="">Mover a…</option>
-              {options.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
+      {/* Reclassify select */}
+      <div className="w-full shrink-0 sm:w-auto">
+        {saving ? (
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        ) : (
+          <select
+            defaultValue=""
+            onChange={(e) => { if (e.target.value) void handleReclassify(e.target.value); }}
+            className="w-full rounded-xl border border-border bg-muted/30 px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary/40 sm:w-auto [&>option]:bg-card"
+            aria-label="Cambiar clasificación"
+          >
+            <option value="">Mover a…</option>
+            {options.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        )}
+      </div>
     </div>
   );
 }
@@ -263,7 +261,7 @@ export function ExpenseTypeDrilldownSheet({
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 z-[90] bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+        className="fixed inset-0 z-[125] bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -273,7 +271,7 @@ export function ExpenseTypeDrilldownSheet({
         role="dialog"
         aria-modal="true"
         aria-label={config.label}
-        className="fixed inset-x-0 bottom-0 z-[100] flex max-h-[88dvh] flex-col rounded-t-2xl border-t border-border bg-card/[0.98] shadow-2xl animate-in slide-in-from-bottom duration-300 pb-[env(safe-area-inset-bottom)]"
+        className="fixed inset-x-0 bottom-0 z-[130] flex max-h-[88dvh] flex-col rounded-t-2xl border-t border-border bg-card/[0.98] shadow-2xl animate-in slide-in-from-bottom duration-300 pb-[env(safe-area-inset-bottom)]"
       >
         {/* Handle */}
         <div className="flex shrink-0 justify-center pb-1 pt-3">
@@ -355,16 +353,9 @@ export function ExpenseTypeDrilldownSheet({
 
           {status === "done" && transactions.length > 0 && (
             <div className="divide-y divide-border/50 pb-2">
-              {!isUnclassified && (
-                <p className="px-5 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Movimientos · Tocá "Mover a…" para reclasificar
-                </p>
-              )}
-              {isUnclassified && (
-                <p className="px-5 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Movimientos sin clasificar este mes
-                </p>
-              )}
+              <p className="px-5 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Movimientos · Tocá "Mover a…" para reclasificar
+              </p>
               {transactions.map((tx) => (
                 <TransactionRow
                   key={tx.id}

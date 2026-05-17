@@ -9,6 +9,7 @@ import {
   Lightbulb,
   Loader2,
   Merge,
+  Store,
   Tag,
   X,
 } from "lucide-react";
@@ -19,17 +20,19 @@ import {
   PremiumCardContent,
 } from "@/components/ui-v2/premium-card";
 import { ActionButton } from "@/components/ui-v2/action-button";
+import { trackProductEvent } from "@/lib/observability/client";
 import type {
   FrequentDescription,
   QualitySignals,
   SimilarCategoryPair,
+  SimilarMerchantGroup,
   UncategorizedTransaction,
   UnusedCategory,
 } from "@/server/services/data-quality";
 
 type WorkspaceCategory = { id: string; name: string; type: string };
 
-type Tab = "uncategorized" | "frequent" | "similar" | "unused";
+type Tab = "uncategorized" | "frequent" | "similar" | "unused" | "merchants";
 
 const CAT_TYPE_LABELS: Record<string, string> = {
   INCOME: "Ingreso",
@@ -119,6 +122,7 @@ type Props = {
   initialFrequent: FrequentDescription[];
   initialSimilar: SimilarCategoryPair[];
   initialUnused: UnusedCategory[];
+  initialMerchants: SimilarMerchantGroup[];
   categories: WorkspaceCategory[];
 };
 
@@ -129,10 +133,19 @@ export function DataQualityClient({
   initialFrequent,
   initialSimilar,
   initialUnused,
+  initialMerchants,
   categories,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("uncategorized");
   const [signals, setSignals] = useState(initialSignals);
+  const [merchantRows] = useState(initialMerchants);
+
+  function handleTabChange(tab: Tab) {
+    setActiveTab(tab);
+    if (tab === "merchants") {
+      trackProductEvent("merchant_group_viewed", { merchantCount: merchantRows.length }, "analytics");
+    }
+  }
 
   // Uncategorized state
   const [uncatRows, setUncatRows] = useState(initialUncategorized);
@@ -267,6 +280,7 @@ export function DataQualityClient({
     { id: "frequent", label: "Frecuentes", count: signals.frequentGroupCount, accent: "teal" },
     { id: "similar", label: "Similares", count: signals.similarCategoryPairs, accent: "blue" },
     { id: "unused", label: "Sin uso", count: signals.unusedCategoryCount, accent: "muted" },
+    { id: "merchants", label: "Comercios", count: signals.similarMerchantGroupCount, accent: "teal" },
   ];
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -281,7 +295,7 @@ export function DataQualityClient({
             count={t.count}
             label={t.label}
             accent={t.accent}
-            onClick={() => setActiveTab(t.id)}
+            onClick={() => handleTabChange(t.id)}
             active={activeTab === t.id}
           />
         ))}
@@ -293,7 +307,7 @@ export function DataQualityClient({
           <button
             key={t.id}
             type="button"
-            onClick={() => setActiveTab(t.id)}
+            onClick={() => handleTabChange(t.id)}
             className={cn(
               "flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all duration-150",
               activeTab === t.id
@@ -579,6 +593,50 @@ export function DataQualityClient({
                   </PremiumCard>
                 );
               })}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab: Comercios ── */}
+      {activeTab === "merchants" && (
+        <div className="space-y-3">
+          {merchantRows.length === 0 ? (
+            <PremiumCard><PremiumCardContent><EmptyCheck message="No se detectaron comercios con variaciones en sus nombres en los últimos 90 días." /></PremiumCardContent></PremiumCard>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground">
+                Estos comercios aparecen con distintas descripciones en tus movimientos. El análisis de IA los agrupa automáticamente.
+              </p>
+              <PremiumCard>
+                <div className="divide-y divide-border/50">
+                  {merchantRows.map((group) => (
+                    <div key={group.canonical} className="px-4 py-3">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/40 text-muted-foreground">
+                          <Store className="h-3.5 w-3.5" aria-hidden="true" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-semibold text-foreground">{group.canonical}</p>
+                            <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                              {group.transactionCount} mov.
+                            </span>
+                            {group.categoryNames.length > 0 && (
+                              <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                                {group.categoryNames[0]}
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            Variaciones: {group.variants.map((v) => `"${v}"`).join(" · ")}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </PremiumCard>
             </>
           )}
         </div>

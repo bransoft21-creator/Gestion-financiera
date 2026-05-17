@@ -95,6 +95,11 @@ type ProductEvent =
   | "distribution_group_opened"
   | "distribution_transaction_reclassified"
   | "distribution_data_quality_clicked"
+  // Merchant canonicalization
+  | "merchant_group_viewed"
+  | "merchant_merge_suggested"
+  | "merchant_merge_confirmed"
+  | "merchant_merge_rejected"
   // System
   | "offline_detected"
   | "online_restored"
@@ -146,6 +151,9 @@ const ALLOWED_PROPS = new Set([
   "category",
   // Distribution Drilldown
   "expenseGroup",
+  // Merchant canonicalization
+  "merchantCount",
+  "variantCount",
 ]);
 
 export function setTelemetryUser(userId?: string | null) {

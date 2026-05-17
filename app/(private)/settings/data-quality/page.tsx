@@ -5,6 +5,7 @@ import {
   getUncategorizedTransactions,
   getFrequentUncategorizedDescriptions,
   getSimilarCategories,
+  getSimilarMerchants,
   getUnusedCategories,
 } from "@/server/services/data-quality";
 import { V2PageShell } from "@/components/layout/v2-page-shell";
@@ -16,12 +17,13 @@ export default async function DataQualityPage() {
   const { userProfile } = await getCurrentUser();
   const { household, categories } = await getTransactionWorkspace(userProfile.id);
 
-  const [signals, uncategorized, frequent, similar, unused] = await Promise.all([
+  const [signals, uncategorized, frequent, similar, unused, merchants] = await Promise.all([
     getQualitySignals(userProfile.id, household.id),
     getUncategorizedTransactions(userProfile.id, household.id),
     getFrequentUncategorizedDescriptions(userProfile.id, household.id),
     getSimilarCategories(userProfile.id, household.id),
     getUnusedCategories(userProfile.id, household.id),
+    getSimilarMerchants(userProfile.id, household.id),
   ]);
 
   return (
@@ -37,6 +39,7 @@ export default async function DataQualityPage() {
         initialFrequent={frequent}
         initialSimilar={similar}
         initialUnused={unused}
+        initialMerchants={merchants}
         categories={categories}
       />
     </V2PageShell>
