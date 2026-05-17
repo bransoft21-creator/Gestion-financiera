@@ -50,15 +50,29 @@ export function ExpenseCategoryChart({ data, activeCategoryId, onSelectCategory 
               />
             ))}
           </Pie>
-          <Tooltip content={<ExpenseCategoryTooltip />} />
+          {/* Suppress tooltip when a category is selected — the center overlay already shows name + % */}
+          {!activeCategoryId && <Tooltip content={<ExpenseCategoryTooltip />} />}
         </PieChart>
       </ResponsiveContainer>
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div className="flex h-[104px] w-[104px] flex-col items-center justify-center rounded-full border border-border bg-card/95 text-center shadow-md">
-          <span className={`${activeItem ? "text-2xl" : "max-w-[86px] truncate text-sm"} font-semibold tabular-nums text-foreground`}>
-            {activeItem ? `${activePercent}%` : <SensitiveAmount value={formatMoney(total)} />}
-          </span>
-          <span className="mt-0.5 max-w-[76px] truncate text-[10px] font-medium text-muted-foreground">{activeItem?.name ?? "Total"}</span>
+        <div className="flex h-[104px] w-[104px] flex-col items-center justify-center rounded-full border border-border bg-card/95 text-center shadow-md px-2">
+          {activeItem ? (
+            <>
+              <span className="text-2xl font-extrabold tabular-nums text-foreground leading-none">
+                {activePercent}%
+              </span>
+              <span className="mt-1 w-full truncate text-[10px] font-medium text-muted-foreground leading-tight">
+                {activeItem.name}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="w-full truncate text-sm font-semibold tabular-nums text-foreground leading-none">
+                <SensitiveAmount value={formatMoney(total)} />
+              </span>
+              <span className="mt-1 text-[10px] font-medium text-muted-foreground">Total</span>
+            </>
+          )}
         </div>
       </div>
     </div>

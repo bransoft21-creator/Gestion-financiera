@@ -38,7 +38,7 @@ export function TransactionFilters({
   onPayCreditCard?: () => void;
 }) {
   return (
-    <PremiumCard className="sticky top-2 z-20 overflow-hidden border-border/80 bg-background/95 backdrop-blur lg:static">
+    <PremiumCard className="sticky top-[calc(env(safe-area-inset-top,0px)+72px+8px)] z-10 overflow-hidden border-border/80 bg-background backdrop-blur-sm lg:static lg:top-auto lg:z-auto">
       <PremiumCardHeader className="border-b border-border/60 bg-muted/[0.08] p-3 sm:p-4">
         <div className="flex min-w-0 items-center gap-2">
           <div className="relative min-w-0 flex-1">

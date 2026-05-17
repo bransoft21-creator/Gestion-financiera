@@ -29,6 +29,72 @@ const MOBILITY_CATEGORY_NAMES = [
   "Transporte",
 ] as const;
 
+// Categories and description patterns that are NEVER "gastos invisibles":
+// essential, planned, or high-value purchases that repeat legitimately.
+const ESSENTIAL_CATEGORY_NAMES = [
+  "Supermercado",
+  "Mercado",
+  "Almacén",
+  "Verdulería",
+  "Carnicería",
+  "Farmacia",
+  "Salud",
+  "Médico",
+  "Alquiler / Hipoteca",
+  "Expensas",
+  "Servicios",
+  "Internet / Telefonía",
+  "Suscripciones",
+  "Educación",
+  "Cuota Auto",
+  "Combustible",
+  "Estacionamiento",
+  "Transporte",
+  "Colegiaturas",
+] as const;
+
+// Normalized merchant fragments to exclude from repeatedSmallExpenses.
+// Matches if the normalized description CONTAINS any of these strings.
+const ESSENTIAL_DESCRIPTION_FRAGMENTS = [
+  "coto",
+  "carrefour",
+  "walmart",
+  "dia ",
+  " dia ",
+  "jumbo",
+  "disco",
+  "vea ",
+  "changomas",
+  "chango mas",
+  "lidl",
+  "makro",
+  "mayorista",
+  "farmacity",
+  "farmacias",
+  "farmacia",
+  "drogueria",
+  "osde",
+  "swiss medical",
+  "galeno",
+  "prepaga",
+  "obra social",
+  "arcor",
+  "edenor",
+  "edesur",
+  "metrogas",
+  "naturgy",
+  "aysa",
+  "telecentro",
+  "fibertel",
+  "claro",
+  "personal ",
+  "movistar",
+  "directv",
+  "netflix",
+  "spotify",
+  "amazon",
+] as const;
+
 const analysisSchema = {
   type: "object",
   additionalProperties: false,
@@ -623,12 +689,20 @@ function getHighImpactTransactions(transactions: AnalysisTransaction[], totalInc
     }));
 }
 
+function isEssentialTransaction(tx: AnalysisTransaction): boolean {
+  if (matchesAnyCategory(tx.category?.name, ESSENTIAL_CATEGORY_NAMES)) return true;
+  const desc = normalizeRepeatedDescription(tx.description).toLowerCase();
+  return ESSENTIAL_DESCRIPTION_FRAGMENTS.some((fragment) => desc.includes(fragment));
+}
+
 function getRepeatedSmallExpenses(transactions: AnalysisTransaction[], totalIncome: number) {
   const largeExpenseThreshold = totalIncome > 0 ? totalIncome * (HIGH_IMPACT_INCOME_RATE / 100) : Number.POSITIVE_INFINITY;
   const groups = new Map<string, AnalysisTransaction[]>();
 
   transactions.forEach((tx) => {
     if (toFiniteNumber(tx.amount) > largeExpenseThreshold) return;
+    // Essential purchases (supermarkets, pharmacies, services) are never "invisible expenses"
+    if (isEssentialTransaction(tx)) return;
 
     const normalizedDescription = normalizeRepeatedDescription(tx.description);
     if (!normalizedDescription) return;
@@ -685,7 +759,7 @@ async function requestOpenAiAnalysis(
           {
             role: "system",
             content:
-              "Sos un analista financiero para una app de finanzas personales en Argentina. Respondé en español rioplatense, con tono claro, prudente y accionable. No inventes datos. No des asesoramiento financiero regulado; basate solo en el resumen, las métricas, la comparación y las señales recibidas. Usá obligatoriamente las métricas calculadas por backend cuando menciones ahorro, gastos fijos, movilidad, tarjeta de crédito, proyección de cierre, gastos repetidos, transacciones de alto impacto o cambios contra el mes anterior. Si comparison.available es false, tenés prohibido inventar comparaciones contra el mes anterior.",
+              "Sos un analista financiero para una app de finanzas personales en Argentina. Respondé en español rioplatense, con tono claro, prudente y accionable. No inventes datos. No des asesoramiento financiero regulado; basate solo en el resumen, las métricas, la comparación y las señales recibidas. Usá obligatoriamente las métricas calculadas por backend cuando menciones ahorro, gastos fijos, movilidad, tarjeta de crédito, proyección de cierre, gastos repetidos, transacciones de alto impacto o cambios contra el mes anterior. Si comparison.available es false, tenés prohibido inventar comparaciones contra el mes anterior. CRÍTICO: el campo repeatedSmallExpenses ya fue filtrado por backend para excluir compras esenciales — lo que figura ahí son exclusivamente posibles gastos hormiga o microcompras no esenciales. NUNCA llames 'gasto invisible' ni 'gasto hormiga' a supermercados (Coto, Carrefour, Walmart, Jumbo, Disco, etc.), farmacias, servicios del hogar, alquileres, cuotas, pagos recurrentes planificados ni ningún gasto grande único. Solo usá esos términos si repeatedSmallExpenses contiene ítems reales y mencioná que 'podría estar sumando' sin dramatizar.",
           },
           {
             role: "user",

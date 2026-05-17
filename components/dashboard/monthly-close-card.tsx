@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { captureClientError } from "@/lib/observability/client";
@@ -18,23 +19,20 @@ const TONE_DOT: Record<string, string> = {
 /* ── Preview line ──────────────────────────────────────────────────────────── */
 
 function buildPreviewText(close: MonthlyCloseData): string {
-  if (!close.hasData) return "Sin datos registrados para el mes anterior";
-
   const firstSignal = close.signals[0];
   if (firstSignal) return firstSignal.label;
-
   if (close.available >= 0) return "El mes cerró con disponible real positivo";
   return "El mes cerró con disponible ajustado";
 }
 
 /* ── Main component ────────────────────────────────────────────────────────── */
 
-type Status = "idle" | "loading" | "done" | "empty";
+type Status = "idle" | "loading" | "done" | "insufficient" | "error";
 
 export function MonthlyCloseCard() {
   const dayOfMonth = new Date().getDate();
   const shouldShow = dayOfMonth <= 10;
-  const [status, setStatus] = useState<Status>(shouldShow ? "loading" : "empty");
+  const [status, setStatus] = useState<Status>(shouldShow ? "loading" : "idle");
   const [close, setClose] = useState<MonthlyCloseData | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -45,12 +43,15 @@ export function MonthlyCloseCard() {
     let cancelled = false;
 
     fetch("/api/monthly-close")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((json: { data?: MonthlyCloseData | null }) => {
         if (cancelled) return;
         const d = json.data;
         if (!d || !d.hasData) {
-          setStatus("empty");
+          setStatus("insufficient");
           return;
         }
         setClose(d);
@@ -58,13 +59,14 @@ export function MonthlyCloseCard() {
       })
       .catch((err) => {
         captureClientError(err, "dashboard", { reason: "monthly_close_fetch" });
-        if (!cancelled) setStatus("empty");
+        if (!cancelled) setStatus("error");
       });
 
     return () => { cancelled = true; };
   }, [shouldShow]);
 
-  if (status === "empty" || status === "idle") return null;
+  // Hidden after day 10 — intentional design
+  if (status === "idle") return null;
 
   if (status === "loading") {
     return (
@@ -75,6 +77,53 @@ export function MonthlyCloseCard() {
           <Skeleton className="ml-auto h-3 w-10 rounded" />
         </div>
         <Skeleton className="h-3 w-3/5 rounded" />
+      </div>
+    );
+  }
+
+  if (status === "insufficient") {
+    return (
+      <div className="mb-3 rounded-2xl border border-border bg-muted/15 px-5 py-4">
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/40" aria-hidden="true" />
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Cierre de mes
+          </span>
+        </div>
+        <p className="pl-4 text-sm text-muted-foreground leading-snug">
+          Todavía no hay suficiente información para armar tu cierre del mes anterior.
+        </p>
+        <div className="pl-4 mt-2.5 flex items-center gap-3">
+          <Link
+            href="/transactions?new=1"
+            className="text-[11px] font-semibold text-primary hover:underline"
+          >
+            Registrar movimiento →
+          </Link>
+          <span className="text-muted-foreground/40">·</span>
+          <Link
+            href="/smart-import"
+            className="text-[11px] font-semibold text-primary hover:underline"
+          >
+            Importar Excel →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="mb-3 rounded-2xl border border-border bg-muted/15 px-5 py-4">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/40" aria-hidden="true" />
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Cierre de mes
+          </span>
+        </div>
+        <p className="pl-4 text-sm text-muted-foreground">
+          No se pudo cargar el cierre. Recargá la página para intentar de nuevo.
+        </p>
       </div>
     );
   }
