@@ -8,6 +8,7 @@ import type { Signal } from "./financial-signals";
 import { captureServerMessage } from "@/lib/observability/server";
 import { estimateTextTokens, recordAiUsage } from "@/server/services/ai-usage";
 import { traceAi, traceUserId } from "@/server/services/ai-trace";
+import { buildWeeklySystemPrompt } from "@/lib/ai/prompt-governance";
 
 export interface ReflectionInput {
   weekLabel: string;          // e.g. "5 al 11 de mayo"
@@ -61,9 +62,9 @@ function formatARS(n: number): string {
   }).format(n);
 }
 
-/** Builds the compact prompt sent to OpenAI. Target: ≤ 450 tokens. */
-function buildPrompt(input: ReflectionInput): string {
-  const lines: string[] = [];
+/** Builds the user-content data block sent to OpenAI. Target: ≤ 300 tokens. */
+function buildWeeklyDataBlock(input: ReflectionInput): string {
+  const lines: string[] = ["Datos de la semana:"];
 
   lines.push(`Semana: ${input.weekLabel}`);
   lines.push(`Movimiento semanal: ${formatARS(input.totalExpenses)} en gastos`);
@@ -86,23 +87,10 @@ function buildPrompt(input: ReflectionInput): string {
   }
 
   if (input.signals.length > 0) {
-    lines.push(`Señales: ${input.signals.map((s) => s.label).join(" | ")}`);
+    lines.push(`Señales backend: ${input.signals.map((s) => s.label).join(" | ")}`);
   }
 
-  return [
-    "Sos un asistente financiero personal para una app en Argentina. Tu tono es calmado, empático y directo.",
-    "Contexto clave: los datos son de UNA sola semana. Las semanas pueden incluir pagos programados como alquiler, tarjeta de crédito o servicios — estos son eventos normales del calendario, no señales negativas. Nunca los trates como hábitos preocupantes.",
-    "",
-    "Datos de la semana:",
-    ...lines,
-    "",
-    "Generá exactamente 2 o 3 observaciones breves sobre el ritmo y la actividad de esta semana. Cada observación:",
-    "- text: oración corta (máx 15 palabras), en español rioplatense, dirigida al usuario",
-    '- tone: "positive" si hay algo destacable, "warning" solo si hay algo que merece atención real (no por pagos normales), "neutral" si es informativo',
-    "",
-    "Reglas: no uses tecnicismos, no culpes al usuario, no seas dramático. Pagar el alquiler, la tarjeta o los servicios NO es un problema — es parte del mes.",
-    "Respondé SOLO con el JSON solicitado.",
-  ].join("\n");
+  return lines.join("\n");
 }
 
 export async function generateWeeklyReflection(
@@ -114,7 +102,8 @@ export async function generateWeeklyReflection(
     throw new Error("El servicio de IA no está configurado.");
   }
 
-  const prompt = buildPrompt(input);
+  const dataBlock = buildWeeklyDataBlock(input);
+  const systemPrompt = buildWeeklySystemPrompt();
   const model = process.env.OPENAI_MODEL ?? DEFAULT_MODEL;
   traceAi("OPENAI_WEEKLY_FETCH_START", {
     model,
@@ -132,7 +121,10 @@ export async function generateWeeklyReflection(
       },
       body: JSON.stringify({
         model,
-        input: prompt,
+        input: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: dataBlock },
+        ],
         text: {
           format: {
             type: "json_schema",
@@ -184,7 +176,7 @@ export async function generateWeeklyReflection(
       userId: input.usage.userId,
       endpoint: input.usage.endpoint,
       model,
-      inputTokens: payload.usage?.input_tokens ?? estimateTextTokens(prompt),
+      inputTokens: payload.usage?.input_tokens ?? estimateTextTokens(systemPrompt + dataBlock),
       outputTokens: payload.usage?.output_tokens ?? estimateTextTokens(outputText),
     });
     traceAi("AI_WEEKLY_USAGE_WRITE_OK", {

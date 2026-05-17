@@ -8,6 +8,7 @@ import { estimateTextTokens, recordAiUsage } from "@/server/services/ai-usage";
 import { traceAi, traceUserId } from "@/server/services/ai-trace";
 import { toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
+import { buildMonthlySystemPrompt } from "@/lib/ai/prompt-governance";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
@@ -741,7 +742,7 @@ async function requestOpenAiAnalysis(
     throw new ApiError(503, "El servicio de IA no está configurado.");
   }
   const model = process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL;
-  const prompt = `Analizá este resumen mensual compacto. Las métricas y la comparación incluidas ya fueron calculadas por backend y son la fuente de verdad: no las recalcules ni inventes datos faltantes. Usá la comparación para detectar mejoras, deterioros, categorías que subieron o bajaron, cambios en ahorro, uso de tarjeta y movilidad. Si comparison.available es false, indicá que no hay base comparativa suficiente y no inventes tendencias. Si una métrica está en 0 por falta de ingresos o gastos, explicalo con prudencia. IMPORTANTE: el campo "score" debe ser un entero entre 0 y 100 (escala 0–100, no 0–10): 0 es situación crítica, 50 es equilibrio justo, 100 es financieramente óptimo. Devolvé solo el JSON solicitado:\n${JSON.stringify(input)}`;
+  const prompt = `Analizá este resumen mensual compacto y generá el análisis solicitado.\nRecordatorio de escala: el campo "score" es un entero 0-100 (0=crítico, 50=equilibrio, 100=óptimo).\nDatos:\n${JSON.stringify(input)}`;
 
   let response: Response;
   try {
@@ -758,8 +759,7 @@ async function requestOpenAiAnalysis(
         input: [
           {
             role: "system",
-            content:
-              "Sos un analista financiero para una app de finanzas personales en Argentina. Respondé en español rioplatense, con tono claro, prudente y accionable. No inventes datos. No des asesoramiento financiero regulado; basate solo en el resumen, las métricas, la comparación y las señales recibidas. Usá obligatoriamente las métricas calculadas por backend cuando menciones ahorro, gastos fijos, movilidad, tarjeta de crédito, proyección de cierre, gastos repetidos, transacciones de alto impacto o cambios contra el mes anterior. Si comparison.available es false, tenés prohibido inventar comparaciones contra el mes anterior. CRÍTICO: el campo repeatedSmallExpenses ya fue filtrado por backend para excluir compras esenciales — lo que figura ahí son exclusivamente posibles gastos hormiga o microcompras no esenciales. NUNCA llames 'gasto invisible' ni 'gasto hormiga' a supermercados (Coto, Carrefour, Walmart, Jumbo, Disco, etc.), farmacias, servicios del hogar, alquileres, cuotas, pagos recurrentes planificados ni ningún gasto grande único. Solo usá esos términos si repeatedSmallExpenses contiene ítems reales y mencioná que 'podría estar sumando' sin dramatizar.",
+            content: buildMonthlySystemPrompt(),
           },
           {
             role: "user",
