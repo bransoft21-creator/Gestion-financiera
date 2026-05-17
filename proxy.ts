@@ -14,6 +14,11 @@ const PRIVATE_PREFIXES = [
   "/goals",
   "/recurring",
   "/reports",
+  "/household",
+  "/profile",
+  "/settings",
+  "/notifications",
+  "/smart-import",
 ];
 
 const PUBLIC_AUTH_PATHS = [
