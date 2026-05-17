@@ -12,10 +12,17 @@ const TOOLTIP_H = 210;
 const MARGIN = 16;
 const GAP = 14;
 const SPOTLIGHT_R = 14;
-const BOTTOM_NAV_H = 80;
+// Extra 12px over the nav height to clear safe-area-inset-bottom on Android gesture nav
+const BOTTOM_NAV_H = 92;
 const POLL_INTERVAL = 80;
 const POLL_TIMEOUT = 3000;
 const EASE = [0.22, 1, 0.36, 1] as const;
+
+function getViewportHeight() {
+  // visualViewport tracks the visible area excluding browser chrome (URL bar, OSK).
+  // Falls back to innerHeight for environments that don't support it.
+  return window.visualViewport?.height ?? window.innerHeight;
+}
 
 type Rect = { x: number; y: number; w: number; h: number };
 type Placement = "above" | "below" | "left" | "right" | "center";
@@ -188,7 +195,7 @@ export function TutorialSpotlight() {
     };
   }, [state.active, state.step, state.navigating, isOverlay, currentStep, measureEl, shouldReduce]);
 
-  // Re-measure on resize
+  // Re-measure on resize (covers desktop) and on visualViewport resize (covers Android URL bar / OSK)
   useEffect(() => {
     if (!state.active || isOverlay) return;
     const fn = () => {
@@ -196,7 +203,11 @@ export function TutorialSpotlight() {
       if (el) setSpotRect(measureEl(el));
     };
     window.addEventListener("resize", fn, { passive: true });
-    return () => window.removeEventListener("resize", fn);
+    window.visualViewport?.addEventListener("resize", fn, { passive: true } as AddEventListenerOptions);
+    return () => {
+      window.removeEventListener("resize", fn);
+      window.visualViewport?.removeEventListener("resize", fn);
+    };
   }, [state.active, isOverlay, currentStep, measureEl]);
 
   if (!state.active || !currentStep) return null;
@@ -211,7 +222,7 @@ export function TutorialSpotlight() {
   }
 
   const vw = typeof window !== "undefined" ? window.innerWidth : 390;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 844;
+  const vh = typeof window !== "undefined" ? getViewportHeight() : 844;
   const tw = Math.min(TOOLTIP_W, vw - MARGIN * 2);
 
   const pl = spotRect ? getPlacement(spotRect, vw, vh) : "center";

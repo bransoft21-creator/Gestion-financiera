@@ -718,6 +718,11 @@ function ExpenseLimitSlider({
   );
 }
 
+function currentMonthKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function buildNotifications(
   summary: DashboardSummary | null,
   preferences: NotificationPreferences,
@@ -734,12 +739,13 @@ function buildNotifications(
     ];
   }
 
+  const month = currentMonthKey();
   const { metrics, alerts } = summary;
   const items: NotificationItem[] = [];
 
   if (preferences.rules.realAvailable && metrics.realAvailable < 0) {
     items.push({
-      id: `real-available-negative-${Math.round(metrics.realAvailable)}`,
+      id: `real-available-negative-${month}`,
       title: "Disponible real en negativo",
       body: `Te faltan ${formatMoney(Math.abs(metrics.realAvailable))} luego de reservas y obligaciones.`,
       tone: "danger",
@@ -754,7 +760,7 @@ function buildNotifications(
   ) {
     const percent = Math.round((metrics.expenses / metrics.income) * 100);
     items.push({
-      id: `expenses-near-income-${percent}`,
+      id: `expenses-near-income-${month}`,
       title: "Gastos cerca del límite",
       body: `Ya usaste ${percent}% de tus ingresos del mes.`,
       tone: metrics.expenses > metrics.income ? "danger" : "warning",
@@ -764,7 +770,7 @@ function buildNotifications(
 
   if (preferences.rules.budgetReserve && metrics.remainingReservedBudget > 0) {
     items.push({
-      id: `budget-reserved-${Math.round(metrics.remainingReservedBudget)}`,
+      id: `budget-reserved-${month}`,
       title: "Presupuesto reservado",
       body: `Quedan ${formatMoney(metrics.remainingReservedBudget)} reservados para categorías pendientes.`,
       tone: "info",
@@ -774,7 +780,7 @@ function buildNotifications(
 
   if (preferences.rules.obligations && metrics.upcomingObligations > 0) {
     items.push({
-      id: `upcoming-obligations-${Math.round(metrics.upcomingObligations)}`,
+      id: `upcoming-obligations-${month}`,
       title: "Obligaciones próximas",
       body: `Este mes tenés ${formatMoney(metrics.upcomingObligations)} entre recurrentes, metas y deuda.`,
       tone: "warning",
@@ -784,7 +790,7 @@ function buildNotifications(
 
   if (preferences.rules.debt && metrics.totalOutstandingDebt > 0) {
     items.push({
-      id: `active-debt-${Math.round(metrics.totalOutstandingDebt)}`,
+      id: `active-debt-${month}`,
       title: "Deuda activa registrada",
       body: `Tu deuda activa total es ${formatMoney(metrics.totalOutstandingDebt)}.`,
       tone: "warning",
@@ -793,7 +799,7 @@ function buildNotifications(
   }
 
   alerts.forEach((alert, index) => {
-    const id = `dashboard-alert-${index}-${alert}`;
+    const id = `dashboard-alert-${month}-${index}`;
     if (items.some((item) => item.body === alert || item.title === alert)) return;
     items.push({
       id,

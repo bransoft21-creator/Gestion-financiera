@@ -349,6 +349,32 @@
 .light .bg-zinc-900\/75         { background-color: hsl(var(--muted) / 0.70)  !important; }
 .light .hover\:bg-zinc-900\/75:hover { background-color: hsl(var(--muted) / 0.85) !important; }
 
+/* ── Surface elevation — semi-transparent cards in light mode ────────
+   Dark mode glass uses bg-card/* at low opacity for depth layering.
+   In light (card = white), low opacities like /35 or /45 are
+   indistinguishable from the background. Lift them to solid card.
+   ────────────────────────────────────────────────────────────────── */
+.light .bg-card\/35             { background-color: hsl(var(--card))           !important; }
+.light .bg-card\/40             { background-color: hsl(var(--card))           !important; }
+.light .bg-card\/45             { background-color: hsl(var(--card))           !important; }
+.light .bg-card\/55             { background-color: hsl(var(--card))           !important; }
+.light .bg-card\/60             { background-color: hsl(var(--card))           !important; }
+.light .bg-card\/70             { background-color: hsl(var(--card))           !important; }
+/* bg-background/* in light resolves to the page canvas; keep it solid */
+.light .bg-background\/78       { background-color: hsl(var(--background))     !important; }
+
+/* ── Semantic alert backgrounds — boost from near-invisible to readable
+   in light mode. Dark mode retains low-opacity glow; light mode needs
+   enough fill to communicate the semantic tone on a white surface.
+   ────────────────────────────────────────────────────────────────── */
+.light .bg-teal-300\/\[0\.04\]  { background-color: hsl(172 66% 50% / 0.10)  !important; }
+.light .bg-amber-300\/\[0\.04\] { background-color: hsl(38 92% 50% / 0.10)   !important; }
+.light .bg-rose-400\/\[0\.08\]  { background-color: hsl(351 92% 60% / 0.12)  !important; }
+.light .bg-sky-400\/\[0\.08\]   { background-color: hsl(199 89% 55% / 0.12)  !important; }
+.light .bg-emerald-400\/\[0\.07\] { background-color: hsl(152 60% 45% / 0.10) !important; }
+.light .bg-teal-300\/\[0\.08\]  { background-color: hsl(172 66% 50% / 0.12)  !important; }
+.light .bg-teal-950\/50         { background-color: hsl(172 66% 97%)           !important; }
+
 /* ── Focus ring — accessible offset pattern for light mode ────────
    White gap between element and ring = clearly perceivable on any bg
    ────────────────────────────────────────────────────────────────── */

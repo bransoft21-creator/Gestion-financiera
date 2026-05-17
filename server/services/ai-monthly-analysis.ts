@@ -279,14 +279,23 @@ export async function getSavedMonthlyFinancialAnalysis({
     previousTransactions: compactBundle.previousTransactions,
   });
 
+  const storedResult = existing.result as AiFinancialAnalysisResult;
+  // Detect legacy results where AI used a 0–10 scale instead of 0–100.
+  // A non-zero score ≤ 10 with real transaction data is almost certainly a scale mismatch.
+  const isLegacyScale =
+    typeof storedResult.score === "number" &&
+    storedResult.score > 0 &&
+    storedResult.score <= 10 &&
+    compactInput.metrics.hasData;
+
   return {
-    analysis: existing.result as AiFinancialAnalysisResult,
-    result: existing.result as AiFinancialAnalysisResult,
+    analysis: storedResult,
+    result: storedResult,
     metrics: compactInput.metrics,
     previousMonthMetrics: compactInput.previousMonthMetrics,
     comparison: compactInput.comparison,
     cached: true,
-    stale: existing.inputHash !== currentHash,
+    stale: existing.inputHash !== currentHash || isLegacyScale,
     month,
     generatedAt: existing.updatedAt.toISOString(),
   };
@@ -658,7 +667,7 @@ async function requestOpenAiAnalysis(
     throw new ApiError(503, "El servicio de IA no está configurado.");
   }
   const model = process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL;
-  const prompt = `Analizá este resumen mensual compacto. Las métricas y la comparación incluidas ya fueron calculadas por backend y son la fuente de verdad: no las recalcules ni inventes datos faltantes. Usá la comparación para detectar mejoras, deterioros, categorías que subieron o bajaron, cambios en ahorro, uso de tarjeta y movilidad. Si comparison.available es false, indicá que no hay base comparativa suficiente y no inventes tendencias. Si una métrica está en 0 por falta de ingresos o gastos, explicalo con prudencia. Devolvé solo el JSON solicitado:\n${JSON.stringify(input)}`;
+  const prompt = `Analizá este resumen mensual compacto. Las métricas y la comparación incluidas ya fueron calculadas por backend y son la fuente de verdad: no las recalcules ni inventes datos faltantes. Usá la comparación para detectar mejoras, deterioros, categorías que subieron o bajaron, cambios en ahorro, uso de tarjeta y movilidad. Si comparison.available es false, indicá que no hay base comparativa suficiente y no inventes tendencias. Si una métrica está en 0 por falta de ingresos o gastos, explicalo con prudencia. IMPORTANTE: el campo "score" debe ser un entero entre 0 y 100 (escala 0–100, no 0–10): 0 es situación crítica, 50 es equilibrio justo, 100 es financieramente óptimo. Devolvé solo el JSON solicitado:\n${JSON.stringify(input)}`;
 
   let response: Response;
   try {
