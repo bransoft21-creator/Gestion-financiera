@@ -59,7 +59,7 @@ export function MonthlySignals({
 
   return (
     <PremiumCard className="flex h-full flex-col">
-      <PremiumCardContent className="flex h-full flex-col space-y-3 pt-5 sm:pt-6">
+      <PremiumCardContent className="flex h-full flex-col space-y-3 pt-4 sm:pt-5">
         <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
           <Lightbulb className="h-3 w-3 shrink-0" aria-hidden="true" />
           Lo que importa hoy

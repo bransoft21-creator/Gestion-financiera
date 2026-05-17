@@ -368,7 +368,7 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
 
   return (
     <>
-      <div className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
+      <div className="grid gap-3 sm:gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
         <AppFormPanel
           isOpen={isFormOpen}
           onClose={() => setIsFormOpen(false)}
@@ -951,7 +951,7 @@ function GoalSkeletonList() {
 
 function GoalEmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="rounded-[1.75rem] border border-dashed border-border bg-muted/20 p-6 text-center">
+    <div className="rounded-[1.75rem] border border-dashed border-border bg-muted/20 p-4 sm:p-6 text-center">
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-muted/50 text-muted-foreground">
         <Target className="h-5 w-5" aria-hidden="true" />
       </div>

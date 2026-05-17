@@ -88,7 +88,7 @@ function SectionCollapseButton({
 
 function AmbientSignal({ text, celebratory = false }: { text: string; celebratory?: boolean }) {
   return (
-    <div className="mb-8 flex items-center gap-3 sm:mb-10">
+    <div className="mb-5 flex items-center gap-3 sm:mb-8">
       <span
         className={`h-px flex-1 ${celebratory ? "bg-emerald-500/[0.12]" : "bg-muted/30"}`}
         aria-hidden="true"
@@ -172,7 +172,7 @@ export function DashboardClient() {
   }
 
   const monthNav = (
-    <div className="mb-6">
+    <div className="mb-4">
       {isCurrentMonth && (
         <p className="mb-3 text-sm font-medium text-muted-foreground" suppressHydrationWarning>
           {timeContext.greeting}
@@ -225,7 +225,7 @@ export function DashboardClient() {
       <>
         {monthNav}
         <PremiumCard>
-          <PremiumCardContent className="flex h-72 flex-col items-center justify-center p-8 text-center">
+          <PremiumCardContent className="flex h-48 flex-col items-center justify-center p-6 text-center sm:h-64">
             <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />
             <h2 className="mt-4 text-lg font-semibold">No pudimos traer tu información</h2>
             <p className="mt-2 text-sm text-muted-foreground">{error}</p>
@@ -313,7 +313,7 @@ export function DashboardClient() {
         initial={shouldReduceMotion ? false : "hidden"}
         animate={shouldReduceMotion ? false : "visible"}
         transition={{ delay: 0.08 }}
-        className="mx-auto mb-8 w-full sm:mb-10"
+        className="mx-auto mb-5 w-full sm:mb-8"
       >
         <SectionCollapseButton
           title="Distribución"
@@ -345,7 +345,7 @@ export function DashboardClient() {
         initial={shouldReduceMotion ? false : "hidden"}
         animate={shouldReduceMotion ? false : "visible"}
         transition={{ delay: 0.14 }}
-        className="mx-auto mb-8 w-full sm:mb-10"
+        className="mx-auto mb-5 w-full sm:mb-8"
       >
         <SectionCollapseButton
           title="Mapa de consumo"

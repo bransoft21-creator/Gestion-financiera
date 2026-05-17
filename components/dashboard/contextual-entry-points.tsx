@@ -27,7 +27,7 @@ export function ContextualEntryPoints({ entryPoints }: { entryPoints: Contextual
   if (entryPoints.length === 0) return null;
 
   return (
-    <PremiumCard variant="quiet" className="mb-8 sm:mb-10">
+    <PremiumCard variant="quiet" className="mb-5 sm:mb-8">
       <PremiumCardHeader className="pb-3">
         <div className="flex items-center justify-between gap-3">
           <PremiumCardTitle className="text-sm">En foco</PremiumCardTitle>

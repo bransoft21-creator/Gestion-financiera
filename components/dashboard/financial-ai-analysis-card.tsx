@@ -542,7 +542,7 @@ function CopilotExperience({
       initial="hidden"
       animate="visible"
       exit={{ opacity: 0, y: 10 }}
-      className="space-y-5"
+      className="space-y-4"
     >
       <FinancialCopilotHero hero={hero} analysis={analysis} metrics={metrics} comparison={comparison} isStale={isStale} />
       <ImportantInsights insights={insights} />
@@ -573,22 +573,22 @@ function FinancialCopilotHero({
   const trendIsPositive = comparison?.available ? comparison.balanceChangeAmount >= 0 : metrics.balance >= 0;
 
   return (
-    <motion.div variants={itemMotion} className="relative overflow-hidden rounded-[24px] border border-border bg-card/60 p-5 sm:p-7">
+    <motion.div variants={itemMotion} className="relative overflow-hidden rounded-[24px] border border-border bg-card/60 p-4 sm:p-6">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(45,212,191,0.22),transparent_34%),radial-gradient(circle_at_92%_12%,rgba(248,250,252,0.11),transparent_25%)]" />
       <div className="absolute -right-20 -top-20 h-52 w-52 rounded-full border border-border bg-muted/20" />
-      <div className="relative grid gap-6 lg:grid-cols-[1fr_220px] lg:items-end">
+      <div className="relative grid gap-4 lg:grid-cols-[1fr_220px] lg:items-end">
         <div className="min-w-0">
-          <div className="mb-5 flex flex-wrap items-center gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
             <Badge className="border-border bg-muted text-muted-foreground">Tu dinero este mes</Badge>
             {isStale && <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-500">Revisar cambios</Badge>}
           </div>
-          <h2 className="max-w-2xl text-balance text-3xl font-semibold leading-[1.03] text-foreground sm:text-5xl">
+          <h2 className="max-w-2xl text-balance text-2xl font-semibold leading-[1.08] text-foreground sm:text-4xl">
             {hero.title}
           </h2>
-          <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg">
+          <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
             <SensitiveText text={hero.subtitle} />
           </p>
-          <div className="mt-6 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <SignalPill icon={trendIsPositive ? ArrowUpRight : ArrowDownRight} label={hero.trend} tone={trendIsPositive ? "emerald" : "amber"} />
             <SignalPill icon={Gauge} label={`Score ${score}/100`} tone={scoreTone} />
             <SignalPill icon={Wallet} label={`${formatPercent(metrics.savingsRate)} ahorro`} tone={metrics.savingsRate >= 0 ? "sky" : "rose"} />
@@ -639,19 +639,19 @@ function InsightCard({ insight, featured }: { insight: NarrativeInsight; feature
       transition={{ duration: 0.2 }}
       className={`min-w-0 rounded-[22px] border p-4 ${styles.card} ${styles.glow} ${featured ? "lg:col-span-2 lg:p-5" : ""}`}
     >
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${styles.icon}`}>
-          <Icon className="h-5 w-5" aria-hidden="true" />
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${styles.icon}`}>
+          <Icon className="h-4 w-4" aria-hidden="true" />
         </div>
         <Badge className={`${styles.badge} shrink-0`}>{insight.priority}</Badge>
       </div>
-      <h3 className={`text-balance text-xl font-semibold leading-tight ${styles.text}`}>
+      <h3 className={`text-balance text-lg font-semibold leading-tight ${styles.text}`}>
         <SensitiveText text={insight.title} />
       </h3>
-      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+      <p className="mt-2 text-sm leading-[1.55] text-muted-foreground">
         <SensitiveText text={insight.message} />
       </p>
-      <p className="mt-4 text-xs leading-5 text-muted-foreground">
+      <p className="mt-3 text-xs leading-5 text-muted-foreground">
         <SensitiveText text={insight.detail} />
       </p>
     </motion.article>
@@ -669,7 +669,7 @@ function InvisibleExpenses({
 
   return (
     <motion.section variants={itemMotion} className="rounded-[24px] border border-border bg-muted/40 p-4 sm:p-5">
-      <div className="mb-5 flex items-start justify-between gap-3">
+      <div className="mb-3 flex items-start justify-between gap-3">
         <SectionHeader eyebrow="Revelador" title="Gastos invisibles" icon={Eye} />
         {items.length > 0 && (
           <div className="shrink-0 text-right">

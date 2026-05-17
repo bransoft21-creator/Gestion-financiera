@@ -67,7 +67,7 @@ export function GettingStartedCard({ activation }: { activation: NextStepRecomme
   }
 
   return (
-    <PremiumCard variant="raised" className="mb-8 overflow-hidden border-border/80 bg-background/95 sm:mb-10">
+    <PremiumCard variant="raised" className="mb-5 overflow-hidden border-border/80 bg-background/95 sm:mb-8">
       <PremiumCardHeader className="pb-4">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">

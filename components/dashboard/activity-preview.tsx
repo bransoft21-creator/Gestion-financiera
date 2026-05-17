@@ -39,8 +39,8 @@ export function ActivityPreview() {
   const pendingCount = items.filter((item) => !item.readAt && !item.resolvedAt).length;
 
   return (
-    <PremiumCard className="mb-8">
-      <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
+    <PremiumCard className="mb-5">
+      <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-4 sm:px-6 sm:pt-5">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
             Actividad reciente

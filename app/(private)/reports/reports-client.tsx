@@ -145,7 +145,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
   if (error) {
     return (
       <PremiumCard variant="raised">
-        <PremiumCardContent className="flex h-72 flex-col items-center justify-center p-8 text-center">
+        <PremiumCardContent className="flex h-48 flex-col items-center justify-center p-6 text-center sm:h-64">
           <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />
           <h2 className="mt-4 text-lg font-semibold text-foreground">No se pudo cargar la memoria</h2>
           <p className="mt-2 text-sm text-muted-foreground">{error}</p>
@@ -172,7 +172,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
     : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PremiumCard variant="raised" className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_18%_0%,rgba(96,165,250,0.16),transparent_36%),radial-gradient(circle_at_82%_0%,rgba(52,211,153,0.13),transparent_34%)]" />
         <PremiumCardContent className="relative p-5 sm:p-6">
@@ -221,7 +221,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
 
       {isLoading ? (
         <PremiumCard>
-          <PremiumCardContent className="flex h-72 items-center justify-center text-sm text-muted-foreground">
+          <PremiumCardContent className="flex h-48 items-center justify-center text-sm text-muted-foreground sm:h-64">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
             Generando memoria
           </PremiumCardContent>
@@ -281,7 +281,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
               <PremiumCardDescription>Comparación mensual para identificar tendencias.</PremiumCardDescription>
             </PremiumCardHeader>
             <PremiumCardContent>
-              <div className="h-[300px] w-full">
+              <div className="h-[220px] w-full sm:h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={report.trend} barCategoryGap="30%">
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -320,7 +320,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
               <PremiumCardDescription>Porcentaje mensual: ingresos menos gastos sobre ingresos.</PremiumCardDescription>
             </PremiumCardHeader>
             <PremiumCardContent>
-              <div className="h-[240px] w-full">
+              <div className="h-[180px] w-full sm:h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={report.trend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -357,7 +357,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
 
           {/* Categories */}
           {hasCategories ? (
-            <div className="grid gap-6 xl:grid-cols-2">
+            <div className="grid gap-4 sm:gap-6 xl:grid-cols-2">
               {/* Pie chart */}
               <PremiumCard>
                 <PremiumCardHeader>
@@ -534,7 +534,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
   }));
 
   return (
-    <div className="space-y-6 border-t border-border pt-6">
+    <div className="space-y-4 border-t border-border pt-5">
       <div>
         <h2 className="text-base font-semibold text-foreground">Historial de patrimonio</h2>
         <p className="mt-0.5 text-sm leading-6 text-muted-foreground">
@@ -548,7 +548,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
           <PremiumCardDescription>Evolución del dinero disponible real (ingresos − gastos − reservas − obligaciones) al cierre de cada mes.</PremiumCardDescription>
         </PremiumCardHeader>
         <PremiumCardContent>
-          <div className="h-[260px] w-full">
+          <div className="h-[200px] w-full sm:h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>
@@ -571,14 +571,14 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
         </PremiumCardContent>
       </PremiumCard>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 xl:grid-cols-2">
         <PremiumCard>
           <PremiumCardHeader>
             <PremiumCardTitle>Ingresos vs Gastos histórico</PremiumCardTitle>
             <PremiumCardDescription>Comparación mensual acumulada desde el primer snapshot.</PremiumCardDescription>
           </PremiumCardHeader>
           <PremiumCardContent>
-            <div className="h-[220px] w-full">
+            <div className="h-[170px] w-full sm:h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} barCategoryGap="30%">
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -602,7 +602,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
             <PremiumCardDescription>Saldo pendiente de deudas activas registrado en cada snapshot.</PremiumCardDescription>
           </PremiumCardHeader>
           <PremiumCardContent>
-            <div className="h-[220px] w-full">
+            <div className="h-[170px] w-full sm:h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <defs>
@@ -678,7 +678,7 @@ function KpiCard({
   Icon: React.ElementType;
 }) {
   return (
-    <div className="v2-card rounded-2xl p-[18px]">
+    <div className="v2-card rounded-2xl p-3.5 sm:p-[18px]">
       <div className="mb-2.5 flex items-center gap-2">
         <div
           className="flex h-8 w-8 items-center justify-center rounded-2xl"

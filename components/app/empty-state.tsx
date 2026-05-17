@@ -19,14 +19,14 @@ type EmptyStateProps = {
 export function EmptyState({ icon: Icon, title, description, actions }: EmptyStateProps) {
   return (
     <Card>
-      <CardContent className="flex min-h-[300px] flex-col items-center justify-center px-8 py-10 text-center sm:min-h-[320px]">
-        <div className="flex h-14 w-14 items-center justify-center rounded-[18px] border border-border bg-muted/40 text-muted-foreground shadow-sm">
-          <Icon className="h-6 w-6" aria-hidden="true" />
+      <CardContent className="flex min-h-[220px] flex-col items-center justify-center px-6 py-8 text-center sm:min-h-[260px] sm:px-8">
+        <div className="flex h-12 w-12 items-center justify-center rounded-[16px] border border-border bg-muted/40 text-muted-foreground shadow-sm">
+          <Icon className="h-5 w-5" aria-hidden="true" />
         </div>
-        <h2 className="mt-5 text-base font-semibold leading-snug text-foreground">{title}</h2>
+        <h2 className="mt-4 text-base font-semibold leading-snug text-foreground">{title}</h2>
         <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">{description}</p>
         {actions && actions.length > 0 && (
-          <div className="mt-7 flex flex-wrap justify-center gap-2">
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
             {actions.map((action) => (
               <Link
                 key={action.href}
