@@ -11,6 +11,7 @@ import {
   Globe,
   HelpCircle,
   KeyRound,
+  LifeBuoy,
   Loader2,
   Mail,
   Monitor,
@@ -49,20 +50,44 @@ type SettingsClientProps = {
 
 const faqs = [
   {
+    q: "¿Meridian conecta con mi banco?",
+    a: "No. Meridian no se conecta con bancos ni hace scraping. Registrás tus movimientos manualmente o usás Smart Import para subir capturas de pantalla o PDFs de tus resúmenes.",
+  },
+  {
+    q: "¿Mis datos financieros son privados?",
+    a: "Sí. Tus datos son tuyos y están protegidos. No se comparten con terceros. La IA solo accede a totales y promedios agregados, nunca a información personal o datos bancarios identificables.",
+  },
+  {
     q: "¿Cómo funciona el disponible real?",
-    a: "Es tu ingreso menos los gastos registrados, el presupuesto reservado no gastado y las obligaciones próximas (recurrentes, metas, deudas). Lo que podés usar sin comprometer ningún compromiso.",
+    a: "Es tu ingreso menos los gastos registrados, el presupuesto reservado no gastado y las obligaciones próximas (recurrentes, metas, deudas). Representa lo que podés gastar sin comprometer ningún compromiso.",
   },
   {
     q: "¿Qué pasa si tengo cuentas en ARS y USD?",
-    a: "Meridian muestra activos, pasivos y patrimonio separados por moneda para evitar conversiones incorrectas. Cada moneda se ve por separado.",
+    a: "Meridian muestra activos, pasivos y patrimonio separados por moneda. No suma ARS + USD para evitar conversiones incorrectas. Podés ver tu situación en cada moneda de forma independiente.",
   },
   {
-    q: "¿Cómo funciona Smart Import?",
-    a: "Lee imágenes, PDFs o texto con movimientos bancarios y los convierte en transacciones. La IA extrae los datos y vos revisás antes de importar.",
+    q: "¿Cómo funciona el hogar compartido?",
+    a: "Podés crear un hogar e invitar a personas de tu confianza. Registran gastos compartidos y Meridian calcula automáticamente quién puso de más y cómo equilibrar el balance.",
   },
   {
-    q: "¿Mis datos están seguros?",
-    a: "Sí. Tus datos financieros son privados y nunca se comparten con terceros. La IA solo accede a totales agregados, nunca a detalles personales.",
+    q: "¿Qué es Smart Import?",
+    a: "Una función de IA que lee imágenes, PDFs o texto con movimientos bancarios y los convierte en transacciones. La IA extrae fecha, monto y descripción; vos revisás y confirmás antes de importar.",
+  },
+  {
+    q: "¿Puedo exportar mis datos?",
+    a: "Sí. Desde Datos y privacidad podés exportar todo en formato JSON (con metadata completa) o un CSV con tus movimientos para usar en planillas.",
+  },
+  {
+    q: "¿Cómo funcionan las categorías?",
+    a: "Las categorías agrupan tus transacciones para reportes y presupuesto. Podés crear las tuyas, editarlas y asignarles ícono y color. Los movimientos sin categoría no afectan el disponible, pero sí distorsionan los reportes.",
+  },
+  {
+    q: "¿Meridian reemplaza una planilla de Excel?",
+    a: "Depende. Meridian calcula el disponible real, detecta alertas y genera análisis automáticos con IA. No tiene fórmulas personalizadas ni gráficos ad-hoc, pero sí da contexto financiero instantáneo sin trabajo manual.",
+  },
+  {
+    q: "¿Qué pasa si borro mis datos?",
+    a: "Se eliminan permanentemente todos tus registros: cuentas, transacciones, presupuestos, metas, deudas y análisis IA. Tu cuenta de acceso (email y contraseña) queda intacta y podés empezar de cero. No se puede deshacer.",
   },
 ];
 
@@ -144,22 +169,21 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
 
       {/* ── Apariencia ── */}
       <Section icon={Palette} title="Apariencia">
-        {/* Tema */}
         <div className="px-5 py-4">
           <div className="mb-3 flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
               <Palette className="h-4 w-4" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Tema</p>
+              <p className="text-sm font-semibold text-foreground">Tema</p>
               <p className="text-xs text-muted-foreground">Apariencia visual de la interfaz</p>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {([
               { value: "system", label: "Sistema", icon: Monitor },
-              { value: "dark", label: "Oscuro", icon: Moon },
-              { value: "light", label: "Claro", icon: Sun },
+              { value: "dark",   label: "Oscuro",  icon: Moon },
+              { value: "light",  label: "Claro",   icon: Sun },
             ] as const).map(({ value, label, icon: Icon }) => (
               <button
                 key={value}
@@ -168,7 +192,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                 className={`flex flex-col items-center gap-2 rounded-2xl border px-3 py-3 text-xs font-medium transition-all ${
                   prefs.theme === value
                     ? "border-teal-400/30 bg-teal-400/10 text-teal-300"
-                    : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-muted-foreground"
+                    : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60"
                 }`}
               >
                 <Icon className="h-5 w-5" aria-hidden="true" />
@@ -178,21 +202,20 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
           </div>
         </div>
 
-        {/* Tamaño de texto */}
-        <div className="border-t border-border px-5 py-4">
+        <div className="border-t border-border/50 px-5 py-4">
           <div className="mb-3 flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
               <Type className="h-4 w-4" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Tamaño de texto</p>
+              <p className="text-sm font-semibold text-foreground">Tamaño de texto</p>
               <p className="text-xs text-muted-foreground">Ajustá la legibilidad del contenido</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {([
               { value: "normal", label: "Normal" },
-              { value: "large", label: "Grande" },
+              { value: "large",  label: "Grande" },
             ] as const).map(({ value, label }) => (
               <button
                 key={value}
@@ -201,7 +224,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                 className={`flex items-center justify-center rounded-2xl border px-3 py-3 text-sm font-medium transition-all ${
                   prefs.textSize === value
                     ? "border-teal-400/30 bg-teal-400/10 text-teal-300"
-                    : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-muted-foreground"
+                    : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60"
                 } ${value === "large" ? "text-base" : ""}`}
               >
                 {label}
@@ -211,17 +234,16 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
         </div>
       </Section>
 
-      {/* ── Región ── */}
-      <Section icon={Globe} title="Región">
-        {/* Moneda principal */}
+      {/* ── Región e idioma ── */}
+      <Section icon={Globe} title="Región e idioma">
         <div className="px-5 py-4">
           <div className="mb-3 flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
               <Globe className="h-4 w-4" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Moneda principal</p>
-              <p className="text-xs text-muted-foreground">Default en formularios y orden visual de monedas</p>
+              <p className="text-sm font-semibold text-foreground">Moneda principal</p>
+              <p className="text-xs text-muted-foreground">Default en formularios. Números y fechas en formato Argentina</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -233,7 +255,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                 className={`flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-all ${
                   prefs.primaryCurrency === currency
                     ? "border-teal-400/30 bg-teal-400/10 text-teal-300"
-                    : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-muted-foreground"
+                    : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60"
                 }`}
               >
                 {currency === "ARS" ? "🇦🇷" : "🇺🇸"} {currency}
@@ -241,29 +263,18 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
             ))}
           </div>
           <p className="mt-3 text-[11px] text-muted-foreground">
-            No convierte monedas ni suma ARS + USD. Solo define el default en los formularios.
+            No convierte ni suma monedas. Solo define el default en formularios.
           </p>
         </div>
 
-        {/* Formato */}
-        <SettingRow
-          icon={Globe}
-          label="Formato regional"
-          description="Números y fechas"
-          action={<span className="text-xs text-muted-foreground">Argentina</span>}
-        />
-      </Section>
-
-      {/* ── Idioma ── */}
-      <Section icon={Globe} title="Idioma">
-        <div className="px-5 py-4">
+        <div className="border-t border-border/50 px-5 py-4">
           <div className="mb-3 flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
-              <Globe className="h-4 w-4" aria-hidden="true" />
+              <Type className="h-4 w-4" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Idioma de la app</p>
-              <p className="text-xs text-muted-foreground">La preferencia se guarda para cuando llegue la traducción completa</p>
+              <p className="text-sm font-semibold text-foreground">Idioma de la app</p>
+              <p className="text-xs text-muted-foreground">Se guardará la preferencia cuando llegue la traducción completa</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -278,7 +289,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                 className={`relative flex flex-col items-center gap-1.5 rounded-2xl border px-3 py-3 text-sm font-medium transition-all ${
                   prefs.language === value
                     ? "border-teal-400/30 bg-teal-400/10 text-teal-300"
-                    : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-muted-foreground"
+                    : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60"
                 }`}
               >
                 {label}
@@ -291,6 +302,38 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
             ))}
           </div>
         </div>
+      </Section>
+
+      {/* ── Organización ── */}
+      <Section icon={FolderTree} title="Organización">
+        <SettingRow
+          icon={FolderTree}
+          label="Categorías"
+          description="Administrá y organizá tus categorías de gastos e ingresos"
+          action={
+            <Link
+              href="/categories"
+              className="flex shrink-0 items-center gap-1 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
+            >
+              Ir
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          }
+        />
+        <SettingRow
+          icon={ScanLine}
+          label="Revisar movimientos"
+          description="Detectá movimientos sin categoría y datos que afectan reportes"
+          action={
+            <Link
+              href="/settings/data-quality"
+              className="flex shrink-0 items-center gap-1 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
+            >
+              Ir
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          }
+        />
       </Section>
 
       {/* ── Datos y privacidad ── */}
@@ -311,7 +354,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
         <SettingRow
           icon={Download}
           label="Exportar datos"
-          description="JSON completo con metadata, versión de esquema, fecha, zona horaria y conteos"
+          description="JSON completo con metadata, esquema, fecha, zona horaria y conteos"
           action={
             <ActionButton
               variant="glass"
@@ -331,7 +374,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
         <SettingRow
           icon={Download}
           label="CSV de movimientos"
-          description="Archivo simple para revisar movimientos en planillas sin incluir credenciales"
+          description="Formato simple para planillas. No incluye contraseñas ni datos de otros usuarios"
           action={
             <ActionButton
               variant="glass"
@@ -350,8 +393,61 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
         />
         <div className="px-5 py-3">
           <p className="text-xs leading-5 text-muted-foreground">
-            Tus datos financieros son privados y nunca se comparten con terceros. Los exports incluyen timestamp y timezone; no incluyen contraseñas, tokens ni datos de otros usuarios.
+            Tus datos son privados y nunca se comparten con terceros. Los exports incluyen timestamp y timezone.
           </p>
+        </div>
+      </Section>
+
+      {/* ── Tutorial y soporte ── */}
+      <Section icon={LifeBuoy} title="Tutorial y soporte">
+        <SettingRow
+          icon={BookOpen}
+          label="Tutorial interactivo"
+          description="Repasá las funciones principales de Meridian paso a paso"
+          action={
+            <ActionButton variant="glass" size="sm" onClick={startTutorial}>
+              Ver tutorial
+            </ActionButton>
+          }
+        />
+        <SettingRow
+          icon={Mail}
+          label="Escribirnos"
+          description="Comentarios, sugerencias o reportar un problema"
+          action={
+            <a
+              href="mailto:bransoft21@gmail.com?subject=Meridian%20%E2%80%94%20Feedback&body=Hola%2C%20quiero%20compartir%20lo%20siguiente%3A%0A%0A"
+              className="shrink-0 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
+            >
+              Escribir
+            </a>
+          }
+        />
+      </Section>
+
+      {/* ── Preguntas frecuentes ── */}
+      <Section icon={HelpCircle} title="Preguntas frecuentes">
+        <div className="divide-y divide-border/50">
+          {faqs.map((faq, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setOpenFaq(openFaq === i ? null : i)}
+              className="w-full px-5 py-4 text-left transition hover:bg-muted/20"
+              aria-expanded={openFaq === i}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-foreground">{faq.q}</span>
+                {openFaq === i
+                  ? <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                }
+              </div>
+              {openFaq === i && (
+                <p className="mt-2.5 text-[13px] leading-[1.6] text-muted-foreground">{faq.a}</p>
+              )}
+            </button>
+          ))}
         </div>
       </Section>
 
@@ -375,7 +471,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                 <CircleSlash className="h-4 w-4" aria-hidden="true" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-muted-foreground">Borrar toda la información</p>
+                <p className="text-sm font-semibold text-foreground">Borrar toda la información</p>
                 <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
                   Elimina cuentas, transacciones, presupuestos, metas, deudas y recurrentes. Tu cuenta de acceso queda intacta.
                 </p>
@@ -393,86 +489,6 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
           </div>
         </PremiumCardContent>
       </PremiumCard>
-
-      {/* ── Ayuda ── */}
-      <Section icon={HelpCircle} title="Ayuda">
-        <SettingRow
-          icon={BookOpen}
-          label="Tutorial"
-          description="Repasá las funciones principales de Meridian"
-          action={
-            <ActionButton variant="glass" size="sm" onClick={startTutorial}>
-              Ver tutorial
-            </ActionButton>
-          }
-        />
-        <SettingRow
-          icon={Mail}
-          label="Contacto y opinión"
-          description="Envianos tu feedback o reportá un problema"
-          action={
-            <a
-              href="mailto:bransoft21@gmail.com?subject=Meridian%20feedback"
-              className="shrink-0 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
-            >
-              Escribir
-            </a>
-          }
-        />
-        <div className="divide-y divide-white/[0.04]">
-          {faqs.map((faq, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setOpenFaq(openFaq === i ? null : i)}
-              className="w-full px-5 py-4 text-left transition hover:bg-muted/20"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-medium text-muted-foreground">{faq.q}</span>
-                {openFaq === i
-                  ? <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                }
-              </div>
-              {openFaq === i && (
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">{faq.a}</p>
-              )}
-            </button>
-          ))}
-        </div>
-      </Section>
-
-      {/* ── Organización ── */}
-      <Section icon={FolderTree} title="Organización">
-        <SettingRow
-          icon={FolderTree}
-          label="Categorías"
-          description="Administrá y organizá tus categorías de gastos e ingresos"
-          action={
-            <Link
-              href="/categories"
-              className="flex shrink-0 items-center gap-1 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
-            >
-              Ir
-              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
-          }
-        />
-        <SettingRow
-          icon={ScanLine}
-          label="Revisar movimientos"
-          description="Detectá sin categoría, categorías similares y datos que afectan reportes"
-          action={
-            <Link
-              href="/settings/data-quality"
-              className="flex shrink-0 items-center gap-1 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted/70 hover:text-foreground"
-            >
-              Ir
-              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
-          }
-        />
-      </Section>
 
       {/* ── Dialog: Borrar datos ── */}
       {deleteOpen && (
@@ -555,7 +571,7 @@ function Section({
         <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{title}</h2>
       </div>
       <PremiumCard>
-        <PremiumCardContent className="divide-y divide-white/[0.06] p-0">
+        <PremiumCardContent className="divide-y divide-border/50 p-0">
           {children}
         </PremiumCardContent>
       </PremiumCard>
@@ -581,7 +597,7 @@ function SettingRow({
           <Icon className="h-4 w-4" aria-hidden="true" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <p className="text-sm font-semibold text-foreground">{label}</p>
           <p className="text-xs text-muted-foreground">{description}</p>
         </div>
       </div>
