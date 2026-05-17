@@ -18,7 +18,6 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { ActionButton } from "@/components/ui-v2/action-button";
-import { PremiumCard } from "@/components/ui-v2/premium-card";
 import { V2PageShell } from "@/components/layout/v2-page-shell";
 import { v2MotionTokens } from "@/design-system/tokens";
 import { cn } from "@/lib/utils";
@@ -204,29 +203,29 @@ function UploadZone({
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <motion.div
+    <div className="mx-auto max-w-2xl space-y-5">
+      {/* Dropzone — border y fondo vía clases CSS para respetar light/dark */}
+      <div
         data-tutorial="smart-import-dropzone"
-        animate={{
-          borderColor: isDragging ? "rgba(45,212,191,0.5)" : "rgba(255,255,255,0.08)",
-          backgroundColor: isDragging ? "rgba(45,212,191,0.04)" : "rgba(255,255,255,0.01)",
-        }}
-        transition={{ duration: 0.2 }}
         onDrop={onDrop}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
-        className="relative flex min-h-[320px] cursor-pointer flex-col items-center justify-center gap-6 rounded-3xl border-2 border-dashed p-10 text-center transition-colors duration-200 hover:bg-muted/15"
         onClick={onClickUpload}
+        role="button"
+        tabIndex={0}
+        aria-label="Subir comprobante — clic o arrastrá el archivo"
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClickUpload(); } }}
+        className={cn(
+          "relative flex min-h-[280px] cursor-pointer flex-col items-center justify-center gap-5 rounded-3xl border-2 border-dashed p-8 text-center outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          isDragging
+            ? "border-teal-400/50 bg-teal-400/[0.04]"
+            : "border-border/70 hover:border-primary/40 hover:bg-muted/20",
+        )}
       >
         {isDragging && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+          <div
             className="pointer-events-none absolute inset-0 rounded-3xl"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, rgba(45,212,191,0.08) 0%, transparent 70%)",
-            }}
+            style={{ background: "radial-gradient(ellipse at center, rgba(45,212,191,0.08) 0%, transparent 70%)" }}
           />
         )}
 
@@ -234,72 +233,74 @@ function UploadZone({
           animate={isDragging ? { scale: 1.15, rotate: -8 } : { scale: 1, rotate: 0 }}
           transition={v2MotionTokens.spring}
           className={cn(
-            "flex h-20 w-20 items-center justify-center rounded-3xl border transition-colors duration-200",
+            "flex h-16 w-16 items-center justify-center rounded-2xl border transition-colors duration-200",
             isDragging
               ? "border-teal-400/30 bg-teal-400/10 shadow-[0_0_40px_rgba(45,212,191,0.2)]"
-              : "border-border bg-muted/50",
+              : "border-primary/20 bg-primary/[0.06]",
           )}
         >
           {isDragging ? (
-            <Scan className="h-9 w-9 text-teal-300" />
+            <Scan className="h-8 w-8 text-teal-300" />
           ) : (
-            <FileScan className="h-9 w-9 text-muted-foreground" />
+            <FileScan className="h-8 w-8 text-primary/70" />
           )}
         </motion.div>
 
-        <div className="space-y-2">
-          <p className="text-lg font-semibold text-foreground">
+        <div className="space-y-1.5">
+          <p className="text-base font-semibold text-foreground">
             {isDragging ? "Soltá el archivo para analizarlo" : "Subí tu comprobante"}
           </p>
           <p className="text-sm text-muted-foreground">
             {isDragging
               ? "La IA lo va a leer y detectar los movimientos"
-              : "Arrastrá y soltá, o tocá para seleccionar"}
+              : "Arrastrá y soltá o usá el botón de abajo"}
           </p>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-2">
+        <div
+          className={cn(
+            "inline-flex items-center gap-2 rounded-full border px-5 py-2 text-sm font-semibold transition-colors duration-150",
+            isDragging
+              ? "border-teal-400/30 bg-teal-400/10 text-teal-300"
+              : "border-border bg-muted/50 text-foreground hover:bg-muted",
+          )}
+        >
+          <FileScan className="h-3.5 w-3.5" aria-hidden="true" />
+          Elegir archivo
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-1.5">
           {["JPG", "PNG", "WEBP", "PDF"].map((fmt) => (
             <span
               key={fmt}
-              className="rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-semibold text-muted-foreground"
+              className="rounded-full border border-border/50 bg-muted/30 px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground"
             >
               {fmt}
             </span>
           ))}
         </div>
-      </motion.div>
+      </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        {[
-          {
-            icon: FileImage,
-            title: "Screenshots",
-            desc: "Capturas de Mercado Pago, Visa o Mastercard",
-          },
-          {
-            icon: FileScan,
-            title: "Resúmenes",
-            desc: "PDFs de resúmenes bancarios y de tarjeta",
-          },
-          {
-            icon: Scan,
-            title: "Tickets",
-            desc: "Fotos de tickets y comprobantes físicos",
-          },
-        ].map(({ icon: Icon, title, desc }) => (
-          <PremiumCard key={title} variant="quiet" className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 shrink-0 rounded-xl border border-border bg-muted/40 p-2">
-                <Icon className="h-4 w-4 text-muted-foreground" />
-              </div>
+      {/* Tipos aceptados — solo informativos, no interactivos */}
+      <div>
+        <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+          Qué podés subir
+        </p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {[
+            { icon: FileImage, title: "Screenshots", desc: "Capturas de Mercado Pago, Visa o Mastercard" },
+            { icon: FileScan,  title: "Resúmenes",  desc: "PDFs de resúmenes bancarios y de tarjeta" },
+            { icon: Scan,      title: "Tickets",    desc: "Fotos de tickets y comprobantes físicos" },
+          ].map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="flex items-start gap-2.5 rounded-2xl border border-border/40 bg-muted/15 p-3">
+              <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
               <div>
-                <p className="text-sm font-semibold text-foreground">{title}</p>
-                <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{desc}</p>
+                <p className="text-xs font-semibold text-muted-foreground">{title}</p>
+                <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground/60">{desc}</p>
               </div>
             </div>
-          </PremiumCard>
-        ))}
+          ))}
+        </div>
       </div>
 
       {lastError && (
@@ -408,7 +409,7 @@ function ProcessingView({ isSlow, onCancel }: { isSlow: boolean; onCancel: () =>
   }, [currentStep]);
 
   return (
-    <div className="flex min-h-[520px] flex-col items-center justify-center gap-14">
+    <div className="flex min-h-[440px] flex-col items-center justify-center gap-10">
       <div className="relative">
         <div className="absolute inset-0 rounded-full bg-teal-400/20 blur-3xl" />
         <motion.div
@@ -488,7 +489,7 @@ function ProcessingView({ isSlow, onCancel }: { isSlow: boolean; onCancel: () =>
 
 function ConfirmingView({ count }: { count: number }) {
   return (
-    <div className="flex min-h-[400px] flex-col items-center justify-center gap-6">
+    <div className="flex min-h-[320px] flex-col items-center justify-center gap-6">
       <div className="relative">
         <motion.div
           animate={{ scale: [1, 1.25, 1] }}
@@ -562,7 +563,7 @@ function DoneView({
   ] as const;
 
   return (
-    <div className="flex flex-col items-center gap-10 py-6">
+    <div className="flex flex-col items-center gap-6 py-3">
       <motion.div
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}

@@ -130,28 +130,31 @@ export function TransactionList({
             <TransactionsEmptyState search={search} onNew={onNew} />
           ) : (
             <div className="space-y-5">
-              <div className="flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-muted/[0.08] px-2 py-1.5">
-                <p className="pl-2 text-[11px] font-medium text-muted-foreground">
+              <div className="flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-1.5">
+                <p className="text-[11px] font-semibold text-muted-foreground">
                   Agrupado por fecha
                 </p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 text-xs text-muted-foreground"
-                  onClick={onCollapseAll}
-                >
-                  Colapsar días
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 text-xs text-muted-foreground"
-                  onClick={onExpandAll}
-                >
-                  Ver todos
-                </Button>
+                <div className="flex items-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2.5 text-xs text-muted-foreground"
+                    onClick={onCollapseAll}
+                  >
+                    Colapsar días
+                  </Button>
+                  <span className="h-3.5 w-px bg-border/70" aria-hidden="true" />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2.5 text-xs text-muted-foreground"
+                    onClick={onExpandAll}
+                  >
+                    Ver todos
+                  </Button>
+                </div>
               </div>
               {groupedTransactions.map((group) => (
                 <TransactionGroup

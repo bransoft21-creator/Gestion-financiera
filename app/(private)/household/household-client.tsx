@@ -558,6 +558,25 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                       <div className="flex items-center justify-center py-5">
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       </div>
+                    ) : selectedHousehold.members.length < 2 ? (
+                      <div className="rounded-2xl border border-border bg-muted/15 p-5 text-center">
+                        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-muted/50 text-lg">👥</div>
+                        <p className="text-sm font-semibold text-foreground">Invitá a alguien al hogar</p>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          Los gastos compartidos funcionan cuando hay al menos dos personas. Invitá a tu pareja, compañero o familiar para empezar.
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-4 w-full"
+                          onClick={() => {
+                            const el = document.getElementById("invite-member");
+                            el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }}
+                        >
+                          Invitar integrante
+                        </Button>
+                      </div>
                     ) : (
                       <div className="rounded-2xl border border-border bg-muted/15 p-5 text-center">
                         <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-muted/50 text-lg">💸</div>
