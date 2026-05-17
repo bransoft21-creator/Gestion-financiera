@@ -28,6 +28,7 @@ import {
   YAxis,
 } from "recharts";
 import { EmptyState } from "@/components/app/empty-state";
+import { ChartErrorBoundary } from "@/components/app/chart-error-boundary";
 import {
   PremiumCard,
   PremiumCardContent,
@@ -281,6 +282,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
               <PremiumCardDescription>Comparación mensual para identificar tendencias.</PremiumCardDescription>
             </PremiumCardHeader>
             <PremiumCardContent>
+              <ChartErrorBoundary>
               <div className="h-[220px] w-full sm:h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={report.trend} barCategoryGap="30%">
@@ -310,6 +312,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+              </ChartErrorBoundary>
             </PremiumCardContent>
           </PremiumCard>
 
@@ -320,6 +323,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
               <PremiumCardDescription>Porcentaje mensual: ingresos menos gastos sobre ingresos.</PremiumCardDescription>
             </PremiumCardHeader>
             <PremiumCardContent>
+              <ChartErrorBoundary>
               <div className="h-[180px] w-full sm:h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={report.trend}>
@@ -352,6 +356,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                   </LineChart>
                 </ResponsiveContainer>
               </div>
+              </ChartErrorBoundary>
             </PremiumCardContent>
           </PremiumCard>
 
@@ -366,6 +371,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                 </PremiumCardHeader>
                 <PremiumCardContent>
                   <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+                    <ChartErrorBoundary>
                     <div className="h-[200px] w-full max-w-[200px] shrink-0">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
@@ -390,6 +396,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
+                    </ChartErrorBoundary>
                     <div className="w-full space-y-2 min-w-0">
                       {report.topCategories.map((cat) => (
                         <div key={cat.categoryId} className="flex items-center justify-between gap-2 text-sm">
@@ -548,6 +555,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
           <PremiumCardDescription>Evolución del dinero disponible real (ingresos − gastos − reservas − obligaciones) al cierre de cada mes.</PremiumCardDescription>
         </PremiumCardHeader>
         <PremiumCardContent>
+          <ChartErrorBoundary>
           <div className="h-[200px] w-full sm:h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
@@ -568,6 +576,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
               </AreaChart>
             </ResponsiveContainer>
           </div>
+          </ChartErrorBoundary>
         </PremiumCardContent>
       </PremiumCard>
 
@@ -578,6 +587,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
             <PremiumCardDescription>Comparación mensual acumulada desde el primer snapshot.</PremiumCardDescription>
           </PremiumCardHeader>
           <PremiumCardContent>
+            <ChartErrorBoundary>
             <div className="h-[170px] w-full sm:h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartData} barCategoryGap="30%">
@@ -593,6 +603,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                 </BarChart>
               </ResponsiveContainer>
             </div>
+            </ChartErrorBoundary>
           </PremiumCardContent>
         </PremiumCard>
 
@@ -602,6 +613,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
             <PremiumCardDescription>Saldo pendiente de deudas activas registrado en cada snapshot.</PremiumCardDescription>
           </PremiumCardHeader>
           <PremiumCardContent>
+            <ChartErrorBoundary>
             <div className="h-[170px] w-full sm:h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
@@ -622,6 +634,7 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+            </ChartErrorBoundary>
           </PremiumCardContent>
         </PremiumCard>
       </div>

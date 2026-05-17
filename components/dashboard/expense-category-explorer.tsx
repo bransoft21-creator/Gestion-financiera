@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { ChevronLeft, ExternalLink, ReceiptText, Sparkles } from "lucide-react";
 import { EmptyState } from "@/components/app/empty-state";
+import { ChartErrorBoundary } from "@/components/app/chart-error-boundary";
 import { SensitiveAmount } from "@/components/app/sensitive-amount";
 import {
   PremiumCard,
@@ -212,11 +213,13 @@ export function ExpenseCategoryExplorer({
             <div className="mx-auto grid w-full max-w-[940px] gap-5 xl:max-w-none xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.78fr)] xl:items-start">
               <div className="min-w-0 space-y-4">
                 <div className="rounded-[var(--v2-radius-xl)] border border-border bg-muted/20 p-4">
-                  <ExpenseCategoryChart
-                    data={expensesByCategory}
-                    activeCategoryId={selectedExpenseCategoryId ?? undefined}
-                    onSelectCategory={onSelectCategory}
-                  />
+                  <ChartErrorBoundary label="No se pudo renderizar el mapa de categorías">
+                    <ExpenseCategoryChart
+                      data={expensesByCategory}
+                      activeCategoryId={selectedExpenseCategoryId ?? undefined}
+                      onSelectCategory={onSelectCategory}
+                    />
+                  </ChartErrorBoundary>
                 </div>
 
                 {/* Mobile: swap entre lista y detalle */}

@@ -411,7 +411,7 @@ function ProcessingView({ isSlow, onCancel }: { isSlow: boolean; onCancel: () =>
   return (
     <div className="flex min-h-[440px] flex-col items-center justify-center gap-10">
       <div className="relative">
-        <div className="absolute inset-0 rounded-full bg-teal-400/20 blur-3xl" />
+        <div className="absolute inset-0 rounded-full bg-teal-400/20 blur-xl" />
         <motion.div
           animate={shouldReduceMotion ? {} : { scale: [1, 1.1, 1] }}
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
@@ -494,7 +494,7 @@ function ConfirmingView({ count }: { count: number }) {
         <motion.div
           animate={{ scale: [1, 1.25, 1] }}
           transition={{ duration: 1.4, repeat: Infinity }}
-          className="absolute inset-0 rounded-full bg-teal-400/15 blur-2xl"
+          className="absolute inset-0 rounded-full bg-teal-400/15 blur-lg"
         />
         <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-border bg-muted/40">
           <Loader2 className="h-8 w-8 animate-spin text-teal-300" />
@@ -570,7 +570,7 @@ function DoneView({
         transition={v2MotionTokens.spring}
         className="relative"
       >
-        <div className="absolute inset-0 rounded-full bg-teal-400/20 blur-3xl" />
+        <div className="absolute inset-0 rounded-full bg-teal-400/20 blur-xl" />
         <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-teal-400/30 bg-teal-400/10 shadow-[0_0_60px_rgba(45,212,191,0.25)]">
           <CheckCircle2 className="h-12 w-12 text-teal-300" />
         </div>
