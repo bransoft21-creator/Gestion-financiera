@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
+  ArrowLeftRight,
   BookOpen,
   ChevronDown,
   ChevronRight,
@@ -34,6 +35,8 @@ import {
 } from "@/components/ui-v2/premium-card";
 import { usePreferences } from "@/components/app/preferences-provider";
 import { useTutorial } from "@/components/app/tutorial";
+import { useFxRate } from "@/hooks/use-fx-rate";
+import { trackProductEvent } from "@/lib/observability/client";
 import Link from "next/link";
 
 type Preferences = {
@@ -95,12 +98,22 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
   const router = useRouter();
   const { start: startTutorial } = useTutorial();
   const { updatePreference } = usePreferences();
+  const { rate: fxRate, setRate: setFxRate, loaded: fxLoaded } = useFxRate();
+  const [fxInput, setFxInput] = useState<string>("");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [prefs, setPrefs] = useState<Preferences>(initialPrefs);
+
+  // Sync fxInput once localStorage rate is loaded
+  useEffect(() => {
+    if (!fxLoaded) return;
+    const timer = window.setTimeout(() => { setFxInput(String(fxRate)); }, 0);
+    return () => window.clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fxLoaded]);
 
   async function savePreference<K extends keyof Preferences>(key: K, value: Preferences[K]) {
     setPrefs((p) => ({ ...p, [key]: value }));
@@ -301,6 +314,46 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="border-t border-border/50 px-5 py-4">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/30 text-muted-foreground">
+              <ArrowLeftRight className="h-4 w-4" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Tipo de cambio USD → ARS</p>
+              <p className="text-xs text-muted-foreground">Estimado manual para mostrar equivalencias en el dashboard</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">1 USD =</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={fxInput}
+                onChange={(e) => setFxInput(e.target.value)}
+                onBlur={() => {
+                  const parsed = Number(fxInput);
+                  if (Number.isFinite(parsed) && parsed > 0) {
+                    setFxRate(parsed);
+                    trackProductEvent("fx_rate_updated", {
+                      fxRateBucket: parsed < 800 ? "low" : parsed < 1500 ? "mid" : "high",
+                    });
+                  } else {
+                    setFxInput(String(fxRate));
+                  }
+                }}
+                className="w-full rounded-xl border border-border bg-muted/30 py-2.5 pl-14 pr-12 text-sm font-semibold tabular-nums text-foreground outline-none focus:border-teal-400/30 focus:ring-1 focus:ring-teal-400/20"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">ARS</span>
+            </div>
+          </div>
+          <p className="mt-2.5 text-[11px] leading-4 text-muted-foreground">
+            Solo afecta las estimaciones visuales. No se usa para cálculos financieros ni conversiones reales.
+          </p>
         </div>
       </Section>
 

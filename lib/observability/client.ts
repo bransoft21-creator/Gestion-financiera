@@ -49,6 +49,19 @@ type ProductEvent =
   | "ai_analysis_succeeded"
   | "ai_analysis_failed"
   | "weekly_reflection_failed"
+  // Core financial actions
+  | "account_created"
+  | "transaction_created"
+  | "budget_created"
+  | "goal_created"
+  | "debt_created"
+  | "export_used"
+  // FX
+  | "fx_rate_updated"
+  // Tutorial
+  | "tutorial_started"
+  | "tutorial_completed"
+  | "tutorial_skipped"
   // System
   | "offline_detected"
   | "online_restored"
@@ -77,6 +90,15 @@ const ALLOWED_PROPS = new Set([
   "cached",
   "stale",
   "mobile",
+  // FX
+  "fxRateBucket",
+  // Tutorial
+  "step",
+  "totalSteps",
+  // Exports
+  "format",
+  // Financial entity types
+  "entityType",
 ]);
 
 export function setTelemetryUser(userId?: string | null) {

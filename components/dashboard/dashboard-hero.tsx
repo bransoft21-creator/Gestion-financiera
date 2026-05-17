@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { SensitiveAmount } from "@/components/app/sensitive-amount";
 import { useCountUp } from "@/hooks/use-count-up";
+import { useFxRate } from "@/hooks/use-fx-rate";
+import { fxEstimate } from "@/lib/fx";
 import {
   PremiumCard,
 } from "@/components/ui-v2/premium-card";
@@ -50,6 +52,7 @@ export function DashboardHero({
 }) {
   const animated = useCountUp(metrics.realAvailable);
   const isPositive = metrics.realAvailable >= 0;
+  const { rate: fxRate, loaded: fxLoaded } = useFxRate();
 
   return (
     <PremiumCard data-tutorial="dashboard-hero" variant="raised" className="relative mb-8 overflow-hidden p-5 sm:mb-10 sm:p-7">
@@ -153,6 +156,11 @@ export function DashboardHero({
               <p className="mt-0.5 text-[10px] text-muted-foreground">
                 {usdBalance.accountCount} cuenta{usdBalance.accountCount !== 1 ? "s" : ""} en USD
               </p>
+              {fxLoaded && (
+                <p className="mt-1.5 text-[10px] text-muted-foreground/70">
+                  ≈ <SensitiveAmount value={formatMoney(fxEstimate(usdBalance.amount, "USD", "ARS", fxRate) ?? 0)} /> estimado
+                </p>
+              )}
             </div>
           ) : null}
         </div>

@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { trackProductEvent } from "@/lib/observability/client";
 import { TUTORIAL_STEPS } from "./steps";
 
 const STORAGE_KEY = "fin-os-tutorial-v2";
@@ -82,6 +83,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     const firstStep = TUTORIAL_STEPS[0];
     const currentPathname = pathnameRef.current;
     trackEvent("tutorial_start");
+    trackProductEvent("tutorial_started", { totalSteps: TUTORIAL_STEPS.length }, "onboarding");
     if (firstStep.route && firstStep.route !== currentPathname) {
       setState({ active: true, step: 0, navigating: true });
       router.push(firstStep.route);
@@ -97,6 +99,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     if (nextStepIdx >= TUTORIAL_STEPS.length) {
       markSeen();
       trackEvent("tutorial_complete");
+      trackProductEvent("tutorial_completed", { totalSteps: TUTORIAL_STEPS.length }, "onboarding");
       setState({ active: false, step: 0, navigating: false });
       return;
     }
@@ -134,7 +137,9 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
 
   const skip = useCallback(() => {
     markSeen();
-    trackEvent("tutorial_skip", { at: stateRef.current.step });
+    const atStep = stateRef.current.step;
+    trackEvent("tutorial_skip", { at: atStep });
+    trackProductEvent("tutorial_skipped", { step: atStep, totalSteps: TUTORIAL_STEPS.length }, "onboarding");
     setState({ active: false, step: 0, navigating: false });
   }, []);
 
