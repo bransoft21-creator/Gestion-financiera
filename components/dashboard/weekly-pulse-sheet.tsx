@@ -6,6 +6,8 @@ import { X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { ContextualEducationCard } from "@/components/education/contextual-education-card";
+import { getWeeklyPulseEducation } from "@/lib/finance/contextual-education";
 import { captureClientError, trackProductEvent } from "@/lib/observability/client";
 import type { WeeklyPulseData } from "@/app/api/weekly-pulse/route";
 import type { ReflectionInsight } from "@/lib/finance/ai-financial-reflection";
@@ -186,6 +188,7 @@ export function WeeklyPulseSheet({ isOpen, onClose, pulse }: WeeklyPulseSheetPro
 
   const changeInfo =
     pulse.expensesChange !== null ? formatChangePct(pulse.expensesChange) : null;
+  const education = getWeeklyPulseEducation(pulse.signals);
 
   const content = (
     <div>
@@ -280,6 +283,8 @@ export function WeeklyPulseSheet({ isOpen, onClose, pulse }: WeeklyPulseSheetPro
               </ul>
             </div>
           )}
+
+          <ContextualEducationCard item={education} surface="weekly-pulse" compact />
 
           {/* Contexto IA (lazy — maneja 403 internamente) */}
           <AiInsightsSection />

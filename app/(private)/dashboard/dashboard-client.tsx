@@ -33,7 +33,9 @@ import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { ActivityPreview } from "@/components/dashboard/activity-preview";
 import { GettingStartedCard } from "@/components/dashboard/getting-started-card";
 import { ContextualEntryPoints } from "@/components/dashboard/contextual-entry-points";
+import { ContextualEducationCard } from "@/components/education/contextual-education-card";
 import { useSectionCollapse } from "@/hooks/use-section-collapse";
+import { getDashboardEducation } from "@/lib/finance/contextual-education";
 import { trackProductEvent } from "@/lib/observability/client";
 import {
   MONTH_NAMES,
@@ -274,6 +276,7 @@ export function DashboardClient() {
   const obligationsInsight = getObligationsInsight(metrics);
   const ambientHint = getAmbientHint(metrics, timeContext, isCurrentMonth);
   const isCelebratoryMonth = isCurrentMonth && metrics.savingsRate >= 20;
+  const dashboardEducation = getDashboardEducation(metrics);
 
   return (
     <div className="fade-in">
@@ -310,6 +313,12 @@ export function DashboardClient() {
         ]}
       />
       <FinancialHealthStrip metrics={metrics} />
+
+      <ContextualEducationCard
+        item={dashboardEducation}
+        surface="dashboard"
+        className="mb-5 sm:mb-8"
+      />
 
       {/* 4. Distribución + tendencia — colapsable */}
       <motion.section

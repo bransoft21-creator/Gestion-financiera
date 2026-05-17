@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { SensitiveAmount } from "@/components/app/sensitive-amount";
+import { ContextualEducationCard } from "@/components/education/contextual-education-card";
+import { getMonthlyCloseEducation } from "@/lib/finance/contextual-education";
 import { captureClientError, trackProductEvent } from "@/lib/observability/client";
 import type { MonthlyCloseData } from "@/app/api/monthly-close/route";
 
@@ -228,6 +230,7 @@ export function MonthlyCloseSheet({ isOpen, onClose, close }: MonthlyCloseSheetP
     close.availableVsPrev !== null ? formatAvailableChange(close.availableVsPrev) : null;
 
   const availablePositive = close.available >= 0;
+  const education = getMonthlyCloseEducation(close.signals);
 
   const content = (
     <div>
@@ -328,6 +331,8 @@ export function MonthlyCloseSheet({ isOpen, onClose, close }: MonthlyCloseSheetP
               </ul>
             </div>
           )}
+
+          <ContextualEducationCard item={education} surface="monthly-close" compact />
 
           {/* Contexto IA (lazy) */}
           <MonthlyAiSection monthKey={close.monthKey} />

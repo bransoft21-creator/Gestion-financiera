@@ -10,6 +10,7 @@ type TelemetryTag =
   | "onboarding"
   | "household"
   | "mobile"
+  | "education"
   | "analytics";
 
 type ProductEvent =
@@ -62,6 +63,12 @@ type ProductEvent =
   | "monthly_close_viewed"
   | "monthly_close_dismissed"
   | "monthly_close_notification_opened"
+  // Contextual education
+  | "education_viewed"
+  | "education_dismissed"
+  | "education_expanded"
+  | "education_saved"
+  | "education_action_clicked"
   // Notifications
   | "notification_received"
   | "notification_opened"
@@ -129,6 +136,10 @@ const ALLOWED_PROPS = new Set([
   "count",
   "type",
   "priority",
+  // Contextual education
+  "educationId",
+  "surface",
+  "category",
 ]);
 
 export function setTelemetryUser(userId?: string | null) {
