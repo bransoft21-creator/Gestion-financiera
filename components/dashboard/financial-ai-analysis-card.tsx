@@ -463,6 +463,7 @@ function CollapsedCopilotPreview({
   const score = clamp(Math.round(analysis.score), 0, 100);
   const scoreTone = getScoreTone(score);
   const scoreStyle = toneStyles[scoreTone];
+  const scoreLabel = getScoreLabel(score);
 
   return (
     <motion.button
@@ -477,7 +478,7 @@ function CollapsedCopilotPreview({
       <div className="grid grid-cols-[1fr_auto] items-start gap-3">
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            <Badge className={`${scoreStyle.badge}`}>Score {score}/100</Badge>
+            <Badge className={`${scoreStyle.badge}`}>Estabilidad: {scoreLabel}</Badge>
             {isStale && <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-500">Hay cambios nuevos</Badge>}
             <Badge className="border-border bg-muted/50 text-muted-foreground">Tocar para desplegar</Badge>
           </div>
@@ -500,16 +501,11 @@ function CollapsedCopilotPreview({
           )}
         </div>
 
-        <div className="flex flex-col items-end gap-2">
-          <div className={`relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full border ${scoreStyle.card}`}>
-            <div
-              className="absolute inset-2 rounded-full"
-              style={{
-                background: `conic-gradient(${scoreColor(score)} ${score * 3.6}deg, rgba(255,255,255,0.08) 0deg)`,
-              }}
-            />
-            <div className="absolute inset-[14px] rounded-full bg-card" />
-            <span className={`relative text-base font-semibold tabular-nums ${scoreStyle.text}`}>{score}</span>
+        <div className="flex flex-col items-end gap-2 text-right">
+          <div className={`rounded-2xl border px-3 py-2 ${scoreStyle.card}`}>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Estabilidad</p>
+            <p className={`mt-0.5 text-sm font-semibold ${scoreStyle.text}`}>{scoreLabel}</p>
+            <p className="text-[10px] tabular-nums text-muted-foreground">{score}/100</p>
           </div>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition group-hover:bg-muted">
             Abrir
@@ -570,6 +566,7 @@ function FinancialCopilotHero({
   const score = clamp(Math.round(analysis.score), 0, 100);
   const scoreTone = getScoreTone(score);
   const scoreStyle = toneStyles[scoreTone];
+  const scoreLabel = getScoreLabel(score);
   const trendIsPositive = comparison?.available ? comparison.balanceChangeAmount >= 0 : metrics.balance >= 0;
 
   return (
@@ -590,25 +587,15 @@ function FinancialCopilotHero({
           </p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             <SignalPill icon={trendIsPositive ? ArrowUpRight : ArrowDownRight} label={hero.trend} tone={trendIsPositive ? "emerald" : "amber"} />
-            <SignalPill icon={Gauge} label={`Score ${score}/100`} tone={scoreTone} />
+            <SignalPill icon={Gauge} label={`Estabilidad ${scoreLabel}`} tone={scoreTone} />
             <SignalPill icon={Wallet} label={`${formatPercent(metrics.savingsRate)} ahorro`} tone={metrics.savingsRate >= 0 ? "sky" : "rose"} />
           </div>
         </div>
 
-        <div className="h-[104px] w-[104px] shrink-0">
-          <div className={`relative h-full w-full rounded-full border ${scoreStyle.card} ${scoreStyle.glow} p-2`}>
-            <div
-              className="absolute inset-2 rounded-full"
-              style={{
-                background: `conic-gradient(${scoreColor(score)} ${score * 3.6}deg, rgba(255,255,255,0.08) 0deg)`,
-              }}
-            />
-            <div className="absolute inset-4 rounded-full bg-card/95 shadow-inner" />
-            <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
-              <p className={`text-3xl font-semibold tabular-nums ${scoreStyle.text}`}>{score}</p>
-              <p className="text-[9px] text-muted-foreground">/100</p>
-            </div>
-          </div>
+        <div className={`w-[112px] shrink-0 rounded-[20px] border p-3 text-right ${scoreStyle.card} ${scoreStyle.glow}`}>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Estabilidad</p>
+          <p className={`mt-1 text-lg font-semibold leading-tight ${scoreStyle.text}`}>{scoreLabel}</p>
+          <p className="mt-1 text-[11px] tabular-nums text-muted-foreground">{score}/100</p>
         </div>
       </div>
     </motion.div>
@@ -739,44 +726,31 @@ function InvisibleExpenseRow({
 function MonthPrediction({ metrics }: { metrics: AiFinancialAnalysisMetrics }) {
   const projectedSavings = metrics.income - metrics.projectedMonthEndExpense;
   const spendingRatio = percentage(metrics.projectedMonthEndExpense, metrics.income);
-  const bars = buildProjectionBars(metrics.dailyAverageExpense, metrics.projectedMonthEndExpense, metrics.income);
   const tone = projectedSavings >= 0 ? "emerald" : "rose";
   const styles = toneStyles[tone];
+  const estimateLabel = approximateMoney(metrics.projectedMonthEndExpense);
+  const marginLabel = approximateMoney(projectedSavings);
 
   return (
-    <motion.section variants={itemMotion} className="grid gap-2 lg:grid-cols-[0.95fr_1.05fr]">
-      <div className={`rounded-[20px] border p-4 ${styles.card}`}>
-        <SectionHeader eyebrow="Predicción" title="Si seguís así..." icon={Zap} />
-        <p className="mt-3 text-2xl font-semibold leading-tight text-foreground tabular-nums">
-          <SensitiveAmount value={formatMoney(metrics.projectedMonthEndExpense)} />
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">gasto estimado al cierre del mes.</p>
-        <div className="mt-3 grid grid-cols-2 gap-1.5">
-          <PredictionChip label="Ahorro estimado" value={formatMoney(projectedSavings)} tone={tone} />
-          <PredictionChip label="Uso de ingreso" value={formatPercent(spendingRatio)} tone={spendingRatio <= 80 ? "sky" : "amber"} />
+    <motion.section variants={itemMotion} className={`rounded-[20px] border p-4 ${styles.card}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <SectionHeader eyebrow="Estimación" title="Si el ritmo se mantiene parecido" icon={Zap} />
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            Basado en tu ritmo de gasto actual, podrías cerrar cerca de{" "}
+            <span className="font-semibold tabular-nums text-foreground">
+              <SensitiveAmount value={estimateLabel} />
+            </span>{" "}
+            en gastos este mes.
+          </p>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground/75">
+            Es una referencia contextual, no una predicción exacta. Cambia si registrás movimientos nuevos.
+          </p>
         </div>
-      </div>
 
-      <div className="rounded-[20px] border border-border bg-card/40 p-4">
-        <div className="mb-2.5 flex items-center justify-between gap-3">
-          <p className="text-sm font-semibold text-foreground">Pulso del mes</p>
-          <Badge className="border-border bg-muted/50 text-[10px] text-muted-foreground">Proyección suave</Badge>
-        </div>
-        <div className="relative flex h-24 items-end gap-1">
-          {bars.map((bar, index) => (
-            <motion.div
-              key={index}
-              initial={{ scaleY: 0, opacity: 0 }}
-              animate={{ scaleY: 1, opacity: 1 }}
-              transition={{ delay: index * 0.04, duration: 0.45, ease: easeOut }}
-              style={{ height: `${bar}%`, originY: 1 }}
-              className="flex-1 rounded-t-sm bg-gradient-to-t from-teal-500/40 to-teal-300/90 dark:from-teal-400/25 dark:to-teal-200/75"
-            />
-          ))}
-        </div>
-        <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
-          <span>Hoy</span>
-          <span>Cierre estimado</span>
+        <div className="grid shrink-0 grid-cols-2 gap-1.5 sm:w-[260px]">
+          <PredictionChip label="Margen aprox." value={marginLabel} tone={tone} />
+          <PredictionChip label="Uso de ingreso" value={formatPercent(spendingRatio)} tone={spendingRatio <= 80 ? "sky" : "amber"} />
         </div>
       </div>
     </motion.section>
@@ -1176,21 +1150,6 @@ function buildHeroNarrative(
   };
 }
 
-function buildProjectionBars(dailyAverage: number, projected: number, income: number) {
-  // Use income to compute daily budget; fall back to projected/30 if no income data
-  const dailyBudget = income > 0 ? income / 30 : Math.max(projected / 30, 1);
-  // pressureRatio > 1 means overspending relative to budget
-  const pressureRatio = dailyBudget > 0 ? dailyAverage / dailyBudget : 1;
-  // Map pressure to base height: 1.0 pressure ≈ 65%, >1 pushes toward 92%
-  const baseH = clamp(pressureRatio * 65, 22, 92);
-
-  return Array.from({ length: 14 }, (_, index) => {
-    const wave = Math.sin(index * 0.78) * 0.13;          // ±13% day-to-day variation
-    const trend = (index / 13) * 0.14;                   // slight upward trend toward close
-    return clamp(baseH * (1 + wave + trend), 18, 96);
-  });
-}
-
 function buildCategoryStories(comparison: AiFinancialAnalysisComparison) {
   if (!comparison.available) return [];
 
@@ -1248,11 +1207,11 @@ function getScoreTone(score: number): InsightTone {
   return "rose";
 }
 
-function scoreColor(score: number) {
-  if (score >= 78) return "rgba(110,231,183,0.92)";
-  if (score >= 58) return "rgba(125,211,252,0.92)";
-  if (score >= 42) return "rgba(253,230,138,0.92)";
-  return "rgba(253,164,175,0.92)";
+function getScoreLabel(score: number) {
+  if (score >= 78) return "alta";
+  if (score >= 58) return "media";
+  if (score >= 42) return "ajustada";
+  return "sensible";
 }
 
 function severityRank(severity: AiFinancialAnalysis["alerts"][number]["severity"]) {
@@ -1283,6 +1242,13 @@ function formatMoney(value: number) {
     currency: "ARS",
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+function approximateMoney(value: number) {
+  const abs = Math.abs(value);
+  const step = abs >= 100_000 ? 10_000 : abs >= 10_000 ? 1_000 : abs >= 1_000 ? 500 : 100;
+  const rounded = Math.round(value / step) * step || (value === 0 ? 0 : Math.sign(value) * step);
+  return formatMoney(rounded);
 }
 
 function formatSignedMoney(value: number) {

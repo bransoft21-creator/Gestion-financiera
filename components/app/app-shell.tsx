@@ -54,10 +54,23 @@ export function AppShell({ children, userId, userName, userEmail, awareness }: A
           <BottomNav awareness={awareness} />
           <TutorialSpotlight />
           <Toaster
+            className="meridian-toaster"
             position="top-center"
-            offset={{ top: "calc(env(safe-area-inset-top) + 80px)" }}
+            offset={{ top: "calc(env(safe-area-inset-top) + 88px)", left: 16, right: 16 }}
+            mobileOffset={{
+              top: "max(calc(env(safe-area-inset-top) + 76px), 24px)",
+              left: "max(env(safe-area-inset-left), 16px)",
+              right: "max(env(safe-area-inset-right), 16px)",
+            }}
+            visibleToasts={3}
+            gap={10}
             toastOptions={{
-              style: { background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))" },
+              className: "meridian-toast",
+              style: {
+                background: "hsl(var(--card))",
+                border: "1px solid hsl(var(--border))",
+                color: "hsl(var(--foreground))",
+              },
             }}
             richColors
           />

@@ -188,6 +188,55 @@
   animation: slide-up-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Toast viewport: explicit safe-area handling for mobile browsers. */
+[data-sonner-toaster].meridian-toaster {
+  --width: min(420px, calc(100vw - 32px));
+  z-index: 2147483647 !important;
+  pointer-events: none;
+}
+
+[data-sonner-toaster].meridian-toaster [data-sonner-toast] {
+  border-radius: 16px !important;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28) !important;
+  pointer-events: auto;
+  transform-origin: top center;
+}
+
+[data-sonner-toaster].meridian-toaster [data-sonner-toast][data-y-position="top"] {
+  --y: translateY(-18px);
+}
+
+@media (max-width: 600px) {
+  [data-sonner-toaster].meridian-toaster[data-y-position="top"] {
+    top: max(calc(env(safe-area-inset-top) + 76px), 24px) !important;
+    left: max(env(safe-area-inset-left), 16px) !important;
+    right: max(env(safe-area-inset-right), 16px) !important;
+    width: auto !important;
+    transform: none !important;
+  }
+
+  [data-sonner-toaster].meridian-toaster [data-sonner-toast] {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    padding: 14px 16px !important;
+  }
+
+  [data-sonner-toaster].meridian-toaster [data-sonner-toast][data-mounted="true"][data-y-position="top"] {
+    --y: translateY(0);
+  }
+
+}
+
+@media (max-width: 600px) and (orientation: landscape) {
+  [data-sonner-toaster].meridian-toaster[data-y-position="top"] {
+    top: max(calc(env(safe-area-inset-top) + 16px), 14px) !important;
+    left: max(env(safe-area-inset-left), 18px) !important;
+    right: max(env(safe-area-inset-right), 18px) !important;
+  }
+}
+
 /*
   .stagger-in — apply to a grid/flex parent whose children have an animate-in class.
   Each child gets a cascading delay for a natural card-reveal effect.
