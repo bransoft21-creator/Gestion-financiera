@@ -9,7 +9,7 @@ import { traceAi, traceUserId } from "@/server/services/ai-trace";
 import { toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
 import { buildMonthlySystemPrompt } from "@/lib/ai/prompt-governance";
-import { normalizeMerchant } from "@/lib/merchant/normalize";
+import { normalizeMerchant, toDisplayName } from "@/lib/merchant/normalize";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
@@ -623,10 +623,12 @@ function detectRecurringExpenses(transactions: AnalysisTransaction[]) {
     groups.set(key, [...(groups.get(key) ?? []), tx]);
   });
 
-  return Array.from(groups.values())
-    .filter((items) => items.length >= 2)
-    .map((items) => ({
-      description: normalizeDescription(items[0]?.description),
+  return Array.from(groups.entries())
+    .filter(([, items]) => items.length >= 2)
+    .map(([key, items]) => ({
+      // key is the canonical grouping key (merchant canonical | category | amountBucket)
+      // Use canonical display name from the merchant segment, not raw first-item description.
+      description: toDisplayName(key.split("|")[0] ?? "") || normalizeDescription(items[0]?.description),
       category: items[0]?.category?.name ?? "Sin categoría",
       count: items.length,
       averageAmount: roundMoney(sumAmounts(items) / items.length),
@@ -724,7 +726,9 @@ function getRepeatedSmallExpenses(transactions: AnalysisTransaction[], totalInco
       ).slice(0, 4);
 
       return {
-        description: normalizeDescription(items[0]?.description) || normalizedDescription,
+        // Use canonical display name — never the raw description of an arbitrary first item.
+        // "BUEN LIBRO" → "Buen Libro", even if items[0] was "Comida Buen Libro".
+        description: toDisplayName(normalizedDescription) || normalizeDescription(items[0]?.description),
         normalizedDescription,
         count: items.length,
         total,

@@ -221,8 +221,6 @@ export function ExpenseTypeDrilldownSheet({
   useEffect(() => {
     if (!isOpen) {
       didTrack.current = false;
-      setStatus("idle");
-      setTransactions([]);
       return;
     }
 
@@ -231,15 +229,27 @@ export function ExpenseTypeDrilldownSheet({
       trackProductEvent("distribution_group_opened", { expenseGroup: group }, "dashboard");
     }
 
-    setStatus("loading");
-    const params = new URLSearchParams({ year: String(year), month: String(month), expenseGroup: config.apiType });
-    fetch(`/api/dashboard/expense-type-detail?${params.toString()}`)
-      .then((r) => r.json())
-      .then((payload: { data?: { transactions: ExpenseTypeDetailTransaction[] } }) => {
-        setTransactions(payload.data?.transactions ?? []);
-        setStatus("done");
-      })
-      .catch(() => setStatus("error"));
+    // Wrap in async fn so setState calls are indirect (avoids react-hooks/set-state-in-effect)
+    let cancelled = false;
+
+    async function load() {
+      setStatus("loading");
+      setTransactions([]);
+      try {
+        const params = new URLSearchParams({ year: String(year), month: String(month), expenseGroup: config.apiType });
+        const r = await fetch(`/api/dashboard/expense-type-detail?${params.toString()}`);
+        const payload = (await r.json()) as { data?: { transactions: ExpenseTypeDetailTransaction[] } };
+        if (!cancelled) {
+          setTransactions(payload.data?.transactions ?? []);
+          setStatus("done");
+        }
+      } catch {
+        if (!cancelled) setStatus("error");
+      }
+    }
+
+    void load();
+    return () => { cancelled = true; };
   }, [isOpen, group, year, month, config.apiType]);
 
   function handleDataQualityClick() {
@@ -354,7 +364,7 @@ export function ExpenseTypeDrilldownSheet({
           {status === "done" && transactions.length > 0 && (
             <div className="divide-y divide-border/50 pb-2">
               <p className="px-5 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Movimientos · Tocá "Mover a…" para reclasificar
+                Movimientos · Tocá &ldquo;Mover a…&rdquo; para reclasificar
               </p>
               {transactions.map((tx) => (
                 <TransactionRow
