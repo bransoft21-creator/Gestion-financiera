@@ -32,6 +32,7 @@ export function ExpenseTypeBreakdown({
   fixedToIncomeRatio,
   year,
   month,
+  currency,
 }: {
   expensesByType: DashboardSummary["metrics"]["expensesByType"];
   total: number;
@@ -39,6 +40,7 @@ export function ExpenseTypeBreakdown({
   fixedToIncomeRatio: number;
   year: number;
   month: number;
+  currency: string;
 }) {
   const router = useRouter();
   const [openGroup, setOpenGroup] = useState<DrilldownGroup | null>(null);
@@ -110,7 +112,7 @@ export function ExpenseTypeBreakdown({
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">{row.label}</span>
                     <span className="font-semibold tabular-nums">
-                      <SensitiveAmount value={formatMoney(value)} />
+                      <SensitiveAmount value={formatMoney(value, currency)} />
                     </span>
                   </div>
                   <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary">

@@ -3,6 +3,7 @@ import { ARGENTINA_TIME_ZONE, argentinaMonthStartUtc } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import type { MonthlyReportInput } from "../schemas/reports";
 import { assertHouseholdAccess } from "./households";
+import { filterCurrency, sumByCurrency } from "@/lib/finance/currency-safe";
 
 const activeTransactionWhere = {
   deletedAt: null,
@@ -17,7 +18,11 @@ export async function getMonthlyReport(userProfileId: string, input: MonthlyRepo
   const rangeStart = monthSlots[0].start;
   const rangeEnd = monthSlots[monthSlots.length - 1].end;
 
-  const [transactions, categoryTransactions] = await Promise.all([
+  const [household, transactions, categoryTransactions] = await Promise.all([
+    prisma.household.findUniqueOrThrow({
+      where: { id: input.householdId },
+      select: { defaultCurrency: true },
+    }),
     prisma.transaction.findMany({
       where: {
         householdId: input.householdId,
@@ -25,7 +30,7 @@ export async function getMonthlyReport(userProfileId: string, input: MonthlyRepo
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
         occurredAt: { gte: rangeStart, lt: rangeEnd },
       },
-      select: { type: true, amount: true, occurredAt: true },
+      select: { type: true, currency: true, amount: true, occurredAt: true },
     }),
     prisma.transaction.findMany({
       where: {
@@ -38,12 +43,16 @@ export async function getMonthlyReport(userProfileId: string, input: MonthlyRepo
           lt: monthSlots[monthSlots.length - 1].end,
         },
       },
-      select: { amount: true, categoryId: true, category: { select: { id: true, name: true, color: true } } },
+      select: { currency: true, amount: true, categoryId: true, category: { select: { id: true, name: true, color: true } } },
     }),
   ]);
+  const currency = household.defaultCurrency;
+  const transactionTotalsByCurrency = sumByCurrency(transactions, (transaction) => transaction.currency, (transaction) => transaction.amount);
+  const scopedTransactions = filterCurrency(transactions, currency, (transaction) => transaction.currency);
+  const scopedCategoryTransactions = filterCurrency(categoryTransactions, currency, (transaction) => transaction.currency);
 
   const trend = monthSlots.map(({ label, year, month, start, end }) => {
-    const slice = transactions.filter(
+    const slice = scopedTransactions.filter(
       (t) => t.occurredAt >= start && t.occurredAt < end,
     );
 
@@ -65,7 +74,7 @@ export async function getMonthlyReport(userProfileId: string, input: MonthlyRepo
   const categoryTotals = new Map<string, { name: string; color: string | null; total: number }>();
   let totalExpenses = 0;
 
-  for (const t of categoryTransactions) {
+  for (const t of scopedCategoryTransactions) {
     if (!t.categoryId || !t.category) continue;
     const amount = toFiniteNumber(t.amount);
     totalExpenses += amount;
@@ -88,7 +97,19 @@ export async function getMonthlyReport(userProfileId: string, input: MonthlyRepo
     .sort((a, b) => b.total - a.total)
     .slice(0, 10);
 
-  return { trend, topCategories };
+  return {
+    currency,
+    currencyScope: {
+      primaryCurrency: currency,
+      totalsByCurrency: transactionTotalsByCurrency,
+      ignoredCurrencies: transactionTotalsByCurrency
+        .filter((total) => total.currency !== currency && total.count > 0)
+        .map((total) => total.currency),
+      mixedCurrencies: transactionTotalsByCurrency.filter((total) => total.count > 0).length > 1,
+    },
+    trend,
+    topCategories,
+  };
 }
 
 function buildMonthSlots(now: Date, months: number) {

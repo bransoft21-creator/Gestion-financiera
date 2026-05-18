@@ -19,6 +19,9 @@ export const runtime = "nodejs";
 export interface WeeklyPulseData {
   weekLabel: string;
   weekKey: string;
+  currency: string;
+  mixedCurrencies: boolean;
+  ignoredCurrencies: string[];
   hasData: boolean;
   overallTone: SignalSeverity;
   totalExpenses: number;
@@ -72,13 +75,17 @@ export async function GET() {
       txQuery(prevWindow.start, prevWindow.end),
     ]);
 
-    const currentMetrics = computeWeeklyMetrics(currentTxs);
-    const previousMetrics = computeWeeklyMetrics(previousTxs);
+    const currency = household.defaultCurrency;
+    const currentMetrics = computeWeeklyMetrics(currentTxs, currency);
+    const previousMetrics = computeWeeklyMetrics(previousTxs, currency);
 
     if (!currentMetrics.hasData) {
       return ok<WeeklyPulseData>({
         weekLabel,
         weekKey,
+        currency,
+        mixedCurrencies: currentMetrics.mixedCurrencies,
+        ignoredCurrencies: currentMetrics.ignoredCurrencies,
         hasData: false,
         overallTone: "neutral",
         totalExpenses: 0,
@@ -121,6 +128,9 @@ export async function GET() {
     return ok<WeeklyPulseData>({
       weekLabel,
       weekKey,
+      currency,
+      mixedCurrencies: currentMetrics.mixedCurrencies,
+      ignoredCurrencies: currentMetrics.ignoredCurrencies,
       hasData: true,
       overallTone,
       totalExpenses: currentMetrics.totalExpenses,

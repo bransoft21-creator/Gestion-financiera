@@ -16,11 +16,13 @@ function FormulaPill({
   value,
   color,
   href,
+  currency,
 }: {
   label: string;
   value: number;
   color: string;
   href: string;
+  currency: string;
 }) {
   return (
     <Link
@@ -33,7 +35,7 @@ function FormulaPill({
         className="max-w-[8rem] truncate text-[13px] font-semibold tabular-nums"
         style={{ color }}
       >
-        <SensitiveAmount value={formatMoney(value)} />
+        <SensitiveAmount value={formatMoney(value, currency)} />
       </span>
     </Link>
   );
@@ -50,6 +52,7 @@ export function DashboardHero({
   month: number;
   usdBalance?: { amount: number; accountCount: number };
 }) {
+  const currency = metrics.currency;
   const animated = useCountUp(metrics.realAvailable);
   const isPositive = metrics.realAvailable >= 0;
   const { rate: fxRate, loaded: fxLoaded } = useFxRate();
@@ -68,6 +71,9 @@ export function DashboardHero({
             <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
               {MONTH_NAMES[month - 1]} {year}
             </span>
+            <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
+              Vista {currency}
+            </span>
           </div>
           <h2 className="text-balance text-2xl font-semibold leading-tight text-foreground sm:text-4xl">
             {isPositive ? "Tu dinero respira este mes." : "Tu mes pide una corrección."}
@@ -82,17 +88,22 @@ export function DashboardHero({
               isPositive ? "text-emerald-400" : "text-rose-400"
             }`}
           >
-            <SensitiveAmount value={formatMoney(animated)} />
+            <SensitiveAmount value={formatMoney(animated, currency)} />
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <FormulaPill label="Ingresos" value={metrics.income} color="#34d399" href="/transactions?type=INCOME" />
+            <FormulaPill label="Ingresos" value={metrics.income} color="#34d399" href="/transactions?type=INCOME" currency={currency} />
             <span aria-hidden="true">−</span>
-            <FormulaPill label="Gastos" value={metrics.expenses} color="#f87171" href="/transactions?type=EXPENSE" />
+            <FormulaPill label="Gastos" value={metrics.expenses} color="#f87171" href="/transactions?type=EXPENSE" currency={currency} />
             <span aria-hidden="true">−</span>
-            <FormulaPill label="Reservado" value={metrics.remainingReservedBudget} color="#fbbf24" href="/budgets" />
+            <FormulaPill label="Reservado" value={metrics.remainingReservedBudget} color="#fbbf24" href="/budgets" currency={currency} />
             <span aria-hidden="true">−</span>
-            <FormulaPill label="Obligaciones" value={metrics.upcomingObligations} color="#60a5fa" href="/recurring" />
+            <FormulaPill label="Obligaciones" value={metrics.upcomingObligations} color="#60a5fa" href="/recurring" currency={currency} />
           </div>
+          {metrics.currencyScope.mixedCurrencies && (
+            <p className="mt-3 max-w-2xl text-xs leading-5 text-muted-foreground">
+              Hay movimientos en {metrics.currencyScope.ignoredCurrencies.join(", ")}. No se mezclan con esta vista.
+            </p>
+          )}
 
           {metrics.income > 0 && (
             <div className="mt-5 max-w-2xl border-t border-border pt-4">
@@ -144,7 +155,7 @@ export function DashboardHero({
                 metrics.projection.projectedRealAvailable >= 0 ? "text-foreground" : "text-rose-400"
               }`}
             >
-              <SensitiveAmount value={formatMoney(metrics.projection.projectedRealAvailable)} />
+              <SensitiveAmount value={formatMoney(metrics.projection.projectedRealAvailable, currency)} />
             </p>
           </div>
           {usdBalance && usdBalance.accountCount > 0 ? (

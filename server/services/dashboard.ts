@@ -9,6 +9,7 @@ import { normalizeOnboardingGoals } from "../schemas/onboarding";
 import { buildNextStepRecommendation } from "./next-step-engine";
 import { EMPTY_NAVIGATION_AWARENESS } from "@/lib/navigation-awareness";
 import { getNavigationAwareness } from "./navigation-awareness";
+import { filterCurrency, sumByCurrency } from "@/lib/finance/currency-safe";
 
 const chartColors = ["#f97316", "#ef4444", "#06b6d4", "#eab308", "#8b5cf6", "#14b8a6"];
 const activeTransactionWhere = {
@@ -60,6 +61,7 @@ export async function getDashboardSummary(
     budgetCount,
     recurringExpenseCount,
     sharedHouseholdCount,
+    household,
   ] = await Promise.all([
     prisma.transaction.findMany({
       where: {
@@ -84,7 +86,7 @@ export async function getDashboardSummary(
     }),
     prisma.budget.findMany({
       where: { householdId, year, month, deletedAt: null },
-      select: { categoryId: true, plannedAmount: true },
+      select: { categoryId: true, currency: true, plannedAmount: true },
     }),
     prisma.debt.findMany({
       where: {
@@ -103,7 +105,7 @@ export async function getDashboardSummary(
         nextDueDate: { gte: monthStart, lt: nextMonthStart },
         OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
       },
-      select: { amount: true },
+      select: { currency: true, amount: true },
     }),
     prisma.goal.findMany({
       where: {
@@ -112,7 +114,7 @@ export async function getDashboardSummary(
         deletedAt: null,
         requiredMonthlyAmount: { not: null },
       },
-      select: { requiredMonthlyAmount: true },
+      select: { currency: true, requiredMonthlyAmount: true },
     }),
     prisma.debt.findMany({
       where: {
@@ -122,7 +124,7 @@ export async function getDashboardSummary(
         deletedAt: null,
         nextDueDate: { gte: monthStart, lt: nextMonthStart },
       },
-      select: { minimumPayment: true, outstandingAmount: true },
+      select: { currency: true, minimumPayment: true, outstandingAmount: true },
     }),
     prisma.account.findMany({
       where: { householdId, deletedAt: null, isArchived: false },
@@ -158,39 +160,58 @@ export async function getDashboardSummary(
         },
       },
     }),
+    prisma.household.findUniqueOrThrow({
+      where: { id: householdId },
+      select: { defaultCurrency: true },
+    }),
   ]);
 
-  const income = sumTransactionsByType(monthTransactions, TransactionType.INCOME);
-  const expenses = sumTransactionsByType(monthTransactions, TransactionType.EXPENSE);
-  const expensesByCategory = getExpensesByCategory(monthTransactions);
-  const expenseCategoryDetails = getExpenseCategoryDetails(monthTransactions);
-  const expensesByType = getExpensesByType(monthTransactions);
-  const expensesByCategoryId = getExpenseTotalsByCategoryId(monthTransactions);
+  const primaryCurrency = household.defaultCurrency;
+  const primaryMonthTransactions = filterCurrency(monthTransactions, primaryCurrency, (transaction) => transaction.currency);
+  const primaryBudgets = filterCurrency(budgets, primaryCurrency, (budget) => budget.currency);
+  const primaryRecurringExpenses = filterCurrency(recurringExpenses, primaryCurrency, (expense) => expense.currency);
+  const primaryActiveGoals = filterCurrency(activeGoals, primaryCurrency, (goal) => goal.currency);
+  const primaryUpcomingDebts = filterCurrency(upcomingDebts, primaryCurrency, (debt) => debt.currency);
+  const primaryCurrentDebts = filterCurrency(currentDebts, primaryCurrency, (debt) => debt.currency);
+  const primaryAccounts = filterCurrency(accounts, primaryCurrency, (account) => account.currency);
+  const transactionTotalsByCurrency = sumByCurrency(
+    monthTransactions,
+    (transaction) => transaction.currency,
+    (transaction) => transaction.amount,
+  );
+
+  const income = sumTransactionsByType(primaryMonthTransactions, TransactionType.INCOME);
+  const expenses = sumTransactionsByType(primaryMonthTransactions, TransactionType.EXPENSE);
+  const expensesByCategory = getExpensesByCategory(primaryMonthTransactions);
+  const expenseCategoryDetails = getExpenseCategoryDetails(primaryMonthTransactions);
+  const expensesByType = getExpensesByType(primaryMonthTransactions);
+  const expensesByCategoryId = getExpenseTotalsByCategoryId(primaryMonthTransactions);
   const fixedToIncomeRatio = income > 0 ? Math.round((expensesByType.fixed / income) * 100) : 0;
-  const liabilitySummary = computeRealLiabilitySummary(accounts, currentDebts);
+  const liabilitySummary = computeRealLiabilitySummary(primaryAccounts, primaryCurrentDebts);
   traceFinancialSource({
     endpoint: "/api/dashboard/summary",
     householdId,
-    source: "metrics.totalOutstandingDebt <- computeRealLiabilitySummary.liabilities",
+    source: "metrics.totalOutstandingDebt <- computeRealLiabilitySummary.liabilities (primary currency only)",
     computed: {
+      currency: primaryCurrency,
       accountLiabilities: liabilitySummary.accountLiabilities,
       debtLiabilities: liabilitySummary.debtLiabilities,
       duplicatedCreditCardDebt: liabilitySummary.duplicatedCreditCardDebt,
       totalOutstandingDebt: liabilitySummary.liabilities,
     },
-    accounts: accounts.filter((account) => toFiniteNumber(account.currentBalance) < 0),
-    debts: currentDebts,
+    accounts: primaryAccounts.filter((account) => toFiniteNumber(account.currentBalance) < 0),
+    debts: primaryCurrentDebts,
   });
   const health = computeFinancialHealth({
     income,
     expenses,
-    budgets: budgets.map((budget) => ({
+    budgets: primaryBudgets.map((budget) => ({
       plannedAmount: budget.plannedAmount,
       spentAmount: expensesByCategoryId.get(budget.categoryId) ?? 0,
     })),
-    recurringExpenses,
-    goals: activeGoals,
-    debts: upcomingDebts,
+    recurringExpenses: primaryRecurringExpenses,
+    goals: primaryActiveGoals,
+    debts: primaryUpcomingDebts,
     totalOutstandingDebt: liabilitySummary.liabilities,
   });
 
@@ -247,6 +268,15 @@ export async function getDashboardSummary(
     },
     metrics: {
       ...health,
+      currency: primaryCurrency,
+      currencyScope: {
+        primaryCurrency,
+        totalsByCurrency: transactionTotalsByCurrency,
+        ignoredCurrencies: transactionTotalsByCurrency
+          .filter((total) => total.currency !== primaryCurrency && total.count > 0)
+          .map((total) => total.currency),
+        mixedCurrencies: transactionTotalsByCurrency.filter((total) => total.count > 0).length > 1,
+      },
       spendingRate: health.income > 0 ? Math.round((health.expenses / health.income) * 100) : 0,
       expensesByType,
       fixedToIncomeRatio,

@@ -25,11 +25,13 @@ function ExpenseCategoryOption({
   totalExpenses,
   isActive,
   onClick,
+  currency,
 }: {
   item: ExpenseCategoryChartItem;
   totalExpenses: number;
   isActive: boolean;
   onClick: () => void;
+  currency: string;
 }) {
   const percentage = totalExpenses > 0 ? Math.round((item.value / totalExpenses) * 100) : 0;
 
@@ -58,7 +60,7 @@ function ExpenseCategoryOption({
         </span>
         <span className="shrink-0 text-right">
           <span className="block text-sm font-semibold tabular-nums text-foreground">
-            <SensitiveAmount value={formatMoney(item.value)} />
+            <SensitiveAmount value={formatMoney(item.value, currency)} />
           </span>
           <span
             className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -82,11 +84,13 @@ function ExpenseCategoryOption({
 function ExpenseCategoryDetailPanel({
   category,
   color,
+  currency,
   elevated = false,
   onClose,
 }: {
   category: DashboardSummary["expenseCategoryDetails"][number];
   color?: string;
+  currency: string;
   elevated?: boolean;
   onClose?: () => void;
 }) {
@@ -123,7 +127,7 @@ function ExpenseCategoryDetailPanel({
           </p>
         </div>
         <p className="shrink-0 text-right text-base font-semibold tabular-nums text-foreground">
-          <SensitiveAmount value={formatMoney(category.total)} />
+          <SensitiveAmount value={formatMoney(category.total, currency)} />
         </p>
       </div>
 
@@ -163,12 +167,14 @@ export function ExpenseCategoryExplorer({
   selectedExpenseCategory,
   selectedExpenseCategoryId,
   totalExpenses,
+  currency,
   onSelectCategory,
 }: {
   expensesByCategory: ExpenseCategoryChartItem[];
   selectedExpenseCategory?: DashboardSummary["expenseCategoryDetails"][number];
   selectedExpenseCategoryId: string | null;
   totalExpenses: number;
+  currency: string;
   onSelectCategory: (categoryId: string) => void;
 }) {
   const selectedChartItem = expensesByCategory.find((item) => item.id === selectedExpenseCategoryId);
@@ -197,7 +203,7 @@ export function ExpenseCategoryExplorer({
             <div className="rounded-2xl border border-border bg-muted/40 px-3 py-2 text-right">
               <p className="text-[10px] font-semibold uppercase text-muted-foreground">Total leído</p>
               <p className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">
-                <SensitiveAmount value={formatMoney(totalExpenses)} />
+                <SensitiveAmount value={formatMoney(totalExpenses, currency)} />
               </p>
             </div>
           </div>
@@ -216,6 +222,7 @@ export function ExpenseCategoryExplorer({
                   <ChartErrorBoundary label="No se pudo renderizar el mapa de categorías">
                     <ExpenseCategoryChart
                       data={expensesByCategory}
+                      currency={currency}
                       activeCategoryId={selectedExpenseCategoryId ?? undefined}
                       onSelectCategory={onSelectCategory}
                     />
@@ -228,6 +235,7 @@ export function ExpenseCategoryExplorer({
                     <ExpenseCategoryDetailPanel
                       category={selectedExpenseCategory}
                       color={selectedChartItem?.color}
+                      currency={currency}
                       onClose={() => onSelectCategory(selectedExpenseCategoryId)}
                     />
                   ) : (
@@ -239,6 +247,7 @@ export function ExpenseCategoryExplorer({
                           totalExpenses={totalExpenses}
                           isActive={false}
                           onClick={() => onSelectCategory(item.id)}
+                          currency={currency}
                         />
                       ))}
                     </div>
@@ -254,6 +263,7 @@ export function ExpenseCategoryExplorer({
                       totalExpenses={totalExpenses}
                       isActive={selectedExpenseCategoryId === item.id}
                       onClick={() => onSelectCategory(item.id)}
+                      currency={currency}
                     />
                   ))}
                 </div>
@@ -264,6 +274,7 @@ export function ExpenseCategoryExplorer({
                   <ExpenseCategoryDetailPanel
                     category={selectedExpenseCategory}
                     color={selectedChartItem?.color}
+                    currency={currency}
                     elevated
                   />
                 ) : null}

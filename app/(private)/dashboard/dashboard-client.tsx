@@ -264,7 +264,7 @@ export function DashboardClient() {
       : null;
   const selectedExpenseCategory =
     expenseCategoryDetails.find((cat) => cat.id === selectedExpenseCategoryId) ?? undefined;
-  const usdBalance = metrics.accountBalances.find((b) => b.currency === "USD");
+  const usdBalance = metrics.accountBalances.find((b) => b.currency === "USD" && b.currency !== metrics.currency);
 
   function handleExpenseCategorySelect(categoryId: string) {
     setSelectedExpenseCategoryPreference((current) => (current === categoryId ? null : categoryId));
@@ -306,10 +306,10 @@ export function DashboardClient() {
       {/* 3. Métricas del mes */}
       <MetricStrip
         items={[
-          { label: "Ingresos", value: formatMoney(metrics.income), tone: incomeInsight.cardTone, href: "/transactions?type=INCOME" },
-          { label: "Gastos", value: formatMoney(metrics.expenses), tone: expensesInsight.cardTone, href: "/transactions?type=EXPENSE" },
-          { label: "Reservado", value: formatMoney(metrics.remainingReservedBudget), tone: reservedInsight.cardTone, href: "/budgets" },
-          { label: "Obligaciones", value: formatMoney(metrics.upcomingObligations), tone: obligationsInsight.cardTone, href: "/recurring" },
+          { label: "Ingresos", value: formatMoney(metrics.income, metrics.currency), tone: incomeInsight.cardTone, href: "/transactions?type=INCOME" },
+          { label: "Gastos", value: formatMoney(metrics.expenses, metrics.currency), tone: expensesInsight.cardTone, href: "/transactions?type=EXPENSE" },
+          { label: "Reservado", value: formatMoney(metrics.remainingReservedBudget, metrics.currency), tone: reservedInsight.cardTone, href: "/budgets" },
+          { label: "Obligaciones", value: formatMoney(metrics.upcomingObligations, metrics.currency), tone: obligationsInsight.cardTone, href: "/recurring" },
         ]}
       />
       <FinancialHealthStrip metrics={metrics} />
@@ -331,7 +331,7 @@ export function DashboardClient() {
         <SectionCollapseButton
           title="Distribución"
           summary={
-            <SensitiveText text={`${metrics.fixedToIncomeRatio}% en fijos · ${formatMoney(metrics.expenses)} gastados`} />
+            <SensitiveText text={`${metrics.fixedToIncomeRatio}% en fijos · ${formatMoney(metrics.expenses, metrics.currency)} gastados`} />
           }
           expanded={sectionDistribucion.expanded}
           onToggle={() => {
@@ -348,6 +348,7 @@ export function DashboardClient() {
               fixedToIncomeRatio={metrics.fixedToIncomeRatio}
               year={year}
               month={month}
+              currency={metrics.currency}
             />
             <MonthProjection metrics={metrics} />
           </div>
@@ -378,6 +379,7 @@ export function DashboardClient() {
               selectedExpenseCategory={selectedExpenseCategory}
               selectedExpenseCategoryId={selectedExpenseCategoryId}
               totalExpenses={metrics.expenses}
+              currency={metrics.currency}
               onSelectCategory={handleExpenseCategorySelect}
             />
             <div className="flex flex-col gap-4">
@@ -387,7 +389,7 @@ export function DashboardClient() {
                   <PremiumCard interactive className="p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Ahorro est.</p>
                     <p className="mt-2 text-lg font-bold tabular-nums text-emerald-400">
-                      <SensitiveAmount value={formatMoney(metrics.estimatedSavings)} />
+                      <SensitiveAmount value={formatMoney(metrics.estimatedSavings, metrics.currency)} />
                     </p>
                     <p className="mt-1 text-[10px] text-muted-foreground">este mes →</p>
                   </PremiumCard>
@@ -396,7 +398,7 @@ export function DashboardClient() {
                   <PremiumCard interactive className="p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Deuda total</p>
                     <p className="mt-2 text-lg font-bold tabular-nums text-muted-foreground">
-                      <SensitiveAmount value={formatMoney(metrics.totalOutstandingDebt)} />
+                      <SensitiveAmount value={formatMoney(metrics.totalOutstandingDebt, metrics.currency)} />
                     </p>
                     <p className="mt-1 text-[10px] text-muted-foreground">ver deudas →</p>
                   </PremiumCard>

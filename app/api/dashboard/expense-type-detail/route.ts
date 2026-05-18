@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
         deletedAt: null,
         status: { not: TransactionStatus.CANCELED },
         type: TransactionType.EXPENSE,
+        currency: household.defaultCurrency,
         occurredAt: { gte: start, lt: end },
         ...expenseTypeWhere,
       },

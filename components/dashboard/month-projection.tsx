@@ -76,7 +76,7 @@ export function MonthProjection({ metrics }: { metrics: DashboardSummary["metric
                 projection.projectedExpenses > metrics.income ? "text-rose-400" : "text-foreground"
               }`}
             >
-              <SensitiveAmount value={formatMoney(projection.projectedExpenses)} />
+              <SensitiveAmount value={formatMoney(projection.projectedExpenses, metrics.currency)} />
             </p>
           </div>
           <div className="rounded-2xl border border-border bg-muted/25 p-3">
@@ -88,7 +88,7 @@ export function MonthProjection({ metrics }: { metrics: DashboardSummary["metric
                 projection.projectedBalance >= 0 ? "text-emerald-400" : "text-rose-400"
               }`}
             >
-              <SensitiveAmount value={formatMoney(projection.projectedBalance)} />
+              <SensitiveAmount value={formatMoney(projection.projectedBalance, metrics.currency)} />
             </p>
           </div>
         </div>

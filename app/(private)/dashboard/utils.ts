@@ -12,7 +12,7 @@ export const MONTH_NAMES = [
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
-export function formatMoney(value: number, currency: "ARS" | "USD" = "ARS") {
+export function formatMoney(value: number, currency: "ARS" | "USD" | string = "ARS") {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency,
@@ -245,13 +245,13 @@ export function buildNarrative(metrics: DashboardSummary["metrics"]): string {
   if (metrics.income === 0 && metrics.expenses === 0) return "";
   const parts: string[] = [];
   if (metrics.income > 0) {
-    parts.push(`Vas gastando ${formatMoney(metrics.expenses)} de ${formatMoney(metrics.income)}.`);
+    parts.push(`Vas gastando ${formatMoney(metrics.expenses, metrics.currency)} de ${formatMoney(metrics.income, metrics.currency)}.`);
   }
   if (metrics.realAvailable >= 0) {
     const suffix = metrics.upcomingObligations > 0
       ? ", pero todavía faltan gastos recurrentes por vencer."
       : ".";
-    parts.push(`Te queda disponible ${formatMoney(metrics.realAvailable)}${suffix}`);
+    parts.push(`Te queda disponible ${formatMoney(metrics.realAvailable, metrics.currency)}${suffix}`);
   } else {
     parts.push("El disponible real está en negativo al contemplar las obligaciones pendientes.");
   }

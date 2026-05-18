@@ -88,11 +88,16 @@ export function ReviewView({
     }
   }, [candidates, activeFilter]);
 
-  const selectedTotal = useMemo(
+  const selectedTotals = useMemo(
     () =>
-      candidates
-        .filter((c) => c.selected)
-        .reduce((sum, c) => sum + (parseFloat(c.editAmount) || 0), 0),
+      Object.entries(
+        candidates
+          .filter((c) => c.selected)
+          .reduce<Record<string, number>>((totals, c) => {
+            totals[c.currency] = (totals[c.currency] ?? 0) + (parseFloat(c.editAmount) || 0);
+            return totals;
+          }, {}),
+      ).map(([currency, amount]) => ({ currency, amount })),
     [candidates],
   );
 
@@ -196,7 +201,7 @@ export function ReviewView({
       <div className="hidden sm:block">
         <ConfirmBar
           selectedCount={selectedCount}
-          selectedTotal={selectedTotal}
+          selectedTotals={selectedTotals}
           onConfirm={onConfirm}
           onReset={onReset}
         />
@@ -213,7 +218,7 @@ export function ReviewView({
         >
           <ConfirmBar
             selectedCount={selectedCount}
-            selectedTotal={selectedTotal}
+            selectedTotals={selectedTotals}
             onConfirm={onConfirm}
             onReset={onReset}
             compact
@@ -234,15 +239,17 @@ function NarrativeSummary({
   selectedCount: number;
 }) {
   const total = useMemo(
-    () => candidates.reduce((sum, c) => sum + (parseFloat(c.editAmount) || 0), 0),
+    () =>
+      candidates.reduce<Record<string, number>>((totals, c) => {
+        totals[c.currency] = (totals[c.currency] ?? 0) + (parseFloat(c.editAmount) || 0);
+        return totals;
+      }, {}),
     [candidates],
   );
   const highConf = candidates.filter((c) => c.confidence >= 0.85).length;
   const medConf = candidates.filter((c) => c.confidence >= 0.65 && c.confidence < 0.85).length;
   const lowConf = candidates.filter((c) => c.confidence < 0.65).length;
   const duplicates = candidates.filter((c) => c.possibleDuplicate).length;
-  const currency = metadata.currency ?? "ARS";
-
   return (
     <PremiumCard
       variant="default"
@@ -258,14 +265,22 @@ function NarrativeSummary({
             <p className="text-xs font-semibold uppercase tracking-wider text-teal-400/80">
               {sourceTypeLabel(metadata.sourceType)}
             </p>
-            <p className="text-2xl font-bold tabular-nums text-foreground">
-              {currency === "USD" ? "USD " : "$ "}
-              {Math.round(total).toLocaleString("es-AR")}
-            </p>
+            <div className="space-y-0.5">
+              {Object.entries(total).map(([itemCurrency, amount]) => (
+                <p key={itemCurrency} className="text-2xl font-bold tabular-nums text-foreground">
+                  {formatImportMoney(amount, itemCurrency)}
+                </p>
+              ))}
+            </div>
             <p className="text-sm text-muted-foreground">
               {candidates.length} movimiento{candidates.length !== 1 ? "s" : ""} detectado
               {candidates.length !== 1 ? "s" : ""}
             </p>
+            {metadata.mixedCurrencies && (
+              <p className="text-xs text-muted-foreground">
+                Totales separados por moneda real. No hay suma ARS + USD.
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5 text-right">
@@ -388,13 +403,13 @@ function QuickActionsBar({
 
 function ConfirmBar({
   selectedCount,
-  selectedTotal,
+  selectedTotals,
   onConfirm,
   onReset,
   compact = false,
 }: {
   selectedCount: number;
-  selectedTotal: number;
+  selectedTotals: Array<{ currency: string; amount: number }>;
   onConfirm: () => void;
   onReset: () => void;
   compact?: boolean;
@@ -415,7 +430,7 @@ function ConfirmBar({
           </p>
           {selectedCount > 0 && (
             <p className="text-xs text-muted-foreground">
-              $ {Math.round(selectedTotal).toLocaleString("es-AR")}
+              {formatCurrencyList(selectedTotals)}
             </p>
           )}
         </div>
@@ -435,7 +450,7 @@ function ConfirmBar({
         Importar {selectedCount} transacción{selectedCount !== 1 ? "es" : ""}
         {selectedCount > 0 && (
           <span className="ml-1 text-teal-200/70">
-            · $ {Math.round(selectedTotal).toLocaleString("es-AR")}
+            · {formatCurrencyList(selectedTotals)}
           </span>
         )}
         <ArrowRight className="h-4 w-4" />
@@ -634,4 +649,18 @@ function ConfidenceBadge({ value }: { value: number }) {
       Dudoso
     </span>
   );
+}
+
+function formatImportMoney(value: number, currency: string) {
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatCurrencyList(totals: Array<{ currency: string; amount: number }>) {
+  return totals
+    .map((total) => formatImportMoney(total.amount, total.currency))
+    .join(" · ");
 }

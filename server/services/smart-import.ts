@@ -65,6 +65,8 @@ export type SmartImportResult = {
   metadata: {
     sourceType: string;
     currency: CurrencyCode;
+    currencyTotals: Array<{ currency: CurrencyCode; count: number; amount: number }>;
+    mixedCurrencies: boolean;
     warnings: string[];
     totalDetected: number;
     mappingConfidence?: number;
@@ -1408,11 +1410,13 @@ async function normalizeResult(
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const recent = await prisma.transaction.findMany({
     where: { householdId: workspace.householdId, deletedAt: null, occurredAt: { gte: thirtyDaysAgo } },
-    select: { id: true, amount: true, description: true, occurredAt: true },
+    select: { id: true, amount: true, currency: true, description: true, occurredAt: true },
   });
 
   const sourceType = raw.source_type ?? "UNKNOWN";
   const currency = raw.currency === "USD" ? CurrencyCode.USD : CurrencyCode.ARS;
+  const currencyTotals = getImportCurrencyTotals(raw.transactions ?? []);
+  const mixedCurrencies = currencyTotals.length > 1;
 
   const candidates = (raw.transactions ?? []).map((tx, i) =>
     buildCandidate(tx, i, workspace, recent, sourceType),
@@ -1423,17 +1427,38 @@ async function normalizeResult(
     metadata: {
       sourceType,
       currency,
-      warnings: raw.warnings ?? [],
+      currencyTotals,
+      mixedCurrencies,
+      warnings: [
+        ...(raw.warnings ?? []),
+        ...(mixedCurrencies
+          ? ["Detectamos movimientos en más de una moneda. Meridian no los suma entre sí; revisá cada moneda por separado."]
+          : []),
+      ],
       totalDetected: candidates.length,
     },
   };
+}
+
+function getImportCurrencyTotals(transactions: AiTransaction[]) {
+  const totals = new Map<CurrencyCode, { currency: CurrencyCode; count: number; amount: number }>();
+
+  for (const tx of transactions) {
+    const currency = tx.currency === "USD" ? CurrencyCode.USD : CurrencyCode.ARS;
+    const current = totals.get(currency) ?? { currency, count: 0, amount: 0 };
+    current.count += 1;
+    current.amount += Math.abs(Number(tx.amount) || 0);
+    totals.set(currency, current);
+  }
+
+  return Array.from(totals.values()).sort((a, b) => a.currency.localeCompare(b.currency));
 }
 
 function buildCandidate(
   tx: AiTransaction,
   index: number,
   workspace: { accounts: WorkspaceAccount[]; categories: WorkspaceCategory[] },
-  recent: Array<{ id: string; amount: unknown; description: string | null; occurredAt: Date }>,
+  recent: Array<{ id: string; amount: unknown; currency: CurrencyCode; description: string | null; occurredAt: Date }>,
   sourceType: string,
 ): SmartImportCandidate {
   const occurredAt = /^\d{4}-\d{2}-\d{2}$/.test(tx.date) ? tx.date : null;
@@ -1455,6 +1480,7 @@ function buildCandidate(
     tx.description,
     occurredAt,
     recent,
+    currency,
   );
 
   return {
@@ -1595,7 +1621,8 @@ function detectDuplicate(
   amount: number,
   description: string,
   dateStr: string | null,
-  recent: Array<{ id: string; amount: unknown; description: string | null; occurredAt: Date }>,
+  recent: Array<{ id: string; amount: unknown; currency: CurrencyCode; description: string | null; occurredAt: Date }>,
+  currency: CurrencyCode,
 ): { possibleDuplicate: boolean; duplicateInfo: { date: string; amount: number; description: string } | null } {
   if (!dateStr) return { possibleDuplicate: false, duplicateInfo: null };
 
@@ -1603,6 +1630,7 @@ function detectDuplicate(
   const target = Math.abs(amount);
 
   for (const tx of recent) {
+    if (tx.currency !== currency) continue;
     const txAmount = Number(tx.amount);
     const txDate = tx.occurredAt.toISOString().slice(0, 10);
     const txNorm = normName(tx.description);

@@ -12,6 +12,9 @@ import { buildWeeklySystemPrompt } from "@/lib/ai/prompt-governance";
 
 export interface ReflectionInput {
   weekLabel: string;          // e.g. "5 al 11 de mayo"
+  currency: string;
+  mixedCurrencies: boolean;
+  ignoredCurrencies: string[];
   totalExpenses: number;
   totalIncome: number;
   savingsRate: number;
@@ -54,10 +57,10 @@ const REFLECTION_SCHEMA = {
   },
 } as const;
 
-function formatARS(n: number): string {
+function formatMoney(n: number, currency: string): string {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
-    currency: "ARS",
+    currency,
     maximumFractionDigits: 0,
   }).format(n);
 }
@@ -67,10 +70,14 @@ function buildWeeklyDataBlock(input: ReflectionInput): string {
   const lines: string[] = ["Datos de la semana:"];
 
   lines.push(`Semana: ${input.weekLabel}`);
-  lines.push(`Movimiento semanal: ${formatARS(input.totalExpenses)} en gastos`);
+  lines.push(`Moneda real analizada: ${input.currency}`);
+  if (input.mixedCurrencies) {
+    lines.push(`Guardrail multi-moneda: existen movimientos en ${input.ignoredCurrencies.join(", ")} y NO fueron sumados ni comparados.`);
+  }
+  lines.push(`Movimiento semanal: ${formatMoney(input.totalExpenses, input.currency)} en gastos`);
 
   if (input.totalIncome > 0) {
-    lines.push(`Ingresos registrados esta semana: ${formatARS(input.totalIncome)}`);
+    lines.push(`Ingresos registrados esta semana: ${formatMoney(input.totalIncome, input.currency)}`);
   }
 
   if (input.topCategory) {

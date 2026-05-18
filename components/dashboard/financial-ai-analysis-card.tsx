@@ -42,6 +42,13 @@ type AiFinancialAnalysis = {
 
 type AiFinancialAnalysisMetrics = {
   month: string;
+  currency: string;
+  currencyScope: {
+    primaryCurrency: string;
+    totalsByCurrency: Array<{ currency: string; amount: number; count: number }>;
+    ignoredCurrencies: string[];
+    mixedCurrencies: boolean;
+  };
   hasData: boolean;
   income: number;
   expenses: number;
@@ -542,9 +549,9 @@ function CopilotExperience({
     >
       <FinancialCopilotHero hero={hero} analysis={analysis} metrics={metrics} comparison={comparison} isStale={isStale} />
       <ImportantInsights insights={insights} />
-      <InvisibleExpenses items={invisibleExpenses} income={metrics.income} />
+      <InvisibleExpenses items={invisibleExpenses} income={metrics.income} currency={metrics.currency} />
       <MonthPrediction metrics={metrics} />
-      {comparison && <MonthComparison comparison={comparison} />}
+      {comparison && <MonthComparison comparison={comparison} currency={metrics.currency} />}
       <ActionPlan recommendations={analysis.recommendations} metrics={metrics} />
     </motion.div>
   );
@@ -578,6 +585,12 @@ function FinancialCopilotHero({
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
             <Badge className="border-border bg-muted text-muted-foreground">Tu dinero este mes</Badge>
             {isStale && <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-500">Revisar cambios</Badge>}
+            <Badge className="border-border bg-muted text-muted-foreground">Vista {metrics.currency}</Badge>
+            {metrics.currencyScope.mixedCurrencies && (
+              <Badge className="border-border bg-muted text-muted-foreground">
+                {metrics.currencyScope.ignoredCurrencies.join(", ")} separado
+              </Badge>
+            )}
           </div>
           <h2 className="max-w-2xl text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">
             {hero.title}
@@ -649,9 +662,11 @@ function InsightCard({ insight, featured }: { insight: NarrativeInsight; feature
 function InvisibleExpenses({
   items,
   income,
+  currency,
 }: {
   items: AiFinancialAnalysisMetrics["repeatedSmallExpenses"];
   income: number;
+  currency: string;
 }) {
   const total = items.reduce((sum, item) => sum + item.total, 0);
 
@@ -662,7 +677,7 @@ function InvisibleExpenses({
         {items.length > 0 && (
           <div className="shrink-0 text-right">
             <p className="text-base font-semibold tabular-nums text-foreground">
-              <SensitiveAmount value={formatMoney(total)} />
+              <SensitiveAmount value={formatMoney(total, currency)} />
             </p>
             <p className="text-[10px] text-muted-foreground">{formatPercent(percentage(total, income))} del ingreso</p>
           </div>
@@ -672,7 +687,7 @@ function InvisibleExpenses({
       {items.length > 0 ? (
         <div className="space-y-1.5">
           {items.map((item, index) => (
-            <InvisibleExpenseRow key={item.normalizedDescription} item={item} max={Math.max(total, item.total)} index={index} />
+            <InvisibleExpenseRow key={item.normalizedDescription} item={item} max={Math.max(total, item.total)} index={index} currency={currency} />
           ))}
         </div>
       ) : (
@@ -686,10 +701,12 @@ function InvisibleExpenseRow({
   item,
   max,
   index,
+  currency,
 }: {
   item: AiFinancialAnalysisMetrics["repeatedSmallExpenses"][number];
   max: number;
   index: number;
+  currency: string;
 }) {
   const width = max > 0 ? clamp((item.total / max) * 100, 12, 100) : 0;
 
@@ -704,11 +721,11 @@ function InvisibleExpenseRow({
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-foreground">{item.description || "Movimiento repetido"}</p>
           <p className="truncate text-[11px] text-muted-foreground">
-            {item.count}× · prom. <SensitiveAmount value={formatMoney(item.averageAmount)} />
+            {item.count}× · prom. <SensitiveAmount value={formatMoney(item.averageAmount, currency)} />
           </p>
         </div>
         <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-          <SensitiveAmount value={formatMoney(item.total)} />
+          <SensitiveAmount value={formatMoney(item.total, currency)} />
         </p>
       </div>
       <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted/50">
@@ -728,8 +745,8 @@ function MonthPrediction({ metrics }: { metrics: AiFinancialAnalysisMetrics }) {
   const spendingRatio = percentage(metrics.projectedMonthEndExpense, metrics.income);
   const tone = projectedSavings >= 0 ? "emerald" : "rose";
   const styles = toneStyles[tone];
-  const estimateLabel = approximateMoney(metrics.projectedMonthEndExpense);
-  const marginLabel = approximateMoney(projectedSavings);
+  const estimateLabel = approximateMoney(metrics.projectedMonthEndExpense, metrics.currency);
+  const marginLabel = approximateMoney(projectedSavings, metrics.currency);
 
   return (
     <motion.section variants={itemMotion} className={`rounded-[20px] border p-4 ${styles.card}`}>
@@ -757,8 +774,8 @@ function MonthPrediction({ metrics }: { metrics: AiFinancialAnalysisMetrics }) {
   );
 }
 
-function MonthComparison({ comparison }: { comparison: AiFinancialAnalysisComparison }) {
-  const categoryStories = buildCategoryStories(comparison);
+function MonthComparison({ comparison, currency }: { comparison: AiFinancialAnalysisComparison; currency: string }) {
+  const categoryStories = buildCategoryStories(comparison, currency);
 
   return (
     <motion.section variants={itemMotion} className="rounded-[20px] border border-border bg-muted/40 p-3.5 sm:p-4">
@@ -769,7 +786,7 @@ function MonthComparison({ comparison }: { comparison: AiFinancialAnalysisCompar
         <div className="mt-3 grid gap-2 grid-cols-2 lg:grid-cols-4">
           <ComparisonBlock
             label="Gastos"
-            value={formatSignedMoney(comparison.expenseChangeAmount)}
+            value={formatSignedMoney(comparison.expenseChangeAmount, currency)}
             detail={formatNullableChangePercent(comparison.expenseChangePercent)}
             isGood={comparison.expenseChangeAmount <= 0}
           />
@@ -781,7 +798,7 @@ function MonthComparison({ comparison }: { comparison: AiFinancialAnalysisCompar
           />
           <ComparisonBlock
             label="Movilidad"
-            value={formatSignedMoney(comparison.mobilityChangeAmount)}
+            value={formatSignedMoney(comparison.mobilityChangeAmount, currency)}
             detail={formatNullableChangePercent(comparison.mobilityChangePercent)}
             isGood={comparison.mobilityChangeAmount <= 0}
           />
@@ -1018,8 +1035,8 @@ function buildImportantInsights(
     insights.push({
       id: "mobility",
       title: `Movilidad pesa ${formatPercent(metrics.mobilityRate)} de tus ingresos.`,
-      message: `Este mes suma ${formatMoney(metrics.mobilityTotal)} entre transporte, auto o categorías asociadas.`,
-      detail: comparison?.available ? `Contra el mes anterior: ${formatSignedMoney(comparison.mobilityChangeAmount)}.` : "Es una de las señales más fáciles de optimizar cuando crece sin sentirse.",
+      message: `Este mes suma ${formatMoney(metrics.mobilityTotal, metrics.currency)} entre transporte, auto o categorías asociadas.`,
+      detail: comparison?.available ? `Contra el mes anterior: ${formatSignedMoney(comparison.mobilityChangeAmount, metrics.currency)}.` : "Es una de las señales más fáciles de optimizar cuando crece sin sentirse.",
       tone: metrics.mobilityRate >= 18 ? "amber" : "sky",
       priority: metrics.mobilityRate >= 18 ? "Alta" : "Media",
       icon: Car,
@@ -1031,7 +1048,7 @@ function buildImportantInsights(
       id: `category-${topCategory.name}`,
       title: `${topCategory.name} marca el ritmo del mes.`,
       message: `Representa ${formatPercent(topCategory.percentage)} de tus gastos actuales.`,
-      detail: `${formatMoney(topCategory.total)} en ${metrics.expensesByCategory.find((category) => category.name === topCategory.name)?.count ?? 0} movimientos.`,
+      detail: `${formatMoney(topCategory.total, metrics.currency)} en ${metrics.expensesByCategory.find((category) => category.name === topCategory.name)?.count ?? 0} movimientos.`,
       tone: topCategory.percentage >= 30 ? "amber" : "zinc",
       priority: topCategory.percentage >= 30 ? "Media" : "Suave",
       icon: CircleDollarSign,
@@ -1042,7 +1059,7 @@ function buildImportantInsights(
     insights.push({
       id: "month-change",
       title: comparison.expenseChangeAmount <= 0 ? "Gastaste menos que el mes pasado." : "El gasto subió contra el mes pasado.",
-      message: `${comparison.expenseChangeAmount <= 0 ? "Bajaste" : "Subiste"} ${formatMoney(Math.abs(comparison.expenseChangeAmount))} en gastos mensuales.`,
+      message: `${comparison.expenseChangeAmount <= 0 ? "Bajaste" : "Subiste"} ${formatMoney(Math.abs(comparison.expenseChangeAmount), metrics.currency)} en gastos mensuales.`,
       detail: `La tasa de ahorro cambió ${formatSignedPercentagePoints(comparison.savingsRateChange)}.`,
       tone: comparison.expenseChangeAmount <= 0 ? "emerald" : "amber",
       priority: Math.abs(comparison.expenseChangeAmount) > metrics.income * 0.08 ? "Alta" : "Media",
@@ -1150,7 +1167,7 @@ function buildHeroNarrative(
   };
 }
 
-function buildCategoryStories(comparison: AiFinancialAnalysisComparison) {
+function buildCategoryStories(comparison: AiFinancialAnalysisComparison, currency: string) {
   if (!comparison.available) return [];
 
   const biggestUp = comparison.categoryChanges
@@ -1164,13 +1181,13 @@ function buildCategoryStories(comparison: AiFinancialAnalysisComparison) {
     biggestDown && {
       id: `down-${biggestDown.category}`,
       title: `${biggestDown.category} bajó.`,
-      message: `Ahorraste ${formatMoney(Math.abs(biggestDown.changeAmount))} contra el mes pasado.`,
+      message: `Ahorraste ${formatMoney(Math.abs(biggestDown.changeAmount), currency)} contra el mes pasado.`,
       good: true,
     },
     biggestUp && {
       id: `up-${biggestUp.category}`,
       title: `${biggestUp.category} subió fuerte.`,
-      message: `Sumó ${formatMoney(biggestUp.changeAmount)} más que antes.`,
+      message: `Sumó ${formatMoney(biggestUp.changeAmount, currency)} más que antes.`,
       good: false,
     },
   ].filter(Boolean) as Array<{ id: string; title: string; message: string; good: boolean }>;
@@ -1185,7 +1202,7 @@ function buildFallbackRecommendations(metrics: AiFinancialAnalysisMetrics) {
     {
       title: "Recortá una fricción chica esta semana.",
       message: "Elegí un gasto invisible repetido y pausalo por siete días para medir impacto sin cambiar todo tu estilo de vida.",
-      estimatedImpact: invisibleSavings > 0 ? `Impacto posible: ${formatMoney(invisibleSavings)}.` : "Impacto posible: mejora de control.",
+      estimatedImpact: invisibleSavings > 0 ? `Impacto posible: ${formatMoney(invisibleSavings, metrics.currency)}.` : "Impacto posible: mejora de control.",
     },
     {
       title: fixedPressure ? "Revisá los gastos fijos antes de sumar variables." : "Protegé tu tasa de ahorro.",
@@ -1195,7 +1212,7 @@ function buildFallbackRecommendations(metrics: AiFinancialAnalysisMetrics) {
     {
       title: "Poné un techo de movilidad.",
       message: "Si movilidad sigue creciendo, se come margen sin parecer un gran gasto individual.",
-      estimatedImpact: mobilitySavings > 0 ? `Reduciendo 15%: ${formatMoney(mobilitySavings)}.` : "Impacto posible: menor fuga diaria.",
+      estimatedImpact: mobilitySavings > 0 ? `Reduciendo 15%: ${formatMoney(mobilitySavings, metrics.currency)}.` : "Impacto posible: menor fuga diaria.",
     },
   ];
 }
@@ -1236,24 +1253,24 @@ function formatMonthLabel(month: string) {
   return new Intl.DateTimeFormat("es-AR", { month: "long" }).format(new Date(year, monthNumber - 1, 1));
 }
 
-function formatMoney(value: number) {
+function formatMoney(value: number, currency = "ARS") {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
-    currency: "ARS",
+    currency,
     maximumFractionDigits: 0,
   }).format(value);
 }
 
-function approximateMoney(value: number) {
+function approximateMoney(value: number, currency = "ARS") {
   const abs = Math.abs(value);
   const step = abs >= 100_000 ? 10_000 : abs >= 10_000 ? 1_000 : abs >= 1_000 ? 500 : 100;
   const rounded = Math.round(value / step) * step || (value === 0 ? 0 : Math.sign(value) * step);
-  return formatMoney(rounded);
+  return formatMoney(rounded, currency);
 }
 
-function formatSignedMoney(value: number) {
+function formatSignedMoney(value: number, currency = "ARS") {
   const prefix = value > 0 ? "+" : "";
-  return `${prefix}${formatMoney(value)}`;
+  return `${prefix}${formatMoney(value, currency)}`;
 }
 
 function formatPercent(value: number) {

@@ -46,6 +46,10 @@ export async function getOrGenerateWeeklyReflection(params: {
 
   const weekKey = getISOWeekKey(now);
   const weekLabel = buildWeekLabel(currentWindow.start, currentWindow.end);
+  const household = await prisma.household.findUniqueOrThrow({
+    where: { id: householdId },
+    select: { defaultCurrency: true },
+  });
 
   const txQuery = (start: Date, end: Date) =>
     prisma.transaction.findMany({
@@ -73,8 +77,8 @@ export async function getOrGenerateWeeklyReflection(params: {
   });
 
   // Layer 1 — analytics
-  const currentMetrics = computeWeeklyMetrics(currentTxs);
-  const previousMetrics = computeWeeklyMetrics(previousTxs);
+  const currentMetrics = computeWeeklyMetrics(currentTxs, household.defaultCurrency);
+  const previousMetrics = computeWeeklyMetrics(previousTxs, household.defaultCurrency);
 
   if (!currentMetrics.hasData) {
     traceAi("AI_WEEKLY_NO_DATA", { user: traceUserId(userProfileId), weekKey });
@@ -112,6 +116,9 @@ export async function getOrGenerateWeeklyReflection(params: {
   traceAi("OPENAI_WEEKLY_REQUEST_START", { user: traceUserId(userProfileId), weekKey });
   const reflectionResult = await generateWeeklyReflection({
     weekLabel,
+    currency: currentMetrics.currency,
+    mixedCurrencies: currentMetrics.mixedCurrencies,
+    ignoredCurrencies: currentMetrics.ignoredCurrencies,
     totalExpenses: currentMetrics.totalExpenses,
     totalIncome: currentMetrics.totalIncome,
     savingsRate: currentMetrics.savingsRate,

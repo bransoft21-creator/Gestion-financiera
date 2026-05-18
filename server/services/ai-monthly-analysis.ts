@@ -10,6 +10,7 @@ import { toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
 import { buildMonthlySystemPrompt } from "@/lib/ai/prompt-governance";
 import { normalizeMerchant, toDisplayName, toGroupingKey } from "@/lib/merchant/normalize";
+import { filterCurrency, sumByCurrency } from "@/lib/finance/currency-safe";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
@@ -177,6 +178,13 @@ export type AiFinancialAnalysisResult = {
 
 export type AiFinancialAnalysisMetrics = {
   month: string;
+  currency: string;
+  currencyScope: {
+    primaryCurrency: string;
+    totalsByCurrency: Array<{ currency: string; amount: number; count: number }>;
+    ignoredCurrencies: string[];
+    mixedCurrencies: boolean;
+  };
   hasData: boolean;
   income: number;
   expenses: number;
@@ -262,6 +270,7 @@ export async function generateMonthlyFinancialAnalysis({
   const inputHash = buildInputHash({
     month,
     previousMonth: compactInput.previousMonthMetrics.month,
+    currency: compactInput.currency,
     transactions: compactBundle.currentTransactions,
     previousTransactions: compactBundle.previousTransactions,
   });
@@ -343,6 +352,7 @@ export async function getSavedMonthlyFinancialAnalysis({
   const currentHash = buildInputHash({
     month,
     previousMonth: compactInput.previousMonthMetrics.month,
+    currency: compactInput.currency,
     transactions: compactBundle.currentTransactions,
     previousTransactions: compactBundle.previousTransactions,
   });
@@ -393,7 +403,11 @@ async function buildCompactInputForMonth(householdId: string, month: string) {
     previousPeriod.monthNumber,
   );
 
-  const [currentTransactions, previousTransactions] = await Promise.all([
+  const [household, currentTransactions, previousTransactions] = await Promise.all([
+    prisma.household.findUniqueOrThrow({
+      where: { id: householdId },
+      select: { defaultCurrency: true },
+    }),
     prisma.transaction.findMany({
       where: {
         householdId,
@@ -420,6 +434,7 @@ async function buildCompactInputForMonth(householdId: string, month: string) {
 
   return {
     input: buildCompactMonthlyInput({
+      primaryCurrency: household.defaultCurrency,
       currentPeriod: { year, monthNumber, month },
       currentTransactions,
       previousPeriod,
@@ -431,26 +446,36 @@ async function buildCompactInputForMonth(householdId: string, month: string) {
 }
 
 function buildCompactMonthlyInput({
+  primaryCurrency,
   currentPeriod,
   currentTransactions,
   previousPeriod,
   previousTransactions,
 }: {
+  primaryCurrency: string;
   currentPeriod: { year: number; monthNumber: number; month: string };
   currentTransactions: AnalysisTransaction[];
   previousPeriod: { year: number; monthNumber: number; month: string };
   previousTransactions: AnalysisTransaction[];
 }) {
+  const currentCurrencyScope = buildCurrencyScope(currentTransactions, primaryCurrency);
+  const previousCurrencyScope = buildCurrencyScope(previousTransactions, primaryCurrency);
+  const scopedCurrentTransactions = filterCurrency(currentTransactions, primaryCurrency, (transaction) => transaction.currency);
+  const scopedPreviousTransactions = filterCurrency(previousTransactions, primaryCurrency, (transaction) => transaction.currency);
   const metrics = buildMonthMetrics({
     period: currentPeriod,
-    transactions: currentTransactions,
+    transactions: scopedCurrentTransactions,
+    currency: primaryCurrency,
+    currencyScope: currentCurrencyScope,
   });
   const previousMonthMetrics = buildMonthMetrics({
     period: previousPeriod,
-    transactions: previousTransactions,
+    transactions: scopedPreviousTransactions,
+    currency: primaryCurrency,
+    currencyScope: previousCurrencyScope,
   });
   const comparison = buildMonthlyComparison(metrics, previousMonthMetrics);
-  const expenseTransactions = currentTransactions.filter((tx) => tx.type === TransactionType.EXPENSE);
+  const expenseTransactions = scopedCurrentTransactions.filter((tx) => tx.type === TransactionType.EXPENSE);
   const topExpenses = [...expenseTransactions]
     .sort((a, b) => toFiniteNumber(b.amount) - toFiniteNumber(a.amount))
     .slice(0, 8)
@@ -465,8 +490,9 @@ function buildCompactMonthlyInput({
 
   return {
     month: currentPeriod.month,
-    currency: "ARS",
-    transactionCount: currentTransactions.length,
+    currency: primaryCurrency,
+    currencyScope: currentCurrencyScope,
+    transactionCount: scopedCurrentTransactions.length,
     summary: {
       totalIncome: metrics.income,
       totalExpenses: metrics.expenses,
@@ -492,12 +518,33 @@ function buildCompactMonthlyInput({
   };
 }
 
+function buildCurrencyScope(transactions: AnalysisTransaction[], primaryCurrency: string) {
+  const totalsByCurrency = sumByCurrency(
+    transactions,
+    (transaction) => transaction.currency,
+    (transaction) => transaction.amount,
+  );
+
+  return {
+    primaryCurrency,
+    totalsByCurrency,
+    ignoredCurrencies: totalsByCurrency
+      .filter((total) => total.currency !== primaryCurrency && total.count > 0)
+      .map((total) => total.currency),
+    mixedCurrencies: totalsByCurrency.filter((total) => total.count > 0).length > 1,
+  };
+}
+
 function buildMonthMetrics({
   period,
   transactions,
+  currency,
+  currencyScope,
 }: {
   period: { year: number; monthNumber: number; month: string };
   transactions: AnalysisTransaction[];
+  currency: string;
+  currencyScope: AiFinancialAnalysisMetrics["currencyScope"];
 }): AiFinancialAnalysisMetrics {
   const incomeTransactions = transactions.filter((tx) => tx.type === TransactionType.INCOME);
   const expenseTransactions = transactions.filter((tx) => tx.type === TransactionType.EXPENSE);
@@ -518,6 +565,8 @@ function buildMonthMetrics({
 
   return {
     month: period.month,
+    currency,
+    currencyScope,
     hasData: transactions.length > 0,
     income: totalIncome,
     expenses: totalExpenses,
@@ -768,7 +817,7 @@ async function requestOpenAiAnalysis(
     throw new ApiError(503, "El servicio de IA no está configurado.");
   }
   const model = process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL;
-  const prompt = `Analizá este resumen mensual compacto y generá el análisis solicitado.\nRecordatorio de escala: el campo "score" es un entero 0-100 (0=crítico, 50=equilibrio, 100=óptimo).\nDatos:\n${JSON.stringify(input)}`;
+  const prompt = `Analizá este resumen mensual compacto y generá el análisis solicitado.\nRecordatorio de escala: el campo "score" es un entero 0-100 (0=crítico, 50=equilibrio, 100=óptimo).\nGuardrail multi-moneda: el campo currency es la moneda real analizada. currencyScope.ignoredCurrencies lista monedas presentes que NO fueron sumadas. No infieras totales globales ni mezcles monedas.\nDatos:\n${JSON.stringify(input)}`;
 
   let response: Response;
   try {
@@ -934,17 +983,20 @@ function hashJson(value: unknown) {
 function buildInputHash({
   month,
   previousMonth,
+  currency,
   transactions,
   previousTransactions,
 }: {
   month: string;
   previousMonth: string;
+  currency: string;
   transactions: AnalysisTransaction[];
   previousTransactions: AnalysisTransaction[];
 }) {
   return hashJson({
     month,
     previousMonth,
+    currency,
     transactions: serializeTransactionsForHash(transactions),
     previousTransactions: serializeTransactionsForHash(previousTransactions),
   });

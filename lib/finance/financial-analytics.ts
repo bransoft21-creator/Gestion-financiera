@@ -4,6 +4,7 @@
  */
 
 import type { Prisma } from "@prisma/client";
+import { filterCurrency, sumByCurrency } from "@/lib/finance/currency-safe";
 
 export type TxForAnalysis = Prisma.TransactionGetPayload<{
   include: {
@@ -13,6 +14,10 @@ export type TxForAnalysis = Prisma.TransactionGetPayload<{
 }>;
 
 export interface WeeklyMetrics {
+  currency: string;
+  totalsByCurrency: Array<{ currency: string; amount: number; count: number }>;
+  mixedCurrencies: boolean;
+  ignoredCurrencies: string[];
   totalExpenses: number;
   totalIncome: number;
   balance: number;
@@ -64,10 +69,17 @@ export function getWeekWindow(date: Date = new Date()): { start: Date; end: Date
   return { start, end };
 }
 
-/** Computes all weekly metrics from a set of transactions (any status/type mix) */
-export function computeWeeklyMetrics(txs: TxForAnalysis[]): WeeklyMetrics {
-  const expenses = txs.filter((t) => t.type === "EXPENSE" && t.status === "CONFIRMED");
-  const income = txs.filter((t) => t.type === "INCOME" && t.status === "CONFIRMED");
+/** Computes weekly metrics scoped to one real currency. Never sums mixed currencies. */
+export function computeWeeklyMetrics(txs: TxForAnalysis[], primaryCurrency = "ARS"): WeeklyMetrics {
+  const confirmedMoneyTxs = txs.filter((t) => t.status === "CONFIRMED" && (t.type === "EXPENSE" || t.type === "INCOME"));
+  const totalsByCurrency = sumByCurrency(
+    confirmedMoneyTxs,
+    (transaction) => transaction.currency,
+    (transaction) => transaction.amount,
+  );
+  const scopedTxs = filterCurrency(confirmedMoneyTxs, primaryCurrency, (transaction) => transaction.currency);
+  const expenses = scopedTxs.filter((t) => t.type === "EXPENSE");
+  const income = scopedTxs.filter((t) => t.type === "INCOME");
 
   const totalExpenses = expenses.reduce((s, t) => s + Number(t.amount), 0);
   const totalIncome = income.reduce((s, t) => s + Number(t.amount), 0);
@@ -101,6 +113,12 @@ export function computeWeeklyMetrics(txs: TxForAnalysis[]): WeeklyMetrics {
   const creditPct = totalExpenses > 0 ? (creditTotal / totalExpenses) * 100 : 0;
 
   return {
+    currency: primaryCurrency,
+    totalsByCurrency,
+    mixedCurrencies: totalsByCurrency.filter((total) => total.count > 0).length > 1,
+    ignoredCurrencies: totalsByCurrency
+      .filter((total) => total.currency !== primaryCurrency && total.count > 0)
+      .map((total) => total.currency),
     totalExpenses,
     totalIncome,
     balance,
@@ -114,7 +132,7 @@ export function computeWeeklyMetrics(txs: TxForAnalysis[]): WeeklyMetrics {
     weekendPct,
     categoryBreakdown,
     creditPct,
-    hasData: txs.length > 0,
+    hasData: scopedTxs.length > 0,
   };
 }
 

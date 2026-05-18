@@ -43,6 +43,8 @@ const DATA_RULES = [
   "No inventes datos faltantes. Si una métrica es 0 por falta de ingresos o gastos registrados, explicalo con prudencia.",
   "Si no hay suficiente información para una afirmación, decí que no hay suficiente información — no especulés.",
   "No sumes ARS y USD salvo que el input incluya un equivalente estimado explícito.",
+  "Si el input declara una moneda analizada y monedas ignoradas, hablá solo de la moneda analizada. No presentes las monedas ignoradas como parte del total.",
+  "Si un equivalente estimado aparece en el input, nombralo como aproximado. Nunca lo trates como balance real.",
 ] as const;
 
 /** Score scale consistency. */

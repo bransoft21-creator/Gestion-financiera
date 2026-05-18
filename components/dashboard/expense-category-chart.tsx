@@ -12,11 +12,12 @@ export type ExpenseCategoryChartItem = {
 
 type ExpenseCategoryChartProps = {
   data: ExpenseCategoryChartItem[];
+  currency?: string;
   activeCategoryId?: string;
   onSelectCategory?: (categoryId: string) => void;
 };
 
-export function ExpenseCategoryChart({ data, activeCategoryId, onSelectCategory }: ExpenseCategoryChartProps) {
+export function ExpenseCategoryChart({ data, currency = "ARS", activeCategoryId, onSelectCategory }: ExpenseCategoryChartProps) {
   const activeItem = data.find((item) => item.id === activeCategoryId);
   const total = data.reduce((sum, item) => sum + item.value, 0);
   const activePercent = activeItem && total > 0 ? Math.round((activeItem.value / total) * 100) : 0;
@@ -51,7 +52,7 @@ export function ExpenseCategoryChart({ data, activeCategoryId, onSelectCategory 
             ))}
           </Pie>
           {/* Suppress tooltip when a category is selected — the center overlay already shows name + % */}
-          {!activeCategoryId && <Tooltip content={<ExpenseCategoryTooltip />} />}
+          {!activeCategoryId && <Tooltip content={<ExpenseCategoryTooltip currency={currency} />} />}
         </PieChart>
       </ResponsiveContainer>
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -68,7 +69,7 @@ export function ExpenseCategoryChart({ data, activeCategoryId, onSelectCategory 
           ) : (
             <>
               <span className="w-full truncate text-sm font-semibold tabular-nums text-foreground leading-none">
-                <SensitiveAmount value={formatMoney(total)} />
+                <SensitiveAmount value={formatMoney(total, currency)} />
               </span>
               <span className="mt-1 text-[10px] font-medium text-muted-foreground">Total</span>
             </>
@@ -82,9 +83,11 @@ export function ExpenseCategoryChart({ data, activeCategoryId, onSelectCategory 
 function ExpenseCategoryTooltip({
   active,
   payload,
+  currency,
 }: {
   active?: boolean;
   payload?: Array<{ name?: string; value?: number | string }>;
+  currency: string;
 }) {
   const item = payload?.[0];
   if (!active || !item) return null;
@@ -93,16 +96,16 @@ function ExpenseCategoryTooltip({
     <div className="rounded-xl border border-border bg-card px-3 py-2 text-xs text-foreground shadow-lg">
       <p className="font-medium text-muted-foreground">{String(item.name ?? "Categoría")}</p>
       <p className="mt-1 font-semibold tabular-nums">
-        <SensitiveAmount value={formatMoney(Number(item.value ?? 0))} />
+        <SensitiveAmount value={formatMoney(Number(item.value ?? 0), currency)} />
       </p>
     </div>
   );
 }
 
-function formatMoney(value: number) {
+function formatMoney(value: number, currency: string) {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
-    currency: "ARS",
+    currency,
     maximumFractionDigits: 0,
   }).format(value);
 }

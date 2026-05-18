@@ -65,6 +65,7 @@ function deriveOverallTone(
 export interface MonthlyCloseData {
   monthLabel: string;
   monthKey: string;
+  currency: string;
   hasData: boolean;
   overallTone: MonthlySignalSeverity;
   income: number;
@@ -90,6 +91,7 @@ export async function GET() {
 
     const monthKey = `${closeYear}-${String(closeMonth).padStart(2, "0")}`;
     const monthLabel = buildMonthLabel(closeYear, closeMonth);
+    const currency = household.defaultCurrency;
 
     // Load both snapshots in parallel
     const [closeSnap, prevSnap] = await Promise.all([
@@ -97,7 +99,7 @@ export async function GET() {
         where: {
           householdId_currency_year_month: {
             householdId: household.id,
-            currency: "ARS",
+            currency,
             year: closeYear,
             month: closeMonth,
           },
@@ -107,7 +109,7 @@ export async function GET() {
         where: {
           householdId_currency_year_month: {
             householdId: household.id,
-            currency: "ARS",
+            currency,
             year: prevYear,
             month: prevMonth,
           },
@@ -119,6 +121,7 @@ export async function GET() {
       return ok<MonthlyCloseData>({
         monthLabel,
         monthKey,
+        currency,
         hasData: false,
         overallTone: "neutral",
         income: 0,
@@ -170,6 +173,7 @@ export async function GET() {
     return ok<MonthlyCloseData>({
       monthLabel,
       monthKey,
+      currency,
       hasData: true,
       overallTone,
       income: current.income,

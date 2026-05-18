@@ -28,7 +28,7 @@ type FinancialTracePayload = {
   endpoint: string;
   householdId: string;
   source: string;
-  computed?: Record<string, number>;
+  computed?: Record<string, number | string>;
   accounts?: DebugAccount[];
   debts?: DebugDebt[];
   snapshots?: DebugSnapshot[];

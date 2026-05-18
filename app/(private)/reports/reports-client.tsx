@@ -56,6 +56,13 @@ type TopCategory = {
 };
 
 type MonthlyReport = {
+  currency: string;
+  currencyScope: {
+    primaryCurrency: string;
+    totalsByCurrency: Array<{ currency: string; amount: number; count: number }>;
+    ignoredCurrencies: string[];
+    mixedCurrencies: boolean;
+  };
   trend: TrendPoint[];
   topCategories: TopCategory[];
 };
@@ -157,6 +164,8 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
 
   const hasTrend = report && report.trend.length > 0;
   const hasCategories = report && report.topCategories.length > 0;
+  const currency = report?.currency ?? "ARS";
+  const scopedSnapshots = snapshots.filter((snapshot) => snapshot.currency === currency);
 
   const totalIncome = report?.trend.reduce((s, p) => s + p.income, 0) ?? 0;
   const totalExpenses = report?.trend.reduce((s, p) => s + p.expenses, 0) ?? 0;
@@ -188,9 +197,14 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
               </h2>
               <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
                 {hasTrend
-                  ? "Miramos ingresos, gastos, ahorro y categorías para encontrar el pulso real del período."
+                  ? `Miramos ingresos, gastos, ahorro y categorías en ${currency}, sin mezclar monedas.`
                   : "Registrá movimientos y snapshots para que la app pueda narrar tendencias con más precisión."}
               </p>
+              {report?.currencyScope.mixedCurrencies && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {report.currencyScope.ignoredCurrencies.join(", ")} existe en el período y queda separado de este reporte.
+                </p>
+              )}
             </div>
 
             <div className="flex w-full overflow-x-auto rounded-2xl border border-border bg-muted/40 p-1 sm:w-fit">
@@ -212,9 +226,9 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
 
           {hasTrend ? (
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <MemoryMetric icon={TrendingUp} label="Ingresos" value={formatMoney(totalIncome)} />
-              <MemoryMetric icon={TrendingDown} label="Gastos" value={formatMoney(totalExpenses)} />
-              <MemoryMetric icon={PiggyBank} label="Ahorro" value={formatMoney(totalSavings)} />
+              <MemoryMetric icon={TrendingUp} label="Ingresos" value={formatMoney(totalIncome, currency)} />
+              <MemoryMetric icon={TrendingDown} label="Gastos" value={formatMoney(totalExpenses, currency)} />
+              <MemoryMetric icon={PiggyBank} label="Ahorro" value={formatMoney(totalSavings, currency)} />
             </div>
           ) : null}
         </PremiumCardContent>
@@ -245,9 +259,9 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
         <>
           {/* Period summary */}
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiCard label="Ingresos totales" value={formatMoney(totalIncome)} color="#34d399" Icon={TrendingUp} />
-            <KpiCard label="Gastos totales" value={formatMoney(totalExpenses)} color="#f87171" Icon={TrendingDown} />
-            <KpiCard label="Ahorro neto" value={formatMoney(totalSavings)} color="#60a5fa" Icon={Wallet} />
+            <KpiCard label="Ingresos totales" value={formatMoney(totalIncome, currency)} color="#34d399" Icon={TrendingUp} />
+            <KpiCard label="Gastos totales" value={formatMoney(totalExpenses, currency)} color="#f87171" Icon={TrendingDown} />
+            <KpiCard label="Ahorro neto" value={formatMoney(totalSavings, currency)} color="#60a5fa" Icon={Wallet} />
             <KpiCard label="Tasa promedio" value={`${avgSavingsRate}%`} color="#a78bfa" Icon={PiggyBank} />
           </div>
 
@@ -259,7 +273,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                   <Star className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden="true" />
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">Mejor mes</p>
-                    <p className="text-sm font-semibold">{bestMonth.label} · {formatMoney(bestMonth.savings)} ahorrado</p>
+                    <p className="text-sm font-semibold">{bestMonth.label} · {formatMoney(bestMonth.savings, currency)} ahorrado</p>
                   </div>
                 </div>
               )}
@@ -268,7 +282,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                   <TrendingDown className="h-5 w-5 shrink-0 text-rose-400" aria-hidden="true" />
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-rose-400">Mayor gasto</p>
-                    <p className="text-sm font-semibold">{worstMonth.label} · {formatMoney(worstMonth.expenses)} gastado</p>
+                    <p className="text-sm font-semibold">{worstMonth.label} · {formatMoney(worstMonth.expenses, currency)} gastado</p>
                   </div>
                 </div>
               )}
@@ -294,7 +308,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                       tickLine={false}
                     />
                     <YAxis
-                      tickFormatter={formatMoneyShort}
+                      tickFormatter={(value) => formatMoneyShort(value, currency)}
                       tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                       axisLine={false}
                       tickLine={false}
@@ -302,7 +316,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                     />
                     <Tooltip
                       formatter={(value, name) => [
-                        formatMoney(Number(value ?? 0)),
+                        formatMoney(Number(value ?? 0), currency),
                         name === "income" ? "Ingresos" : "Gastos",
                       ]}
                       contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12, color: "hsl(var(--foreground))", padding: "8px 12px" }}
@@ -390,7 +404,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                             ))}
                           </Pie>
                           <Tooltip
-                            formatter={(value) => [formatMoney(Number(value)), ""]}
+                            formatter={(value) => [formatMoney(Number(value), currency), ""]}
                             contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12, color: "hsl(var(--foreground))", padding: "8px 12px" }}
                           />
                         </PieChart>
@@ -432,7 +446,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                           <div className="flex shrink-0 items-center gap-3 text-right">
                             <span className="text-muted-foreground">{cat.percentage}%</span>
                             <span className="font-semibold tabular-nums" style={{ color: cat.color ?? "#6366f1" }}>
-                              {formatMoney(cat.total)}
+                              {formatMoney(cat.total, currency)}
                             </span>
                           </div>
                         </div>
@@ -473,7 +487,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
                     return (
                       <div key={d.label} className="flex min-w-[44px] flex-1 flex-col items-center gap-1.5">
                         <span className={`whitespace-nowrap text-[11px] font-bold tabular-nums ${isNegative ? "text-rose-400" : "text-emerald-400"}`}>
-                          {isNegative ? "-" : ""}${(Math.abs(d.savings) / 1000).toFixed(0)}k
+                          {isNegative ? "-" : ""}{currency} {(Math.abs(d.savings) / 1000).toFixed(0)}k
                         </span>
                         <div className="flex h-24 w-full items-end justify-center">
                           <div
@@ -499,7 +513,7 @@ export function ReportsClient({ householdId }: ReportsClientProps) {
         </>
       )}
 
-      {snapshots.length > 0 && <SnapshotHistorySection snapshots={snapshots} />}
+      {scopedSnapshots.length > 0 && <SnapshotHistorySection snapshots={scopedSnapshots} currency={currency} />}
     </div>
   );
 }
@@ -531,7 +545,7 @@ function getMemoryTitle(totalSavings: number, avgSavingsRate: number) {
   return "El período necesita una lectura más fina.";
 }
 
-function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[] }) {
+function SnapshotHistorySection({ snapshots, currency }: { snapshots: MonthlySnapshotItem[]; currency: string }) {
   const chartData = snapshots.map((s) => ({
     label: `${MONTH_SHORT[s.month - 1]} ${String(s.year).slice(2)}`,
     disponible: s.availableAmount,
@@ -567,9 +581,9 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                <YAxis tickFormatter={formatMoneyShort} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={70} />
+                <YAxis tickFormatter={(value) => formatMoneyShort(value, currency)} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={70} />
                 <Tooltip
-                  formatter={(value) => [formatMoney(Number(value)), "Disponible"]}
+                  formatter={(value) => [formatMoney(Number(value), currency), "Disponible"]}
                   contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12, color: "hsl(var(--foreground))", padding: "8px 12px" }}
                 />
                 <Area type="monotone" dataKey="disponible" stroke="#818cf8" strokeWidth={2.5} fill="url(#gradDisp)" dot={{ fill: "#818cf8", r: 3 }} activeDot={{ r: 5 }} />
@@ -593,9 +607,9 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                 <BarChart data={chartData} barCategoryGap="30%">
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <YAxis tickFormatter={formatMoneyShort} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={70} />
+                  <YAxis tickFormatter={(value) => formatMoneyShort(value, currency)} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={70} />
                   <Tooltip
-                    formatter={(value, name) => [formatMoney(Number(value)), name === "ingresos" ? "Ingresos" : "Gastos"]}
+                    formatter={(value, name) => [formatMoney(Number(value), currency), name === "ingresos" ? "Ingresos" : "Gastos"]}
                     contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12, color: "hsl(var(--foreground))", padding: "8px 12px" }}
                   />
                   <Bar dataKey="ingresos" fill="#34d399" radius={[4, 4, 0, 0]} />
@@ -625,9 +639,9 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <YAxis tickFormatter={formatMoneyShort} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={70} />
+                  <YAxis tickFormatter={(value) => formatMoneyShort(value, currency)} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={70} />
                   <Tooltip
-                    formatter={(value) => [formatMoney(Number(value)), "Deuda total"]}
+                    formatter={(value) => [formatMoney(Number(value), currency), "Deuda total"]}
                     contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12, color: "hsl(var(--foreground))", padding: "8px 12px" }}
                   />
                   <Area type="monotone" dataKey="deuda" stroke="#f87171" strokeWidth={2.5} fill="url(#gradDeuda)" dot={{ fill: "#f87171", r: 3 }} activeDot={{ r: 5 }} />
@@ -661,12 +675,12 @@ function SnapshotHistorySection({ snapshots }: { snapshots: MonthlySnapshotItem[
                 {[...snapshots].reverse().map((s) => (
                   <tr key={s.id} className="text-foreground">
                     <td className="py-2 pr-4 font-medium">{MONTH_SHORT[s.month - 1]} {s.year}</td>
-                    <td className="py-2 pr-4 text-right tabular-nums text-emerald-400">{formatMoney(s.incomeAmount)}</td>
-                    <td className="py-2 pr-4 text-right tabular-nums text-rose-400">{formatMoney(s.expenseAmount)}</td>
-                    <td className="py-2 pr-4 text-right tabular-nums text-amber-400">{formatMoney(s.reservedAmount)}</td>
-                    <td className="py-2 pr-4 text-right tabular-nums text-rose-400">{formatMoney(s.debtOutstandingAmount)}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums text-emerald-400">{formatMoney(s.incomeAmount, currency)}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums text-rose-400">{formatMoney(s.expenseAmount, currency)}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums text-amber-400">{formatMoney(s.reservedAmount, currency)}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums text-rose-400">{formatMoney(s.debtOutstandingAmount, currency)}</td>
                     <td className={`py-2 text-right tabular-nums font-semibold ${s.availableAmount >= 0 ? "text-primary" : "text-rose-400"}`}>
-                      {formatMoney(s.availableAmount)}
+                      {formatMoney(s.availableAmount, currency)}
                     </td>
                   </tr>
                 ))}
@@ -708,20 +722,20 @@ function KpiCard({
   );
 }
 
-function formatMoney(value: number) {
+function formatMoney(value: number, currency = "ARS") {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
-    currency: "ARS",
+    currency,
     maximumFractionDigits: 0,
   }).format(value);
 }
 
-function formatMoneyShort(value: number) {
+function formatMoneyShort(value: number, currency = "ARS") {
   if (Math.abs(value) >= 1_000_000) {
-    return `$${(value / 1_000_000).toFixed(1)}M`;
+    return `${currency} ${(value / 1_000_000).toFixed(1)}M`;
   }
   if (Math.abs(value) >= 1_000) {
-    return `$${(value / 1_000).toFixed(0)}k`;
+    return `${currency} ${(value / 1_000).toFixed(0)}k`;
   }
-  return `$${value}`;
+  return `${currency} ${value}`;
 }

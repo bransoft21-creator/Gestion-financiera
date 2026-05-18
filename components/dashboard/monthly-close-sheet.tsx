@@ -14,19 +14,19 @@ import type { MonthlyCloseData } from "@/app/api/monthly-close/route";
 
 /* ── Formatters ────────────────────────────────────────────────────────────── */
 
-function formatARS(n: number): string {
+function formatMoney(n: number, currency: string): string {
   if (Math.abs(n) >= 1_000_000) {
-    return `$${(n / 1_000_000).toFixed(1).replace(".", ",")} M`;
+    return `${currency} ${(n / 1_000_000).toFixed(1).replace(".", ",")} M`;
   }
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
-    currency: "ARS",
+    currency,
     maximumFractionDigits: 0,
   }).format(n);
 }
 
-function formatAvailableChange(delta: number): { text: string; positive: boolean } {
-  const abs = formatARS(Math.abs(delta));
+function formatAvailableChange(delta: number, currency: string): { text: string; positive: boolean } {
+  const abs = formatMoney(Math.abs(delta), currency);
   if (delta > 0) return { text: `${abs} más que el mes anterior`, positive: true };
   return { text: `${abs} menos que el mes anterior`, positive: false };
 }
@@ -227,7 +227,7 @@ export function MonthlyCloseSheet({ isOpen, onClose, close }: MonthlyCloseSheetP
   if (!isMounted || !isOpen) return null;
 
   const availableChange =
-    close.availableVsPrev !== null ? formatAvailableChange(close.availableVsPrev) : null;
+    close.availableVsPrev !== null ? formatAvailableChange(close.availableVsPrev, close.currency) : null;
 
   const availablePositive = close.available >= 0;
   const education = getMonthlyCloseEducation(close.signals);
@@ -288,7 +288,7 @@ export function MonthlyCloseSheet({ isOpen, onClose, close }: MonthlyCloseSheetP
                 availablePositive ? "text-foreground" : "text-amber-400",
               )}
             >
-              <SensitiveAmount value={formatARS(close.available)} />
+              <SensitiveAmount value={formatMoney(close.available, close.currency)} />
             </p>
             {availableChange && (
               <p
@@ -302,9 +302,9 @@ export function MonthlyCloseSheet({ isOpen, onClose, close }: MonthlyCloseSheetP
             )}
             {/* Expense context */}
             <p className="mt-2 text-xs text-muted-foreground">
-              <SensitiveAmount value={formatARS(close.expenses)} /> en gastos
+              <SensitiveAmount value={formatMoney(close.expenses, close.currency)} /> en gastos
               {close.income > 0 && (
-                <> · <SensitiveAmount value={formatARS(close.income)} /> en ingresos</>
+                <> · <SensitiveAmount value={formatMoney(close.income, close.currency)} /> en ingresos</>
               )}
             </p>
           </div>

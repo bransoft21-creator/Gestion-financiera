@@ -1,9 +1,10 @@
-import { DebtStatus, GoalStatus, TransactionStatus, TransactionType } from "@prisma/client";
+import { CurrencyCode, DebtStatus, GoalStatus, TransactionStatus, TransactionType } from "@prisma/client";
 import { argentinaMonthRangeUtc } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { assertHouseholdAccess } from "./households";
 import { computeFinancialHealth, computeRealLiabilitySummary, toFiniteNumber } from "./financial-ledger";
 import { traceFinancialSource } from "./financial-debug";
+import { filterCurrency } from "@/lib/finance/currency-safe";
 
 export async function captureMonthlySnapshot(
   userProfileId: string,
@@ -22,8 +23,12 @@ export async function captureMonthlySnapshot(
 
   const { start: monthStart, end: nextMonthStart } = argentinaMonthRangeUtc(year, month);
 
-  const [monthTransactions, budgets, recurringExpenses, activeGoals, upcomingDebts, currentDebts, accounts] =
+  const [household, monthTransactions, budgets, recurringExpenses, activeGoals, upcomingDebts, currentDebts, accounts] =
     await Promise.all([
+      prisma.household.findUniqueOrThrow({
+        where: { id: householdId },
+        select: { defaultCurrency: true },
+      }),
       prisma.transaction.findMany({
         where: {
           householdId,
@@ -32,11 +37,11 @@ export async function captureMonthlySnapshot(
           occurredAt: { gte: monthStart, lt: nextMonthStart },
           type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
         },
-        select: { type: true, amount: true, categoryId: true },
+        select: { type: true, currency: true, amount: true, categoryId: true },
       }),
       prisma.budget.findMany({
         where: { householdId, year, month, deletedAt: null },
-        select: { categoryId: true, plannedAmount: true },
+        select: { categoryId: true, currency: true, plannedAmount: true },
       }),
       prisma.recurringExpense.findMany({
         where: {
@@ -46,7 +51,7 @@ export async function captureMonthlySnapshot(
           nextDueDate: { gte: monthStart, lt: nextMonthStart },
           OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
         },
-        select: { amount: true },
+        select: { currency: true, amount: true },
       }),
       prisma.goal.findMany({
         where: {
@@ -55,7 +60,7 @@ export async function captureMonthlySnapshot(
           deletedAt: null,
           requiredMonthlyAmount: { not: null },
         },
-        select: { requiredMonthlyAmount: true },
+        select: { currency: true, requiredMonthlyAmount: true },
       }),
       prisma.debt.findMany({
         where: {
@@ -65,7 +70,7 @@ export async function captureMonthlySnapshot(
           deletedAt: null,
           nextDueDate: { gte: monthStart, lt: nextMonthStart },
         },
-        select: { minimumPayment: true, outstandingAmount: true },
+        select: { currency: true, minimumPayment: true, outstandingAmount: true },
       }),
       prisma.debt.findMany({
         where: {
@@ -74,7 +79,7 @@ export async function captureMonthlySnapshot(
           outstandingAmount: { gt: 0 },
           deletedAt: null,
         },
-        select: { type: true, status: true, outstandingAmount: true },
+        select: { type: true, status: true, currency: true, outstandingAmount: true },
       }),
       prisma.account.findMany({
         where: { householdId, deletedAt: null, isArchived: false },
@@ -82,76 +87,95 @@ export async function captureMonthlySnapshot(
       }),
     ]);
 
-  const income = monthTransactions
-    .filter((t) => t.type === TransactionType.INCOME)
-    .reduce((s, t) => s + toFiniteNumber(t.amount), 0);
-  const expenses = monthTransactions
-    .filter((t) => t.type === TransactionType.EXPENSE)
-    .reduce((s, t) => s + toFiniteNumber(t.amount), 0);
-
-  const expensesByCategoryId = new Map<string, number>();
-  for (const t of monthTransactions) {
-    if (t.type === TransactionType.EXPENSE && t.categoryId) {
-      expensesByCategoryId.set(
-        t.categoryId,
-        (expensesByCategoryId.get(t.categoryId) ?? 0) + toFiniteNumber(t.amount),
-      );
-    }
+  const currencies = new Set<CurrencyCode>([household.defaultCurrency]);
+  for (const collection of [monthTransactions, budgets, recurringExpenses, activeGoals, upcomingDebts, currentDebts, accounts]) {
+    for (const item of collection) currencies.add(item.currency);
   }
 
-  const liabilitySummary = computeRealLiabilitySummary(accounts, currentDebts);
-  traceFinancialSource({
-    endpoint: "/api/snapshots POST",
-    householdId,
-    source: "captureMonthlySnapshot.debtOutstandingAmount <- computeRealLiabilitySummary.liabilities",
-    computed: {
-      debtOutstandingAmount: liabilitySummary.liabilities,
-      accountLiabilities: liabilitySummary.accountLiabilities,
-      debtLiabilities: liabilitySummary.debtLiabilities,
-    },
-    accounts: accounts.filter((account) => toFiniteNumber(account.currentBalance) < 0),
-    debts: currentDebts.map((debt, index) => ({ ...debt, id: `debt-${index}` })),
-  });
-  const health = computeFinancialHealth({
-    income,
-    expenses,
-    budgets: budgets.map((b) => ({
-      plannedAmount: b.plannedAmount,
-      spentAmount: expensesByCategoryId.get(b.categoryId) ?? 0,
-    })),
-    recurringExpenses,
-    goals: activeGoals,
-    debts: upcomingDebts,
-    totalOutstandingDebt: liabilitySummary.liabilities,
-  });
+  const snapshots = [];
+  for (const currency of currencies) {
+    const currencyTransactions = filterCurrency(monthTransactions, currency, (transaction) => transaction.currency);
+    const currencyBudgets = filterCurrency(budgets, currency, (budget) => budget.currency);
+    const currencyRecurringExpenses = filterCurrency(recurringExpenses, currency, (expense) => expense.currency);
+    const currencyActiveGoals = filterCurrency(activeGoals, currency, (goal) => goal.currency);
+    const currencyUpcomingDebts = filterCurrency(upcomingDebts, currency, (debt) => debt.currency);
+    const currencyCurrentDebts = filterCurrency(currentDebts, currency, (debt) => debt.currency);
+    const currencyAccounts = filterCurrency(accounts, currency, (account) => account.currency);
 
-  return prisma.monthlySnapshot.upsert({
-    where: {
-      householdId_currency_year_month: { householdId, currency: "ARS", year, month },
-    },
-    create: {
+    const income = currencyTransactions
+      .filter((t) => t.type === TransactionType.INCOME)
+      .reduce((s, t) => s + toFiniteNumber(t.amount), 0);
+    const expenses = currencyTransactions
+      .filter((t) => t.type === TransactionType.EXPENSE)
+      .reduce((s, t) => s + toFiniteNumber(t.amount), 0);
+
+    const expensesByCategoryId = new Map<string, number>();
+    for (const t of currencyTransactions) {
+      if (t.type === TransactionType.EXPENSE && t.categoryId) {
+        expensesByCategoryId.set(
+          t.categoryId,
+          (expensesByCategoryId.get(t.categoryId) ?? 0) + toFiniteNumber(t.amount),
+        );
+      }
+    }
+
+    const liabilitySummary = computeRealLiabilitySummary(currencyAccounts, currencyCurrentDebts);
+    traceFinancialSource({
+      endpoint: "/api/snapshots POST",
       householdId,
-      currency: "ARS",
-      year,
-      month,
-      incomeAmount: health.income,
-      expenseAmount: health.expenses,
-      reservedAmount: health.remainingReservedBudget,
-      goalAllocatedAmount: health.requiredGoalContributions,
-      debtOutstandingAmount: health.totalOutstandingDebt,
-      upcomingObligationsAmount: health.upcomingObligations,
-      availableAmount: health.realAvailable,
-    },
-    update: {
-      incomeAmount: health.income,
-      expenseAmount: health.expenses,
-      reservedAmount: health.remainingReservedBudget,
-      goalAllocatedAmount: health.requiredGoalContributions,
-      debtOutstandingAmount: health.totalOutstandingDebt,
-      upcomingObligationsAmount: health.upcomingObligations,
-      availableAmount: health.realAvailable,
-    },
-  });
+      source: "captureMonthlySnapshot.debtOutstandingAmount <- computeRealLiabilitySummary.liabilities (currency scoped)",
+      computed: {
+        currency,
+        debtOutstandingAmount: liabilitySummary.liabilities,
+        accountLiabilities: liabilitySummary.accountLiabilities,
+        debtLiabilities: liabilitySummary.debtLiabilities,
+      },
+      accounts: currencyAccounts.filter((account) => toFiniteNumber(account.currentBalance) < 0),
+      debts: currencyCurrentDebts.map((debt, index) => ({ ...debt, id: `debt-${index}` })),
+    });
+    const health = computeFinancialHealth({
+      income,
+      expenses,
+      budgets: currencyBudgets.map((b) => ({
+        plannedAmount: b.plannedAmount,
+        spentAmount: expensesByCategoryId.get(b.categoryId) ?? 0,
+      })),
+      recurringExpenses: currencyRecurringExpenses,
+      goals: currencyActiveGoals,
+      debts: currencyUpcomingDebts,
+      totalOutstandingDebt: liabilitySummary.liabilities,
+    });
+
+    snapshots.push(await prisma.monthlySnapshot.upsert({
+      where: {
+        householdId_currency_year_month: { householdId, currency, year, month },
+      },
+      create: {
+        householdId,
+        currency,
+        year,
+        month,
+        incomeAmount: health.income,
+        expenseAmount: health.expenses,
+        reservedAmount: health.remainingReservedBudget,
+        goalAllocatedAmount: health.requiredGoalContributions,
+        debtOutstandingAmount: health.totalOutstandingDebt,
+        upcomingObligationsAmount: health.upcomingObligations,
+        availableAmount: health.realAvailable,
+      },
+      update: {
+        incomeAmount: health.income,
+        expenseAmount: health.expenses,
+        reservedAmount: health.remainingReservedBudget,
+        goalAllocatedAmount: health.requiredGoalContributions,
+        debtOutstandingAmount: health.totalOutstandingDebt,
+        upcomingObligationsAmount: health.upcomingObligations,
+        availableAmount: health.realAvailable,
+      },
+    }));
+  }
+
+  return snapshots;
 }
 
 export async function listMonthlySnapshots(

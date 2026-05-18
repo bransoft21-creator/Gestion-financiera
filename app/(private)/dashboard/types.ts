@@ -32,6 +32,17 @@ export type NextStepRecommendation = {
 
 export type DashboardSummary = {
   metrics: {
+    currency: "ARS" | "USD" | string;
+    currencyScope: {
+      primaryCurrency: "ARS" | "USD" | string;
+      totalsByCurrency: Array<{
+        currency: "ARS" | "USD" | string;
+        amount: number;
+        count: number;
+      }>;
+      ignoredCurrencies: Array<"ARS" | "USD" | string>;
+      mixedCurrencies: boolean;
+    };
     income: number;
     expenses: number;
     balance: number;

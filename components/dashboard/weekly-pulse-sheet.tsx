@@ -22,13 +22,13 @@ const SIGNAL_DOT: Record<string, string> = {
 
 /* ── Formatting ────────────────────────────────────────────────────────────── */
 
-function formatARS(n: number): string {
+function formatMoney(n: number, currency: string): string {
   if (n >= 1_000_000) {
-    return `$${(n / 1_000_000).toFixed(1).replace(".", ",")} M`;
+    return `${currency} ${(n / 1_000_000).toFixed(1).replace(".", ",")} M`;
   }
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
-    currency: "ARS",
+    currency,
     maximumFractionDigits: 0,
   }).format(n);
 }
@@ -241,8 +241,13 @@ export function WeeklyPulseSheet({ isOpen, onClose, pulse }: WeeklyPulseSheetPro
               Movimiento semanal
             </p>
             <p className="text-2xl font-bold tabular-nums text-foreground">
-              {formatARS(pulse.totalExpenses)}
+              {formatMoney(pulse.totalExpenses, pulse.currency)}
             </p>
+            {pulse.mixedCurrencies && (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Vista {pulse.currency}; {pulse.ignoredCurrencies.join(", ")} no se suma.
+              </p>
+            )}
             {pulse.transactionCount > 0 && (
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {pulse.transactionCount} movimiento{pulse.transactionCount !== 1 ? "s" : ""}

@@ -32,6 +32,8 @@ export type ImportCandidate = {
 export type ImportMetadata = {
   sourceType: string;
   currency: Currency;
+  currencyTotals?: Array<{ currency: Currency; count: number; amount: number }>;
+  mixedCurrencies?: boolean;
   warnings: string[];
   totalDetected: number;
   mappingConfidence?: number;
