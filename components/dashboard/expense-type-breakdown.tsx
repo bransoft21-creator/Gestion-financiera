@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { HelpCircle, Repeat, ShoppingCart, Zap } from "lucide-react";
 import {
   PremiumCard,
@@ -39,7 +40,17 @@ export function ExpenseTypeBreakdown({
   year: number;
   month: number;
 }) {
+  const router = useRouter();
   const [openGroup, setOpenGroup] = useState<DrilldownGroup | null>(null);
+  const didReclassify = useRef(false);
+
+  function handleClose() {
+    if (didReclassify.current) {
+      router.refresh();
+      didReclassify.current = false;
+    }
+    setOpenGroup(null);
+  }
 
   const rows = expenseTypeRows.filter(
     (row) => (row.key === "unclassified" ? expensesByType.unclassified > 0 : true),
@@ -126,7 +137,8 @@ export function ExpenseTypeBreakdown({
       {openGroup && (
         <ExpenseTypeDrilldownSheet
           isOpen={openGroup !== null}
-          onClose={() => setOpenGroup(null)}
+          onClose={handleClose}
+          onTransactionReclassified={() => { didReclassify.current = true; }}
           group={openGroup}
           total={expensesByType[openGroup] ?? 0}
           pct={total > 0 ? Math.round(((expensesByType[openGroup] ?? 0) / total) * 100) : 0}

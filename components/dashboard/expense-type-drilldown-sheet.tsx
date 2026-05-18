@@ -26,6 +26,7 @@ export type DrilldownGroup = "fixed" | "variable" | "extraordinary" | "unclassif
 export interface ExpenseTypeDrilldownSheetProps {
   isOpen: boolean;
   onClose: () => void;
+  onTransactionReclassified?: () => void;
   group: DrilldownGroup;
   total: number;
   pct: number;
@@ -126,7 +127,7 @@ function TransactionRow({
 }: {
   tx: ExpenseTypeDetailTransaction;
   group: DrilldownGroup;
-  onReclassified: (id: string) => void;
+  onReclassified: (id: string, amount: number) => void;
 }) {
   const [saving, setSaving] = useState(false);
   const options = RECLASSIFY_OPTIONS.filter((o) => o.value !== GROUP_CONFIG[group].apiType);
@@ -142,7 +143,7 @@ function TransactionRow({
       if (!r.ok) throw new Error();
       trackProductEvent("distribution_transaction_reclassified", { expenseGroup: group }, "dashboard");
       toast.success("Clasificación actualizada");
-      onReclassified(tx.id);
+      onReclassified(tx.id, parseFloat(tx.amount));
     } catch {
       toast.error("No se pudo guardar. Intentá de nuevo.");
     } finally {
@@ -199,6 +200,7 @@ function TransactionRow({
 export function ExpenseTypeDrilldownSheet({
   isOpen,
   onClose,
+  onTransactionReclassified,
   group,
   total,
   pct,
@@ -212,6 +214,7 @@ export function ExpenseTypeDrilldownSheet({
 
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [transactions, setTransactions] = useState<ExpenseTypeDetailTransaction[]>([]);
+  const [reclassifiedAmount, setReclassifiedAmount] = useState(0);
 
   const config = GROUP_CONFIG[group];
   const Icon = config.icon;
@@ -258,13 +261,18 @@ export function ExpenseTypeDrilldownSheet({
     router.push("/settings/data-quality");
   }
 
-  function handleTransactionReclassified(id: string) {
+  function handleTransactionReclassified(id: string, amount: number) {
     setTransactions((prev) => prev.filter((tx) => tx.id !== id));
+    setReclassifiedAmount((prev) => prev + amount);
+    onTransactionReclassified?.();
   }
 
   if (!isMounted || !isOpen) return null;
 
-  const formattedTotal = total.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+  const adjustedTotal = Math.max(total - reclassifiedAmount, 0);
+  const grandTotal = pct > 0 ? total / (pct / 100) : 0;
+  const adjustedPct = grandTotal > 0 ? Math.round((adjustedTotal / grandTotal) * 100) : 0;
+  const formattedTotal = adjustedTotal.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
   const count = status === "done" ? transactions.length : null;
 
   const content = (
@@ -320,7 +328,7 @@ export function ExpenseTypeDrilldownSheet({
           <div className="h-8 w-px bg-border" />
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Del gasto</p>
-            <p className="text-xl font-extrabold tabular-nums text-foreground">{pct}%</p>
+            <p className="text-xl font-extrabold tabular-nums text-foreground">{adjustedPct}%</p>
           </div>
           {count !== null && (
             <>

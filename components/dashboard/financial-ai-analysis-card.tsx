@@ -739,7 +739,7 @@ function InvisibleExpenseRow({
 function MonthPrediction({ metrics }: { metrics: AiFinancialAnalysisMetrics }) {
   const projectedSavings = metrics.income - metrics.projectedMonthEndExpense;
   const spendingRatio = percentage(metrics.projectedMonthEndExpense, metrics.income);
-  const bars = buildProjectionBars(metrics.dailyAverageExpense, metrics.projectedMonthEndExpense);
+  const bars = buildProjectionBars(metrics.dailyAverageExpense, metrics.projectedMonthEndExpense, metrics.income);
   const tone = projectedSavings >= 0 ? "emerald" : "rose";
   const styles = toneStyles[tone];
 
@@ -1176,12 +1176,18 @@ function buildHeroNarrative(
   };
 }
 
-function buildProjectionBars(dailyAverage: number, projected: number) {
-  const base = Math.max(dailyAverage, projected / 30, 1);
+function buildProjectionBars(dailyAverage: number, projected: number, income: number) {
+  // Use income to compute daily budget; fall back to projected/30 if no income data
+  const dailyBudget = income > 0 ? income / 30 : Math.max(projected / 30, 1);
+  // pressureRatio > 1 means overspending relative to budget
+  const pressureRatio = dailyBudget > 0 ? dailyAverage / dailyBudget : 1;
+  // Map pressure to base height: 1.0 pressure ≈ 65%, >1 pushes toward 92%
+  const baseH = clamp(pressureRatio * 65, 22, 92);
 
   return Array.from({ length: 14 }, (_, index) => {
-    const wave = 0.72 + Math.sin(index * 0.78) * 0.16 + (index / 14) * 0.26;
-    return clamp((base * wave / base) * 72, 22, 96);
+    const wave = Math.sin(index * 0.78) * 0.13;          // ±13% day-to-day variation
+    const trend = (index / 13) * 0.14;                   // slight upward trend toward close
+    return clamp(baseH * (1 + wave + trend), 18, 96);
   });
 }
 
