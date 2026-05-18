@@ -178,19 +178,19 @@ export function ContextualEducationCard({
   return (
     <section
       className={cn(
-        "rounded-lg border p-4 text-foreground",
+        "rounded-lg border p-3.5 text-foreground",
         tone.border,
-        compact ? "space-y-3" : "space-y-4 sm:p-5",
+        compact ? "space-y-2" : "space-y-3 sm:p-4",
         className,
       )}
       aria-label={`Contexto financiero: ${item.title}`}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2.5">
         <span
-          className={cn("mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-background/40", tone.icon)}
+          className={cn("mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-background/40", tone.icon)}
           aria-hidden="true"
         >
-          <Lightbulb className="h-4 w-4" />
+          <Lightbulb className="h-3.5 w-3.5" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">

@@ -472,21 +472,21 @@ function CollapsedCopilotPreview({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.28, ease: easeOut }}
       onClick={onOpen}
-      className="group w-full overflow-hidden rounded-[24px] border border-border bg-card/45 p-4 text-left transition hover:border-border hover:bg-card/55 sm:p-5"
+      className="group w-full overflow-hidden rounded-[24px] border border-border bg-card/45 p-3.5 text-left transition hover:border-border hover:bg-card/55 sm:p-4"
     >
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
+      <div className="grid grid-cols-[1fr_auto] items-start gap-3">
         <div className="min-w-0">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
             <Badge className={`${scoreStyle.badge}`}>Score {score}/100</Badge>
             {isStale && <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-500">Hay cambios nuevos</Badge>}
             <Badge className="border-border bg-muted/50 text-muted-foreground">Tocar para desplegar</Badge>
           </div>
-          <h2 className="text-balance text-2xl font-semibold leading-tight text-foreground sm:text-3xl">{hero.title}</h2>
-          <p className="mt-3 line-clamp-2 max-w-2xl text-sm leading-6 text-muted-foreground">{hero.subtitle}</p>
+          <h2 className="text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">{hero.title}</h2>
+          <p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-snug text-muted-foreground">{hero.subtitle}</p>
           {primaryInsight && (
-            <div className="mt-4 flex min-w-0 items-center gap-3 rounded-2xl border border-border bg-muted/40 px-3 py-2.5">
-              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${toneStyles[primaryInsight.tone].icon}`}>
-                <primaryInsight.icon className="h-4 w-4" aria-hidden="true" />
+            <div className="mt-3 flex min-w-0 items-center gap-2.5 rounded-xl border border-border bg-muted/40 px-2.5 py-2">
+              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${toneStyles[primaryInsight.tone].icon}`}>
+                <primaryInsight.icon className="h-3.5 w-3.5" aria-hidden="true" />
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-foreground">
@@ -500,20 +500,20 @@ function CollapsedCopilotPreview({
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
-          <div className={`relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full border ${scoreStyle.card}`}>
+        <div className="flex flex-col items-end gap-2">
+          <div className={`relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full border ${scoreStyle.card}`}>
             <div
               className="absolute inset-2 rounded-full"
               style={{
                 background: `conic-gradient(${scoreColor(score)} ${score * 3.6}deg, rgba(255,255,255,0.08) 0deg)`,
               }}
             />
-            <div className="absolute inset-4 rounded-full bg-card" />
-            <span className={`relative text-xl font-semibold tabular-nums ${scoreStyle.text}`}>{score}</span>
+            <div className="absolute inset-[14px] rounded-full bg-card" />
+            <span className={`relative text-base font-semibold tabular-nums ${scoreStyle.text}`}>{score}</span>
           </div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground transition group-hover:bg-muted">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition group-hover:bg-muted">
             Abrir
-            <ChevronDown className="-rotate-90 h-3.5 w-3.5" aria-hidden="true" />
+            <ChevronDown className="-rotate-90 h-3 w-3" aria-hidden="true" />
           </span>
         </div>
       </div>
@@ -542,7 +542,7 @@ function CopilotExperience({
       initial="hidden"
       animate="visible"
       exit={{ opacity: 0, y: 10 }}
-      className="space-y-4"
+      className="space-y-3"
     >
       <FinancialCopilotHero hero={hero} analysis={analysis} metrics={metrics} comparison={comparison} isStale={isStale} />
       <ImportantInsights insights={insights} />
@@ -573,41 +573,40 @@ function FinancialCopilotHero({
   const trendIsPositive = comparison?.available ? comparison.balanceChangeAmount >= 0 : metrics.balance >= 0;
 
   return (
-    <motion.div variants={itemMotion} className="relative overflow-hidden rounded-[24px] border border-border bg-card/60 p-4 sm:p-6">
+    <motion.div variants={itemMotion} className="relative overflow-hidden rounded-[24px] border border-border bg-card/60 p-4">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(45,212,191,0.22),transparent_34%),radial-gradient(circle_at_92%_12%,rgba(248,250,252,0.11),transparent_25%)]" />
       <div className="absolute -right-20 -top-20 h-52 w-52 rounded-full border border-border bg-muted/20" />
-      <div className="relative grid gap-4 lg:grid-cols-[1fr_220px] lg:items-end">
+      <div className="relative grid grid-cols-[1fr_auto] items-start gap-3">
         <div className="min-w-0">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
             <Badge className="border-border bg-muted text-muted-foreground">Tu dinero este mes</Badge>
             {isStale && <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-500">Revisar cambios</Badge>}
           </div>
-          <h2 className="max-w-2xl text-balance text-2xl font-semibold leading-[1.08] text-foreground sm:text-4xl">
+          <h2 className="max-w-2xl text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">
             {hero.title}
           </h2>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
+          <p className="mt-2 max-w-xl text-sm leading-snug text-muted-foreground">
             <SensitiveText text={hero.subtitle} />
           </p>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-1.5">
             <SignalPill icon={trendIsPositive ? ArrowUpRight : ArrowDownRight} label={hero.trend} tone={trendIsPositive ? "emerald" : "amber"} />
             <SignalPill icon={Gauge} label={`Score ${score}/100`} tone={scoreTone} />
             <SignalPill icon={Wallet} label={`${formatPercent(metrics.savingsRate)} ahorro`} tone={metrics.savingsRate >= 0 ? "sky" : "rose"} />
           </div>
         </div>
 
-        <div className="mx-auto w-full max-w-[220px] lg:mx-0">
-          <div className={`relative aspect-square rounded-full border ${scoreStyle.card} ${scoreStyle.glow} p-4`}>
+        <div className="h-[104px] w-[104px] shrink-0">
+          <div className={`relative h-full w-full rounded-full border ${scoreStyle.card} ${scoreStyle.glow} p-2`}>
             <div
-              className="absolute inset-4 rounded-full"
+              className="absolute inset-2 rounded-full"
               style={{
                 background: `conic-gradient(${scoreColor(score)} ${score * 3.6}deg, rgba(255,255,255,0.08) 0deg)`,
               }}
             />
-            <div className="absolute inset-8 rounded-full bg-card/95 shadow-inner" />
+            <div className="absolute inset-4 rounded-full bg-card/95 shadow-inner" />
             <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
-              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Estado general</p>
-              <p className={`mt-2 text-5xl font-semibold tabular-nums ${scoreStyle.text}`}>{score}</p>
-              <p className="mt-1 text-xs text-muted-foreground">lectura IA</p>
+              <p className={`text-3xl font-semibold tabular-nums ${scoreStyle.text}`}>{score}</p>
+              <p className="text-[9px] text-muted-foreground">/100</p>
             </div>
           </div>
         </div>
@@ -618,9 +617,9 @@ function FinancialCopilotHero({
 
 function ImportantInsights({ insights }: { insights: NarrativeInsight[] }) {
   return (
-    <motion.section variants={itemMotion} className="space-y-3">
+    <motion.section variants={itemMotion} className="space-y-2">
       <SectionHeader eyebrow="Hoy importa" title="Insights importantes" icon={Sparkles} />
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid gap-2 lg:grid-cols-3">
         {insights.map((insight, index) => (
           <InsightCard key={insight.id} insight={insight} featured={index === 0} />
         ))}
@@ -635,25 +634,27 @@ function InsightCard({ insight, featured }: { insight: NarrativeInsight; feature
 
   return (
     <motion.article
-      whileHover={{ y: -4, scale: 1.01 }}
+      whileHover={{ y: -2, scale: 1.005 }}
       transition={{ duration: 0.2 }}
-      className={`min-w-0 rounded-[22px] border p-4 ${styles.card} ${styles.glow} ${featured ? "lg:col-span-2 lg:p-5" : ""}`}
+      className={`min-w-0 rounded-[18px] border p-3 ${styles.card} ${styles.glow} ${featured ? "lg:col-span-2" : ""}`}
     >
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${styles.icon}`}>
-          <Icon className="h-4 w-4" aria-hidden="true" />
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${styles.icon}`}>
+          <Icon className="h-3.5 w-3.5" aria-hidden="true" />
         </div>
-        <Badge className={`${styles.badge} shrink-0`}>{insight.priority}</Badge>
+        <Badge className={`${styles.badge} shrink-0 text-[10px]`}>{insight.priority}</Badge>
       </div>
-      <h3 className={`text-balance text-lg font-semibold leading-tight ${styles.text}`}>
+      <h3 className={`text-balance text-sm font-semibold leading-tight ${styles.text}`}>
         <SensitiveText text={insight.title} />
       </h3>
-      <p className="mt-2 text-sm leading-[1.55] text-muted-foreground">
+      <p className="mt-1.5 text-xs leading-snug text-muted-foreground">
         <SensitiveText text={insight.message} />
       </p>
-      <p className="mt-3 text-xs leading-5 text-muted-foreground">
-        <SensitiveText text={insight.detail} />
-      </p>
+      {featured && (
+        <p className="mt-2 text-xs leading-snug text-muted-foreground/70">
+          <SensitiveText text={insight.detail} />
+        </p>
+      )}
     </motion.article>
   );
 }
@@ -668,21 +669,21 @@ function InvisibleExpenses({
   const total = items.reduce((sum, item) => sum + item.total, 0);
 
   return (
-    <motion.section variants={itemMotion} className="rounded-[24px] border border-border bg-muted/40 p-4 sm:p-5">
-      <div className="mb-3 flex items-start justify-between gap-3">
+    <motion.section variants={itemMotion} className="rounded-[20px] border border-border bg-muted/40 p-3.5 sm:p-4">
+      <div className="mb-2.5 flex items-center justify-between gap-3">
         <SectionHeader eyebrow="Revelador" title="Gastos invisibles" icon={Eye} />
         {items.length > 0 && (
           <div className="shrink-0 text-right">
-            <p className="text-lg font-semibold tabular-nums text-foreground">
+            <p className="text-base font-semibold tabular-nums text-foreground">
               <SensitiveAmount value={formatMoney(total)} />
             </p>
-            <p className="text-[11px] text-muted-foreground">{formatPercent(percentage(total, income))} del ingreso</p>
+            <p className="text-[10px] text-muted-foreground">{formatPercent(percentage(total, income))} del ingreso</p>
           </div>
         )}
       </div>
 
       {items.length > 0 ? (
-        <div className="space-y-2.5">
+        <div className="space-y-1.5">
           {items.map((item, index) => (
             <InvisibleExpenseRow key={item.normalizedDescription} item={item} max={Math.max(total, item.total)} index={index} />
           ))}
@@ -710,20 +711,20 @@ function InvisibleExpenseRow({
       initial={{ opacity: 0, x: -12 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.05, duration: 0.35 }}
-      className="rounded-2xl border border-border bg-card/35 p-3"
+      className="rounded-xl border border-border bg-card/35 px-3 py-2.5"
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-foreground">{item.description || "Movimiento repetido"}</p>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
-            {item.count} veces · promedio <SensitiveAmount value={formatMoney(item.averageAmount)} />
+          <p className="truncate text-[11px] text-muted-foreground">
+            {item.count}× · prom. <SensitiveAmount value={formatMoney(item.averageAmount)} />
           </p>
         </div>
         <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
           <SensitiveAmount value={formatMoney(item.total)} />
         </p>
       </div>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted/50">
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted/50">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${width}%` }}
@@ -743,25 +744,25 @@ function MonthPrediction({ metrics }: { metrics: AiFinancialAnalysisMetrics }) {
   const styles = toneStyles[tone];
 
   return (
-    <motion.section variants={itemMotion} className="grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
-      <div className={`rounded-[24px] border p-5 ${styles.card}`}>
+    <motion.section variants={itemMotion} className="grid gap-2 lg:grid-cols-[0.95fr_1.05fr]">
+      <div className={`rounded-[20px] border p-4 ${styles.card}`}>
         <SectionHeader eyebrow="Predicción" title="Si seguís así..." icon={Zap} />
-        <p className="mt-5 text-3xl font-semibold leading-tight text-foreground tabular-nums">
+        <p className="mt-3 text-2xl font-semibold leading-tight text-foreground tabular-nums">
           <SensitiveAmount value={formatMoney(metrics.projectedMonthEndExpense)} />
         </p>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">sería tu gasto estimado al cierre del mes.</p>
-        <div className="mt-5 grid grid-cols-2 gap-2">
+        <p className="mt-1 text-xs text-muted-foreground">gasto estimado al cierre del mes.</p>
+        <div className="mt-3 grid grid-cols-2 gap-1.5">
           <PredictionChip label="Ahorro estimado" value={formatMoney(projectedSavings)} tone={tone} />
           <PredictionChip label="Uso de ingreso" value={formatPercent(spendingRatio)} tone={spendingRatio <= 80 ? "sky" : "amber"} />
         </div>
       </div>
 
-      <div className="rounded-[24px] border border-border bg-card/40 p-5">
-        <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="rounded-[20px] border border-border bg-card/40 p-4">
+        <div className="mb-2.5 flex items-center justify-between gap-3">
           <p className="text-sm font-semibold text-foreground">Pulso del mes</p>
-          <Badge className="border-border bg-muted/50 text-muted-foreground">Proyección suave</Badge>
+          <Badge className="border-border bg-muted/50 text-[10px] text-muted-foreground">Proyección suave</Badge>
         </div>
-        <div className="relative flex h-36 items-end gap-1.5">
+        <div className="relative flex h-24 items-end gap-1">
           {bars.map((bar, index) => (
             <motion.div
               key={index}
@@ -769,11 +770,11 @@ function MonthPrediction({ metrics }: { metrics: AiFinancialAnalysisMetrics }) {
               animate={{ scaleY: 1, opacity: 1 }}
               transition={{ delay: index * 0.04, duration: 0.45, ease: easeOut }}
               style={{ height: `${bar}%`, originY: 1 }}
-              className="flex-1 rounded-t-md bg-gradient-to-t from-teal-500/40 to-teal-300/90 dark:from-teal-400/25 dark:to-teal-200/75"
+              className="flex-1 rounded-t-sm bg-gradient-to-t from-teal-500/40 to-teal-300/90 dark:from-teal-400/25 dark:to-teal-200/75"
             />
           ))}
         </div>
-        <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+        <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
           <span>Hoy</span>
           <span>Cierre estimado</span>
         </div>
@@ -786,12 +787,12 @@ function MonthComparison({ comparison }: { comparison: AiFinancialAnalysisCompar
   const categoryStories = buildCategoryStories(comparison);
 
   return (
-    <motion.section variants={itemMotion} className="rounded-[24px] border border-border bg-muted/40 p-4 sm:p-5">
+    <motion.section variants={itemMotion} className="rounded-[20px] border border-border bg-muted/40 p-3.5 sm:p-4">
       <SectionHeader eyebrow="Cambio" title="Contra el mes pasado" icon={CalendarDays} />
       {!comparison.available ? (
         <EmptyMicroState icon={CalendarDays} title="Todavía no hay una base anterior" message="Cuando exista un mes previo comparable, esta sección se vuelve narrativa." />
       ) : (
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-3 grid gap-2 grid-cols-2 lg:grid-cols-4">
           <ComparisonBlock
             label="Gastos"
             value={formatSignedMoney(comparison.expenseChangeAmount)}
@@ -820,9 +821,9 @@ function MonthComparison({ comparison }: { comparison: AiFinancialAnalysisCompar
       )}
 
       {categoryStories.length > 0 && (
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="mt-2.5 grid gap-1.5 sm:grid-cols-2">
           {categoryStories.map((story) => (
-            <p key={story.id} className="rounded-2xl border border-border bg-card/35 px-3 py-2.5 text-sm leading-6 text-muted-foreground">
+            <p key={story.id} className="rounded-xl border border-border bg-card/35 px-3 py-2 text-xs leading-snug text-muted-foreground">
               <span className={story.good ? "text-emerald-400" : "text-amber-500"}>{story.title}</span>{" "}
               <SensitiveText text={story.message} />
             </p>
@@ -843,25 +844,25 @@ function ActionPlan({
   const smartRecommendations = recommendations.length > 0 ? recommendations.slice(0, 3) : buildFallbackRecommendations(metrics);
 
   return (
-    <motion.section variants={itemMotion} className="space-y-3">
+    <motion.section variants={itemMotion} className="space-y-2">
       <SectionHeader eyebrow="Próximo paso" title="Recomendaciones accionables" icon={Target} />
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid gap-2 lg:grid-cols-3">
         {smartRecommendations.map((item, index) => (
           <motion.article
             key={`${item.title}-${index}`}
-            whileHover={{ y: -4 }}
-            className="rounded-[22px] border border-border bg-card/45 p-4"
+            whileHover={{ y: -2 }}
+            className="rounded-[18px] border border-border bg-card/45 p-3"
           >
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-muted/50 text-foreground">
-              {index === 0 ? <Target className="h-5 w-5" aria-hidden="true" /> : index === 1 ? <ShieldCheck className="h-5 w-5" aria-hidden="true" /> : <Wallet className="h-5 w-5" aria-hidden="true" />}
+            <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-muted/50 text-foreground">
+              {index === 0 ? <Target className="h-4 w-4" aria-hidden="true" /> : index === 1 ? <ShieldCheck className="h-4 w-4" aria-hidden="true" /> : <Wallet className="h-4 w-4" aria-hidden="true" />}
             </div>
-            <h3 className="text-balance text-lg font-semibold leading-tight text-foreground">
+            <h3 className="text-balance text-sm font-semibold leading-tight text-foreground">
               <SensitiveText text={item.title} />
             </h3>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            <p className="mt-1.5 text-xs leading-snug text-muted-foreground">
               <SensitiveText text={item.message} />
             </p>
-            <p className="mt-4 text-sm font-semibold text-primary">
+            <p className="mt-2 text-xs font-semibold text-primary">
               <SensitiveText text={item.estimatedImpact} />
             </p>
           </motion.article>
@@ -887,22 +888,22 @@ function CopilotEmptyState({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      className="overflow-hidden rounded-[24px] border border-border bg-card/45 p-5 sm:p-7"
+      className="overflow-hidden rounded-[24px] border border-border bg-card/45 p-4 sm:p-5"
     >
       <div className="max-w-2xl">
-        <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/50 text-primary">
-          {isForbidden ? <ShieldAlert className="h-6 w-6" aria-hidden="true" /> : error ? <AlertTriangle className="h-6 w-6" aria-hidden="true" /> : <Sparkles className="h-6 w-6" aria-hidden="true" />}
+        <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-muted/50 text-primary">
+          {isForbidden ? <ShieldAlert className="h-4 w-4" aria-hidden="true" /> : error ? <AlertTriangle className="h-4 w-4" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
         </div>
-        <h2 className="text-balance text-3xl font-semibold leading-tight text-foreground">
+        <h2 className="text-balance text-xl font-semibold leading-tight text-foreground">
           {isForbidden ? "La IA todavía no está habilitada." : error ? "No pudimos traer tu lectura." : "Descubramos qué importa hoy."}
         </h2>
-        <p className="mt-4 text-sm leading-6 text-muted-foreground">
+        <p className="mt-2 text-sm leading-snug text-muted-foreground">
           {isForbidden
             ? "Contactate con el administrador para activar Financial Copilot."
             : error ?? "Generá una lectura mensual con alertas, patrones y recomendaciones sin convertir tu dinero en un tablero técnico."}
         </p>
         {!isForbidden && (
-          <Button onClick={onAnalyze} disabled={isLoading} className="mt-6 h-11 rounded-2xl bg-foreground text-background hover:opacity-90">
+          <Button onClick={onAnalyze} disabled={isLoading} className="mt-4 h-10 rounded-2xl bg-foreground text-background hover:opacity-90">
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
             Crear lectura inteligente
           </Button>
@@ -946,11 +947,11 @@ function PremiumLoading() {
 function SectionHeader({ eyebrow, title, icon: Icon }: { eyebrow: string; title: string; icon: IconType }) {
   return (
     <div className="min-w-0">
-      <div className="mb-1.5 flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground">
-        <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+      <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <Icon className="h-3 w-3" aria-hidden="true" />
         <span>{eyebrow}</span>
       </div>
-      <h2 className="text-balance text-xl font-semibold leading-tight text-foreground">{title}</h2>
+      <h2 className="text-balance text-base font-semibold leading-tight text-foreground">{title}</h2>
     </div>
   );
 }
@@ -959,8 +960,8 @@ function SignalPill({ icon: Icon, label, tone }: { icon: IconType; label: string
   const styles = toneStyles[tone];
 
   return (
-    <span className={`inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium ${styles.badge}`}>
-      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+    <span className={`inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${styles.badge}`}>
+      <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
       <span className="truncate">{label}</span>
     </span>
   );
@@ -970,9 +971,9 @@ function PredictionChip({ label, value, tone }: { label: string; value: string; 
   const styles = toneStyles[tone];
 
   return (
-    <div className={`min-w-0 rounded-2xl border p-3 ${styles.card}`}>
-      <p className="truncate text-[11px] font-semibold uppercase text-muted-foreground">{label}</p>
-      <p className={`mt-1 truncate text-sm font-semibold tabular-nums ${styles.text}`}>
+    <div className={`min-w-0 rounded-xl border p-2.5 ${styles.card}`}>
+      <p className="truncate text-[10px] font-semibold uppercase text-muted-foreground">{label}</p>
+      <p className={`mt-0.5 truncate text-sm font-semibold tabular-nums ${styles.text}`}>
         <SensitiveText text={value} />
       </p>
     </div>
@@ -991,25 +992,25 @@ function ComparisonBlock({
   isGood: boolean;
 }) {
   return (
-    <div className="min-w-0 rounded-2xl border border-border bg-card/35 p-3">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="truncate text-xs font-semibold uppercase text-muted-foreground">{label}</p>
-        {isGood ? <TrendingDown className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" /> : <TrendingUp className="h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />}
+    <div className="min-w-0 rounded-xl border border-border bg-card/35 p-2.5">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <p className="truncate text-[10px] font-semibold uppercase text-muted-foreground">{label}</p>
+        {isGood ? <TrendingDown className="h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden="true" /> : <TrendingUp className="h-3.5 w-3.5 shrink-0 text-amber-500" aria-hidden="true" />}
       </div>
-      <p className={isGood ? "truncate text-base font-semibold tabular-nums text-emerald-400" : "truncate text-base font-semibold tabular-nums text-amber-500"}>
+      <p className={isGood ? "truncate text-sm font-semibold tabular-nums text-emerald-400" : "truncate text-sm font-semibold tabular-nums text-amber-500"}>
         <SensitiveText text={value} />
       </p>
-      <p className="mt-1 truncate text-xs text-muted-foreground">{detail}</p>
+      <p className="truncate text-[10px] text-muted-foreground">{detail}</p>
     </div>
   );
 }
 
 function EmptyMicroState({ icon: Icon, title, message }: { icon: IconType; title: string; message: string }) {
   return (
-    <div className="mt-5 rounded-2xl border border-border bg-card/35 p-4">
-      <Icon className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-      <p className="mt-3 text-sm font-semibold text-muted-foreground">{title}</p>
-      <p className="mt-1 text-sm leading-6 text-muted-foreground">{message}</p>
+    <div className="mt-3 rounded-xl border border-border bg-card/35 px-3 py-3">
+      <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+      <p className="mt-2 text-sm font-semibold text-muted-foreground">{title}</p>
+      <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{message}</p>
     </div>
   );
 }

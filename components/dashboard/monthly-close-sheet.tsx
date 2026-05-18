@@ -275,7 +275,7 @@ export function MonthlyCloseSheet({ isOpen, onClose, close }: MonthlyCloseSheetP
         <div className="h-px shrink-0 bg-border mx-5" />
 
         {/* Scrollable content */}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 space-y-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
 
           {/* Disponible real */}
           <div>
