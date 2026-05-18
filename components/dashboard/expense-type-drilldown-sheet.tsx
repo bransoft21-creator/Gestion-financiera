@@ -137,7 +137,7 @@ function TransactionRow({
       const r = await fetch(`/api/transactions/${tx.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expenseType: newType }),
+        body: JSON.stringify({ householdId: tx.householdId, expenseType: newType }),
       });
       if (!r.ok) throw new Error();
       trackProductEvent("distribution_transaction_reclassified", { expenseGroup: group }, "dashboard");

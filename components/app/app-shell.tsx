@@ -55,6 +55,7 @@ export function AppShell({ children, userId, userName, userEmail, awareness }: A
           <TutorialSpotlight />
           <Toaster
             position="top-center"
+            offset={{ top: "calc(env(safe-area-inset-top) + 80px)" }}
             toastOptions={{
               style: { background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))" },
             }}

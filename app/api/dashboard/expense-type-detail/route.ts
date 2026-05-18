@@ -18,6 +18,7 @@ const querySchema = z.object({
 
 export type ExpenseTypeDetailTransaction = {
   id: string;
+  householdId: string;
   description: string | null;
   amount: string;
   currency: string;
@@ -73,6 +74,7 @@ export async function GET(request: NextRequest) {
 
     const transactions: ExpenseTypeDetailTransaction[] = rows.map((row) => ({
       id: row.id,
+      householdId: household.id,
       description: row.description,
       amount: String(row.amount),
       currency: row.currency,
