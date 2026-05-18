@@ -9,7 +9,7 @@ import { traceAi, traceUserId } from "@/server/services/ai-trace";
 import { toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
 import { buildMonthlySystemPrompt } from "@/lib/ai/prompt-governance";
-import { normalizeMerchant, toDisplayName } from "@/lib/merchant/normalize";
+import { normalizeMerchant, toDisplayName, toGroupingKey } from "@/lib/merchant/normalize";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
@@ -611,24 +611,33 @@ function groupExpenses(transactions: AnalysisTransaction[], groupBy: "category" 
 }
 
 function detectRecurringExpenses(transactions: AnalysisTransaction[]) {
-  const groups = new Map<string, AnalysisTransaction[]>();
+  // Map key: space-collapsed merchant + category + amount bucket so that
+  // "BUEN LIBRO" and "BUENLIBRO" fall into the same bucket.
+  const groups = new Map<string, { canonical: string; items: AnalysisTransaction[] }>();
 
   transactions.forEach((tx) => {
     const merchantKey = normalizeMerchant(tx.description);
-    const description = merchantKey.length >= 4 ? merchantKey : normalizeDescription(tx.description).toUpperCase();
-    if (!description) return;
+    const canonical = merchantKey.length >= 4 ? merchantKey : normalizeDescription(tx.description).toUpperCase();
+    if (!canonical) return;
 
     const amountBucket = Math.round(toFiniteNumber(tx.amount) / 100) * 100;
-    const key = `${description}|${tx.category?.name ?? "Sin categoría"}|${amountBucket}`;
-    groups.set(key, [...(groups.get(key) ?? []), tx]);
+    const key = `${toGroupingKey(canonical)}|${tx.category?.name ?? "Sin categoría"}|${amountBucket}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.items.push(tx);
+      // Prefer the canonical that contains spaces (more human-readable).
+      if (!existing.canonical.includes(" ") && canonical.includes(" ")) {
+        existing.canonical = canonical;
+      }
+    } else {
+      groups.set(key, { canonical, items: [tx] });
+    }
   });
 
-  return Array.from(groups.entries())
-    .filter(([, items]) => items.length >= 2)
-    .map(([key, items]) => ({
-      // key is the canonical grouping key (merchant canonical | category | amountBucket)
-      // Use canonical display name from the merchant segment, not raw first-item description.
-      description: toDisplayName(key.split("|")[0] ?? "") || normalizeDescription(items[0]?.description),
+  return Array.from(groups.values())
+    .filter(({ items }) => items.length >= 2)
+    .map(({ canonical, items }) => ({
+      description: toDisplayName(canonical) || normalizeDescription(items[0]?.description),
       category: items[0]?.category?.name ?? "Sin categoría",
       count: items.length,
       averageAmount: roundMoney(sumAmounts(items) / items.length),
@@ -702,24 +711,34 @@ function isEssentialTransaction(tx: AnalysisTransaction): boolean {
 
 function getRepeatedSmallExpenses(transactions: AnalysisTransaction[], totalIncome: number) {
   const largeExpenseThreshold = totalIncome > 0 ? totalIncome * (HIGH_IMPACT_INCOME_RATE / 100) : Number.POSITIVE_INFINITY;
-  const groups = new Map<string, AnalysisTransaction[]>();
+  // Map key: space-collapsed canonical so "BUEN LIBRO" and "BUENLIBRO" merge.
+  const groups = new Map<string, { canonical: string; items: AnalysisTransaction[] }>();
 
   transactions.forEach((tx) => {
     if (toFiniteNumber(tx.amount) > largeExpenseThreshold) return;
     // Essential purchases (supermarkets, pharmacies, services) are never "invisible expenses"
     if (isEssentialTransaction(tx)) return;
 
-    // Use merchant canonicalization first, fall back to description stripping
     const merchantKey = normalizeMerchant(tx.description);
-    const normalizedDescription = merchantKey.length >= 4 ? merchantKey : normalizeRepeatedDescription(tx.description);
-    if (!normalizedDescription) return;
+    const canonical = merchantKey.length >= 4 ? merchantKey : normalizeRepeatedDescription(tx.description);
+    if (!canonical) return;
 
-    groups.set(normalizedDescription, [...(groups.get(normalizedDescription) ?? []), tx]);
+    const key = toGroupingKey(canonical);
+    const existing = groups.get(key);
+    if (existing) {
+      existing.items.push(tx);
+      // Prefer canonical with spaces (more human-readable).
+      if (!existing.canonical.includes(" ") && canonical.includes(" ")) {
+        existing.canonical = canonical;
+      }
+    } else {
+      groups.set(key, { canonical, items: [tx] });
+    }
   });
 
-  return Array.from(groups.entries())
-    .filter(([, items]) => items.length >= 2)
-    .map(([normalizedDescription, items]) => {
+  return Array.from(groups.values())
+    .filter(({ items }) => items.length >= 2)
+    .map(({ canonical, items }) => {
       const total = sumAmounts(items);
       const categories = Array.from(
         new Set(items.map((tx) => tx.category?.name ?? "Sin categoría")),
@@ -727,9 +746,8 @@ function getRepeatedSmallExpenses(transactions: AnalysisTransaction[], totalInco
 
       return {
         // Use canonical display name — never the raw description of an arbitrary first item.
-        // "BUEN LIBRO" → "Buen Libro", even if items[0] was "Comida Buen Libro".
-        description: toDisplayName(normalizedDescription) || normalizeDescription(items[0]?.description),
-        normalizedDescription,
+        description: toDisplayName(canonical) || normalizeDescription(items[0]?.description),
+        normalizedDescription: canonical,
         count: items.length,
         total,
         averageAmount: roundMoney(total / items.length),

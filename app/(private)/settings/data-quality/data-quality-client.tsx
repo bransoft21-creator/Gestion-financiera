@@ -618,7 +618,7 @@ export function DataQualityClient({
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-semibold text-foreground">{group.canonical}</p>
+                            <p className="text-sm font-semibold text-foreground">{group.displayName}</p>
                             <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                               {group.transactionCount} mov.
                             </span>

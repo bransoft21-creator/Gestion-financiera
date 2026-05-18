@@ -48,6 +48,16 @@ const CONTEXT_PREFIX_WORDS = [
   "DELIVERY",
   "PEDIDO",
   "DESPACHO",
+  "CAFE",
+  "CAFETERIA",
+  "RESTAURANTE",
+  "RESTAURANT",
+  "RESTO",
+  "HELADERIA",
+  "PANADERIA",
+  "PIZZERIA",
+  "ROTISERIA",
+  "CONFITERIA",
 ] as const;
 
 const CONTEXT_PREFIX_RE = new RegExp(
@@ -112,6 +122,19 @@ export function toDisplayName(canonical: string): string {
   return canonical
     .toLowerCase()
     .replace(/(?:^|\s)\S/g, (ch) => ch.toUpperCase());
+}
+
+/**
+ * Collapses all internal spaces so that canonicals that differ only by a space
+ * (e.g. "BUEN LIBRO" vs "BUENLIBRO") map to the same grouping key.
+ * Use as a Map key for cross-variant aggregation; never use as display text.
+ *
+ * "BUEN LIBRO"  → "BUENLIBRO"
+ * "BUENLIBRO"   → "BUENLIBRO"
+ * "COTO DIGITAL"→ "COTODIGITAL"
+ */
+export function toGroupingKey(canonical: string): string {
+  return canonical.replace(/\s+/g, "");
 }
 
 // ── Identity object ───────────────────────────────────────────────────────────

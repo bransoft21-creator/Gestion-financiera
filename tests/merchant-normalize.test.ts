@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { getMerchantIdentity, normalizeMerchant, toDisplayName } from "../lib/merchant/normalize";
+import { getMerchantIdentity, normalizeMerchant, toDisplayName, toGroupingKey } from "../lib/merchant/normalize";
 
 // ── Core bug regression ───────────────────────────────────────────────────────
 describe("normalizeMerchant — core bug: Buen Libro / Comida Buen Libro", () => {
@@ -160,18 +160,18 @@ describe("normalizeMerchant — legal suffix stripping", () => {
 
 // ── Accent normalization ──────────────────────────────────────────────────────
 describe("normalizeMerchant — accent normalization", () => {
-  it("strips accents — é → e", () => {
-    assert.equal(normalizeMerchant("Café El Patio"), "CAFE EL PATIO");
+  it("strips accents — é → e (CAFE is now a context prefix, so it gets stripped)", () => {
+    // "Café El Patio" → "CAFE EL PATIO" → CAFE is context prefix → "EL PATIO" (8 chars ≥ 5)
+    assert.equal(normalizeMerchant("Café El Patio"), "EL PATIO");
   });
 
   it("strips accents — ú → u", () => {
     assert.equal(normalizeMerchant("Almacén Único"), "ALMACEN UNICO");
   });
 
-  it("strips accents from context prefix word", () => {
-    // "Café Buen Libro" — CAFE not in context-prefix list, so no stripping of "CAFE"
-    // Result should preserve both words
-    assert.equal(normalizeMerchant("Café Buen Libro"), "CAFE BUEN LIBRO");
+  it("strips CAFE context prefix after accent normalization", () => {
+    // "Café Buen Libro" → "CAFE BUEN LIBRO" → CAFE is context prefix → "BUEN LIBRO" (10 chars ≥ 5)
+    assert.equal(normalizeMerchant("Café Buen Libro"), "BUEN LIBRO");
   });
 });
 
@@ -278,15 +278,115 @@ describe("getMerchantIdentity", () => {
 
   // ── Test 7: recurring detection — same canonical key, no duplicates ───────────
   it("test 7 — recurring detection: variants of same merchant produce identical grouping key", () => {
-    // Simulate the key used in detectRecurringExpenses: canonical|category|amountBucket
+    // Simulate the key used in detectRecurringExpenses: toGroupingKey(canonical)|category|amountBucket
     function buildRecurringKey(description: string, category: string, amount: number) {
       const canonical = normalizeMerchant(description);
       const amountBucket = Math.round(amount / 100) * 100;
-      return `${canonical}|${category}|${amountBucket}`;
+      return `${toGroupingKey(canonical)}|${category}|${amountBucket}`;
     }
 
     const keyA = buildRecurringKey("Buen Libro", "Libros", 1500);
     const keyB = buildRecurringKey("Comida Buen Libro", "Libros", 1500);
     assert.equal(keyA, keyB, "Different description variants must produce the same recurring detection key");
+  });
+});
+
+// ── toGroupingKey ─────────────────────────────────────────────────────────────
+describe("toGroupingKey", () => {
+  it("collapses spaces: 'BUEN LIBRO' → 'BUENLIBRO'", () => {
+    assert.equal(toGroupingKey("BUEN LIBRO"), "BUENLIBRO");
+  });
+
+  it("no-space canonical is unchanged: 'BUENLIBRO' → 'BUENLIBRO'", () => {
+    assert.equal(toGroupingKey("BUENLIBRO"), "BUENLIBRO");
+  });
+
+  it("'BUEN LIBRO' and 'BUENLIBRO' share the same grouping key (Risk 1 fix)", () => {
+    assert.equal(toGroupingKey("BUEN LIBRO"), toGroupingKey("BUENLIBRO"));
+  });
+
+  it("'COTO' and 'COTO DIGITAL' have DIFFERENT grouping keys (no false merge)", () => {
+    assert.notEqual(toGroupingKey("COTO"), toGroupingKey("COTO DIGITAL"));
+  });
+
+  it("returns '' for empty string", () => {
+    assert.equal(toGroupingKey(""), "");
+  });
+
+  it("collapses multiple internal spaces", () => {
+    assert.equal(toGroupingKey("A  B  C"), "ABC");
+  });
+});
+
+// ── Risk 1 integration: BUENLIBRO SA / Buen Libro grouping ───────────────────
+describe("Risk 1 — BUENLIBRO SA / Buen Libro merge via toGroupingKey", () => {
+  it("'BUENLIBRO SA' canonical is 'BUENLIBRO' (strips SA suffix)", () => {
+    assert.equal(normalizeMerchant("BUENLIBRO SA"), "BUENLIBRO");
+  });
+
+  it("'Buen Libro' canonical is 'BUEN LIBRO'", () => {
+    assert.equal(normalizeMerchant("Buen Libro"), "BUEN LIBRO");
+  });
+
+  it("canonicals differ (space vs no-space) but share the same grouping key", () => {
+    const canonicalA = normalizeMerchant("BUENLIBRO SA");
+    const canonicalB = normalizeMerchant("Buen Libro");
+    assert.notEqual(canonicalA, canonicalB); // still distinct canonicals
+    assert.equal(toGroupingKey(canonicalA), toGroupingKey(canonicalB)); // same key
+  });
+});
+
+// ── Risk 2 — Expanded context prefix words ────────────────────────────────────
+describe("Risk 2 — expanded context prefix words (business-type prefixes)", () => {
+  it("'Cafe Buen Libro' → 'BUEN LIBRO' (strips CAFE prefix)", () => {
+    assert.equal(normalizeMerchant("Cafe Buen Libro"), "BUEN LIBRO");
+  });
+
+  it("'Cafeteria Buen Libro' → 'BUEN LIBRO'", () => {
+    assert.equal(normalizeMerchant("Cafeteria Buen Libro"), "BUEN LIBRO");
+  });
+
+  it("'Restaurante El Gato' → 'EL GATO'", () => {
+    assert.equal(normalizeMerchant("Restaurante El Gato"), "EL GATO");
+  });
+
+  it("'Restaurant El Gato' → 'EL GATO'", () => {
+    assert.equal(normalizeMerchant("Restaurant El Gato"), "EL GATO");
+  });
+
+  it("'Resto El Gato' → 'EL GATO'", () => {
+    assert.equal(normalizeMerchant("Resto El Gato"), "EL GATO");
+  });
+
+  it("'Heladeria Freddo' → 'FREDDO'", () => {
+    assert.equal(normalizeMerchant("Heladeria Freddo"), "FREDDO");
+  });
+
+  it("'Panaderia Lauro' → 'LAURO'", () => {
+    assert.equal(normalizeMerchant("Panaderia Lauro"), "LAURO");
+  });
+
+  it("'Pizzeria Güerrin' → 'GUERRIN'", () => {
+    assert.equal(normalizeMerchant("Pizzeria Güerrin"), "GUERRIN");
+  });
+
+  it("'Rotiseria Nostra' → 'NOSTRA' (6 chars, above guardrail)", () => {
+    assert.equal(normalizeMerchant("Rotiseria Nostra"), "NOSTRA");
+  });
+
+  it("'Rotiseria Roma' stays — ROMA = 4 chars < 5 (min-length guardrail)", () => {
+    assert.equal(normalizeMerchant("Rotiseria Roma"), "ROTISERIA ROMA");
+  });
+
+  it("'Confiteria Las Violetas' → 'LAS VIOLETAS'", () => {
+    assert.equal(normalizeMerchant("Confiteria Las Violetas"), "LAS VIOLETAS");
+  });
+
+  it("min-length guard still applies: 'Cafe Juan' stays (JUAN = 4 chars < 5)", () => {
+    assert.equal(normalizeMerchant("Cafe Juan"), "CAFE JUAN");
+  });
+
+  it("'Restaurante Bar' stays — BAR = 3 chars < 5", () => {
+    assert.equal(normalizeMerchant("Restaurante Bar"), "RESTAURANTE BAR");
   });
 });

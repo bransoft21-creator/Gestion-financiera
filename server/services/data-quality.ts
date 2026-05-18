@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma";
-import { normalizeMerchant } from "@/lib/merchant/normalize";
+import { normalizeMerchant, toDisplayName, toGroupingKey } from "@/lib/merchant/normalize";
 import { assertHouseholdAccess } from "./households";
 
 const MERCHANT_HINTS: Array<{ pattern: RegExp; hint: string }> = [
@@ -71,6 +71,7 @@ export type QualitySignals = {
 
 export type SimilarMerchantGroup = {
   canonical: string;
+  displayName: string;
   variants: string[];
   transactionCount: number;
   categoryNames: string[];
@@ -170,17 +171,19 @@ export async function getQualitySignals(userProfileId: string, householdId: stri
   }
   const frequentGroupCount = Array.from(descMap.values()).filter((c) => c >= 2).length;
 
-  // similar merchant groups (multiple raw descriptions → same canonical)
+  // similar merchant groups (multiple raw descriptions → same grouping key)
+  // Uses toGroupingKey so "BUEN LIBRO" and "BUENLIBRO" count as one group.
   const merchantVariants = new Map<string, Set<string>>();
   for (const t of recentDescs) {
     if (!t.description) continue;
     const canonical = normalizeMerchant(t.description);
     if (canonical.length < 4) continue;
-    const existing = merchantVariants.get(canonical);
+    const key = toGroupingKey(canonical);
+    const existing = merchantVariants.get(key);
     if (existing) {
       existing.add(t.description);
     } else {
-      merchantVariants.set(canonical, new Set([t.description]));
+      merchantVariants.set(key, new Set([t.description]));
     }
   }
   const similarMerchantGroupCount = Array.from(merchantVariants.values()).filter((v) => v.size >= 2).length;
@@ -348,20 +351,27 @@ export async function getSimilarMerchants(userProfileId: string, householdId: st
     orderBy: { occurredAt: "desc" },
   });
 
-  const groups = new Map<string, { variants: Set<string>; count: number; categories: Set<string> }>();
+  // Key: space-collapsed grouping key so "BUEN LIBRO" and "BUENLIBRO" merge.
+  const groups = new Map<string, { bestCanonical: string; variants: Set<string>; count: number; categories: Set<string> }>();
 
   for (const tx of transactions) {
     if (!tx.description) continue;
     const canonical = normalizeMerchant(tx.description);
     if (canonical.length < 4) continue;
 
-    const existing = groups.get(canonical);
+    const key = toGroupingKey(canonical);
+    const existing = groups.get(key);
     if (existing) {
       existing.variants.add(tx.description);
       existing.count += 1;
       if (tx.category?.name) existing.categories.add(tx.category.name);
+      // Prefer canonical with spaces (more human-readable).
+      if (!existing.bestCanonical.includes(" ") && canonical.includes(" ")) {
+        existing.bestCanonical = canonical;
+      }
     } else {
-      groups.set(canonical, {
+      groups.set(key, {
+        bestCanonical: canonical,
         variants: new Set([tx.description]),
         count: 1,
         categories: tx.category?.name ? new Set([tx.category.name]) : new Set(),
@@ -370,10 +380,11 @@ export async function getSimilarMerchants(userProfileId: string, householdId: st
   }
 
   const result: SimilarMerchantGroup[] = [];
-  for (const [canonical, group] of groups) {
+  for (const [, group] of groups) {
     if (group.variants.size < 2) continue;
     result.push({
-      canonical,
+      canonical: group.bestCanonical,
+      displayName: toDisplayName(group.bestCanonical),
       variants: Array.from(group.variants).slice(0, 5),
       transactionCount: group.count,
       categoryNames: Array.from(group.categories).slice(0, 3),
