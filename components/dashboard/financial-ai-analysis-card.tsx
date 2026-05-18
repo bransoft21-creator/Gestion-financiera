@@ -761,14 +761,15 @@ function MonthPrediction({ metrics }: { metrics: AiFinancialAnalysisMetrics }) {
           <p className="text-sm font-semibold text-foreground">Pulso del mes</p>
           <Badge className="border-border bg-muted/50 text-muted-foreground">Proyección suave</Badge>
         </div>
-        <div className="flex h-36 items-end gap-2">
+        <div className="relative flex h-36 items-end gap-1.5">
           {bars.map((bar, index) => (
             <motion.div
-              key={`${bar}-${index}`}
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: `${bar}%`, opacity: 1 }}
+              key={index}
+              initial={{ scaleY: 0, opacity: 0 }}
+              animate={{ scaleY: 1, opacity: 1 }}
               transition={{ delay: index * 0.04, duration: 0.45, ease: easeOut }}
-              className="flex-1 rounded-t-lg bg-gradient-to-t from-white/12 to-teal-200/80"
+              style={{ height: `${bar}%`, originY: 1 }}
+              className="flex-1 rounded-t-md bg-gradient-to-t from-teal-500/40 to-teal-300/90 dark:from-teal-400/25 dark:to-teal-200/75"
             />
           ))}
         </div>
