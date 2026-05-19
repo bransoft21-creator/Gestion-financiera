@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateFinancialData } from "@/lib/invalidate";
 import { HelpCircle, Repeat, ShoppingCart, Zap } from "lucide-react";
 import {
   PremiumCard,
@@ -42,13 +43,13 @@ export function ExpenseTypeBreakdown({
   month: number;
   currency: string;
 }) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [openGroup, setOpenGroup] = useState<DrilldownGroup | null>(null);
   const didReclassify = useRef(false);
 
   function handleClose() {
     if (didReclassify.current) {
-      router.refresh();
+      invalidateFinancialData(queryClient, "transactionChanged");
       didReclassify.current = false;
     }
     setOpenGroup(null);

@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { invalidateFinancialData } from "@/lib/invalidate";
 import { captureClientError, trackProductEvent } from "@/lib/observability/client";
 import {
   SMART_IMPORT_ALLOWED_TYPES,
@@ -25,6 +27,7 @@ type Options = {
 };
 
 export function useSmartImport({ householdId, accounts }: Options) {
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>("upload");
   const [candidates, setCandidates] = useState<CandidateState[]>([]);
   const [metadata, setMetadata] = useState<ImportMetadata | null>(null);
@@ -361,13 +364,14 @@ export function useSmartImport({ householdId, accounts }: Options) {
       setDiscardedCount(notSelected.length);
       setDuplicatesAvoided(dupsAvoided.length);
       setStep("done");
+      invalidateFinancialData(queryClient, "importConfirmed");
     } catch (err) {
       trackProductEvent("smart_import_confirm_failed", { reason: "save_failed" }, "smart-import");
       captureClientError(err, "smart-import", { reason: "confirm_failed" });
       toast.error(err instanceof Error ? err.message : "Error al guardar.");
       setStep("review");
     }
-  }, [householdId, candidates, metadata]);
+  }, [householdId, candidates, metadata, queryClient]);
 
   const reset = useCallback(() => {
     if (metadata?.aiAssisted && step === "review") {

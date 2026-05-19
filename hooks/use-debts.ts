@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
+import { invalidateFinancialData } from "@/lib/invalidate";
 
 export type DebtItem = {
   id: string;
@@ -76,8 +77,7 @@ export function useCreateDebt() {
     },
     onSuccess: () => {
       toast.success("Deuda creada.");
-      void queryClient.invalidateQueries({ queryKey: queryKeys.debts.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      invalidateFinancialData(queryClient, "debtChanged");
     },
   });
 }
@@ -101,8 +101,7 @@ export function useUpdateDebt() {
     },
     onSuccess: () => {
       toast.success("Deuda actualizada.");
-      void queryClient.invalidateQueries({ queryKey: queryKeys.debts.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      invalidateFinancialData(queryClient, "debtChanged");
     },
   });
 }
@@ -121,8 +120,7 @@ export function useDeleteDebt() {
     },
     onSuccess: () => {
       toast.success("Deuda eliminada.");
-      void queryClient.invalidateQueries({ queryKey: queryKeys.debts.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      invalidateFinancialData(queryClient, "debtChanged");
     },
     onError: (err) => toast.error(err.message),
   });
@@ -166,9 +164,7 @@ export function usePayDebt() {
       return { debtName: input.debtName, debtId: input.debtId, amount: input.amount };
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.debts.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      invalidateFinancialData(queryClient, "transactionChanged");
     },
   });
 }

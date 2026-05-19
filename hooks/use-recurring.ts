@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
+import { invalidateFinancialData } from "@/lib/invalidate";
 
 export type RecurringItem = {
   id: string;
@@ -43,13 +44,6 @@ export function useRecurringExpenses(householdId: string, filter: RecurringFilte
   });
 }
 
-function useRecurringInvalidation(householdId: string, filter: RecurringFilter) {
-  const queryClient = useQueryClient();
-  return () => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.recurring.all });
-  };
-}
-
 type SaveRecurringInput = {
   householdId: string;
   name: string;
@@ -82,7 +76,7 @@ export function useCreateRecurring() {
     },
     onSuccess: () => {
       toast.success("Recurrente creado.");
-      void queryClient.invalidateQueries({ queryKey: queryKeys.recurring.all });
+      invalidateFinancialData(queryClient, "recurringChanged");
     },
   });
 }
@@ -106,7 +100,7 @@ export function useUpdateRecurring() {
     },
     onSuccess: () => {
       toast.success("Recurrente actualizado.");
-      void queryClient.invalidateQueries({ queryKey: queryKeys.recurring.all });
+      invalidateFinancialData(queryClient, "recurringChanged");
     },
   });
 }
@@ -134,7 +128,7 @@ export function useToggleRecurring() {
     },
     onSuccess: ({ wasActive }) => {
       toast.success(wasActive ? "Recurrente pausado." : "Recurrente activado.");
-      void queryClient.invalidateQueries({ queryKey: queryKeys.recurring.all });
+      invalidateFinancialData(queryClient, "recurringChanged");
     },
     onError: (err) => toast.error(err.message),
   });
@@ -154,7 +148,7 @@ export function useDeleteRecurring() {
     },
     onSuccess: () => {
       toast.success("Recurrente eliminado.");
-      void queryClient.invalidateQueries({ queryKey: queryKeys.recurring.all });
+      invalidateFinancialData(queryClient, "recurringChanged");
     },
     onError: (err) => toast.error(err.message),
   });
@@ -195,9 +189,7 @@ export function usePayRecurring() {
     },
     onSuccess: ({ name }) => {
       toast.success(`Pago de ${name} registrado correctamente.`);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.recurring.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      invalidateFinancialData(queryClient, "transactionChanged");
     },
     onError: (err) => toast.error(err.message),
   });

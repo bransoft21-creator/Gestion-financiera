@@ -1,6 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useBudgets,
+  useBudgetSuggestions,
+  useCreateBudget,
+  useUpdateBudget,
+  useDeleteBudget,
+} from "@/hooks/use-budgets";
+import { invalidateFinancialData } from "@/lib/invalidate";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
@@ -112,7 +121,17 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
   const currentMonth = now.getMonth() + 1;
   const shouldReduceMotion = useReducedMotion();
 
-  const [budgets, setBudgets] = useState<BudgetItem[]>([]);
+  const queryClient = useQueryClient();
+  const { data: budgets = [], isLoading } = useBudgets(householdId, currentYear, currentMonth);
+  const { data: suggestionsData, isLoading: isLoadingSuggestions } = useBudgetSuggestions(householdId, currentYear, currentMonth);
+
+  const createBudget = useCreateBudget();
+  const updateBudget = useUpdateBudget();
+  const deleteBudget = useDeleteBudget();
+
+  const isSaving = createBudget.isPending || updateBudget.isPending;
+  const deletingBudgetId = deleteBudget.isPending ? (deleteBudget.variables?.budgetId ?? null) : null;
+
   const [form, setForm] = useState<FormState>({
     categoryId: categories[0]?.id ?? "",
     plannedAmount: "",
@@ -120,18 +139,26 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
-  const [deletingBudgetId, setDeletingBudgetId] = useState<string | null>(null);
   const [pendingDeleteBudget, setPendingDeleteBudget] = useState<BudgetItem | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [isApplyingSuggestions, setIsApplyingSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState<BudgetSuggestion[]>([]);
-  const [suggestionDrafts, setSuggestionDrafts] = useState<Record<string, string>>({});
-  const [selectedSuggestionIds, setSelectedSuggestionIds] = useState<string[]>([]);
-  const [recentMonthlyIncome, setRecentMonthlyIncome] = useState(0);
-  const [hasHistoricalActivity, setHasHistoricalActivity] = useState(false);
+  const [draftOverrides, setDraftOverrides] = useState<Record<string, string>>({});
+  const [deselectedIds, setDeselectedIds] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState<string | null>(null);
+
+  const suggestions = useMemo(() => suggestionsData?.suggestions ?? [], [suggestionsData]);
+  const recentMonthlyIncome = suggestionsData?.recentMonthlyIncome ?? 0;
+  const hasHistoricalActivity = suggestionsData?.hasHistoricalActivity ?? false;
+  const suggestionDrafts = useMemo(
+    () => ({
+      ...Object.fromEntries(suggestions.map((s) => [s.categoryId, String(s.suggestedAmount)])),
+      ...draftOverrides,
+    }),
+    [suggestions, draftOverrides],
+  );
+  const selectedSuggestionIds = useMemo(
+    () => suggestions.map((s) => s.categoryId).filter((id) => !deselectedIds.has(id)),
+    [suggestions, deselectedIds],
+  );
 
   const availableCategories = useMemo(() => {
     const usedCategoryIds = new Set(
@@ -148,85 +175,6 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
     () => suggestions.filter((suggestion) => selectedSuggestionIds.includes(suggestion.categoryId)),
     [selectedSuggestionIds, suggestions],
   );
-
-  const loadSuggestions = useCallback(async () => {
-    setIsLoadingSuggestions(true);
-
-    try {
-      const params = new URLSearchParams({
-        householdId,
-        year: String(currentYear),
-        month: String(currentMonth),
-      });
-      const response = await fetch(`/api/budgets/suggestions?${params.toString()}`);
-      const payload = (await response.json()) as {
-        data?: {
-          recentMonthlyIncome: number;
-          hasHistoricalActivity: boolean;
-          suggestions: BudgetSuggestion[];
-        };
-        error?: string;
-      };
-
-      if (!response.ok) {
-        toast.error(payload.error ?? "No pudimos preparar una distribución inicial.");
-        return;
-      }
-
-      const nextSuggestions = payload.data?.suggestions ?? [];
-      setSuggestions(nextSuggestions);
-      setRecentMonthlyIncome(payload.data?.recentMonthlyIncome ?? 0);
-      setHasHistoricalActivity(payload.data?.hasHistoricalActivity ?? false);
-      setSuggestionDrafts(
-        Object.fromEntries(
-          nextSuggestions.map((suggestion) => [
-            suggestion.categoryId,
-            String(suggestion.suggestedAmount),
-          ]),
-        ),
-      );
-      setSelectedSuggestionIds(nextSuggestions.map((suggestion) => suggestion.categoryId));
-    } catch {
-      toast.error("No pudimos preparar sugerencias. Podés crear el plan manualmente.");
-    } finally {
-      setIsLoadingSuggestions(false);
-    }
-  }, [currentMonth, currentYear, householdId]);
-
-  const loadBudgets = useCallback(async () => {
-    setIsLoading(true);
-    setMessage(null);
-
-    try {
-      const params = new URLSearchParams({
-        householdId,
-        year: String(currentYear),
-        month: String(currentMonth),
-      });
-      const response = await fetch(`/api/budgets?${params.toString()}`);
-      const payload = (await response.json()) as { data?: BudgetItem[]; error?: string };
-
-      if (!response.ok) {
-        toast.error(payload.error ?? "No se pudieron cargar los presupuestos.");
-        return;
-      }
-
-      setBudgets(payload.data ?? []);
-      await loadSuggestions();
-    } catch {
-      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentMonth, currentYear, householdId, loadSuggestions]);
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void loadBudgets();
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [loadBudgets]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -255,36 +203,28 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
     }
 
     setErrors({});
-    setIsSaving(true);
 
     try {
-      const response = await fetch(editingBudgetId ? `/api/budgets/${editingBudgetId}` : "/api/budgets", {
-        method: editingBudgetId ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          householdId,
-          categoryId: parsed.data.categoryId,
-          currency: parsed.data.currency,
-          year: currentYear,
-          month: currentMonth,
-          plannedAmount: parsed.data.plannedAmount,
-        }),
-      });
-      const payload = (await response.json()) as { error?: string; fieldErrors?: FormErrors };
+      const input = {
+        householdId,
+        categoryId: parsed.data.categoryId,
+        currency: parsed.data.currency,
+        year: currentYear,
+        month: currentMonth,
+        plannedAmount: parsed.data.plannedAmount,
+      };
 
-      if (!response.ok) {
-        if (payload.fieldErrors) setErrors(payload.fieldErrors);
-        setMessage(payload.error ?? "No se pudo guardar el presupuesto.");
-        return;
+      if (editingBudgetId) {
+        await updateBudget.mutateAsync({ budgetId: editingBudgetId, ...input });
+      } else {
+        await createBudget.mutateAsync(input);
       }
 
-      toast.success(editingBudgetId ? "Presupuesto actualizado." : "Presupuesto creado.");
       resetForm();
-      await loadBudgets();
-    } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setIsSaving(false);
+    } catch (err) {
+      const fieldErrors = (err as Error & { fieldErrors?: FormErrors }).fieldErrors;
+      if (fieldErrors) setErrors(fieldErrors);
+      else setMessage((err as Error).message ?? "No se pudo guardar el presupuesto.");
     }
   }
 
@@ -334,12 +274,12 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
       const firstFailure = results.find((r) => r !== null && !r.ok);
       if (firstFailure) {
         setMessage(firstFailure.error ?? `No se pudo crear el plan de ${firstFailure.name}.`);
-        await loadBudgets();
+        invalidateFinancialData(queryClient, "budgetChanged");
         return;
       }
 
       toast.success("Distribución inicial creada.");
-      await loadBudgets();
+      invalidateFinancialData(queryClient, "budgetChanged");
     } catch {
       setMessage("Error de red. No pudimos crear la distribución inicial.");
     } finally {
@@ -348,15 +288,16 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
   }
 
   function updateSuggestionDraft(categoryId: string, value: string) {
-    setSuggestionDrafts((current) => ({ ...current, [categoryId]: value }));
+    setDraftOverrides((current) => ({ ...current, [categoryId]: value }));
   }
 
   function toggleSuggestion(categoryId: string) {
-    setSelectedSuggestionIds((current) =>
-      current.includes(categoryId)
-        ? current.filter((id) => id !== categoryId)
-        : [...current, categoryId],
-    );
+    setDeselectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(categoryId)) next.delete(categoryId);
+      else next.add(categoryId);
+      return next;
+    });
   }
 
   function requestDelete(budget: BudgetItem) {
@@ -367,32 +308,16 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
     if (!pendingDeleteBudget) return;
 
     const budgetId = pendingDeleteBudget.id;
-    setDeletingBudgetId(budgetId);
     setMessage(null);
 
     try {
-      const response = await fetch(
-        `/api/budgets/${budgetId}?${new URLSearchParams({ householdId }).toString()}`,
-        { method: "DELETE" },
-      );
-      const payload = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        toast.error(payload.error ?? "No se pudo eliminar el presupuesto.");
-        return;
-      }
-
-      toast.success("Presupuesto eliminado.");
+      await deleteBudget.mutateAsync({ budgetId, householdId });
       setPendingDeleteBudget(null);
       if (editingBudgetId === budgetId) {
         resetForm();
       }
-
-      await loadBudgets();
     } catch {
-      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setDeletingBudgetId(null);
+      // toast shown by useDeleteBudget onError
     }
   }
 

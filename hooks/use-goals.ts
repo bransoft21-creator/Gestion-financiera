@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryKeys } from "@/lib/query-keys";
+import { invalidateFinancialData } from "@/lib/invalidate";
 
 export type GoalItem = {
   id: string;
@@ -31,14 +32,6 @@ export function useGoals(householdId: string) {
   });
 }
 
-function useGoalInvalidation() {
-  const queryClient = useQueryClient();
-  return () => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.goals.all });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-  };
-}
-
 type CreateGoalInput = {
   householdId: string;
   name: string;
@@ -54,7 +47,7 @@ type CreateGoalInput = {
 type UpdateGoalInput = CreateGoalInput & { goalId: string };
 
 export function useCreateGoal() {
-  const invalidate = useGoalInvalidation();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateGoalInput) => {
       const response = await fetch("/api/goals", {
@@ -72,13 +65,13 @@ export function useCreateGoal() {
     },
     onSuccess: () => {
       toast.success("Meta creada.");
-      invalidate();
+      invalidateFinancialData(queryClient, "goalChanged");
     },
   });
 }
 
 export function useUpdateGoal() {
-  const invalidate = useGoalInvalidation();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ goalId, ...input }: UpdateGoalInput) => {
       const response = await fetch(`/api/goals/${goalId}`, {
@@ -96,13 +89,13 @@ export function useUpdateGoal() {
     },
     onSuccess: () => {
       toast.success("Meta actualizada.");
-      invalidate();
+      invalidateFinancialData(queryClient, "goalChanged");
     },
   });
 }
 
 export function useDeleteGoal() {
-  const invalidate = useGoalInvalidation();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ goalId, householdId }: { goalId: string; householdId: string }) => {
       const response = await fetch(
@@ -115,7 +108,7 @@ export function useDeleteGoal() {
     },
     onSuccess: () => {
       toast.success("Meta eliminada.");
-      invalidate();
+      invalidateFinancialData(queryClient, "goalChanged");
     },
     onError: (err) => toast.error(err.message),
   });
@@ -156,9 +149,7 @@ export function useGoalContribution() {
     },
     onSuccess: ({ goalName }) => {
       toast.success(`Aporte a "${goalName}" registrado correctamente.`);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.goals.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      invalidateFinancialData(queryClient, "transactionChanged");
     },
     onError: (err) => toast.error(err.message),
   });
