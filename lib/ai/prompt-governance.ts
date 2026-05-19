@@ -47,6 +47,20 @@ const DATA_RULES = [
   "Si un equivalente estimado aparece en el input, nombralo como aproximado. Nunca lo trates como balance real.",
 ] as const;
 
+/**
+ * Mathematical consistency rules for percentage presentation.
+ * CRITICAL: prevents the model from mixing denominators in the same sentence,
+ * which generates perceived contradictions in the UI even when the math is correct.
+ */
+const PERCENTAGE_GOVERNANCE_RULES = [
+  "REGLA CRÍTICA — DENOMINADORES: Meridian usa dos bases distintas para porcentajes. Nunca las mezclés en la misma oración sin aclararlo.",
+  "BASE INGRESOS (income): savingsRate, fixedExpenseRate, mobilityRate, incomePercentage en highImpactTransactions. Cuando los menciones, decí siempre 'del ingreso' o 'sobre tus ingresos'. Ejemplo correcto: 'el 41% del ingreso va a fijos'. Ejemplo incorrecto: 'tus fijos representan el 41%'.",
+  "BASE GASTO TOTAL (totalExpenses): creditCardExpenseRate, y los campos 'percentage' dentro de categoryExpensePercentages. Cuando los menciones, decí siempre 'del gasto total' o 'de tus gastos'. Ejemplo correcto: 'Supermercados representa el 28% del gasto total'. Ejemplo incorrecto: 'Supermercados es el 28%'.",
+  "NUNCA digas 'los gastos fijos son el X%' sin aclarar si es sobre ingresos o sobre el gasto total — son valores distintos y ambos pueden estar en el input.",
+  "Si en un mismo párrafo mencionás un porcentaje sobre ingresos Y uno sobre gastos, separalos en oraciones distintas y etiquetá cada uno. Nunca los pongas como si fueran comparables entre sí.",
+  "Los campos de comparación mes anterior (expenseChangePercent, savingsRateChange, fixedExpenseRateChange, mobilityChangePercent) son variaciones, no ratios absolutos. Presentalos como 'cambió X puntos' o 'bajó X%', no como 'es el X% de los ingresos'.",
+] as const;
+
 /** Score scale consistency. */
 const SCORE_RULES = [
   "Si el esquema de respuesta incluye un campo 'score', usá escala 0-100 entero: 0 es situación crítica, 50 es equilibrio justo, 100 es financieramente óptimo.",
@@ -81,6 +95,9 @@ export function buildMonthlySystemPrompt(): string {
     "",
     "DATOS Y ALUCINACIONES",
     ...DATA_RULES,
+    "",
+    "DENOMINADORES Y PORCENTAJES",
+    ...PERCENTAGE_GOVERNANCE_RULES,
     "",
     "SCORE",
     ...SCORE_RULES,

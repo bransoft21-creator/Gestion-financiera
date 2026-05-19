@@ -829,7 +829,22 @@ async function requestOpenAiAnalysis(
     throw new ApiError(503, "El servicio de IA no está configurado.");
   }
   const model = process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL;
-  const prompt = `Analizá este resumen mensual compacto y generá el análisis solicitado.\nRecordatorio de escala: el campo "score" es un entero 0-100 (0=crítico, 50=equilibrio, 100=óptimo).\nGuardrail multi-moneda: el campo currency es la moneda real analizada. currencyScope.ignoredCurrencies lista monedas presentes que NO fueron sumadas. No infieras totales globales ni mezcles monedas.\nDatos:\n${JSON.stringify(input)}`;
+  const prompt = [
+    "Analizá este resumen mensual compacto y generá el análisis solicitado.",
+    "",
+    "Recordatorio de escala: el campo \"score\" es un entero 0-100 (0=crítico, 50=equilibrio, 100=óptimo).",
+    "",
+    "Guardrail multi-moneda: el campo currency es la moneda real analizada. currencyScope.ignoredCurrencies lista monedas presentes que NO fueron sumadas. No infieras totales globales ni mezcles monedas.",
+    "",
+    "MAPA DE DENOMINADORES — leé esto antes de los datos:",
+    "  BASE INGRESOS (sobre 'income'): savingsRate, fixedExpenseRate, mobilityRate, incomePercentage.",
+    "  BASE GASTO TOTAL (sobre suma de gastos): creditCardExpenseRate, categoryExpensePercentages[].percentage.",
+    "  Al mencionar cualquier porcentaje en tu respuesta, incluí siempre 'del ingreso' o 'del gasto total' según corresponda.",
+    "  fixedExpenseRate (ej: 41) y el porcentaje de fijos sobre gastos (ej: 62) son valores distintos — no los confundas ni los presentes como si midieran lo mismo.",
+    "",
+    "Datos:",
+    JSON.stringify(input),
+  ].join("\n");
 
   let response: Response;
   try {
