@@ -79,13 +79,13 @@ export function ExpenseTypeBreakdown({
           {income > 0 && (
             <div className="rounded-2xl border border-border bg-muted/30 px-4 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Carga sobre ingresos
+                Ingreso ya asignado
               </p>
               <div className="mt-1 flex items-baseline gap-2">
                 <span className={`text-2xl font-extrabold tabular-nums ${fixedRatioTextClass}`}>
                   {fixedToIncomeRatio}%
                 </span>
-                <span className="text-xs text-muted-foreground">del ingreso comprometido en fijos</span>
+                <span className="text-xs text-muted-foreground">en pagos que se repiten este mes</span>
               </div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background/60">
                 <div
@@ -97,7 +97,7 @@ export function ExpenseTypeBreakdown({
           )}
           {rows.length > 0 && (
             <p className="px-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
-              Distribución del gasto
+              Del total gastado
             </p>
           )}
           {rows.map((row) => {
