@@ -102,14 +102,18 @@ export function getAmbientHint(
 export function buildHealthSignals(metrics: DashboardSummary["metrics"]): HealthSignal[] {
   const signals: HealthSignal[] = [];
   if (metrics.savingsRate >= 20) {
-    signals.push({ label: `Ahorrás ${metrics.savingsRate}%`, tone: "positive" });
+    signals.push({ label: "Ahorro saludable", tone: "positive" });
+  } else if (metrics.savingsRate >= 10) {
+    signals.push({ label: "Ahorro activo", tone: "positive" });
   } else if (metrics.savingsRate < 0) {
     signals.push({ label: "Mes en déficit", tone: "warning" });
   }
   if (metrics.fixedToIncomeRatio < 35 && metrics.income > 0) {
     signals.push({ label: "Fijos controlados", tone: "positive" });
   } else if (metrics.fixedToIncomeRatio >= 55 && metrics.income > 0) {
-    signals.push({ label: `${metrics.fixedToIncomeRatio}% en fijos`, tone: "warning" });
+    signals.push({ label: "Carga fija alta", tone: "warning" });
+  } else if (metrics.fixedToIncomeRatio >= 40 && metrics.income > 0) {
+    signals.push({ label: "Fijos en zona media", tone: "warning" });
   }
   if (metrics.upcomingObligations === 0 && metrics.income > 0) {
     signals.push({ label: "Sin presión pendiente", tone: "positive" });

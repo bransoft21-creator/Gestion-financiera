@@ -79,7 +79,7 @@ export function ExpenseTypeBreakdown({
           {income > 0 && (
             <div className="rounded-2xl border border-border bg-muted/30 px-4 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Fijos del ingreso
+                Carga sobre ingresos
               </p>
               <div className="mt-1 flex items-baseline gap-2">
                 <span className={`text-2xl font-extrabold tabular-nums ${fixedRatioTextClass}`}>
@@ -94,6 +94,11 @@ export function ExpenseTypeBreakdown({
                 />
               </div>
             </div>
+          )}
+          {rows.length > 0 && (
+            <p className="px-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+              Distribución del gasto
+            </p>
           )}
           {rows.map((row) => {
             const value = expensesByType[row.key];

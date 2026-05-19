@@ -358,7 +358,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
     }
   }
 
-  const statusLabel = isStale ? "Hay cambios sin revisar" : isCached ? "Guardado" : analysis ? null : "Sin análisis aún";
+  const statusLabel = isStale ? "Datos nuevos disponibles" : isCached ? "Guardado" : analysis ? null : "Sin lectura aún";
 
   return (
     <section data-tutorial="financial-copilot" className="mb-8 overflow-hidden rounded-[28px] border border-border bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.16),transparent_31%),radial-gradient(circle_at_82%_12%,rgba(251,191,36,0.12),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))] p-1 shadow-[0_30px_120px_rgba(0,0,0,0.38)] sm:mb-10">
@@ -376,10 +376,10 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
             </div>
             <div className="min-w-0">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-foreground">Briefing del mes</p>
+                <p className="text-sm font-semibold text-foreground">Lectura del mes</p>
                 {statusLabel && <Badge className="border-border bg-muted/50 text-[11px] text-muted-foreground">{statusLabel}</Badge>}
               </div>
-              <p className="mt-0.5 text-xs text-muted-foreground">Lo importante de tu dinero, sin ruido.</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Tu panorama financiero mensual.</p>
             </div>
             {analysis && metrics && (
               <ChevronDown
@@ -396,7 +396,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
               className="h-11 w-full rounded-2xl bg-foreground text-background shadow-[0_16px_42px_rgba(255,255,255,0.12)] hover:opacity-90 sm:w-auto"
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
-              {analysis ? "Actualizar" : "Generar briefing"}
+              {analysis ? "Nueva lectura" : "Analizar mi mes"}
             </Button>
           </div>
         </div>
@@ -473,7 +473,7 @@ function CollapsedCopilotPreview({
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
             <Badge className={`${scoreStyle.badge}`}>Estabilidad: {scoreLabel}</Badge>
-            {isStale && <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-500">Hay cambios sin revisar</Badge>}
+            {isStale && <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-500">Datos nuevos disponibles</Badge>}
           </div>
           <h2 className="text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">{hero.title}</h2>
           <p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-snug text-muted-foreground">{hero.subtitle}</p>
@@ -570,7 +570,7 @@ function FinancialCopilotHero({
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
             <Badge className="border-border bg-muted text-muted-foreground">Tu dinero este mes</Badge>
-            {isStale && <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-500">Revisar cambios</Badge>}
+            {isStale && <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-500">Datos nuevos</Badge>}
             <Badge className="border-border bg-muted text-muted-foreground">Vista {metrics.currency}</Badge>
             {metrics.currencyScope.mixedCurrencies && (
               <Badge className="border-border bg-muted text-muted-foreground">
@@ -876,13 +876,13 @@ function CopilotEmptyState({
         </h2>
         <p className="mt-2 text-sm leading-snug text-muted-foreground">
           {isForbidden
-            ? "Contactate con el administrador para activar Financial Copilot."
-            : error ?? "Generá una lectura mensual con alertas, patrones y recomendaciones sin convertir tu dinero en un tablero técnico."}
+            ? "Contactate con el administrador para activar el análisis mensual."
+            : error ?? "Generá una lectura mensual con alertas, patrones y recomendaciones. Tu panorama financiero, sin convertirlo en un tablero técnico."}
         </p>
         {!isForbidden && (
           <Button onClick={onAnalyze} disabled={isLoading} className="mt-4 h-10 rounded-2xl bg-foreground text-background hover:opacity-90">
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
-            Crear lectura inteligente
+            Analizar mi mes
           </Button>
         )}
       </div>
