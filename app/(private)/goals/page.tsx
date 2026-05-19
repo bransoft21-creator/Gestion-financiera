@@ -5,7 +5,7 @@ import { GoalsClient } from "./goals-client";
 
 export default async function GoalsPage() {
   const { userProfile } = await getCurrentUser();
-  const workspace = await getGoalWorkspace(userProfile.id);
+  const workspace = await getGoalWorkspace(userProfile.id, userProfile.currency);
 
   return (
     <V2PageShell
@@ -13,7 +13,7 @@ export default async function GoalsPage() {
       title="Tus próximos movimientos importantes"
       description="Seguís ahorro, fechas y aportes como una historia de progreso, no como una lista de tareas."
     >
-      <GoalsClient householdId={workspace.household.id} accounts={workspace.accounts} defaultCurrency={userProfile.currency as "ARS" | "USD"} />
+      <GoalsClient householdId={workspace.household.id} accounts={workspace.accounts} defaultCurrency={userProfile.currency as "ARS" | "USD"} avgMonthlyExpense={workspace.avgMonthlyExpense} />
     </V2PageShell>
   );
 }

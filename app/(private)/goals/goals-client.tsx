@@ -64,6 +64,7 @@ type GoalsClientProps = {
   householdId: string;
   accounts: AccountOption[];
   defaultCurrency?: "ARS" | "USD";
+  avgMonthlyExpense?: number;
 };
 
 type FormState = {
@@ -126,7 +127,7 @@ const cardMotion = {
   transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
 } as const;
 
-export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: GoalsClientProps) {
+export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS", avgMonthlyExpense = 0 }: GoalsClientProps) {
   const defaultAccount = getPreferredArsBankAccount(accounts);
   const queryClient = useQueryClient();
   const { data: goals = [], isLoading } = useGoals(householdId);
@@ -297,7 +298,7 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
     setIsFormOpen(true);
   }
 
-  function openNewGoalWithSuggestion(partial: Partial<Pick<FormState, "name" | "currency">>) {
+  function openNewGoalWithSuggestion(partial: Partial<Pick<FormState, "name" | "currency" | "targetAmount">>) {
     resetForm();
     setForm((current) => ({ ...current, ...partial }));
     setIsFormOpen(true);
@@ -480,7 +481,7 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
               {isLoading ? (
                 <GoalSkeletonList />
               ) : goals.length === 0 ? (
-                <GoalEmptyState onCreate={openNewGoal} onSuggest={openNewGoalWithSuggestion} />
+                <GoalEmptyState onCreate={openNewGoal} onSuggest={openNewGoalWithSuggestion} avgMonthlyExpense={avgMonthlyExpense} />
               ) : (
                 <div className="grid gap-3">
                   <AnimatePresence initial={false}>
@@ -904,9 +905,11 @@ const GOAL_SUGGESTIONS: GoalSuggestionItem[] = [
 function GoalEmptyState({
   onCreate,
   onSuggest,
+  avgMonthlyExpense,
 }: {
   onCreate: () => void;
-  onSuggest: (partial: Partial<Pick<FormState, "name" | "currency">>) => void;
+  onSuggest: (partial: Partial<Pick<FormState, "name" | "currency" | "targetAmount">>) => void;
+  avgMonthlyExpense: number;
 }) {
   return (
     <div className="space-y-4">
@@ -921,22 +924,36 @@ function GoalEmptyState({
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2">
-        {GOAL_SUGGESTIONS.map((suggestion) => (
-          <button
-            key={suggestion.label}
-            type="button"
-            onClick={() => onSuggest({ name: suggestion.name, currency: suggestion.currency })}
-            className="group flex items-start gap-3 rounded-2xl border border-border bg-muted/20 p-3.5 text-left transition hover:border-border/80 hover:bg-muted/35 active:scale-[0.99]"
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-muted-foreground">
-              <suggestion.Icon className="h-4 w-4" aria-hidden="true" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">{suggestion.label}</p>
-              <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{suggestion.description}</p>
-            </div>
-          </button>
-        ))}
+        {GOAL_SUGGESTIONS.map((suggestion) => {
+          const isEmergency = suggestion.label === "Fondo de emergencia";
+          const prefilledTarget = isEmergency && avgMonthlyExpense > 0
+            ? String(Math.round(avgMonthlyExpense * 3))
+            : undefined;
+          return (
+            <button
+              key={suggestion.label}
+              type="button"
+              onClick={() => onSuggest({
+                name: suggestion.name,
+                currency: suggestion.currency,
+                ...(prefilledTarget ? { targetAmount: prefilledTarget } : {}),
+              })}
+              className="group flex items-start gap-3 rounded-2xl border border-border bg-muted/20 p-3.5 text-left transition hover:border-border/80 hover:bg-muted/35 active:scale-[0.99]"
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-muted-foreground">
+                <suggestion.Icon className="h-4 w-4" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">{suggestion.label}</p>
+                <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                  {isEmergency && avgMonthlyExpense > 0
+                    ? `Sugerido: ${formatMoney(avgMonthlyExpense * 3, "ARS")} (3× gasto promedio).`
+                    : suggestion.description}
+                </p>
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       <div className="flex justify-center pt-1">

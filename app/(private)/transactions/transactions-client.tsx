@@ -178,6 +178,13 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
   const [pendingDeleteTransaction, setPendingDeleteTransaction] = useState<TransactionItem | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [pendingRecurringProposal, setPendingRecurringProposal] = useState<{
+    name: string;
+    amount: number;
+    currency: CurrencyCode;
+    accountId: string;
+  } | null>(null);
+  const [isCreatingRecurring, setIsCreatingRecurring] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(() => (
     Boolean(searchParams.get("type") ?? searchParams.get("categoryId") ?? searchParams.get("from") ?? searchParams.get("to"))
   ));
@@ -441,12 +448,22 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
         return;
       }
 
-      const wasCardPayment = type === "TRANSFER" &&
-        accounts.find((a) => a.id === (data.transferAccountId as string))?.type === "CREDIT_CARD";
+      const isNewExpenseOrIncomeRecurring =
+        !editingTransactionId && isExpenseOrIncome && Boolean(data.isRecurring);
       toast.success(editingTransactionId ? "Transacción actualizada." : "Transacción guardada.");
       pendingCreateRequestIdRef.current = null;
       resetForm();
-      setIsFormOpen(false);
+      if (isNewExpenseOrIncomeRecurring) {
+        setPendingRecurringProposal({
+          name: data.description as string,
+          amount: parseFloat(data.amount as string),
+          currency: data.currency as CurrencyCode,
+          accountId: data.accountId as string,
+        });
+        // Keep panel open to show the proposal step
+      } else {
+        setIsFormOpen(false);
+      }
       invalidateAfterTransaction();
       await loadTransactions(filters, search);
     } catch {
@@ -455,6 +472,46 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function confirmRecurringProposal() {
+    if (!pendingRecurringProposal) return;
+    setIsCreatingRecurring(true);
+    const nextMonthFirst = new Date();
+    nextMonthFirst.setMonth(nextMonthFirst.getMonth() + 1);
+    nextMonthFirst.setDate(1);
+    try {
+      const response = await fetch("/api/recurring-expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          householdId,
+          name: pendingRecurringProposal.name,
+          amount: pendingRecurringProposal.amount,
+          currency: pendingRecurringProposal.currency,
+          accountId: pendingRecurringProposal.accountId,
+          frequency: "MONTHLY",
+          nextDueDate: nextMonthFirst.toISOString().slice(0, 10),
+        }),
+      });
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        toast.error(payload.error ?? "No se pudo crear el gasto recurrente.");
+      } else {
+        toast.success("Gasto recurrente creado correctamente.");
+      }
+    } catch {
+      toast.error("Error de red. No se pudo crear el recurrente.");
+    } finally {
+      setIsCreatingRecurring(false);
+      setPendingRecurringProposal(null);
+      setIsFormOpen(false);
+    }
+  }
+
+  function dismissRecurringProposal() {
+    setPendingRecurringProposal(null);
+    setIsFormOpen(false);
   }
 
   async function handleDelete(transaction: TransactionItem) {
@@ -654,7 +711,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
         onConfirm={() => void confirmDelete()}
       />
 
-      <AppFormPanel isOpen={isFormOpen} onClose={() => { setIsFormOpen(false); setCardPaymentBlocked(null); }} desktopAlwaysOpen={false}>
+      <AppFormPanel isOpen={isFormOpen} onClose={() => { setIsFormOpen(false); setCardPaymentBlocked(null); setPendingRecurringProposal(null); }} desktopAlwaysOpen={false}>
         <CardHeader className={appFormHeaderClass()}>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-muted/60 text-primary">
@@ -679,7 +736,40 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
           </div>
         </CardHeader>
         <CardContent className={appFormContentClass(isFormOpen)}>
-          {cardPaymentBlocked ? (
+          {pendingRecurringProposal ? (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4">
+                <p className="text-sm font-semibold text-foreground">¿Guardamos esto como recurrente?</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Marcaste este movimiento como recurrente. Podemos crear un <strong>Gasto recurrente</strong> con los mismos datos para que aparezca en tus obligaciones cada mes.
+                </p>
+                <div className="mt-3 rounded-xl border border-border bg-background/50 px-3 py-2 text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">{pendingRecurringProposal.name}</span>
+                  {" · "}
+                  {new Intl.NumberFormat("es-AR", { style: "currency", currency: pendingRecurringProposal.currency, minimumFractionDigits: 0 }).format(pendingRecurringProposal.amount)}
+                  {" · "}mensual
+                </div>
+              </div>
+              <Button
+                type="button"
+                className="h-11 w-full"
+                disabled={isCreatingRecurring}
+                onClick={() => void confirmRecurringProposal()}
+              >
+                {isCreatingRecurring ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+                Sí, crear gasto recurrente
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-9 w-full text-xs text-muted-foreground"
+                disabled={isCreatingRecurring}
+                onClick={dismissRecurringProposal}
+              >
+                No, solo era esta vez
+              </Button>
+            </div>
+          ) : cardPaymentBlocked ? (
             <div className="space-y-4">
               <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4">
                 <div className="flex items-start gap-3">

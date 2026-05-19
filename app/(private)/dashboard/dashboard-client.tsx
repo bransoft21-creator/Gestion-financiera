@@ -293,12 +293,6 @@ export function DashboardClient() {
       />
       <FinancialHealthStrip metrics={metrics} />
 
-      <ContextualEducationCard
-        item={dashboardEducation}
-        surface="dashboard"
-        className="mb-5 sm:mb-8"
-      />
-
       {/* 4. Distribución + tendencia — colapsable */}
       <motion.section
         variants={shouldReduceMotion ? undefined : sectionReveal}
@@ -319,17 +313,24 @@ export function DashboardClient() {
           }}
         />
         {sectionDistribucion.expanded && (
-          <div className="grid gap-5 lg:grid-cols-2">
-            <ExpenseTypeBreakdown
-              expensesByType={metrics.expensesByType}
-              total={metrics.expenses}
-              income={metrics.income}
-              fixedToIncomeRatio={metrics.fixedToIncomeRatio}
-              year={year}
-              month={month}
-              currency={metrics.currency}
+          <div className="space-y-5">
+            <ContextualEducationCard
+              item={dashboardEducation}
+              surface="dashboard"
+              compact
             />
-            <MonthProjection metrics={metrics} />
+            <div className="grid gap-5 lg:grid-cols-2">
+              <ExpenseTypeBreakdown
+                expensesByType={metrics.expensesByType}
+                total={metrics.expenses}
+                income={metrics.income}
+                fixedToIncomeRatio={metrics.fixedToIncomeRatio}
+                year={year}
+                month={month}
+                currency={metrics.currency}
+              />
+              <MonthProjection metrics={metrics} />
+            </div>
           </div>
         )}
       </motion.section>

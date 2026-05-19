@@ -1,4 +1,4 @@
-import { AccountType, CategoryType, HouseholdKind, HouseholdMemberStatus } from "@prisma/client";
+import { AccountType, CategoryType, CurrencyCode, HouseholdKind, HouseholdMemberStatus, TransactionType } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { NotFoundError } from "../api/errors";
 
@@ -171,14 +171,37 @@ export async function getBudgetWorkspace(userProfileId: string) {
   };
 }
 
-export async function getGoalWorkspace(userProfileId: string) {
+export async function getGoalWorkspace(userProfileId: string, primaryCurrency: CurrencyCode = CurrencyCode.ARS) {
   const household = await getPrimaryHousehold(userProfileId);
-  const accounts = await prisma.account.findMany({
-    where: { householdId: household.id, deletedAt: null, isArchived: false },
-    select: { id: true, name: true, type: true, currency: true },
-    orderBy: { name: "asc" },
-  });
-  return { household, accounts };
+
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  threeMonthsAgo.setDate(1);
+  threeMonthsAgo.setHours(0, 0, 0, 0);
+
+  const [accounts, expenseAggregate] = await Promise.all([
+    prisma.account.findMany({
+      where: { householdId: household.id, deletedAt: null, isArchived: false },
+      select: { id: true, name: true, type: true, currency: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.transaction.aggregate({
+      where: {
+        householdId: household.id,
+        type: TransactionType.EXPENSE,
+        currency: primaryCurrency,
+        status: { not: "CANCELED" },
+        occurredAt: { gte: threeMonthsAgo },
+        deletedAt: null,
+      },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const totalExpenses3m = Number(expenseAggregate._sum?.amount ?? 0);
+  const avgMonthlyExpense = Math.round(totalExpenses3m / 3);
+
+  return { household, accounts, avgMonthlyExpense };
 }
 
 export async function getAccountWorkspace(userProfileId: string) {
