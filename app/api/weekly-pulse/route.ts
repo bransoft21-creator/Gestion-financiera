@@ -29,6 +29,8 @@ export interface WeeklyPulseData {
   expensesChange: number | null;
   topCategory: { name: string; pct: number } | null;
   signals: Array<{ id: string; label: string; severity: SignalSeverity }>;
+  /** Days elapsed in the current ISO week (1=Mon … 7=Sun). Used to suppress early-week comparisons. */
+  daysElapsed: number;
 }
 
 function deriveOverallTone(
@@ -54,6 +56,8 @@ export async function GET() {
 
     const weekKey = getISOWeekKey(now);
     const weekLabel = buildWeekLabel(currentWindow.start, currentWindow.end);
+    const dayOfWeek = now.getDay(); // 0=Sun … 6=Sat
+    const daysElapsed = dayOfWeek === 0 ? 7 : dayOfWeek;
 
     const txQuery = (start: Date, end: Date) =>
       prisma.transaction.findMany({
@@ -93,6 +97,7 @@ export async function GET() {
         expensesChange: null,
         topCategory: null,
         signals: [],
+        daysElapsed,
       });
     }
 
@@ -147,6 +152,7 @@ export async function GET() {
         ? { name: currentMetrics.topCategory.name, pct: currentMetrics.topCategory.pct }
         : null,
       signals,
+      daysElapsed,
     });
   } catch (error) {
     return handleApiError(error);

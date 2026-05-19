@@ -17,8 +17,18 @@ const TONE_DOT: Record<string, string> = {
 
 /* ── Preview label from pulse data ────────────────────────────────────────── */
 
+function isEarlyWeek(pulse: WeeklyPulseData): boolean {
+  return pulse.daysElapsed <= 2 && pulse.transactionCount < 3;
+}
+
 function buildPreviewText(pulse: WeeklyPulseData): string {
   if (!pulse.hasData) return "Sin movimientos registrados esta semana";
+
+  if (isEarlyWeek(pulse)) {
+    return pulse.transactionCount > 0
+      ? `${pulse.transactionCount} movimiento${pulse.transactionCount !== 1 ? "s" : ""} por ahora`
+      : "La semana acaba de empezar";
+  }
 
   const firstSignal = pulse.signals[0];
   if (firstSignal) return firstSignal.label;

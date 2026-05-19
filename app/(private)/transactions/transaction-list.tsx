@@ -89,8 +89,6 @@ export function TransactionList({
 }) {
   return (
     <div className="space-y-4 sm:space-y-5">
-      <TransactionFeedBriefing summary={feedSummary} totalAmount={totalAmount} activeFilterCount={activeFilterCount} />
-
       <PremiumCard data-tutorial="transactions-feed" className="overflow-hidden border-border/80">
         <PremiumCardHeader className="border-b border-border/70 bg-muted/[0.08]">
           <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -122,6 +120,22 @@ export function TransactionList({
               </Button>
             </div>
           </div>
+          {feedSummary.count > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border border-border/50 bg-background/40 px-3.5 py-2">
+              {activeFilterCount > 0 && (
+                <>
+                  <span className="text-[11px] font-semibold text-amber-500">{activeFilterCount} filtros activos</span>
+                  <span className="h-3 w-px shrink-0 bg-border/60" aria-hidden="true" />
+                </>
+              )}
+              <span className="text-[11px] text-muted-foreground">
+                Entró <SensitiveAmount value={formatMoneyBalance(feedSummary.income)} className="font-semibold text-emerald-400" />
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                Salió <SensitiveAmount value={formatMoneyBalance(feedSummary.expenses)} className="font-semibold text-rose-400" />
+              </span>
+            </div>
+          )}
         </PremiumCardHeader>
         <PremiumCardContent className="p-3 pt-3 sm:p-4 sm:pt-4">
           {isLoading ? (
@@ -135,7 +149,7 @@ export function TransactionList({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2.5 text-[11px] text-muted-foreground"
+                  className="h-9 px-3 text-[11px] text-muted-foreground"
                   onClick={onCollapseAll}
                 >
                   Colapsar todo
@@ -145,7 +159,7 @@ export function TransactionList({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-7 px-2.5 text-[11px] text-muted-foreground"
+                  className="h-9 px-3 text-[11px] text-muted-foreground"
                   onClick={onExpandAll}
                 >
                   Expandir todo
@@ -227,41 +241,6 @@ function TransactionsEmptyState({ search, onNew }: { search: string; onNew: () =
   );
 }
 
-function TransactionFeedBriefing({
-  summary,
-  totalAmount,
-  activeFilterCount,
-}: {
-  summary: FeedSummary;
-  totalAmount: number;
-  activeFilterCount: number;
-}) {
-  if (summary.count === 0) return null;
-
-  const balanceTone = totalAmount >= 0 ? "text-emerald-400" : "text-rose-400";
-
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border border-border/50 bg-muted/[0.07] px-4 py-2.5">
-      {activeFilterCount > 0 && (
-        <>
-          <span className="text-[11px] font-semibold text-amber-500">{activeFilterCount} filtros</span>
-          <span className="h-3 w-px shrink-0 bg-border/60" aria-hidden="true" />
-        </>
-      )}
-      <span className="text-[11px] text-muted-foreground tabular-nums">{summary.count} movimientos</span>
-      <span className="h-3 w-px shrink-0 bg-border/60" aria-hidden="true" />
-      <span className="text-[11px] text-muted-foreground">
-        Entró <SensitiveAmount value={formatMoneyBalance(summary.income)} className="font-semibold text-emerald-400" />
-      </span>
-      <span className="text-[11px] text-muted-foreground">
-        Salió <SensitiveAmount value={formatMoneyBalance(summary.expenses)} className="font-semibold text-rose-400" />
-      </span>
-      <span className="text-[11px] text-muted-foreground">
-        Balance <SensitiveAmount value={`${totalAmount >= 0 ? "+" : ""}${formatMoneyBalance(totalAmount)}`} className={`font-semibold ${balanceTone}`} />
-      </span>
-    </div>
-  );
-}
 
 function TransactionGroup({
   group,

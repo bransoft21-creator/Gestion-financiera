@@ -186,8 +186,9 @@ export function WeeklyPulseSheet({ isOpen, onClose, pulse }: WeeklyPulseSheetPro
 
   if (!isMounted || !isOpen) return null;
 
+  const isEarlyWeek = pulse.daysElapsed <= 2;
   const changeInfo =
-    pulse.expensesChange !== null ? formatChangePct(pulse.expensesChange) : null;
+    !isEarlyWeek && pulse.expensesChange !== null ? formatChangePct(pulse.expensesChange) : null;
   const education = getWeeklyPulseEducation(pulse.signals);
 
   const content = (
@@ -254,7 +255,11 @@ export function WeeklyPulseSheet({ isOpen, onClose, pulse }: WeeklyPulseSheetPro
                 {pulse.topCategory ? ` · ${pulse.topCategory.name} fue lo principal` : ""}
               </p>
             )}
-            {changeInfo && (
+            {isEarlyWeek ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                La semana está empezando. La comparación aparece cuando hay más días registrados.
+              </p>
+            ) : changeInfo ? (
               <p
                 className={cn(
                   "mt-2 text-sm font-medium",
@@ -263,7 +268,7 @@ export function WeeklyPulseSheet({ isOpen, onClose, pulse }: WeeklyPulseSheetPro
               >
                 {changeInfo.text}
               </p>
-            )}
+            ) : null}
           </div>
 
           {/* Señales (max 2) */}

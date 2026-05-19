@@ -656,12 +656,12 @@ function SuggestedPlanPanel({
     return (
       <div className="rounded-3xl border border-border bg-muted/30 p-4">
         <p className="text-sm font-semibold text-foreground">
-          {hasHistoricalActivity ? "Las categorías activas ya tienen plan" : "Registrá movimientos para activar sugerencias"}
+          {hasHistoricalActivity ? "Las categorías activas ya tienen plan" : "Creá tu primer plan de distribución"}
         </p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
           {hasHistoricalActivity
             ? "Todas las categorías con actividad ya están cubiertas. Podés ajustar cualquier intención activa o agregar una nueva manualmente."
-            : "A medida que registrés movimientos, Meridian va a preparar sugerencias basadas en tu actividad real. Por ahora podés crear un plan manualmente."}
+            : "Las sugerencias automáticas se activan cuando hay movimientos registrados. Como punto de partida, una distribución saludable destina ~50% a necesidades esenciales, ~30% a gastos variables y ~20% a ahorro."}
         </p>
       </div>
     );

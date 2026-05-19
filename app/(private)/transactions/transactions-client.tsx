@@ -5,7 +5,7 @@ import { useInvalidateAfterTransaction } from "@/hooks/use-transactions";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   CreditCard,
@@ -118,7 +118,6 @@ const formSchema = z.object({
 });
 
 export function TransactionsClient({ householdId, accounts, categories, sharedHouseholds, defaultCurrency = "ARS" }: TransactionsClientProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const defaultAccount = getPreferredArsBankAccount(accounts);
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
@@ -450,7 +449,6 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
       setIsFormOpen(false);
       invalidateAfterTransaction();
       await loadTransactions(filters, search);
-      if (wasCardPayment) router.refresh();
     } catch {
       pendingCreateRequestIdRef.current = null;
       setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
@@ -1002,7 +1000,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
                 </div>
 
                 <div className="flex flex-wrap gap-4">
-                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm" title="Solo etiqueta. Para automatizar el pago, usá Gastos recurrentes.">
                     <input
                       type="checkbox"
                       className="h-4 w-4 rounded border-input accent-primary"

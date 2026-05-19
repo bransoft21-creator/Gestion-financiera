@@ -11,7 +11,7 @@ export default async function RecurringPage() {
     <V2PageShell
       eyebrow="Gastos fijos invisibles"
       title="El dinero que se va solo"
-      description="Suscripciones, servicios y pagos automáticos vistos como compromisos silenciosos del mes."
+      description="Compromisos mensuales fijos: suscripciones, servicios y pagos automáticos."
     >
       <RecurringExpensesClient
         householdId={household.id}

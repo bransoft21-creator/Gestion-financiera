@@ -564,12 +564,16 @@ function buildMonthMetrics({
   const daysInMonth = new Date(period.year, period.monthNumber, 0).getDate();
   const daysRemaining = daysInMonth - daysElapsed;
 
-  // Use the same projection logic as the dashboard: only project variable expenses linearly.
-  // Fixed expenses are one-time payments (rent, services, etc.) — projecting them daily would overstate the forecast.
-  const variableExpenseTotal = totalExpenses - fixedExpenseTotal;
-  const dailyVariableAvg = daysElapsed > 0 ? variableExpenseTotal / daysElapsed : 0;
+  // Mirror the dashboard projection: fixed + extraordinary are one-time (not projected daily);
+  // only variable + unclassified flow is extrapolated to end-of-month.
+  const extraordinaryExpenseTotal = sumAmounts(
+    expenseTransactions.filter((tx) => tx.expenseType === "EXTRAORDINARY"),
+  );
+  const nonDailyExpenseTotal = fixedExpenseTotal + extraordinaryExpenseTotal;
+  const dailyExpenseTotal = totalExpenses - nonDailyExpenseTotal;
+  const dailyVariableAvg = daysElapsed > 0 ? dailyExpenseTotal / daysElapsed : 0;
   const projectedVariable = daysElapsed > 0 && daysRemaining > 0 ? dailyVariableAvg * daysRemaining : 0;
-  const projectedMonthEndExpense = roundMoney(fixedExpenseTotal + variableExpenseTotal + projectedVariable);
+  const projectedMonthEndExpense = roundMoney(nonDailyExpenseTotal + dailyExpenseTotal + projectedVariable);
 
   return {
     month: period.month,

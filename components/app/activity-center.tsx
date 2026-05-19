@@ -68,6 +68,12 @@ const TYPE_LABEL: Record<ActivityType, string> = {
   SYSTEM:   "Sistema",
 };
 
+const SOURCE_LABEL: Partial<Record<string, string>> = {
+  "weekly-pulse":       "Pulso semanal",
+  "weekly-reflection":  "Pulso semanal",
+  "monthly-close":      "Cierre mensual",
+};
+
 const TYPE_ICON: Record<ActivityType, typeof Bell> = {
   INSIGHT:  Sparkles,
   SIGNAL:   BrainCircuit,
@@ -163,7 +169,7 @@ function ActivityCard({
           <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className={cn("flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider", tone.label)}>
               <Icon className="h-3 w-3" aria-hidden="true" />
-              {TYPE_LABEL[item.type]}
+              {SOURCE_LABEL[item.source] ?? TYPE_LABEL[item.type]}
             </span>
             {priority && (
               <span className={cn("rounded-full border px-1.5 py-0.5 text-[10px] font-semibold", priority.className)}>

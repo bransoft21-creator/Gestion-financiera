@@ -508,7 +508,7 @@ function RecurringBriefing({ summary, isLoading, onCreate }: { summary: Recurrin
                 </h2>
                 <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
                   {summary.activeCount > 0
-                    ? "La app los mantiene visibles para que el mes no se llene de cobros silenciosos."
+                    ? "Cada gasto queda visible para que sepas exactamente cuánto se compromete el mes."
                     : "Cuando cargues suscripciones y servicios, vas a ver cuánto se va solo cada mes."}
                 </p>
               </div>
