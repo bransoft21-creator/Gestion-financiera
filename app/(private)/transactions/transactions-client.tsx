@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useInvalidateAfterTransaction } from "@/hooks/use-transactions";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -165,6 +166,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   const watchedPaymentMethod = (useWatch({ control, name: "paymentMethod" }) as PaymentMethod | undefined);
   const watchedSharedHouseholdId = (useWatch({ control, name: "sharedHouseholdId" }) as string | undefined) ?? "";
   const watchedAmountStr = (useWatch({ control, name: "amount" }) as string | undefined) ?? "";
+  const invalidateAfterTransaction = useInvalidateAfterTransaction();
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
   const pendingCreateRequestIdRef = useRef<string | null>(null);
@@ -446,6 +448,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
       pendingCreateRequestIdRef.current = null;
       resetForm();
       setIsFormOpen(false);
+      invalidateAfterTransaction();
       await loadTransactions(filters, search);
       if (wasCardPayment) router.refresh();
     } catch {
@@ -486,6 +489,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
       }
 
       setPendingDeleteTransaction(null);
+      invalidateAfterTransaction();
       await loadTransactions(filters, search);
     } catch {
       toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");

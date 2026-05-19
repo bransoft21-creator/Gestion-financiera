@@ -309,28 +309,33 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
     setIsApplyingSuggestions(true);
 
     try {
-      for (const suggestion of selectedSuggestions) {
-        const parsed = parseMoneyInput(suggestionDrafts[suggestion.categoryId] ?? "");
-        if (!parsed.success || parsed.data == null) continue;
+      const results = await Promise.all(
+        selectedSuggestions.map(async (suggestion) => {
+          const parsed = parseMoneyInput(suggestionDrafts[suggestion.categoryId] ?? "");
+          if (!parsed.success || parsed.data == null) return null;
 
-        const response = await fetch("/api/budgets", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            householdId,
-            categoryId: suggestion.categoryId,
-            currency: suggestion.currency,
-            year: currentYear,
-            month: currentMonth,
-            plannedAmount: parsed.data,
-          }),
-        });
-        const payload = (await response.json()) as { error?: string };
+          const response = await fetch("/api/budgets", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              householdId,
+              categoryId: suggestion.categoryId,
+              currency: suggestion.currency,
+              year: currentYear,
+              month: currentMonth,
+              plannedAmount: parsed.data,
+            }),
+          });
+          const payload = (await response.json()) as { error?: string };
+          return { ok: response.ok, error: payload.error, name: suggestion.category.name };
+        }),
+      );
 
-        if (!response.ok) {
-          setMessage(payload.error ?? `No se pudo crear el plan de ${suggestion.category.name}.`);
-          return;
-        }
+      const firstFailure = results.find((r) => r !== null && !r.ok);
+      if (firstFailure) {
+        setMessage(firstFailure.error ?? `No se pudo crear el plan de ${firstFailure.name}.`);
+        await loadBudgets();
+        return;
       }
 
       toast.success("Distribución inicial creada.");

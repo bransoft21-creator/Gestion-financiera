@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal, useGoalContribution } from "@/hooks/use-goals";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   CalendarDays,
@@ -18,7 +20,6 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
-import { toast } from "sonner";
 import { z } from "zod";
 import { ActionButton } from "@/components/ui-v2/action-button";
 import {
@@ -127,49 +128,28 @@ const cardMotion = {
 
 export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: GoalsClientProps) {
   const defaultAccount = getPreferredArsBankAccount(accounts);
-  const [goals, setGoals] = useState<GoalItem[]>([]);
+  const queryClient = useQueryClient();
+  const { data: goals = [], isLoading } = useGoals(householdId);
+  const createGoalMutation = useCreateGoal();
+  const updateGoalMutation = useUpdateGoal();
+  const deleteGoalMutation = useDeleteGoal();
+  const contribMutation = useGoalContribution();
+  const isSaving = createGoalMutation.isPending || updateGoalMutation.isPending;
+  const deletingGoalId = deleteGoalMutation.isPending ? (deleteGoalMutation.variables?.goalId ?? null) : null;
+  const contributingGoalId = contribMutation.isPending ? (contribMutation.variables?.goalId ?? null) : null;
+
   const [form, setForm] = useState<FormState>({ ...defaultForm, currency: defaultCurrency });
   const [errors, setErrors] = useState<FormErrors>({});
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
   const [pendingDeleteGoal, setPendingDeleteGoal] = useState<GoalItem | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [contributingGoalId, setContributingGoalId] = useState<string | null>(null);
   const [quickContribGoalId, setQuickContribGoalId] = useState<string | null>(null);
   const [quickContribAccountId, setQuickContribAccountId] = useState<string>("");
   const [quickContribAmount, setQuickContribAmount] = useState<string>("");
   const [quickContribErrors, setQuickContribErrors] = useState<{ accountId?: string; amount?: string }>({});
 
   const summary = useMemo(() => buildGoalSummary(goals), [goals]);
-
-  useEffect(() => {
-    void loadGoals();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function loadGoals() {
-    setIsLoading(true);
-    setMessage(null);
-
-    try {
-      const response = await fetch(`/api/goals?${new URLSearchParams({ householdId }).toString()}`);
-      const payload = (await response.json()) as { data?: GoalItem[]; error?: string };
-
-      if (!response.ok) {
-        toast.error(payload.error ?? "No se pudieron cargar las metas.");
-        return;
-      }
-
-      setGoals(payload.data ?? []);
-    } catch {
-      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -190,40 +170,31 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
     }
 
     setErrors({});
-    setIsSaving(true);
+
+    const input = {
+      householdId,
+      name: parsed.data.name,
+      currency: parsed.data.currency,
+      targetAmount: parsed.data.targetAmount,
+      currentAmount: parsed.data.currentAmount,
+      requiredMonthlyAmount: parsed.data.requiredMonthlyAmount ?? (editingGoalId ? null : undefined),
+      targetDate: parsed.data.targetDate || (editingGoalId ? null : undefined),
+      status: parsed.data.status,
+      notes: parsed.data.notes || (editingGoalId ? null : undefined),
+    };
 
     try {
-      const response = await fetch(editingGoalId ? `/api/goals/${editingGoalId}` : "/api/goals", {
-        method: editingGoalId ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          householdId,
-          name: parsed.data.name,
-          currency: parsed.data.currency,
-          targetAmount: parsed.data.targetAmount,
-          currentAmount: parsed.data.currentAmount,
-          requiredMonthlyAmount: parsed.data.requiredMonthlyAmount ?? (editingGoalId ? null : undefined),
-          targetDate: parsed.data.targetDate || (editingGoalId ? null : undefined),
-          status: parsed.data.status,
-          notes: parsed.data.notes || (editingGoalId ? null : undefined),
-        }),
-      });
-      const payload = (await response.json()) as { error?: string; fieldErrors?: FormErrors };
-
-      if (!response.ok) {
-        if (payload.fieldErrors) setErrors(payload.fieldErrors);
-        setMessage(payload.error ?? "No se pudo guardar la meta.");
-        return;
+      if (editingGoalId) {
+        await updateGoalMutation.mutateAsync({ goalId: editingGoalId, ...input });
+      } else {
+        await createGoalMutation.mutateAsync(input);
       }
-
-      toast.success(editingGoalId ? "Meta actualizada." : "Meta creada.");
       resetForm();
       setIsFormOpen(false);
-      await loadGoals();
-    } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setIsSaving(false);
+    } catch (err: unknown) {
+      const e = err as Error & { fieldErrors?: FormErrors };
+      if (e.fieldErrors) setErrors(e.fieldErrors);
+      setMessage(e.message ?? "No se pudo guardar la meta.");
     }
   }
 
@@ -233,35 +204,14 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
 
   async function confirmDelete() {
     if (!pendingDeleteGoal) return;
-
     const goalId = pendingDeleteGoal.id;
-    setDeletingGoalId(goalId);
     setMessage(null);
-
     try {
-      const response = await fetch(
-        `/api/goals/${goalId}?${new URLSearchParams({ householdId }).toString()}`,
-        { method: "DELETE" },
-      );
-      const payload = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        toast.error(payload.error ?? "No se pudo eliminar la meta.");
-        return;
-      }
-
-      toast.success("Meta eliminada.");
+      await deleteGoalMutation.mutateAsync({ goalId, householdId });
       setPendingDeleteGoal(null);
-      if (editingGoalId === goalId) {
-        resetForm();
-        setIsFormOpen(false);
-      }
-
-      await loadGoals();
+      if (editingGoalId === goalId) { resetForm(); setIsFormOpen(false); }
     } catch {
-      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setDeletingGoalId(null);
+      // toast shown by hook
     }
   }
 
@@ -296,38 +246,19 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
     }
 
     setQuickContribErrors({});
-    setContributingGoalId(goal.id);
     try {
-      const today = formatArgentinaDateInput();
-      const response = await fetch("/api/transactions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          householdId,
-          type: "GOAL_CONTRIBUTION",
-          status: "CONFIRMED",
-          accountId: quickContribAccountId,
-          goalId: goal.id,
-          amount: parsedAmount.data,
-          currency: goal.currency,
-          description: `Aporte: ${goal.name}`,
-          occurredAt: today,
-        }),
+      await contribMutation.mutateAsync({
+        householdId,
+        accountId: quickContribAccountId,
+        goalId: goal.id,
+        amount: parsedAmount.data,
+        currency: goal.currency,
+        goalName: goal.name,
+        occurredAt: formatArgentinaDateInput(),
       });
-
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        toast.error(payload.error ?? "No se pudo registrar el aporte.");
-        return;
-      }
-
-      toast.success(`Aporte a "${goal.name}" registrado correctamente.`);
       cancelContribution();
-      await loadGoals();
     } catch {
-      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setContributingGoalId(null);
+      // toast shown by hook
     }
   }
 

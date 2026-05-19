@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { useDashboardSummary } from "@/hooks/use-dashboard-summary";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import {
@@ -118,10 +119,9 @@ export function DashboardClient() {
   const { userName } = useUser();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const { data: summary = null, isLoading, error: queryError } = useDashboardSummary(year, month);
+  const error = queryError ? queryError.message : null;
   const [selectedExpenseCategoryPreference, setSelectedExpenseCategoryPreference] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const firstName = userName?.split(" ")[0] ?? null;
   const [timeContext] = useState(() => getTimeContext(firstName));
   const shouldReduceMotion = useReducedMotion();
@@ -132,36 +132,15 @@ export function DashboardClient() {
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
 
   useEffect(() => {
-    async function loadSummary() {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const params = new URLSearchParams({ year: String(year), month: String(month) });
-        const response = await fetch(`/api/dashboard/summary?${params.toString()}`);
-        const payload = (await response.json()) as { data?: DashboardSummary; error?: string };
-        if (!response.ok) {
-          setError(payload.error ?? "No se pudo cargar el dashboard.");
-          return;
-        }
-        setSummary(payload.data ?? null);
-
-        if (isCurrentMonth) {
-          const prevMonth = month === 1 ? 12 : month - 1;
-          const prevYear = month === 1 ? year - 1 : year;
-          void fetch("/api/snapshots", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ year: prevYear, month: prevMonth }),
-          });
-        }
-      } catch {
-        setError("Error de red. Verificá tu conexión e intentá de nuevo.");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    void loadSummary();
-  }, [year, month, isCurrentMonth]);
+    if (!summary || !isCurrentMonth) return;
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    void fetch("/api/snapshots", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ year: prevYear, month: prevMonth }),
+    });
+  }, [summary, isCurrentMonth, month, year]);
 
   function navigatePrev() {
     if (month === 1) { setYear((y) => y - 1); setMonth(12); }

@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import {
+  useRecurringExpenses,
+  useCreateRecurring,
+  useUpdateRecurring,
+  useToggleRecurring,
+  useDeleteRecurring,
+  usePayRecurring,
+} from "@/hooks/use-recurring";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Bell,
@@ -149,57 +157,30 @@ export function RecurringExpensesClient({ householdId, accounts, categories, def
     accountId: defaultAccount?.id ?? "",
     nextDueDate: formatArgentinaDateInput(),
   });
-  const [items, setItems] = useState<RecurringItem[]>([]);
-  const [upcomingCount, setUpcomingCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [payingId, setPayingId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
+  const { data: recurringData, isLoading } = useRecurringExpenses(householdId, activeFilter);
+  const items = recurringData?.recurringExpenses ?? [];
+  const upcomingCount = recurringData?.upcomingCount ?? 0;
+
+  const createRecurring = useCreateRecurring();
+  const updateRecurring = useUpdateRecurring();
+  const toggleRecurring = useToggleRecurring();
+  const deleteRecurring = useDeleteRecurring();
+  const payRecurring = usePayRecurring();
+
+  const isSaving = createRecurring.isPending || updateRecurring.isPending;
+  const togglingId = toggleRecurring.isPending ? (toggleRecurring.variables?.id ?? null) : null;
+  const deletingId = deleteRecurring.isPending ? (deleteRecurring.variables?.id ?? null) : null;
+  const payingId = payRecurring.isPending ? (payRecurring.variables?.item.id ?? null) : null;
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>(getDefaultForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const [message, setMessage] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
   const [pendingDeleteItem, setPendingDeleteItem] = useState<RecurringItem | null>(null);
 
   const summary = buildRecurringSummary(items, upcomingCount);
-
-  useEffect(() => {
-    void loadItems();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFilter]);
-
-  async function loadItems() {
-    setIsLoading(true);
-    setMessage(null);
-    try {
-      const params = new URLSearchParams({ householdId });
-      if (activeFilter === "active") params.set("isActive", "true");
-      if (activeFilter === "inactive") params.set("isActive", "false");
-
-      const response = await fetch(`/api/recurring-expenses?${params}`);
-      const payload = (await response.json()) as {
-        data?: { recurringExpenses: RecurringItem[]; upcomingCount: number };
-        error?: string;
-      };
-
-      if (!response.ok) {
-        setMessage(payload.error ?? "No se pudieron cargar los recurrentes.");
-        return;
-      }
-
-      if (payload.data) {
-        setItems(payload.data.recurringExpenses);
-        setUpcomingCount(payload.data.upcomingCount);
-      }
-    } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -223,69 +204,37 @@ export function RecurringExpensesClient({ householdId, accounts, categories, def
     }
 
     setErrors({});
-    setIsSaving(true);
+
+    const input = {
+      householdId,
+      name: parsed.data.name,
+      currency: parsed.data.currency,
+      amount: parsed.data.amount,
+      frequency: parsed.data.frequency,
+      nextDueDate: parsed.data.nextDueDate,
+      endDate: parsed.data.endDate ?? (editingId ? null : undefined),
+      accountId: parsed.data.accountId ?? (editingId ? null : undefined),
+      categoryId: parsed.data.categoryId ?? (editingId ? null : undefined),
+      notes: parsed.data.notes ?? (editingId ? null : undefined),
+    };
 
     try {
-      const url = editingId ? `/api/recurring-expenses/${editingId}` : "/api/recurring-expenses";
-      const response = await fetch(url, {
-        method: editingId ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          householdId,
-          name: parsed.data.name,
-          currency: parsed.data.currency,
-          amount: parsed.data.amount,
-          frequency: parsed.data.frequency,
-          nextDueDate: parsed.data.nextDueDate,
-          endDate: parsed.data.endDate ?? (editingId ? null : undefined),
-          accountId: parsed.data.accountId ?? (editingId ? null : undefined),
-          categoryId: parsed.data.categoryId ?? (editingId ? null : undefined),
-          notes: parsed.data.notes ?? (editingId ? null : undefined),
-        }),
-      });
-
-      const payload = (await response.json()) as { error?: string; fieldErrors?: FormErrors };
-
-      if (!response.ok) {
-        if (payload.fieldErrors) setErrors(payload.fieldErrors);
-        setMessage(payload.error ?? "No se pudo guardar el gasto recurrente.");
-        return;
+      if (editingId) {
+        await updateRecurring.mutateAsync({ id: editingId, ...input });
+      } else {
+        await createRecurring.mutateAsync(input);
       }
-
-      toast.success(editingId ? "Recurrente actualizado." : "Recurrente creado.");
       resetForm();
       setIsFormOpen(false);
-      await loadItems();
-    } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setIsSaving(false);
+    } catch (err: unknown) {
+      const e = err as Error & { fieldErrors?: FormErrors };
+      if (e.fieldErrors) setErrors(e.fieldErrors);
+      setMessage(e.message ?? "No se pudo guardar el gasto recurrente.");
     }
   }
 
   async function handleToggle(item: RecurringItem) {
-    setTogglingId(item.id);
-    try {
-      const response = await fetch(`/api/recurring-expenses/${item.id}/toggle`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ householdId, isActive: !item.isActive }),
-      });
-
-      const payload = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        toast.error(payload.error ?? "No se pudo cambiar el estado.");
-        return;
-      }
-
-      toast.success(item.isActive ? "Recurrente pausado." : "Recurrente activado.");
-      await loadItems();
-    } catch {
-      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setTogglingId(null);
-    }
+    await toggleRecurring.mutateAsync({ id: item.id, householdId, isActive: !item.isActive });
   }
 
   function requestDelete(item: RecurringItem) {
@@ -294,31 +243,14 @@ export function RecurringExpensesClient({ householdId, accounts, categories, def
 
   async function confirmDelete() {
     if (!pendingDeleteItem) return;
-
     const id = pendingDeleteItem.id;
-    setDeletingId(id);
     setMessage(null);
-
     try {
-      const response = await fetch(
-        `/api/recurring-expenses/${id}?${new URLSearchParams({ householdId })}`,
-        { method: "DELETE" },
-      );
-      const payload = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        toast.error(payload.error ?? "No se pudo eliminar.");
-        return;
-      }
-
-      toast.success("Recurrente eliminado.");
+      await deleteRecurring.mutateAsync({ id, householdId });
       setPendingDeleteItem(null);
       if (editingId === id) resetForm();
-      await loadItems();
     } catch {
-      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setDeletingId(null);
+      // toast shown by hook
     }
   }
 
@@ -327,37 +259,11 @@ export function RecurringExpensesClient({ householdId, accounts, categories, def
       toast.error("Asigná una cuenta al recurrente antes de registrar el pago.");
       return;
     }
-    setPayingId(item.id);
-    try {
-      const today = new Date().toISOString().slice(0, 10);
-      const response = await fetch("/api/transactions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          householdId,
-          type: "EXPENSE",
-          status: "CONFIRMED",
-          accountId: item.account.id,
-          categoryId: item.category?.id ?? undefined,
-          amount: item.amount,
-          currency: item.currency,
-          description: item.name,
-          occurredAt: today,
-        }),
-      });
-
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        toast.error(payload.error ?? "No se pudo registrar el pago.");
-        return;
-      }
-
-      toast.success(`Pago de ${item.name} registrado correctamente.`);
-    } catch {
-      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setPayingId(null);
-    }
+    await payRecurring.mutateAsync({
+      householdId,
+      item,
+      occurredAt: new Date().toISOString().slice(0, 10),
+    });
   }
 
   function startEditing(item: RecurringItem) {

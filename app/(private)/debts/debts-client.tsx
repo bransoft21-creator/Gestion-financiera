@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDebts, useCreateDebt, useUpdateDebt, useDeleteDebt, usePayDebt } from "@/hooks/use-debts";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   AlertTriangle,
@@ -152,58 +153,31 @@ const cardMotion = {
 export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: DebtsClientProps) {
   const defaultAccount = getPreferredArsBankAccount(accounts);
   const [todayMs] = useState(() => Date.now());
-  const [debts, setDebts] = useState<DebtItem[]>([]);
-  const [totalOutstanding, setTotalOutstanding] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [deletingDebtId, setDeletingDebtId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const { data: debtsData, isLoading } = useDebts(householdId, statusFilter || undefined);
+  const createDebt = useCreateDebt();
+  const updateDebt = useUpdateDebt();
+  const deleteDebt = useDeleteDebt();
+  const payDebt = usePayDebt();
+
+  const isSaving = createDebt.isPending || updateDebt.isPending;
+  const deletingDebtId = deleteDebt.isPending ? (deleteDebt.variables?.debtId ?? null) : null;
+  const payingDebtId = payDebt.isPending ? (payDebt.variables?.debtId ?? null) : null;
+
   const [pendingDeleteDebt, setPendingDeleteDebt] = useState<DebtItem | null>(null);
   const [editingDebtId, setEditingDebtId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [form, setForm] = useState<FormState>({ ...defaultForm, currency: defaultCurrency });
   const [errors, setErrors] = useState<FormErrors>({});
   const [message, setMessage] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [payingDebtId, setPayingDebtId] = useState<string | null>(null);
   const [quickPayDebtId, setQuickPayDebtId] = useState<string | null>(null);
   const [quickPayAccountId, setQuickPayAccountId] = useState<string>("");
   const [quickPayAmount, setQuickPayAmount] = useState<string>("");
   const [quickPayErrors, setQuickPayErrors] = useState<{ accountId?: string; amount?: string; debtId?: string }>({});
 
+  const debts = useMemo(() => debtsData?.debts ?? [], [debtsData]);
+  const totalOutstanding = debtsData?.totalOutstanding ?? 0;
   const summary = useMemo(() => buildDebtSummary(debts, totalOutstanding, todayMs), [debts, totalOutstanding, todayMs]);
-
-  useEffect(() => {
-    void loadDebts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
-
-  async function loadDebts() {
-    setIsLoading(true);
-    setMessage(null);
-    try {
-      const params = new URLSearchParams({ householdId });
-      if (statusFilter) params.set("status", statusFilter);
-      const response = await fetch(`/api/debts?${params}`);
-      const payload = (await response.json()) as {
-        data?: { debts: DebtItem[]; totalOutstanding: number };
-        error?: string;
-      };
-
-      if (!response.ok) {
-        toast.error(payload.error ?? "No se pudieron cargar las deudas.");
-        return;
-      }
-
-      if (payload.data) {
-        setDebts(payload.data.debts);
-        setTotalOutstanding(payload.data.totalOutstanding);
-      }
-    } catch {
-      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -229,39 +203,28 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
     }
 
     setErrors({});
-    setIsSaving(true);
+
+    const input = {
+      householdId,
+      ...parsed.data,
+      nextDueDate: parsed.data.nextDueDate || (editingDebtId ? null : undefined),
+      lender: parsed.data.lender || (editingDebtId ? null : undefined),
+      minimumPayment: parsed.data.minimumPayment ?? (editingDebtId ? null : undefined),
+      interestRate: parsed.data.interestRate ?? (editingDebtId ? null : undefined),
+    };
 
     try {
-      const url = editingDebtId ? `/api/debts/${editingDebtId}` : "/api/debts";
-      const response = await fetch(url, {
-        method: editingDebtId ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          householdId,
-          ...parsed.data,
-          nextDueDate: parsed.data.nextDueDate || (editingDebtId ? null : undefined),
-          lender: parsed.data.lender || (editingDebtId ? null : undefined),
-          minimumPayment: parsed.data.minimumPayment ?? (editingDebtId ? null : undefined),
-          interestRate: parsed.data.interestRate ?? (editingDebtId ? null : undefined),
-        }),
-      });
-
-      const payload = (await response.json()) as { error?: string; fieldErrors?: FormErrors };
-
-      if (!response.ok) {
-        if (payload.fieldErrors) setErrors(payload.fieldErrors);
-        setMessage(payload.error ?? "No se pudo guardar la deuda.");
-        return;
+      if (editingDebtId) {
+        await updateDebt.mutateAsync({ debtId: editingDebtId, ...input });
+      } else {
+        await createDebt.mutateAsync(input);
       }
-
-      toast.success(editingDebtId ? "Compromiso actualizado." : "Compromiso registrado.");
       resetForm();
       setIsFormOpen(false);
-      await loadDebts();
-    } catch {
-      setMessage("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setIsSaving(false);
+    } catch (err: unknown) {
+      const e = err as Error & { fieldErrors?: FormErrors };
+      if (e.fieldErrors) setErrors(e.fieldErrors);
+      setMessage(e.message ?? "No se pudo guardar la deuda.");
     }
   }
 
@@ -271,31 +234,14 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
 
   async function confirmDelete() {
     if (!pendingDeleteDebt) return;
-
     const debtId = pendingDeleteDebt.id;
-    setDeletingDebtId(debtId);
     setMessage(null);
-
     try {
-      const response = await fetch(
-        `/api/debts/${debtId}?${new URLSearchParams({ householdId })}`,
-        { method: "DELETE" },
-      );
-      const payload = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        toast.error(payload.error ?? "No se pudo eliminar la deuda.");
-        return;
-      }
-
-      toast.success("Compromiso eliminado.");
+      await deleteDebt.mutateAsync({ debtId, householdId });
       setPendingDeleteDebt(null);
       if (editingDebtId === debtId) resetForm();
-      await loadDebts();
     } catch {
-      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setDeletingDebtId(null);
+      // toast shown by hook
     }
   }
 
@@ -329,39 +275,22 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
     }
 
     setQuickPayErrors({});
-    setPayingDebtId(debt.id);
     try {
-      const today = formatArgentinaDateInput();
-      const response = await fetch("/api/transactions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          householdId,
-          type: "DEBT_PAYMENT",
-          status: "CONFIRMED",
-          accountId: quickPayAccountId,
-          debtId: debt.id,
-          amount: parsedAmount.data,
-          currency: debt.currency,
-          description: `Pago: ${debt.name}`,
-          occurredAt: today,
-        }),
+      await payDebt.mutateAsync({
+        householdId,
+        debtId: debt.id,
+        accountId: quickPayAccountId,
+        amount: parsedAmount.data,
+        currency: debt.currency,
+        debtName: debt.name,
+        occurredAt: formatArgentinaDateInput(),
       });
-
-      const payload = (await response.json()) as { error?: string; fieldErrors?: { accountId?: string; amount?: string; debtId?: string } };
-      if (!response.ok) {
-        if (payload.fieldErrors) setQuickPayErrors(payload.fieldErrors);
-        toast.error(payload.error ?? "No se pudo registrar el pago.");
-        return;
-      }
-
       toast.success(`Pago de ${debt.name} registrado correctamente.`);
       cancelQuickPay();
-      await loadDebts();
-    } catch {
-      toast.error("Error de red. Verificá tu conexión e intentá de nuevo.");
-    } finally {
-      setPayingDebtId(null);
+    } catch (err: unknown) {
+      const e = err as Error & { fieldErrors?: { accountId?: string; amount?: string; debtId?: string } };
+      if (e.fieldErrors) setQuickPayErrors(e.fieldErrors);
+      else toast.error(e.message);
     }
   }
 
