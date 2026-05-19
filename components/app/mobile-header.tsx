@@ -2,16 +2,41 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { LogoutButton } from "./logout-button";
 import { NotificationsButton } from "./notifications-button";
 import { PrivacyToggle } from "./privacy-toggle";
+
+const SECTION_LABELS: Record<string, string> = {
+  "/dashboard": "Tu panorama del día",
+  "/transactions": "Movimientos",
+  "/smart-import": "Importar",
+  "/household": "Hogar compartido",
+  "/activity": "Actividad",
+  "/budgets": "Plan del mes",
+  "/recurring": "Gastos recurrentes",
+  "/debts": "Deudas",
+  "/categories": "Categorías",
+  "/accounts": "Cuentas",
+  "/goals": "Metas",
+  "/data-quality": "Calidad de datos",
+  "/reports": "Reportes",
+  "/profile": "Tu perfil",
+  "/settings": "Configuración",
+};
 
 type MobileHeaderProps = {
   userName?: string | null;
 };
 
 export function MobileHeader({ userName }: MobileHeaderProps) {
-  const subtitle = userName ? `para ${userName.split(" ")[0]}` : "personal";
+  const pathname = usePathname();
+  const firstName = userName?.split(" ")[0];
+
+  const sectionLabel =
+    Object.entries(SECTION_LABELS).find(
+      ([path]) => pathname === path || pathname.startsWith(`${path}/`),
+    )?.[1] ?? (firstName ? `Hola, ${firstName}` : "Meridian");
 
   return (
     <header className="sticky top-0 z-30 shrink-0 border-b border-border bg-background px-5 lg:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
@@ -23,7 +48,7 @@ export function MobileHeader({ userName }: MobileHeaderProps) {
               Meridian
             </span>
             <span className="block truncate text-[13px] font-medium leading-snug text-muted-foreground">
-              Copilot {subtitle}
+              {sectionLabel}
             </span>
           </span>
         </Link>

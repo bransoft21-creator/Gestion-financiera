@@ -366,6 +366,12 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
     setIsFormOpen(true);
   }
 
+  function openNewGoalWithSuggestion(partial: Partial<Pick<FormState, "name" | "currency">>) {
+    resetForm();
+    setForm((current) => ({ ...current, ...partial }));
+    setIsFormOpen(true);
+  }
+
   return (
     <>
       <div className="grid gap-3 sm:gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
@@ -543,7 +549,7 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
               {isLoading ? (
                 <GoalSkeletonList />
               ) : goals.length === 0 ? (
-                <GoalEmptyState onCreate={openNewGoal} />
+                <GoalEmptyState onCreate={openNewGoal} onSuggest={openNewGoalWithSuggestion} />
               ) : (
                 <div className="grid gap-3">
                   <AnimatePresence initial={false}>
@@ -949,20 +955,68 @@ function GoalSkeletonList() {
   );
 }
 
-function GoalEmptyState({ onCreate }: { onCreate: () => void }) {
+type GoalSuggestionItem = {
+  label: string;
+  description: string;
+  name: string;
+  currency?: CurrencyCode;
+  Icon: typeof Target;
+};
+
+const GOAL_SUGGESTIONS: GoalSuggestionItem[] = [
+  { label: "Fondo de emergencia", description: "3 a 6 meses de gastos como respaldo.", name: "Fondo de emergencia", Icon: ShieldAlert },
+  { label: "Ahorro mensual", description: "Un monto fijo que separás cada mes.", name: "Ahorro mensual", Icon: TrendingUp },
+  { label: "Vacaciones", description: "Ahorrá hacia una fecha específica.", name: "Vacaciones", Icon: CalendarDays },
+  { label: "Reserva en dólares", description: "Cobertura en moneda fuerte.", name: "Reserva USD", currency: "USD", Icon: WalletCards },
+];
+
+function GoalEmptyState({
+  onCreate,
+  onSuggest,
+}: {
+  onCreate: () => void;
+  onSuggest: (partial: Partial<Pick<FormState, "name" | "currency">>) => void;
+}) {
   return (
-    <div className="rounded-[1.75rem] border border-dashed border-border bg-muted/20 p-4 sm:p-6 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-muted/50 text-muted-foreground">
-        <Target className="h-5 w-5" aria-hidden="true" />
+    <div className="space-y-4">
+      <div className="rounded-[1.75rem] border border-dashed border-border bg-muted/20 p-4 sm:p-5 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-border bg-muted/50 text-muted-foreground">
+          <Target className="h-5 w-5" aria-hidden="true" />
+        </div>
+        <h3 className="mt-4 text-base font-semibold text-foreground">Todavía no hay metas activas</h3>
+        <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+          Elegí una sugerencia para empezar, o creá una meta propia.
+        </p>
       </div>
-      <h3 className="mt-4 text-base font-semibold text-foreground">Todavía no hay hitos financieros</h3>
-      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-        Creá una meta que valga la pena mirar: ahorro, fecha y aporte sugerido.
-      </p>
-      <ActionButton type="button" className="mt-5" onClick={onCreate}>
-        <Plus className="h-4 w-4" aria-hidden="true" />
-        Crear hito
-      </ActionButton>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        {GOAL_SUGGESTIONS.map((suggestion) => (
+          <button
+            key={suggestion.label}
+            type="button"
+            onClick={() => onSuggest({ name: suggestion.name, currency: suggestion.currency })}
+            className="group flex items-start gap-3 rounded-2xl border border-border bg-muted/20 p-3.5 text-left transition hover:border-border/80 hover:bg-muted/35 active:scale-[0.99]"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-muted-foreground">
+              <suggestion.Icon className="h-4 w-4" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">{suggestion.label}</p>
+              <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{suggestion.description}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex justify-center pt-1">
+        <button
+          type="button"
+          onClick={onCreate}
+          className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        >
+          Crear meta personalizada
+        </button>
+      </div>
     </div>
   );
 }

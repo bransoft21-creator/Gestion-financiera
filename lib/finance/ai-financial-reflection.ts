@@ -10,6 +10,13 @@ import { estimateTextTokens, recordAiUsage } from "@/server/services/ai-usage";
 import { traceAi, traceUserId } from "@/server/services/ai-trace";
 import { buildWeeklySystemPrompt } from "@/lib/ai/prompt-governance";
 
+export type PeriodMaturityLabel = "very_early" | "early" | "mid" | "late" | "complete";
+
+export interface PeriodMaturity {
+  daysElapsed: number;  // 1–7
+  label: PeriodMaturityLabel;
+}
+
 export interface ReflectionInput {
   weekLabel: string;          // e.g. "5 al 11 de mayo"
   currency: string;
@@ -22,7 +29,21 @@ export interface ReflectionInput {
   weekendPct: number;
   expensesChange: number | null;  // % vs previous week
   signals: Array<{ label: string; severity: Signal["severity"] }>;
+  periodMaturity: PeriodMaturity;
   usage?: { userId: string; endpoint: string };
+}
+
+export function computePeriodMaturity(now: Date): PeriodMaturity {
+  const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon … 6=Sat
+  // ISO week starts Monday; convert to 1=Mon … 7=Sun
+  const daysElapsed = dayOfWeek === 0 ? 7 : dayOfWeek;
+  const label: PeriodMaturityLabel =
+    daysElapsed <= 1 ? "very_early"
+    : daysElapsed <= 2 ? "early"
+    : daysElapsed <= 4 ? "mid"
+    : daysElapsed <= 6 ? "late"
+    : "complete";
+  return { daysElapsed, label };
 }
 
 export interface ReflectionInsight {
@@ -65,11 +86,21 @@ function formatMoney(n: number, currency: string): string {
   }).format(n);
 }
 
+const MATURITY_CONTEXT: Record<PeriodMaturityLabel, string> = {
+  very_early: "Solo 1 día de la semana registrado. Es demasiado temprano para observar patrones. Describí solo lo que pasó ese día, sin conclusiones sobre la semana.",
+  early: "2 días de la semana registrados. Aún muy temprano. Describí el ritmo parcial con mucha cautela, sin afirmar tendencias.",
+  mid: "Entre 3 y 4 días de la semana registrados. Podés mencionar el ritmo emergente pero sin conclusiones definitivas.",
+  late: "5 o 6 días de la semana registrados. La mayor parte del ritmo está visible. Observaciones concretas son válidas.",
+  complete: "Semana completa (7 días). Podés observar la semana entera con plena confianza.",
+};
+
 /** Builds the user-content data block sent to OpenAI. Target: ≤ 300 tokens. */
 function buildWeeklyDataBlock(input: ReflectionInput): string {
   const lines: string[] = ["Datos de la semana:"];
 
   lines.push(`Semana: ${input.weekLabel}`);
+  lines.push(`Días registrados: ${input.periodMaturity.daysElapsed} de 7`);
+  lines.push(`Madurez del período: ${MATURITY_CONTEXT[input.periodMaturity.label]}`);
   lines.push(`Moneda real analizada: ${input.currency}`);
   if (input.mixedCurrencies) {
     lines.push(`Guardrail multi-moneda: existen movimientos en ${input.ignoredCurrencies.join(", ")} y NO fueron sumados ni comparados.`);

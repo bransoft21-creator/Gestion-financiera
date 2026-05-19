@@ -10,8 +10,8 @@ export default async function BudgetsPage() {
   return (
     <V2PageShell
       eyebrow="Plan del mes"
-      title="Meridian preparó una base para tu mes"
-      description="Una distribución editable basada en ingresos recientes, hábitos y compromisos recurrentes."
+      title="Tu plan del mes"
+      description="Una distribución editable basada en tu actividad real: ingresos, hábitos y compromisos recurrentes."
     >
       <BudgetsClient householdId={workspace.household.id} categories={workspace.categories} defaultCurrency={userProfile.currency as "ARS" | "USD"} />
     </V2PageShell>

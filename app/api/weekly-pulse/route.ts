@@ -103,6 +103,13 @@ export async function GET() {
 
     const expensesChange = comparison.available ? comparison.expensesPct : null;
     const overallTone = deriveOverallTone(signals, expensesChange);
+    const activityTitle =
+      overallTone === "warning"
+        ? "Esta semana tiene movimientos para revisar"
+        : overallTone === "positive"
+          ? "Buena semana financiera"
+          : "Así fue tu semana";
+    const activityBody = signals[0]?.label ?? `${currentMetrics.transactionCount} movimientos registrados esta semana.`;
     await upsertActivity({
       userId: userProfile.id,
       type: ActivityType.INSIGHT,
@@ -113,8 +120,8 @@ export async function GET() {
           ? ActivityTone.positive
           : ActivityTone.neutral,
       priority: overallTone === "warning" ? 1 : 0,
-      title: "Tu Weekly Pulse está listo.",
-      body: "Un resumen corto de la semana para mirar sin apuro.",
+      title: activityTitle,
+      body: activityBody,
       metadata: {
         tone: overallTone,
         signalCount: signals.length,

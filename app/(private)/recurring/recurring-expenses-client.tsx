@@ -510,7 +510,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories, def
           <PremiumCardHeader className="pb-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <PremiumCardTitle>Pagos silenciosos</PremiumCardTitle>
+                <PremiumCardTitle>Gastos recurrentes</PremiumCardTitle>
                 <PremiumCardDescription>{items.length} recurrentes registrados</PremiumCardDescription>
               </div>
               <div className="flex flex-wrap gap-2">

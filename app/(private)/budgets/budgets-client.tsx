@@ -726,12 +726,12 @@ function SuggestedPlanPanel({
     return (
       <div className="rounded-3xl border border-border bg-muted/30 p-4">
         <p className="text-sm font-semibold text-foreground">
-          {hasHistoricalActivity ? "No quedan categorías reales para sugerir" : "Todavía no hay historial suficiente"}
+          {hasHistoricalActivity ? "Las categorías activas ya tienen plan" : "Registrá movimientos para activar sugerencias"}
         </p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
           {hasHistoricalActivity
-            ? "Las categorías con actividad ya tienen plan o no hay recurrentes libres. Podés ajustar cualquier intención activa."
-            : "Meridian necesita movimientos o recurrentes reales para preparar una distribución confiable."}
+            ? "Todas las categorías con actividad ya están cubiertas. Podés ajustar cualquier intención activa o agregar una nueva manualmente."
+            : "A medida que registrés movimientos, Meridian va a preparar sugerencias basadas en tu actividad real. Por ahora podés crear un plan manualmente."}
         </p>
       </div>
     );

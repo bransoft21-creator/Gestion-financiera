@@ -45,7 +45,7 @@ export function TransactionFilters({
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <Input
               className="h-10 min-w-0 rounded-2xl border-border/80 bg-background/60 pl-8 text-base transition focus:bg-background md:text-xs"
-              placeholder="Buscar movimiento..."
+              placeholder="Buscar..."
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
             />
@@ -59,12 +59,12 @@ export function TransactionFilters({
             aria-expanded={isFiltersOpen}
           >
             <Filter className="h-3.5 w-3.5" aria-hidden="true" />
-            {activeFilterCount > 0 ? activeFilterCount : "Filtros"}
+            {activeFilterCount > 0 ? activeFilterCount : <span className="hidden sm:inline">Filtros</span>}
             <ChevronDown className={`h-3.5 w-3.5 transition ${isFiltersOpen ? "rotate-180" : ""}`} aria-hidden="true" />
           </ActionButton>
           <ActionButton type="button" size="sm" className="shrink-0" onClick={onNew}>
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-            Nueva
+            <span className="hidden sm:inline">Nueva</span>
           </ActionButton>
         </div>
         {onPayCreditCard ? (

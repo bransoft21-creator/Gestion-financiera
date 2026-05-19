@@ -16,6 +16,7 @@ import { generateWeeklySignals } from "@/lib/finance/financial-signals";
 import { buildWeeklyInputHash, buildWeekLabel } from "@/lib/finance/reflection-cache";
 import {
   generateWeeklyReflection,
+  computePeriodMaturity,
   type ReflectionResult,
 } from "@/lib/finance/ai-financial-reflection";
 import { traceAi, traceUserId } from "@/server/services/ai-trace";
@@ -126,6 +127,7 @@ export async function getOrGenerateWeeklyReflection(params: {
     weekendPct: currentMetrics.weekendPct,
     expensesChange: comparison.available ? comparison.expensesPct : null,
     signals: signals.map((s) => ({ label: s.label, severity: s.severity })),
+    periodMaturity: computePeriodMaturity(now),
     usage: { userId: userProfileId, endpoint: "ai.weekly-reflection" },
   });
   traceAi("OPENAI_WEEKLY_RESPONSE_OK", {

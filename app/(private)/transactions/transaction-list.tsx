@@ -130,31 +130,26 @@ export function TransactionList({
             <TransactionsEmptyState search={search} onNew={onNew} />
           ) : (
             <div className="space-y-5">
-              <div className="flex items-center justify-between gap-2 rounded-2xl border border-border/60 bg-muted/30 px-3 py-1.5">
-                <p className="text-[11px] font-semibold text-muted-foreground">
-                  Agrupado por fecha
-                </p>
-                <div className="flex items-center">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2.5 text-xs text-muted-foreground"
-                    onClick={onCollapseAll}
-                  >
-                    Colapsar días
-                  </Button>
-                  <span className="h-3.5 w-px bg-border/70" aria-hidden="true" />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2.5 text-xs text-muted-foreground"
-                    onClick={onExpandAll}
-                  >
-                    Ver todos
-                  </Button>
-                </div>
+              <div className="flex items-center justify-end gap-0.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2.5 text-[11px] text-muted-foreground"
+                  onClick={onCollapseAll}
+                >
+                  Colapsar todo
+                </Button>
+                <span className="h-3 w-px bg-border/60" aria-hidden="true" />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2.5 text-[11px] text-muted-foreground"
+                  onClick={onExpandAll}
+                >
+                  Expandir todo
+                </Button>
               </div>
               {groupedTransactions.map((group) => (
                 <TransactionGroup
@@ -241,51 +236,29 @@ function TransactionFeedBriefing({
   totalAmount: number;
   activeFilterCount: number;
 }) {
+  if (summary.count === 0) return null;
+
   const balanceTone = totalAmount >= 0 ? "text-emerald-400" : "text-rose-400";
 
   return (
-    <PremiumCard variant="raised" className="overflow-hidden border-border/80 bg-muted/[0.06] p-4 sm:p-5">
-      <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
-        <div className="min-w-0">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <Badge className="border-primary/20 bg-primary/10 text-primary">Money feed</Badge>
-            {activeFilterCount > 0 && (
-              <Badge className="border-amber-500/20 bg-amber-500/10 text-amber-500">{activeFilterCount} filtros activos</Badge>
-            )}
-          </div>
-          <h2 className="text-balance text-lg font-semibold leading-tight text-foreground sm:text-xl">
-            {summary.count === 0 ? "Todavía no hay movimientos para leer." : "Así se movió tu dinero."}
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            {summary.count === 0
-              ? "Cuando registres movimientos, esta vista va a mostrar el pulso real del mes."
-              : (
-                  <>
-                    {summary.count} movimientos cargados. Entraron{" "}
-                    <SensitiveAmount value={formatMoneyBalance(summary.income)} />
-                    {" "}y salieron <SensitiveAmount value={formatMoneyBalance(summary.expenses)} />.
-                  </>
-                )}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 lg:min-w-[360px]">
-          <BriefingMetric label="Balance" value={`${totalAmount >= 0 ? "+" : ""}${formatMoneyBalance(totalAmount)}`} className={balanceTone} />
-          <BriefingMetric label="Entró" value={formatMoneyBalance(summary.income)} className="text-emerald-400" />
-          <BriefingMetric label="Salió" value={formatMoneyBalance(summary.expenses)} className="text-rose-400" />
-        </div>
-      </div>
-    </PremiumCard>
-  );
-}
-
-function BriefingMetric({ label, value, className }: { label: string; value: string; className?: string }) {
-  return (
-    <div className="min-w-0 rounded-2xl border border-border/70 bg-background/55 p-3 shadow-sm">
-      <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={`mt-1 break-words text-xs font-semibold tabular-nums leading-tight sm:text-sm ${className ?? "text-foreground"}`}>
-        <SensitiveAmount value={value} />
-      </p>
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border border-border/50 bg-muted/[0.07] px-4 py-2.5">
+      {activeFilterCount > 0 && (
+        <>
+          <span className="text-[11px] font-semibold text-amber-500">{activeFilterCount} filtros</span>
+          <span className="h-3 w-px shrink-0 bg-border/60" aria-hidden="true" />
+        </>
+      )}
+      <span className="text-[11px] text-muted-foreground tabular-nums">{summary.count} movimientos</span>
+      <span className="h-3 w-px shrink-0 bg-border/60" aria-hidden="true" />
+      <span className="text-[11px] text-muted-foreground">
+        Entró <SensitiveAmount value={formatMoneyBalance(summary.income)} className="font-semibold text-emerald-400" />
+      </span>
+      <span className="text-[11px] text-muted-foreground">
+        Salió <SensitiveAmount value={formatMoneyBalance(summary.expenses)} className="font-semibold text-rose-400" />
+      </span>
+      <span className="text-[11px] text-muted-foreground">
+        Balance <SensitiveAmount value={`${totalAmount >= 0 ? "+" : ""}${formatMoneyBalance(totalAmount)}`} className={`font-semibold ${balanceTone}`} />
+      </span>
     </div>
   );
 }

@@ -358,7 +358,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
     }
   }
 
-  const statusLabel = isStale ? "Hay movimientos nuevos" : isCached ? "Informe guardado" : analysis ? "Actualizado" : "Listo para analizar";
+  const statusLabel = isStale ? "Hay cambios sin revisar" : isCached ? "Guardado" : analysis ? null : "Sin análisis aún";
 
   return (
     <section data-tutorial="financial-copilot" className="mb-8 overflow-hidden rounded-[28px] border border-border bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.16),transparent_31%),radial-gradient(circle_at_82%_12%,rgba(251,191,36,0.12),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))] p-1 shadow-[0_30px_120px_rgba(0,0,0,0.38)] sm:mb-10">
@@ -376,8 +376,8 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
             </div>
             <div className="min-w-0">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-foreground">Financial Copilot</p>
-                <Badge className="border-border bg-muted/50 text-[11px] text-muted-foreground">{statusLabel}</Badge>
+                <p className="text-sm font-semibold text-foreground">Briefing del mes</p>
+                {statusLabel && <Badge className="border-border bg-muted/50 text-[11px] text-muted-foreground">{statusLabel}</Badge>}
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">Lo importante de tu dinero, sin ruido.</p>
             </div>
@@ -390,26 +390,13 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
           </button>
 
           <div className="flex flex-col gap-2 sm:flex-row">
-            {analysis && metrics && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsOpen((current) => !current)}
-                className="h-11 w-full rounded-2xl border-border bg-muted/40 text-foreground hover:bg-muted sm:w-auto"
-                aria-expanded={isOpen}
-                aria-controls="financial-copilot-content"
-              >
-                <ChevronDown className={`h-4 w-4 transition duration-300 ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />
-                {isOpen ? "Ocultar" : "Ver lectura"}
-              </Button>
-            )}
             <Button
               onClick={handleAnalyze}
               disabled={isLoading || isForbidden}
               className="h-11 w-full rounded-2xl bg-foreground text-background shadow-[0_16px_42px_rgba(255,255,255,0.12)] hover:opacity-90 sm:w-auto"
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
-              {analysis ? "Actualizar lectura" : "Analizar con IA"}
+              {analysis ? "Actualizar" : "Generar briefing"}
             </Button>
           </div>
         </div>
@@ -486,8 +473,7 @@ function CollapsedCopilotPreview({
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
             <Badge className={`${scoreStyle.badge}`}>Estabilidad: {scoreLabel}</Badge>
-            {isStale && <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-500">Hay cambios nuevos</Badge>}
-            <Badge className="border-border bg-muted/50 text-muted-foreground">Tocar para desplegar</Badge>
+            {isStale && <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-500">Hay cambios sin revisar</Badge>}
           </div>
           <h2 className="text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">{hero.title}</h2>
           <p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-snug text-muted-foreground">{hero.subtitle}</p>
