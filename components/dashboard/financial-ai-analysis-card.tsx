@@ -396,7 +396,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
               className="h-11 w-full rounded-2xl bg-foreground text-background shadow-[0_16px_42px_rgba(255,255,255,0.12)] hover:opacity-90 sm:w-auto"
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
-              {analysis ? "Nueva lectura" : "Analizar mi mes"}
+              {analysis ? "Actualizar" : "Analizar mi mes"}
             </Button>
           </div>
         </div>
