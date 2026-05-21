@@ -25,7 +25,6 @@ import {
 } from "@/components/ui-v2/premium-card";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { DashboardHero } from "@/components/dashboard/dashboard-hero";
-import { MetricStrip, FinancialHealthStrip } from "@/components/dashboard/metric-strip";
 import { MonthlySignals } from "@/components/dashboard/monthly-signals";
 import { ExpenseTypeBreakdown } from "@/components/dashboard/expense-type-breakdown";
 import { MonthProjection } from "@/components/dashboard/month-projection";
@@ -42,11 +41,6 @@ import {
   MONTH_NAMES,
   formatMoney,
   getTimeContext,
-  getAmbientHint,
-  getIncomeInsight,
-  getExpensesInsight,
-  getReservedInsight,
-  getObligationsInsight,
   sectionReveal,
 } from "./utils";
 import type { DashboardSummary } from "./types";
@@ -90,27 +84,6 @@ function SectionCollapseButton({
   );
 }
 
-function AmbientSignal({ text, celebratory = false }: { text: string; celebratory?: boolean }) {
-  return (
-    <div className="mb-5 flex items-center gap-3 sm:mb-8">
-      <span
-        className={`h-px flex-1 ${celebratory ? "bg-emerald-500/[0.12]" : "bg-muted/30"}`}
-        aria-hidden="true"
-      />
-      <p
-        className={`shrink-0 text-[11px] italic tracking-wide ${
-          celebratory ? "text-emerald-500/70" : "text-muted-foreground"
-        }`}
-      >
-        {text}
-      </p>
-      <span
-        className={`h-px flex-1 ${celebratory ? "bg-emerald-500/[0.12]" : "bg-muted/30"}`}
-        aria-hidden="true"
-      />
-    </div>
-  );
-}
 
 /* ── Main component ──────────────────────────────────────────────────────── */
 
@@ -127,7 +100,6 @@ export function DashboardClient() {
   const shouldReduceMotion = useReducedMotion();
   const sectionDistribucion = useSectionCollapse("distribucion", false);
   const sectionMapa = useSectionCollapse("mapa", false);
-  const sectionMovimientos = useSectionCollapse("movimientos", true);
 
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
 
@@ -249,12 +221,6 @@ export function DashboardClient() {
     setSelectedExpenseCategoryPreference((current) => (current === categoryId ? null : categoryId));
   }
 
-  const incomeInsight = getIncomeInsight(metrics);
-  const expensesInsight = getExpensesInsight(metrics);
-  const reservedInsight = getReservedInsight(metrics);
-  const obligationsInsight = getObligationsInsight(metrics);
-  const ambientHint = getAmbientHint(metrics, timeContext, isCurrentMonth);
-  const isCelebratoryMonth = isCurrentMonth && metrics.savingsRate >= 20;
   const dashboardEducation = getDashboardEducation(metrics);
 
   return (
@@ -265,10 +231,6 @@ export function DashboardClient() {
       <DashboardHero metrics={metrics} year={year} month={month} usdBalance={usdBalance} />
 
       <GettingStartedCard activation={summary.activation} />
-      <ContextualEntryPoints entryPoints={summary.awareness.entryPoints} />
-
-      {/* Ambient signal */}
-      {ambientHint && <AmbientSignal text={ambientHint} celebratory={isCelebratoryMonth} />}
 
       {/* Cierre de mes anterior — solo mes actual, primeros 10 días */}
       {isCurrentMonth && <MonthlyCloseCard />}
@@ -278,20 +240,6 @@ export function DashboardClient() {
 
       {/* Pulso semanal — solo mes actual */}
       {isCurrentMonth && <WeeklyPulseCard />}
-
-      {/* Activity preview */}
-      <ActivityPreview />
-
-      {/* 3. Métricas del mes */}
-      <MetricStrip
-        items={[
-          { label: "Ingresos", value: formatMoney(metrics.income, metrics.currency), tone: incomeInsight.cardTone, href: "/transactions?type=INCOME" },
-          { label: "Gastos", value: formatMoney(metrics.expenses, metrics.currency), tone: expensesInsight.cardTone, href: "/transactions?type=EXPENSE" },
-          { label: "Reservado", value: formatMoney(metrics.remainingReservedBudget, metrics.currency), tone: reservedInsight.cardTone, href: "/budgets" },
-          { label: "Obligaciones", value: formatMoney(metrics.upcomingObligations, metrics.currency), tone: obligationsInsight.cardTone, href: "/recurring" },
-        ]}
-      />
-      <FinancialHealthStrip metrics={metrics} />
 
       {/* 4. Distribución + tendencia — colapsable */}
       <motion.section
@@ -389,41 +337,33 @@ export function DashboardClient() {
         )}
       </motion.section>
 
-      {/* 6. Movimientos recientes — colapsable */}
+      {/* 6. Movimientos recientes */}
       <motion.div
         variants={shouldReduceMotion ? undefined : sectionReveal}
         initial={shouldReduceMotion ? false : "hidden"}
         animate={shouldReduceMotion ? false : "visible"}
         transition={{ delay: 0.2 }}
       >
-        <SectionCollapseButton
-          title="Movimientos recientes"
-          summary={`${latestTransactions.length} movimiento${latestTransactions.length !== 1 ? "s" : ""}`}
-          expanded={sectionMovimientos.expanded}
-          onToggle={() => {
-            if (!sectionMovimientos.expanded) trackProductEvent("dashboard_section_expanded", { section: "movimientos" }, "dashboard");
-            sectionMovimientos.toggle();
-          }}
-        />
-        {sectionMovimientos.expanded && (
-          <PremiumCard>
-            <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
-              <h3 className="text-sm font-semibold text-foreground">Movimientos recientes</h3>
-              <Button
-                asChild
-                size="sm"
-                variant="ghost"
-                className="h-7 shrink-0 px-2 text-xs text-muted-foreground hover:bg-transparent hover:text-muted-foreground"
-              >
-                <Link href="/transactions">Ver todas →</Link>
-              </Button>
-            </div>
-            <PremiumCardContent>
-              <RecentTransactions transactions={latestTransactions} />
-            </PremiumCardContent>
-          </PremiumCard>
-        )}
+        <PremiumCard>
+          <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
+            <h3 className="text-sm font-semibold text-foreground">Movimientos recientes</h3>
+            <Button
+              asChild
+              size="sm"
+              variant="ghost"
+              className="h-7 shrink-0 px-2 text-xs text-muted-foreground hover:bg-transparent hover:text-muted-foreground"
+            >
+              <Link href="/transactions">Ver todas →</Link>
+            </Button>
+          </div>
+          <PremiumCardContent>
+            <RecentTransactions transactions={latestTransactions} />
+          </PremiumCardContent>
+        </PremiumCard>
       </motion.div>
+
+      <ContextualEntryPoints entryPoints={summary.awareness.entryPoints} />
+      <ActivityPreview />
     </div>
   );
 }

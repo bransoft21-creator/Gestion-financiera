@@ -245,6 +245,39 @@ export function getObligationsInsight(metrics: DashboardSummary["metrics"]): Ins
   };
 }
 
+export function getHeroHeadline(metrics: DashboardSummary["metrics"]): string {
+  const { realAvailable, spendingRate, fixedToIncomeRatio, savingsRate } = metrics;
+  if (realAvailable < 0) return "Tu mes pide una corrección.";
+  if (spendingRate > 100) return "El ritmo actual supera tus ingresos.";
+  if (fixedToIncomeRatio > 70) return "Los gastos fijos están pesando fuerte.";
+  if (spendingRate > 82 || fixedToIncomeRatio > 58) return "Tu mes viene ajustado, pero manejable.";
+  if (savingsRate >= 20) return "Mes sólido. Tu ahorro está presente.";
+  return "Tu dinero respira este mes.";
+}
+
+export function getHeroPrimarySignal(
+  metrics: DashboardSummary["metrics"],
+): { text: string; tone: "positive" | "warning" | "danger" } {
+  const { fixedToIncomeRatio, spendingRate, savingsRate, realAvailable, projection } = metrics;
+  if (realAvailable < 0)
+    return { text: "Disponible real negativo — el mes necesita corrección.", tone: "danger" };
+  if (spendingRate > 100)
+    return { text: "El ritmo de gasto supera los ingresos del mes.", tone: "danger" };
+  if (fixedToIncomeRatio > 70)
+    return { text: `Gastos fijos al ${fixedToIncomeRatio}% del ingreso — por encima del límite.`, tone: "danger" };
+  if (fixedToIncomeRatio > 58)
+    return { text: `Gastos fijos al ${fixedToIncomeRatio}% — están presionando el mes.`, tone: "warning" };
+  if (spendingRate > 82)
+    return { text: `${spendingRate}% del ingreso ya consumido a este ritmo.`, tone: "warning" };
+  if (projection.isCurrentMonth && projection.projectedRealAvailable < 0)
+    return { text: "El cierre estimado queda por debajo de cero si el ritmo no cambia.", tone: "warning" };
+  if (savingsRate >= 20)
+    return { text: `Tasa de ahorro del ${savingsRate}% — por encima del objetivo.`, tone: "positive" };
+  if (savingsRate > 8)
+    return { text: `Mes con ahorro presente — margen del ${savingsRate}%.`, tone: "positive" };
+  return { text: `${spendingRate}% del ingreso consumido — dentro de lo esperado.`, tone: "positive" };
+}
+
 export function buildNarrative(metrics: DashboardSummary["metrics"]): string {
   if (metrics.income === 0 && metrics.expenses === 0) return "";
   const parts: string[] = [];
