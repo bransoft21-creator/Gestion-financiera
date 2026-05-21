@@ -17,7 +17,6 @@ import { useUser } from "@/components/app/user-context";
 import { EmptyState } from "@/components/app/empty-state";
 import { Button } from "@/components/ui/button";
 import { FinancialAiAnalysisCard } from "@/components/dashboard/financial-ai-analysis-card";
-import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse-card";
 import { MonthlyCloseCard } from "@/components/dashboard/monthly-close-card";
 import {
   PremiumCard,
@@ -237,9 +236,6 @@ export function DashboardClient() {
 
       {/* 2. Financial Copilot */}
       <FinancialAiAnalysisCard month={selectedMonth} />
-
-      {/* Pulso semanal — solo mes actual */}
-      {isCurrentMonth && <WeeklyPulseCard />}
 
       {/* 4. Distribución + tendencia — colapsable */}
       <motion.section

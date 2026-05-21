@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SensitiveAmount, SensitiveText } from "@/components/app/sensitive-amount";
 import { captureClientError, trackProductEvent } from "@/lib/observability/client";
+import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse-card";
 
 type AiFinancialAnalysis = {
   summary: string;
@@ -513,6 +514,9 @@ function CopilotExperience({
       className="space-y-3"
     >
       <FinancialCopilotHero hero={hero} metrics={metrics} comparison={comparison} />
+      <motion.div variants={itemMotion}>
+        <WeeklyPulseCard />
+      </motion.div>
       <ImportantInsights insights={insights} />
       <InvisibleExpenses items={invisibleExpenses} income={metrics.income} currency={metrics.currency} />
       <MonthPrediction metrics={metrics} />
