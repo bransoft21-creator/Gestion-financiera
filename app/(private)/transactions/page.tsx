@@ -9,9 +9,8 @@ export default async function TransactionsPage() {
 
   return (
     <V2PageShell
-      eyebrow="Money feed"
       title="Movimientos"
-      description="Tu línea de tiempo financiera: qué entró, qué salió y qué patrón empieza a aparecer."
+      description="Entradas, salidas y patrones del período."
     >
       <TransactionsClient
         householdId={workspace.household.id}

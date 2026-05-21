@@ -44,7 +44,7 @@ export function TransactionFilters({
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <Input
-              className="h-10 min-w-0 rounded-2xl border-border/80 bg-background/60 pl-8 text-base transition focus:bg-background md:text-xs"
+              className="h-9 min-w-0 rounded-2xl border-border/80 bg-background/60 pl-8 text-base transition focus:bg-background md:text-xs"
               placeholder="Buscar..."
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
@@ -64,17 +64,15 @@ export function TransactionFilters({
           </ActionButton>
           <ActionButton type="button" size="sm" className="shrink-0" onClick={onNew}>
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="hidden sm:inline">Nueva</span>
+            <span className="hidden sm:inline">Nuevo</span>
           </ActionButton>
-        </div>
-        {onPayCreditCard ? (
-          <div className="mt-2">
-            <ActionButton type="button" variant="quiet" size="sm" onClick={onPayCreditCard}>
+          {onPayCreditCard ? (
+            <ActionButton type="button" variant="quiet" size="sm" className="shrink-0" onClick={onPayCreditCard}>
               <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
-              Pagar tarjeta
+              <span className="hidden sm:inline">Pagar tarjeta</span>
             </ActionButton>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </PremiumCardHeader>
       {isFiltersOpen ? (
         <PremiumCardContent className="px-3 pb-3 pt-3 sm:px-4 sm:pb-4">

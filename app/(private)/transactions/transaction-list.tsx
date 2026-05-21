@@ -4,7 +4,6 @@ import {
   ArrowDownCircle,
   ArrowRightLeft,
   ArrowUpCircle,
-  CalendarDays,
   ChevronRight,
   Download,
   Home,
@@ -91,9 +90,9 @@ export function TransactionList({
     <div className="space-y-4 sm:space-y-5">
       <PremiumCard data-tutorial="transactions-feed" className="overflow-hidden border-border/80">
         <PremiumCardHeader className="border-b border-border/70 bg-muted/[0.08]">
-          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center justify-between gap-3">
             <div className="min-w-0">
-              <PremiumCardTitle>Feed de movimientos</PremiumCardTitle>
+              <PremiumCardTitle>Movimientos</PremiumCardTitle>
               <PremiumCardDescription>
                 {transactions.length} movimiento{transactions.length !== 1 ? "s" : ""} ·{" "}
                 <SensitiveAmount
@@ -102,26 +101,34 @@ export function TransactionList({
                 />
               </PremiumCardDescription>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+            <div className="flex shrink-0 items-center gap-0.5">
+              {transactions.length > 0 && (
+                <>
+                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[11px] text-muted-foreground" onClick={onCollapseAll}>
+                    Colapsar
+                  </Button>
+                  <span className="h-3 w-px bg-border/60" aria-hidden="true" />
+                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[11px] text-muted-foreground" onClick={onExpandAll}>
+                    Expandir
+                  </Button>
+                  <span className="h-3 w-px bg-border/60" aria-hidden="true" />
+                </>
+              )}
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground"
                 onClick={onExportCsv}
                 disabled={transactions.length === 0}
+                aria-label="Exportar CSV"
               >
-                <Download className="h-4 w-4" aria-hidden="true" />
-                CSV
-              </Button>
-              <Button type="button" size="sm" className="w-full sm:w-auto" onClick={onNew}>
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Nueva
+                <Download className="h-3.5 w-3.5" aria-hidden="true" />
               </Button>
             </div>
           </div>
           {feedSummary.count > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border border-border/50 bg-background/40 px-3.5 py-2">
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 py-0.5">
               {activeFilterCount > 0 && (
                 <>
                   <span className="text-[11px] font-semibold text-amber-500">{activeFilterCount} filtros activos</span>
@@ -144,27 +151,6 @@ export function TransactionList({
             <TransactionsEmptyState search={search} onNew={onNew} />
           ) : (
             <div className="space-y-5">
-              <div className="flex items-center justify-end gap-0.5">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 px-3 text-[11px] text-muted-foreground"
-                  onClick={onCollapseAll}
-                >
-                  Colapsar todo
-                </Button>
-                <span className="h-3 w-px bg-border/60" aria-hidden="true" />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 px-3 text-[11px] text-muted-foreground"
-                  onClick={onExpandAll}
-                >
-                  Expandir todo
-                </Button>
-              </div>
               {groupedTransactions.map((group) => (
                 <TransactionGroup
                   key={group.label}
@@ -201,18 +187,18 @@ export function TransactionList({
 
 function TransactionListSkeleton() {
   return (
-    <div className="space-y-3 rounded-[1.35rem] border border-border/50 bg-background/40 p-2">
+    <div className="space-y-1.5">
       {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="space-y-3 rounded-2xl border border-border/40 bg-muted/20 p-4">
-          <div className="flex gap-3">
-            <Skeleton className="h-11 w-11 rounded-2xl shrink-0" />
+        <div key={i} className="rounded-[1.15rem] border border-border/40 bg-card/50 px-3 py-2.5">
+          <div className="flex gap-2.5">
+            <Skeleton className="h-8 w-8 rounded-xl shrink-0" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-40" />
               <Skeleton className="h-3 w-28" />
             </div>
             <Skeleton className="h-5 w-20 shrink-0" />
           </div>
-          <Skeleton className="h-3 w-24" />
+          <Skeleton className="mt-1.5 h-3 w-16" />
         </div>
       ))}
     </div>
@@ -275,7 +261,7 @@ function TransactionGroup({
         </span>
       </button>
       {!isCollapsed ? (
-        <div className="space-y-2 rounded-[1.35rem] border border-border/45 bg-background/35 p-1.5">
+        <div className="space-y-1.5">
           {group.transactions.map((transaction) => (
             <TransactionCard
               key={transaction.id}
@@ -310,7 +296,7 @@ function TransactionCard({
 
   return (
     <article
-      className="group min-w-0 cursor-pointer overflow-hidden rounded-[1.15rem] border border-border/40 bg-muted/[0.30] px-3.5 py-3.5 transition duration-150 hover:border-border/75 hover:bg-muted/45 active:scale-[0.995] sm:px-4"
+      className="group min-w-0 cursor-pointer overflow-hidden rounded-[1.15rem] border border-border/40 bg-card/50 px-3 py-2.5 transition duration-150 hover:border-border/75 hover:bg-muted/45 active:scale-[0.995]"
       role="button"
       tabIndex={0}
       onClick={() => onEdit(transaction)}
@@ -321,8 +307,8 @@ function TransactionCard({
         }
       }}
     >
-      <div className="flex min-w-0 items-start gap-3">
-        <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${tone.icon}`}>
+      <div className="flex min-w-0 items-start gap-2.5">
+        <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${tone.icon}`}>
           <Icon className="h-4 w-4" aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">
@@ -333,6 +319,7 @@ function TransactionCard({
                 {transaction.type === "TRANSFER"
                   ? `${transaction.account.name}${transaction.transferAccount ? ` → ${transaction.transferAccount.name}` : ""}`
                   : `${transaction.category?.name ?? "Sin categoría"} · ${transaction.account.name}`}
+                {" · "}{formatDate(transaction.occurredAt)}
               </p>
             </div>
             <div className="max-w-[44%] shrink-0 text-right sm:min-w-[108px]">
@@ -345,7 +332,7 @@ function TransactionCard({
             </div>
           </div>
 
-          <div className="mt-2.5 flex min-w-0 flex-wrap items-center gap-1.5">
+          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
             <Badge className={`h-5 shrink-0 border-0 px-2 text-[11px] ${tone.badge}`}>{transactionTypeLabels[transaction.type]}</Badge>
             {transaction.status === "PENDING" && (
               <Badge className="h-5 shrink-0 border-amber-500/30 bg-amber-500/10 px-2 text-[11px] text-amber-400">Pendiente</Badge>
@@ -359,17 +346,13 @@ function TransactionCard({
                 {transaction.sharedTransaction.household.name}
               </Badge>
             ) : null}
-            <span className="inline-flex min-w-0 items-center gap-1 truncate rounded-full border border-border/50 bg-background/55 px-2 py-1 text-[11px] leading-none text-muted-foreground">
-              <CalendarDays className="h-3 w-3" aria-hidden="true" />
-              {formatDate(transaction.occurredAt)}
-            </span>
           </div>
         </div>
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          className="h-7 w-7 shrink-0 text-muted-foreground/40 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:bg-destructive/10 hover:text-destructive"
           onClick={(event) => {
             event.stopPropagation();
             onDelete(transaction);
