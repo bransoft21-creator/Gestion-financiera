@@ -360,7 +360,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
   const scoreLabel = analysis ? getScoreLabel(clamp(Math.round(analysis.score), 0, 100)) : null;
 
   return (
-    <section data-tutorial="financial-copilot" className="mb-6 rounded-[20px] border border-border bg-[linear-gradient(160deg,rgba(45,212,191,0.04),transparent_50%)] bg-card shadow-[0_4px_24px_rgba(0,0,0,0.10)] sm:mb-8">
+    <section data-tutorial="financial-copilot" className="mb-6 overflow-hidden rounded-[20px] border border-border bg-card [background-image:radial-gradient(ellipse_80%_60%_at_0%_0%,rgba(45,212,191,0.12),transparent_55%),radial-gradient(ellipse_50%_40%_at_100%_100%,rgba(251,191,36,0.07),transparent_50%),radial-gradient(rgba(45,212,191,0.04)_1px,transparent_1px)] [background-size:auto,auto,18px_18px] shadow-[0_4px_32px_rgba(0,0,0,0.14),0_0_0_1px_rgba(45,212,191,0.06)] sm:mb-8">
       <div className="px-4 py-3 sm:px-5 sm:py-4">
         <div className="mb-3 flex items-center gap-3">
           <button
