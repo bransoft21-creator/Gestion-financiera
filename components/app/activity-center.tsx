@@ -128,6 +128,8 @@ function relativeTime(iso: string): string {
 }
 
 // ── SwipeCard ────────────────────────────────────────────────────────────────
+// Reveal-then-tap model: swipe reveals action buttons, tap executes.
+// No auto-execute on swipe — the user always confirms with an explicit tap.
 
 function SwipeCard({
   onArchive,
@@ -146,155 +148,192 @@ function SwipeCard({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState(0);
-  const [phase, setPhase] = useState<"idle" | "dragging" | "releasing">("idle");
-  const [containerWidth, setContainerWidth] = useState(320);
+  const [phase, setPhase] = useState<"idle" | "dragging" | "revealed" | "executing">("idle");
 
+  // All mutable state in refs to avoid stale closures in native event handlers
+  const offsetRef = useRef(0);
+  const phaseRef = useRef<"idle" | "dragging" | "revealed" | "executing">("idle");
   const gRef = useRef({
     active: false, startX: 0, startY: 0,
-    axis: null as "x" | "y" | null, offset: 0, raf: 0,
+    axis: null as "x" | "y" | null, baseOffset: 0, raf: 0,
   });
   const actionsRef = useRef({ onArchive, onDelete, onResolve, onPostpone });
+  actionsRef.current = { onArchive, onDelete, onResolve, onPostpone };
 
-  const SHORT = 0.28;
-  const LONG  = 0.58;
+  // Fixed button width — independent of card width, comfortable tap target
+  const ACTION_W = 72;
+  const SNAP_ONE = ACTION_W;
+  const SNAP_TWO = ACTION_W * 2;
+  const DEAD_ZONE   = 0.08; // < 8%  → always snap back
+  const TWO_RATIO   = 0.36; // > 36% → snap to two actions
+  const RESIST_FROM = 0.36; // rubber band starts here
+  const MAX_DRAG    = 0.75;
 
-  useEffect(() => {
-    actionsRef.current = { onArchive, onDelete, onResolve, onPostpone };
-  }, [onArchive, onDelete, onResolve, onPostpone]);
+  function sync(x: number, p: typeof phase) {
+    offsetRef.current = x; setOffset(x);
+    phaseRef.current = p;  setPhase(p);
+  }
 
-  function getAction(x: number, w: number): "archive" | "delete" | "resolve" | "postpone" | null {
+  function getSnap(x: number, w: number): number {
     const r = Math.abs(x) / w;
-    if (r < SHORT * 0.38) return null;
-    if (x < 0) return r >= LONG ? "delete" : "archive";
-    if (x > 0) return r >= LONG ? "postpone" : "resolve";
-    return null;
+    const s = x < 0 ? -1 : 1;
+    if (r < DEAD_ZONE) return 0;
+    if (r < TWO_RATIO) return s * SNAP_ONE;
+    return s * SNAP_TWO;
+  }
+
+  function executeAction(key: "onArchive" | "onDelete" | "onResolve" | "onPostpone") {
+    if (phaseRef.current === "executing") return;
+    phaseRef.current = "executing"; setPhase("executing");
+    if ("vibrate" in navigator) navigator.vibrate(key === "onDelete" ? [8, 4, 8] : [8]);
+    const w = containerRef.current?.offsetWidth ?? 320;
+    const flyX = (offsetRef.current <= 0 ? -1 : 1) * w * 1.1;
+    offsetRef.current = flyX; setOffset(flyX);
+    setTimeout(() => {
+      sync(0, "idle");
+      actionsRef.current[key]();
+    }, 210);
+  }
+
+  function snapBack() {
+    sync(0, "idle");
   }
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const g = gRef.current;
-    const measure = () => setContainerWidth(el.offsetWidth || 320);
-    const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
-
-    measure();
-    resizeObserver?.observe(el);
-    window.addEventListener("resize", measure);
 
     function onTouchStart(e: TouchEvent) {
+      if (phaseRef.current === "executing") return;
       g.active = true; g.axis = null;
       g.startX = e.touches[0].clientX;
       g.startY = e.touches[0].clientY;
-      setPhase("dragging");
+      g.baseOffset = offsetRef.current;
     }
 
     function onTouchMove(e: TouchEvent) {
-      if (!g.active) return;
+      if (!g.active || phaseRef.current === "executing") return;
       const dx = e.touches[0].clientX - g.startX;
       const dy = e.touches[0].clientY - g.startY;
       if (!g.axis) {
         if (Math.abs(dx) + Math.abs(dy) < 6) return;
         g.axis = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+        if (g.axis === "y") { g.active = false; return; }
       }
-      if (g.axis !== "x") return;
       e.preventDefault();
+      if (phaseRef.current !== "dragging") { phaseRef.current = "dragging"; setPhase("dragging"); }
+
       const w = el!.offsetWidth;
-      const lt = w * LONG;
-      let raw = Math.max(-(w * 0.82), Math.min(w * 0.82, dx));
-      if (Math.abs(raw) > lt) {
-        const sign = raw < 0 ? -1 : 1;
-        raw = sign * (lt + (Math.abs(raw) - lt) * 0.18);
+      const raw = g.baseOffset + dx;
+      const CAP = w * MAX_DRAG;
+      const RT  = w * RESIST_FROM;
+      let clamped = Math.max(-CAP, Math.min(CAP, raw));
+      if (Math.abs(clamped) > RT) {
+        const s = clamped < 0 ? -1 : 1;
+        clamped = s * (RT + (Math.abs(clamped) - RT) * 0.15);
       }
       cancelAnimationFrame(g.raf);
-      g.raf = requestAnimationFrame(() => { g.offset = raw; setOffset(raw); });
+      g.raf = requestAnimationFrame(() => { offsetRef.current = clamped; setOffset(clamped); });
     }
 
     function onTouchEnd() {
       if (!g.active) return;
       g.active = false;
-      setPhase("releasing");
-      const w = el!.offsetWidth;
-      const action = getAction(g.offset, w);
-      if (!action) { g.offset = 0; setOffset(0); return; }
-      if ("vibrate" in navigator) navigator.vibrate([6]);
-      const flyX = (g.offset < 0 ? -1 : 1) * w * 1.08;
-      g.offset = flyX; setOffset(flyX);
-      const key = action === "archive" ? "onArchive" : action === "delete" ? "onDelete" : action === "resolve" ? "onResolve" : "onPostpone";
-      setTimeout(() => { g.offset = 0; setOffset(0); setPhase("idle"); actionsRef.current[key](); }, 230);
+      if (phaseRef.current === "executing") return;
+      const snap = getSnap(offsetRef.current, el!.offsetWidth);
+      offsetRef.current = snap; setOffset(snap);
+      if (snap === 0) {
+        phaseRef.current = "idle"; setPhase("idle");
+      } else {
+        phaseRef.current = "revealed"; setPhase("revealed");
+        if ("vibrate" in navigator) navigator.vibrate([4]);
+      }
     }
 
     el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd, { passive: true });
-    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    el.addEventListener("touchmove",  onTouchMove,  { passive: false });
+    el.addEventListener("touchend",   onTouchEnd,   { passive: true });
+    el.addEventListener("touchcancel",onTouchEnd,   { passive: true });
     return () => {
       el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
-      el.removeEventListener("touchcancel", onTouchEnd);
-      resizeObserver?.disconnect();
-      window.removeEventListener("resize", measure);
+      el.removeEventListener("touchmove",  onTouchMove);
+      el.removeEventListener("touchend",   onTouchEnd);
+      el.removeEventListener("touchcancel",onTouchEnd);
       cancelAnimationFrame(g.raf);
     };
-  }, []); // stable: all mutable state via refs
+  }, []);
 
-  const w = containerWidth;
-  const ratio = Math.abs(offset) / w;
-  const isLeftSwipe = offset < 0;
-  const isRightSwipe = offset > 0;
-  const isLong = ratio >= LONG;
-  const bgAlpha = Math.min(ratio / SHORT, 1) * 0.88;
-  const iconScale = Math.min(0.78 + (ratio / SHORT) * 0.22, 1);
+  // Derived visual state
+  const leftW  = Math.max(0, offset);   // right swipe → left strip (Resolve/Postpone)
+  const rightW = Math.max(0, -offset);  // left swipe  → right strip (Archive/Delete)
+  // Icon scale: 0.84 → 1.0 as strip fills to first button width
+  const lScale = Math.min(0.84 + (leftW  / SNAP_ONE) * 0.16, 1.0);
+  const rScale = Math.min(0.84 + (rightW / SNAP_ONE) * 0.16, 1.0);
+  const cardTransition =
+    phase === "dragging"   ? "none" :
+    phase === "executing"  ? "transform 0.20s cubic-bezier(0.25,0.46,0.45,0.94)" :
+                             "transform 0.32s cubic-bezier(0.34,1.56,0.64,1)";
 
   return (
     <div ref={containerRef} className="relative overflow-hidden rounded-2xl">
-      {/* Left reveal: archive → delete */}
-      <div
-        className="absolute inset-0 flex items-center justify-end pr-5"
-        style={{
-          opacity: isLeftSwipe ? bgAlpha : 0,
-          backgroundColor: isLong ? "rgba(252,165,165,0.10)" : "rgba(100,116,139,0.13)",
-          transition: phase === "dragging" ? "background-color 0.12s" : "opacity 0.22s, background-color 0.12s",
-        }}
-        aria-hidden="true"
-      >
-        <div className="flex flex-col items-center gap-0.5" style={{ transform: `scale(${iconScale})` }}>
-          {isLong
-            ? <Trash2 className="h-5 w-5 text-rose-400" />
-            : <Archive className="h-5 w-5 text-slate-400" />}
-          <span className={cn("text-[10px] font-semibold", isLong ? "text-rose-400" : "text-slate-400")}>
-            {isLong ? "Eliminar" : "Archivar"}
-          </span>
-        </div>
-      </div>
 
-      {/* Right reveal: resolve → postpone */}
-      <div
-        className="absolute inset-0 flex items-center pl-5"
-        style={{
-          opacity: isRightSwipe ? bgAlpha : 0,
-          backgroundColor: isLong ? "rgba(251,191,36,0.09)" : "rgba(45,212,191,0.10)",
-          transition: phase === "dragging" ? "background-color 0.12s" : "opacity 0.22s, background-color 0.12s",
-        }}
-        aria-hidden="true"
-      >
-        <div className="flex flex-col items-center gap-0.5" style={{ transform: `scale(${iconScale})` }}>
-          {isLong
-            ? <Clock className="h-5 w-5 text-amber-400" />
-            : <CheckCircle2 className="h-5 w-5 text-teal-400" />}
-          <span className={cn("text-[10px] font-semibold", isLong ? "text-amber-400" : "text-teal-400")}>
-            {isLong ? "Más tarde" : resolveLabel}
-          </span>
+      {/* LEFT strip — swipe right reveals: Resolve (outer) · Postpone (inner) */}
+      {leftW > 0 && (
+        <div className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: leftW }}>
+          {/* Resolve — always at far-left edge, visible from first pixel */}
+          <button
+            type="button"
+            className="absolute inset-y-0 left-0 flex w-[72px] flex-col items-center justify-center gap-1 bg-teal-500/[0.13] transition active:bg-teal-500/[0.22]"
+            onClick={(e) => { e.stopPropagation(); executeAction("onResolve"); }}
+            aria-label={resolveLabel}
+          >
+            <CheckCircle2 className="h-5 w-5 text-teal-400" style={{ transform: `scale(${lScale})` }} />
+            <span className="text-[10px] font-semibold text-teal-400">{resolveLabel}</span>
+          </button>
+          {/* Postpone — clipped by overflow until strip ≥ 144px */}
+          <button
+            type="button"
+            className="absolute inset-y-0 left-[72px] flex w-[72px] flex-col items-center justify-center gap-1 bg-amber-500/[0.10] transition active:bg-amber-500/[0.18]"
+            onClick={(e) => { e.stopPropagation(); executeAction("onPostpone"); }}
+            aria-label="Más tarde"
+          >
+            <Clock className="h-5 w-5 text-amber-400" style={{ transform: `scale(${lScale})` }} />
+            <span className="text-[10px] font-semibold text-amber-400">Más tarde</span>
+          </button>
         </div>
-      </div>
+      )}
 
-      {/* Draggable content layer */}
+      {/* RIGHT strip — swipe left reveals: Archive (outer) · Delete (inner) */}
+      {rightW > 0 && (
+        <div className="absolute inset-y-0 right-0 overflow-hidden" style={{ width: rightW }}>
+          {/* Archive — at far-right edge, visible from first pixel */}
+          <button
+            type="button"
+            className="absolute inset-y-0 right-0 flex w-[72px] flex-col items-center justify-center gap-1 bg-slate-500/[0.16] transition active:bg-slate-500/[0.26]"
+            onClick={(e) => { e.stopPropagation(); executeAction("onArchive"); }}
+            aria-label="Archivar"
+          >
+            <Archive className="h-5 w-5 text-slate-400" style={{ transform: `scale(${rScale})` }} />
+            <span className="text-[10px] font-semibold text-slate-400">Archivar</span>
+          </button>
+          {/* Delete — clipped by overflow until strip ≥ 144px */}
+          <button
+            type="button"
+            className="absolute inset-y-0 right-[72px] flex w-[72px] flex-col items-center justify-center gap-1 bg-rose-500/[0.11] transition active:bg-rose-500/[0.18]"
+            onClick={(e) => { e.stopPropagation(); executeAction("onDelete"); }}
+            aria-label="Eliminar"
+          >
+            <Trash2 className="h-5 w-5 text-rose-400" style={{ transform: `scale(${rScale})` }} />
+            <span className="text-[10px] font-semibold text-rose-400">Eliminar</span>
+          </button>
+        </div>
+      )}
+
+      {/* Draggable card content — tap when revealed snaps back without executing */}
       <div
-        style={{
-          transform: `translateX(${offset}px)`,
-          transition: phase === "dragging" ? "none" : "transform 0.30s cubic-bezier(0.34,1.56,0.64,1)",
-          willChange: "transform",
-        }}
+        style={{ transform: `translateX(${offset}px)`, transition: cardTransition, willChange: "transform" }}
+        onClick={() => { if (phase === "revealed") snapBack(); }}
       >
         {children}
       </div>
