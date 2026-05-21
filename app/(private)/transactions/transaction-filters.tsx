@@ -4,6 +4,7 @@ import { ChevronDown, CreditCard, Filter, Loader2, Plus, Search } from "lucide-r
 import { ActionButton } from "@/components/ui-v2/action-button";
 import { PremiumCard, PremiumCardContent, PremiumCardHeader } from "@/components/ui-v2/premium-card";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { compactSelectClass, transactionTypeLabels, transactionTypes } from "./constants";
 import { Field } from "./field";
 import type { CategoryOption, Filters } from "./types";
@@ -38,45 +39,54 @@ export function TransactionFilters({
   onPayCreditCard?: () => void;
 }) {
   return (
-    <PremiumCard className="sticky top-[calc(env(safe-area-inset-top,0px)+72px+8px)] z-10 overflow-hidden border-border/80 bg-background backdrop-blur-sm lg:static lg:top-auto lg:z-auto">
-      <PremiumCardHeader className="border-b border-border/60 bg-muted/[0.08] p-3 sm:p-4">
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="relative min-w-0 flex-1">
+    <PremiumCard className="overflow-hidden rounded-[1.25rem] border-border/70 bg-card/85 shadow-none backdrop-blur-none">
+      <PremiumCardHeader className={cn(
+        "bg-muted/[0.06] p-3.5 sm:p-4",
+        isFiltersOpen && "border-b border-border/60",
+      )}>
+        <div className="grid min-w-0 gap-2 sm:flex sm:items-center">
+          <div className="relative min-w-0 sm:flex-1">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <Input
-              className="h-9 min-w-0 rounded-2xl border-border/80 bg-background/60 pl-8 text-base transition focus:bg-background md:text-xs"
+              className="h-10 min-w-0 rounded-2xl border-border/80 bg-background/70 pl-8 text-base transition focus:bg-background md:text-xs"
               placeholder="Buscar..."
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
             />
           </div>
-          <ActionButton
-            type="button"
-            variant={activeFilterCount > 0 ? "glass" : "quiet"}
-            size="sm"
-            className="shrink-0"
-            onClick={onToggleFilters}
-            aria-expanded={isFiltersOpen}
-          >
-            <Filter className="h-3.5 w-3.5" aria-hidden="true" />
-            {activeFilterCount > 0 ? activeFilterCount : <span className="hidden sm:inline">Filtros</span>}
-            <ChevronDown className={`h-3.5 w-3.5 transition ${isFiltersOpen ? "rotate-180" : ""}`} aria-hidden="true" />
-          </ActionButton>
-          <ActionButton type="button" size="sm" className="shrink-0" onClick={onNew}>
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="hidden sm:inline">Nuevo</span>
-          </ActionButton>
-          {onPayCreditCard ? (
-            <ActionButton type="button" variant="quiet" size="sm" className="shrink-0" onClick={onPayCreditCard}>
-              <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="hidden sm:inline">Pagar tarjeta</span>
+          <div className={cn(
+            "grid min-w-0 gap-2",
+            onPayCreditCard ? "grid-cols-3" : "grid-cols-2",
+            "sm:flex sm:shrink-0 sm:items-center",
+          )}>
+            <ActionButton
+              type="button"
+              variant={activeFilterCount > 0 ? "glass" : "quiet"}
+              size="sm"
+              className="min-w-0 px-2 sm:px-3"
+              onClick={onToggleFilters}
+              aria-expanded={isFiltersOpen}
+            >
+              <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 truncate">{activeFilterCount > 0 ? `${activeFilterCount}` : "Filtros"}</span>
+              <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition ${isFiltersOpen ? "rotate-180" : ""}`} aria-hidden="true" />
             </ActionButton>
-          ) : null}
+            <ActionButton type="button" size="sm" className="min-w-0 px-2 sm:px-3" onClick={onNew}>
+              <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 truncate">Nuevo</span>
+            </ActionButton>
+            {onPayCreditCard ? (
+              <ActionButton type="button" variant="quiet" size="sm" className="min-w-0 px-2 sm:px-3" onClick={onPayCreditCard}>
+                <CreditCard className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 truncate">Tarjeta</span>
+              </ActionButton>
+            ) : null}
+          </div>
         </div>
       </PremiumCardHeader>
       {isFiltersOpen ? (
-        <PremiumCardContent className="px-3 pb-3 pt-3 sm:px-4 sm:pb-4">
-          <form className="grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-5" onSubmit={onSubmit}>
+        <PremiumCardContent className="px-3.5 pb-3.5 pt-3 sm:px-4 sm:pb-4">
+          <form className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-5" onSubmit={onSubmit}>
             <Field label="Tipo">
               <select
                 className={compactSelectClass}

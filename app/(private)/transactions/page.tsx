@@ -10,7 +10,8 @@ export default async function TransactionsPage() {
   return (
     <V2PageShell
       title="Movimientos"
-      description="Entradas, salidas y patrones del período."
+      description="Entradas, salidas y patrones."
+      compact
     >
       <TransactionsClient
         householdId={workspace.household.id}

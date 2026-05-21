@@ -703,7 +703,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   }
 
   return (
-    <div className={`grid min-w-0 gap-6 ${isFormOpen ? "xl:grid-cols-[360px_1fr]" : ""}`}>
+    <div className={`grid min-w-0 gap-5 sm:gap-6 ${isFormOpen ? "xl:grid-cols-[360px_1fr]" : ""}`}>
       <DeleteTransactionDialog
         transaction={pendingDeleteTransaction}
         isDeleting={pendingDeleteTransaction ? deletingTransactionId === pendingDeleteTransaction.id : false}
@@ -1214,7 +1214,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
         </CardContent>
       </AppFormPanel>
 
-      <div className="min-w-0 space-y-6">
+      <div className="min-w-0 space-y-5 sm:space-y-6">
         <TransactionFilters
           search={search}
           filters={filters}

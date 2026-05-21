@@ -147,16 +147,20 @@ function SwipeCard({
   const containerRef = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState(0);
   const [phase, setPhase] = useState<"idle" | "dragging" | "releasing">("idle");
+  const [containerWidth, setContainerWidth] = useState(320);
 
   const gRef = useRef({
     active: false, startX: 0, startY: 0,
     axis: null as "x" | "y" | null, offset: 0, raf: 0,
   });
   const actionsRef = useRef({ onArchive, onDelete, onResolve, onPostpone });
-  actionsRef.current = { onArchive, onDelete, onResolve, onPostpone };
 
   const SHORT = 0.28;
   const LONG  = 0.58;
+
+  useEffect(() => {
+    actionsRef.current = { onArchive, onDelete, onResolve, onPostpone };
+  }, [onArchive, onDelete, onResolve, onPostpone]);
 
   function getAction(x: number, w: number): "archive" | "delete" | "resolve" | "postpone" | null {
     const r = Math.abs(x) / w;
@@ -170,6 +174,12 @@ function SwipeCard({
     const el = containerRef.current;
     if (!el) return;
     const g = gRef.current;
+    const measure = () => setContainerWidth(el.offsetWidth || 320);
+    const resizeObserver = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+
+    measure();
+    resizeObserver?.observe(el);
+    window.addEventListener("resize", measure);
 
     function onTouchStart(e: TouchEvent) {
       g.active = true; g.axis = null;
@@ -222,11 +232,13 @@ function SwipeCard({
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("touchcancel", onTouchEnd);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", measure);
       cancelAnimationFrame(g.raf);
     };
   }, []); // stable: all mutable state via refs
 
-  const w = containerRef.current?.offsetWidth ?? 320;
+  const w = containerWidth;
   const ratio = Math.abs(offset) / w;
   const isLeftSwipe = offset < 0;
   const isRightSwipe = offset > 0;

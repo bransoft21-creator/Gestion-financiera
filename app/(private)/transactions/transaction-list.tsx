@@ -87,10 +87,10 @@ export function TransactionList({
   onNew: () => void;
 }) {
   return (
-    <div className="space-y-4 sm:space-y-5">
-      <PremiumCard data-tutorial="transactions-feed" className="overflow-hidden border-border/80">
-        <PremiumCardHeader className="border-b border-border/70 bg-muted/[0.08]">
-          <div className="flex min-w-0 items-center justify-between gap-3">
+    <div className="space-y-5 sm:space-y-6">
+      <PremiumCard data-tutorial="transactions-feed" className="overflow-hidden rounded-[1.35rem] border-border/70 bg-card/90 shadow-none backdrop-blur-none">
+        <PremiumCardHeader className="border-b border-border/60 bg-muted/[0.04] p-4 sm:p-5">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <PremiumCardTitle>Movimientos</PremiumCardTitle>
               <PremiumCardDescription>
@@ -101,24 +101,22 @@ export function TransactionList({
                 />
               </PremiumCardDescription>
             </div>
-            <div className="flex shrink-0 items-center gap-0.5">
+            <div className="flex w-full shrink-0 items-center justify-end gap-1.5 sm:w-auto">
               {transactions.length > 0 && (
                 <>
-                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[11px] text-muted-foreground" onClick={onCollapseAll}>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 flex-1 px-2 text-[11px] text-muted-foreground sm:flex-none" onClick={onCollapseAll}>
                     Colapsar
                   </Button>
-                  <span className="h-3 w-px bg-border/60" aria-hidden="true" />
-                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[11px] text-muted-foreground" onClick={onExpandAll}>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 flex-1 px-2 text-[11px] text-muted-foreground sm:flex-none" onClick={onExpandAll}>
                     Expandir
                   </Button>
-                  <span className="h-3 w-px bg-border/60" aria-hidden="true" />
                 </>
               )}
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-muted-foreground"
+                className="h-8 w-8 shrink-0 text-muted-foreground"
                 onClick={onExportCsv}
                 disabled={transactions.length === 0}
                 aria-label="Exportar CSV"
@@ -128,29 +126,32 @@ export function TransactionList({
             </div>
           </div>
           {feedSummary.count > 0 && (
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 py-0.5">
+            <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-1 border-t border-border/50 pt-3">
               {activeFilterCount > 0 && (
-                <>
-                  <span className="text-[11px] font-semibold text-amber-500">{activeFilterCount} filtros activos</span>
-                  <span className="h-3 w-px shrink-0 bg-border/60" aria-hidden="true" />
-                </>
+                <span className="col-span-3 text-[11px] font-semibold text-amber-500">{activeFilterCount} filtros activos</span>
               )}
-              <span className="text-[11px] text-muted-foreground">
-                Entró <SensitiveAmount value={formatMoneyBalance(feedSummary.income)} className="font-semibold text-emerald-400" />
+              <span className="min-w-0 text-[11px] text-muted-foreground">
+                <span className="block">Entró</span>
+                <SensitiveAmount value={formatMoneyBalance(feedSummary.income)} className="block truncate font-semibold text-emerald-400" />
               </span>
-              <span className="text-[11px] text-muted-foreground">
-                Salió <SensitiveAmount value={formatMoneyBalance(feedSummary.expenses)} className="font-semibold text-rose-400" />
+              <span className="min-w-0 text-[11px] text-muted-foreground">
+                <span className="block">Salió</span>
+                <SensitiveAmount value={formatMoneyBalance(feedSummary.expenses)} className="block truncate font-semibold text-rose-400" />
+              </span>
+              <span className="min-w-0 text-[11px] text-muted-foreground">
+                <span className="block">Total</span>
+                <span className="block truncate font-semibold text-foreground tabular-nums">{feedSummary.count}</span>
               </span>
             </div>
           )}
         </PremiumCardHeader>
-        <PremiumCardContent className="p-3 pt-3 sm:p-4 sm:pt-4">
+        <PremiumCardContent className="p-3.5 pt-4 sm:p-5 sm:pt-5">
           {isLoading ? (
             <TransactionListSkeleton />
           ) : transactions.length === 0 ? (
             <TransactionsEmptyState search={search} onNew={onNew} />
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-6">
               {groupedTransactions.map((group) => (
                 <TransactionGroup
                   key={group.label}
@@ -187,9 +188,9 @@ export function TransactionList({
 
 function TransactionListSkeleton() {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="rounded-[1.15rem] border border-border/40 bg-card/50 px-3 py-2.5">
+        <div key={i} className="min-h-[76px] rounded-[1.15rem] border border-border/45 bg-card/50 px-3.5 py-3">
           <div className="flex gap-2.5">
             <Skeleton className="h-8 w-8 rounded-xl shrink-0" />
             <div className="flex-1 space-y-2">
@@ -247,7 +248,7 @@ function TransactionGroup({
     <section className="space-y-2.5">
       <button
         type="button"
-        className="sticky top-2 z-10 flex w-full items-center justify-between rounded-2xl border border-border/70 bg-background/95 px-3 py-2.5 text-xs font-semibold text-muted-foreground shadow-sm backdrop-blur transition duration-150 hover:bg-muted/35"
+        className="flex w-full items-center justify-between border-b border-border/60 px-1 pb-2 text-xs font-semibold text-muted-foreground transition duration-150 hover:text-foreground"
         onClick={onToggle}
         aria-expanded={!isCollapsed}
       >
@@ -256,12 +257,12 @@ function TransactionGroup({
           <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/35" aria-hidden="true" />
           {group.label}
         </span>
-        <span className="rounded-full border border-border/70 bg-muted/35 px-2 py-0.5 text-[10px] tabular-nums">
+        <span className="rounded-full bg-muted/35 px-2 py-0.5 text-[10px] tabular-nums">
           {group.transactions.length}
         </span>
       </button>
       {!isCollapsed ? (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {group.transactions.map((transaction) => (
             <TransactionCard
               key={transaction.id}
@@ -296,7 +297,7 @@ function TransactionCard({
 
   return (
     <article
-      className="group min-w-0 cursor-pointer overflow-hidden rounded-[1.15rem] border border-border/40 bg-card/50 px-3 py-2.5 transition duration-150 hover:border-border/75 hover:bg-muted/45 active:scale-[0.995]"
+      className="group min-h-[76px] min-w-0 cursor-pointer overflow-hidden rounded-[1.15rem] border border-border/45 bg-card/55 px-3.5 py-3 transition duration-150 hover:border-border/75 hover:bg-muted/45 active:scale-[0.995]"
       role="button"
       tabIndex={0}
       onClick={() => onEdit(transaction)}
@@ -307,7 +308,7 @@ function TransactionCard({
         }
       }}
     >
-      <div className="flex min-w-0 items-start gap-2.5">
+      <div className="flex min-w-0 items-start gap-3">
         <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${tone.icon}`}>
           <Icon className="h-4 w-4" aria-hidden="true" />
         </div>
@@ -322,7 +323,7 @@ function TransactionCard({
                 {" · "}{formatDate(transaction.occurredAt)}
               </p>
             </div>
-            <div className="max-w-[44%] shrink-0 text-right sm:min-w-[108px]">
+            <div className="max-w-[42%] shrink-0 text-right sm:min-w-[108px]">
               <p className={`max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold leading-5 sm:text-[15px] ${tone.amount}`}>
                 <SensitiveAmount
                   value={`${isTransfer ? "" : signedAmount > 0 ? "+" : signedAmount < 0 ? "-" : ""}${formatMoney(isTransfer ? displayAmount : Math.abs(signedAmount), transaction.currency)}`}
@@ -352,7 +353,7 @@ function TransactionCard({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 w-7 shrink-0 text-muted-foreground/40 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:bg-destructive/10 hover:text-destructive"
+          className="mt-0.5 h-8 w-8 shrink-0 text-muted-foreground/60 transition hover:bg-destructive/10 hover:text-destructive sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
           onClick={(event) => {
             event.stopPropagation();
             onDelete(transaction);
