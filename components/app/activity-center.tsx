@@ -1,16 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
+  Archive,
   Bell,
   BrainCircuit,
   CheckCheck,
   CheckCircle2,
+  Clock,
   Lightbulb,
   RefreshCw,
   Sparkles,
-  X,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -125,6 +127,169 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString("es-AR", { day: "numeric", month: "short" });
 }
 
+// ── SwipeCard ────────────────────────────────────────────────────────────────
+
+function SwipeCard({
+  onArchive,
+  onDelete,
+  onResolve,
+  onPostpone,
+  resolveLabel = "Revisar",
+  children,
+}: {
+  onArchive: () => void;
+  onDelete: () => void;
+  onResolve: () => void;
+  onPostpone: () => void;
+  resolveLabel?: string;
+  children: ReactNode;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [offset, setOffset] = useState(0);
+  const [phase, setPhase] = useState<"idle" | "dragging" | "releasing">("idle");
+
+  const gRef = useRef({
+    active: false, startX: 0, startY: 0,
+    axis: null as "x" | "y" | null, offset: 0, raf: 0,
+  });
+  const actionsRef = useRef({ onArchive, onDelete, onResolve, onPostpone });
+  actionsRef.current = { onArchive, onDelete, onResolve, onPostpone };
+
+  const SHORT = 0.28;
+  const LONG  = 0.58;
+
+  function getAction(x: number, w: number): "archive" | "delete" | "resolve" | "postpone" | null {
+    const r = Math.abs(x) / w;
+    if (r < SHORT * 0.38) return null;
+    if (x < 0) return r >= LONG ? "delete" : "archive";
+    if (x > 0) return r >= LONG ? "postpone" : "resolve";
+    return null;
+  }
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const g = gRef.current;
+
+    function onTouchStart(e: TouchEvent) {
+      g.active = true; g.axis = null;
+      g.startX = e.touches[0].clientX;
+      g.startY = e.touches[0].clientY;
+      setPhase("dragging");
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      if (!g.active) return;
+      const dx = e.touches[0].clientX - g.startX;
+      const dy = e.touches[0].clientY - g.startY;
+      if (!g.axis) {
+        if (Math.abs(dx) + Math.abs(dy) < 6) return;
+        g.axis = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+      }
+      if (g.axis !== "x") return;
+      e.preventDefault();
+      const w = el!.offsetWidth;
+      const lt = w * LONG;
+      let raw = Math.max(-(w * 0.82), Math.min(w * 0.82, dx));
+      if (Math.abs(raw) > lt) {
+        const sign = raw < 0 ? -1 : 1;
+        raw = sign * (lt + (Math.abs(raw) - lt) * 0.18);
+      }
+      cancelAnimationFrame(g.raf);
+      g.raf = requestAnimationFrame(() => { g.offset = raw; setOffset(raw); });
+    }
+
+    function onTouchEnd() {
+      if (!g.active) return;
+      g.active = false;
+      setPhase("releasing");
+      const w = el!.offsetWidth;
+      const action = getAction(g.offset, w);
+      if (!action) { g.offset = 0; setOffset(0); return; }
+      if ("vibrate" in navigator) navigator.vibrate([6]);
+      const flyX = (g.offset < 0 ? -1 : 1) * w * 1.08;
+      g.offset = flyX; setOffset(flyX);
+      const key = action === "archive" ? "onArchive" : action === "delete" ? "onDelete" : action === "resolve" ? "onResolve" : "onPostpone";
+      setTimeout(() => { g.offset = 0; setOffset(0); setPhase("idle"); actionsRef.current[key](); }, 230);
+    }
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+      cancelAnimationFrame(g.raf);
+    };
+  }, []); // stable: all mutable state via refs
+
+  const w = containerRef.current?.offsetWidth ?? 320;
+  const ratio = Math.abs(offset) / w;
+  const isLeftSwipe = offset < 0;
+  const isRightSwipe = offset > 0;
+  const isLong = ratio >= LONG;
+  const bgAlpha = Math.min(ratio / SHORT, 1) * 0.88;
+  const iconScale = Math.min(0.78 + (ratio / SHORT) * 0.22, 1);
+
+  return (
+    <div ref={containerRef} className="relative overflow-hidden rounded-2xl">
+      {/* Left reveal: archive → delete */}
+      <div
+        className="absolute inset-0 flex items-center justify-end pr-5"
+        style={{
+          opacity: isLeftSwipe ? bgAlpha : 0,
+          backgroundColor: isLong ? "rgba(252,165,165,0.10)" : "rgba(100,116,139,0.13)",
+          transition: phase === "dragging" ? "background-color 0.12s" : "opacity 0.22s, background-color 0.12s",
+        }}
+        aria-hidden="true"
+      >
+        <div className="flex flex-col items-center gap-0.5" style={{ transform: `scale(${iconScale})` }}>
+          {isLong
+            ? <Trash2 className="h-5 w-5 text-rose-400" />
+            : <Archive className="h-5 w-5 text-slate-400" />}
+          <span className={cn("text-[10px] font-semibold", isLong ? "text-rose-400" : "text-slate-400")}>
+            {isLong ? "Eliminar" : "Archivar"}
+          </span>
+        </div>
+      </div>
+
+      {/* Right reveal: resolve → postpone */}
+      <div
+        className="absolute inset-0 flex items-center pl-5"
+        style={{
+          opacity: isRightSwipe ? bgAlpha : 0,
+          backgroundColor: isLong ? "rgba(251,191,36,0.09)" : "rgba(45,212,191,0.10)",
+          transition: phase === "dragging" ? "background-color 0.12s" : "opacity 0.22s, background-color 0.12s",
+        }}
+        aria-hidden="true"
+      >
+        <div className="flex flex-col items-center gap-0.5" style={{ transform: `scale(${iconScale})` }}>
+          {isLong
+            ? <Clock className="h-5 w-5 text-amber-400" />
+            : <CheckCircle2 className="h-5 w-5 text-teal-400" />}
+          <span className={cn("text-[10px] font-semibold", isLong ? "text-amber-400" : "text-teal-400")}>
+            {isLong ? "Más tarde" : resolveLabel}
+          </span>
+        </div>
+      </div>
+
+      {/* Draggable content layer */}
+      <div
+        style={{
+          transform: `translateX(${offset}px)`,
+          transition: phase === "dragging" ? "none" : "transform 0.30s cubic-bezier(0.34,1.56,0.64,1)",
+          willChange: "transform",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ── ActivityCard ─────────────────────────────────────────────────────────────
 
 function ActivityCard({
@@ -149,7 +314,7 @@ function ActivityCard({
   return (
     <div
       className={cn(
-        "group relative rounded-2xl border p-4 transition-opacity duration-200",
+        "group relative rounded-2xl border px-4 py-3.5 transition-opacity duration-200",
         tone.border,
         tone.bg,
         (isRead || isResolved) && "opacity-60",
@@ -186,7 +351,7 @@ function ActivityCard({
           <p className={cn("mt-1 text-sm leading-5", tone.text)}>{item.body}</p>
 
           {/* Actions */}
-          <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="mt-2.5 flex flex-wrap items-center gap-3">
             {item.actionLabel && item.actionLink && (
               <Link
                 href={item.actionLink}
@@ -438,9 +603,9 @@ export function ActivityCenter() {
 
       {/* Feed */}
       {status === "loading" && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="rounded-2xl border border-border bg-muted/20 p-4">
+            <div key={i} className="rounded-2xl border border-border bg-muted/20 px-4 py-3.5">
               <div className="flex items-start gap-3">
                 <Skeleton className="mt-1.5 h-1.5 w-1.5 rounded-full" />
                 <div className="flex-1 space-y-2">
@@ -473,16 +638,24 @@ export function ActivityCenter() {
       {status === "done" && items.length === 0 && <EmptyState filter={filter} />}
 
       {status === "done" && items.length > 0 && (
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           {items.map((item) => (
-            <ActivityCard
+            <SwipeCard
               key={item.id}
-              item={item}
-              onRead={(id) => void handleRead(id)}
-              onOpen={handleOpen}
-              onResolve={(id) => void handleResolve(id)}
-              onDismiss={(id) => void handleDismiss(id)}
-            />
+              onArchive={() => void handleDismiss(item.id)}
+              onDelete={() => void handleDismiss(item.id)}
+              onResolve={() => void handleResolve(item.id)}
+              onPostpone={() => void handleRead(item.id)}
+              resolveLabel={item.actionLabel ?? "Revisar"}
+            >
+              <ActivityCard
+                item={item}
+                onRead={(id) => void handleRead(id)}
+                onOpen={handleOpen}
+                onResolve={(id) => void handleResolve(id)}
+                onDismiss={(id) => void handleDismiss(id)}
+              />
+            </SwipeCard>
           ))}
         </div>
       )}

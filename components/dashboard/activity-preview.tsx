@@ -62,22 +62,22 @@ export function ActivityPreview() {
       </div>
 
       <PremiumCardContent className="pt-1">
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {items.filter((item) => !item.readAt && !item.resolvedAt).slice(0, 3).map((item) => (
             <Link
               key={item.id}
               href={item.actionLink ?? "/notifications"}
-              className="group flex items-start gap-3 rounded-xl border border-border bg-muted/20 px-3 py-3 transition hover:border-border hover:bg-muted/40"
+              className="group flex items-start gap-2.5 rounded-xl border border-border bg-muted/20 px-3 py-2.5 transition hover:border-border hover:bg-muted/40"
             >
               <span
                 className={cn(
-                  "mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
+                  "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg",
                   item.tone === "positive" && "bg-teal-400/10 text-teal-300",
                   item.tone === "warning" && "bg-amber-400/10 text-amber-300",
                   item.tone === "neutral" && "bg-muted/50 text-muted-foreground",
                 )}
               >
-                <Bell className="h-3.5 w-3.5" aria-hidden="true" />
+                <Bell className="h-3 w-3" aria-hidden="true" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-medium text-muted-foreground group-hover:text-foreground">
