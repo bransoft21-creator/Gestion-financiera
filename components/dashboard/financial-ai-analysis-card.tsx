@@ -14,7 +14,6 @@ import {
   CircleDollarSign,
   CreditCard,
   Eye,
-  Gauge,
   Loader2,
   Repeat,
   ShieldAlert,
@@ -358,47 +357,52 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
     }
   }
 
-  const statusLabel = isStale ? "Datos nuevos disponibles" : isCached ? "Guardado" : analysis ? null : "Sin lectura aún";
+  const scoreLabel = analysis ? getScoreLabel(clamp(Math.round(analysis.score), 0, 100)) : null;
 
   return (
-    <section data-tutorial="financial-copilot" className="mb-8 overflow-hidden rounded-[28px] border border-border bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.16),transparent_31%),radial-gradient(circle_at_82%_12%,rgba(251,191,36,0.12),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))] p-1 shadow-[0_30px_120px_rgba(0,0,0,0.38)] sm:mb-10">
-      <div className="rounded-[24px] bg-background/78 px-4 py-4 backdrop-blur-xl sm:px-6 sm:py-6">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <section data-tutorial="financial-copilot" className="mb-6 rounded-[20px] border border-border bg-card sm:mb-8">
+      <div className="px-4 py-3 sm:px-5 sm:py-4">
+        <div className="mb-3 flex items-center gap-3">
           <button
             type="button"
-            className="group flex min-w-0 items-center gap-3 rounded-2xl text-left outline-none transition focus-visible:ring-2 focus-visible:ring-ring"
+            className="group flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left outline-none transition focus-visible:ring-2 focus-visible:ring-ring"
             onClick={() => analysis && metrics ? setIsOpen((current) => !current) : undefined}
             aria-expanded={analysis && metrics ? isOpen : undefined}
             aria-controls="financial-copilot-content"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/50 text-primary shadow-inner">
-              <Brain className="h-5 w-5" aria-hidden="true" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-primary">
+              <Brain className="h-4 w-4" aria-hidden="true" />
             </div>
-            <div className="min-w-0">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
                 <p className="text-sm font-semibold text-foreground">Lectura del mes</p>
-                {statusLabel && <Badge className="border-border bg-muted/50 text-[11px] text-muted-foreground">{statusLabel}</Badge>}
+                {isStale && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" aria-label="Datos nuevos disponibles" />}
               </div>
-              <p className="mt-0.5 text-xs text-muted-foreground">Tu panorama financiero mensual.</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {scoreLabel ? `Tu panorama mensual · Estabilidad ${scoreLabel}` : "Tu panorama financiero mensual."}
+              </p>
             </div>
             {analysis && metrics && (
               <ChevronDown
-                className={`ml-auto h-4 w-4 shrink-0 text-muted-foreground transition duration-300 group-hover:text-muted-foreground ${isOpen ? "rotate-180" : ""}`}
+                className={`h-4 w-4 shrink-0 text-muted-foreground transition duration-300 ${isOpen ? "rotate-180" : ""}`}
                 aria-hidden="true"
               />
             )}
           </button>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
+          {analysis && (
+            <button
+              type="button"
               onClick={handleAnalyze}
               disabled={isLoading || isForbidden}
-              className="h-11 w-full rounded-2xl bg-foreground text-background shadow-[0_16px_42px_rgba(255,255,255,0.12)] hover:opacity-90 sm:w-auto"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
             >
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
-              {analysis ? "Actualizar" : "Analizar mi mes"}
-            </Button>
-          </div>
+              {isLoading
+                ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                : <Sparkles className="h-3 w-3" aria-hidden="true" />
+              }
+              Actualizar
+            </button>
+          )}
         </div>
 
         <div id="financial-copilot-content">
@@ -411,7 +415,6 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
                 analysis={analysis}
                 metrics={metrics}
                 comparison={comparison}
-                isStale={isStale}
                 onOpen={() => setIsOpen(true)}
               />
             ) : analysis && metrics ? (
@@ -420,7 +423,6 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
                 analysis={analysis}
                 metrics={metrics}
                 comparison={comparison}
-                isStale={isStale}
               />
             ) : (
               <CopilotEmptyState
@@ -442,22 +444,16 @@ function CollapsedCopilotPreview({
   analysis,
   metrics,
   comparison,
-  isStale,
   onOpen,
 }: {
   analysis: AiFinancialAnalysis;
   metrics: AiFinancialAnalysisMetrics;
   comparison: AiFinancialAnalysisComparison | null;
-  isStale: boolean;
   onOpen: () => void;
 }) {
   const hero = useMemo(() => buildHeroNarrative(analysis, metrics, comparison), [analysis, metrics, comparison]);
   const insights = useMemo(() => buildImportantInsights(analysis, metrics, comparison), [analysis, metrics, comparison]);
   const primaryInsight = insights[0];
-  const score = clamp(Math.round(analysis.score), 0, 100);
-  const scoreTone = getScoreTone(score);
-  const scoreStyle = toneStyles[scoreTone];
-  const scoreLabel = getScoreLabel(score);
 
   return (
     <motion.button
@@ -467,45 +463,19 @@ function CollapsedCopilotPreview({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.28, ease: easeOut }}
       onClick={onOpen}
-      className="group w-full overflow-hidden rounded-[24px] border border-border bg-card/45 p-3.5 text-left transition hover:border-border hover:bg-card/55 sm:p-4"
+      className="w-full rounded-[18px] border border-border bg-card/40 p-4 text-left transition hover:bg-card/55"
     >
-      <div className="grid grid-cols-[1fr_auto] items-start gap-3">
-        <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            <Badge className={`${scoreStyle.badge}`}>Estabilidad: {scoreLabel}</Badge>
-            {isStale && <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-500">Datos nuevos disponibles</Badge>}
-          </div>
-          <h2 className="text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">{hero.title}</h2>
-          <p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-snug text-muted-foreground">{hero.subtitle}</p>
-          {primaryInsight && (
-            <div className="mt-3 flex min-w-0 items-center gap-2.5 rounded-xl border border-border bg-muted/40 px-2.5 py-2">
-              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${toneStyles[primaryInsight.tone].icon}`}>
-                <primaryInsight.icon className="h-3.5 w-3.5" aria-hidden="true" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-foreground">
-                  <SensitiveText text={primaryInsight.title} />
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  <SensitiveText text={primaryInsight.message} />
-                </p>
-              </div>
-            </div>
-          )}
+      <h2 className="text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">{hero.title}</h2>
+      <p className="mt-1.5 line-clamp-2 max-w-2xl text-sm leading-snug text-muted-foreground">{hero.subtitle}</p>
+      {primaryInsight && (
+        <div className="mt-3 flex min-w-0 items-center gap-2">
+          <primaryInsight.icon className={`h-3.5 w-3.5 shrink-0 ${toneStyles[primaryInsight.tone].text}`} aria-hidden="true" />
+          <p className="min-w-0 truncate text-xs text-muted-foreground">
+            <SensitiveText text={primaryInsight.title} />
+          </p>
+          <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 -rotate-90 text-muted-foreground/50" aria-hidden="true" />
         </div>
-
-        <div className="flex flex-col items-end gap-2 text-right">
-          <div className={`rounded-2xl border px-3 py-2 ${scoreStyle.card}`}>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Estabilidad</p>
-            <p className={`mt-0.5 text-sm font-semibold ${scoreStyle.text}`}>{scoreLabel}</p>
-            <p className="text-[10px] tabular-nums text-muted-foreground">{score}/100</p>
-          </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition group-hover:bg-muted">
-            Abrir
-            <ChevronDown className="-rotate-90 h-3 w-3" aria-hidden="true" />
-          </span>
-        </div>
-      </div>
+      )}
     </motion.button>
   );
 }
@@ -514,12 +484,10 @@ function CopilotExperience({
   analysis,
   metrics,
   comparison,
-  isStale,
 }: {
   analysis: AiFinancialAnalysis;
   metrics: AiFinancialAnalysisMetrics;
   comparison: AiFinancialAnalysisComparison | null;
-  isStale: boolean;
 }) {
   const insights = useMemo(() => buildImportantInsights(analysis, metrics, comparison), [analysis, metrics, comparison]);
   const hero = useMemo(() => buildHeroNarrative(analysis, metrics, comparison), [analysis, metrics, comparison]);
@@ -533,7 +501,7 @@ function CopilotExperience({
       exit={{ opacity: 0, y: 10 }}
       className="space-y-3"
     >
-      <FinancialCopilotHero hero={hero} analysis={analysis} metrics={metrics} comparison={comparison} isStale={isStale} />
+      <FinancialCopilotHero hero={hero} metrics={metrics} comparison={comparison} />
       <ImportantInsights insights={insights} />
       <InvisibleExpenses items={invisibleExpenses} income={metrics.income} currency={metrics.currency} />
       <MonthPrediction metrics={metrics} />
@@ -545,56 +513,34 @@ function CopilotExperience({
 
 function FinancialCopilotHero({
   hero,
-  analysis,
   metrics,
   comparison,
-  isStale,
 }: {
   hero: { title: string; subtitle: string; tone: InsightTone; trend: string };
-  analysis: AiFinancialAnalysis;
   metrics: AiFinancialAnalysisMetrics;
   comparison: AiFinancialAnalysisComparison | null;
-  isStale: boolean;
 }) {
-  const score = clamp(Math.round(analysis.score), 0, 100);
-  const scoreTone = getScoreTone(score);
-  const scoreStyle = toneStyles[scoreTone];
-  const scoreLabel = getScoreLabel(score);
   const trendIsPositive = comparison?.available ? comparison.balanceChangeAmount >= 0 : metrics.balance >= 0;
 
   return (
-    <motion.div variants={itemMotion} className="relative overflow-hidden rounded-[24px] border border-border bg-card/60 p-4">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(45,212,191,0.22),transparent_34%),radial-gradient(circle_at_92%_12%,rgba(248,250,252,0.11),transparent_25%)]" />
-      <div className="absolute -right-20 -top-20 h-52 w-52 rounded-full border border-border bg-muted/20" />
-      <div className="relative grid grid-cols-[1fr_auto] items-start gap-3">
-        <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-1.5">
-            <Badge className="border-border bg-muted text-muted-foreground">Tu dinero este mes</Badge>
-            {isStale && <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-500">Datos nuevos</Badge>}
-            <Badge className="border-border bg-muted text-muted-foreground">Vista {metrics.currency}</Badge>
-            {metrics.currencyScope.mixedCurrencies && (
-              <Badge className="border-border bg-muted text-muted-foreground">
-                {metrics.currencyScope.ignoredCurrencies.join(", ")} separado
-              </Badge>
-            )}
+    <motion.div variants={itemMotion} className="rounded-[18px] border border-border bg-card/50 p-4">
+      <div className="min-w-0">
+        {metrics.currencyScope.mixedCurrencies && (
+          <div className="mb-2">
+            <Badge className="border-border bg-muted text-[11px] text-muted-foreground">
+              {metrics.currencyScope.ignoredCurrencies.join(", ")} separado
+            </Badge>
           </div>
-          <h2 className="max-w-2xl text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">
-            {hero.title}
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-snug text-muted-foreground">
-            <SensitiveText text={hero.subtitle} />
-          </p>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            <SignalPill icon={trendIsPositive ? ArrowUpRight : ArrowDownRight} label={hero.trend} tone={trendIsPositive ? "emerald" : "amber"} />
-            <SignalPill icon={Gauge} label={`Estabilidad ${scoreLabel}`} tone={scoreTone} />
-            <SignalPill icon={Wallet} label={`${formatPercent(metrics.savingsRate)} ahorro`} tone={metrics.savingsRate >= 0 ? "sky" : "rose"} />
-          </div>
-        </div>
-
-        <div className={`w-[112px] shrink-0 rounded-[20px] border p-3 text-right ${scoreStyle.card} ${scoreStyle.glow}`}>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Estabilidad</p>
-          <p className={`mt-1 text-lg font-semibold leading-tight ${scoreStyle.text}`}>{scoreLabel}</p>
-          <p className="mt-1 text-[11px] tabular-nums text-muted-foreground">{score}/100</p>
+        )}
+        <h2 className="max-w-2xl text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">
+          {hero.title}
+        </h2>
+        <p className="mt-2 max-w-xl text-sm leading-snug text-muted-foreground">
+          <SensitiveText text={hero.subtitle} />
+        </p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <SignalPill icon={trendIsPositive ? ArrowUpRight : ArrowDownRight} label={hero.trend} tone={trendIsPositive ? "emerald" : "amber"} />
+          <SignalPill icon={Wallet} label={`${formatPercent(metrics.savingsRate)} ahorro`} tone={metrics.savingsRate >= 0 ? "sky" : "rose"} />
         </div>
       </div>
     </motion.div>
