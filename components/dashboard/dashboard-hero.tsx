@@ -87,28 +87,30 @@ export function DashboardHero({
 
       <div className="relative grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
         <div className="min-w-0">
-          {/* Month navigation — replaces static badge, keeps utility discreta */}
-          <div className="mb-3 flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={onPrevMonth}
-              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/50 hover:text-foreground"
-              aria-label="Mes anterior"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-            <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
-              {MONTH_NAMES[month - 1]} {year}
-            </span>
-            <button
-              type="button"
-              onClick={onNextMonth}
-              disabled={isCurrentMonth}
-              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/50 hover:text-foreground disabled:opacity-30"
-              aria-label="Mes siguiente"
-            >
-              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
+          {/* Month navigation */}
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-0.5 rounded-full border border-border bg-muted/40 p-1">
+              <button
+                type="button"
+                onClick={onPrevMonth}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+                aria-label="Mes anterior"
+              >
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <span className="px-2 text-[13px] font-semibold text-foreground">
+                {MONTH_NAMES[month - 1]} {year}
+              </span>
+              <button
+                type="button"
+                onClick={onNextMonth}
+                disabled={isCurrentMonth}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground disabled:opacity-30"
+                aria-label="Mes siguiente"
+              >
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
             {metrics.currencyScope.mixedCurrencies && (
               <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
                 Vista {currency}
