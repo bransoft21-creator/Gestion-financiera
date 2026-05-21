@@ -360,7 +360,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
   const scoreLabel = analysis ? getScoreLabel(clamp(Math.round(analysis.score), 0, 100)) : null;
 
   return (
-    <section data-tutorial="financial-copilot" className="mb-6 rounded-[20px] border border-border bg-card sm:mb-8">
+    <section data-tutorial="financial-copilot" className="mb-6 rounded-[20px] border border-border bg-[linear-gradient(160deg,rgba(45,212,191,0.04),transparent_50%)] bg-card shadow-[0_4px_24px_rgba(0,0,0,0.10)] sm:mb-8">
       <div className="px-4 py-3 sm:px-5 sm:py-4">
         <div className="mb-3 flex items-center gap-3">
           <button
@@ -370,7 +370,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
             aria-expanded={analysis && metrics ? isOpen : undefined}
             aria-controls="financial-copilot-content"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-primary">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
               <Brain className="h-4 w-4" aria-hidden="true" />
             </div>
             <div className="min-w-0 flex-1">
@@ -394,7 +394,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
               type="button"
               onClick={handleAnalyze}
               disabled={isLoading || isForbidden}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
             >
               {isLoading
                 ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
@@ -454,6 +454,9 @@ function CollapsedCopilotPreview({
   const hero = useMemo(() => buildHeroNarrative(analysis, metrics, comparison), [analysis, metrics, comparison]);
   const insights = useMemo(() => buildImportantInsights(analysis, metrics, comparison), [analysis, metrics, comparison]);
   const primaryInsight = insights[0];
+  const score = clamp(Math.round(analysis.score), 0, 100);
+  const scoreStyle = toneStyles[getScoreTone(score)];
+  const scoreLabel = getScoreLabel(score);
 
   return (
     <motion.button
@@ -463,19 +466,27 @@ function CollapsedCopilotPreview({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.28, ease: easeOut }}
       onClick={onOpen}
-      className="w-full rounded-[18px] border border-border bg-card/40 p-4 text-left transition hover:bg-card/55"
+      className="w-full rounded-[18px] border border-border/60 bg-muted/20 p-4 text-left transition hover:bg-muted/30"
     >
-      <h2 className="text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">{hero.title}</h2>
-      <p className="mt-1.5 line-clamp-2 max-w-2xl text-sm leading-snug text-muted-foreground">{hero.subtitle}</p>
-      {primaryInsight && (
-        <div className="mt-3 flex min-w-0 items-center gap-2">
-          <primaryInsight.icon className={`h-3.5 w-3.5 shrink-0 ${toneStyles[primaryInsight.tone].text}`} aria-hidden="true" />
-          <p className="min-w-0 truncate text-xs text-muted-foreground">
-            <SensitiveText text={primaryInsight.title} />
-          </p>
-          <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 -rotate-90 text-muted-foreground/50" aria-hidden="true" />
+      <div className="grid grid-cols-[1fr_auto] items-start gap-4">
+        <div className="min-w-0">
+          <h2 className="text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">{hero.title}</h2>
+          <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-muted-foreground">{hero.subtitle}</p>
+          {primaryInsight && (
+            <div className="mt-3 flex min-w-0 items-center gap-2 rounded-lg bg-muted/30 px-2.5 py-2">
+              <primaryInsight.icon className={`h-3.5 w-3.5 shrink-0 ${toneStyles[primaryInsight.tone].text}`} aria-hidden="true" />
+              <p className="min-w-0 truncate text-xs text-muted-foreground">
+                <SensitiveText text={primaryInsight.title} />
+              </p>
+              <ChevronDown className="ml-auto h-3 w-3 shrink-0 -rotate-90 text-muted-foreground/40" aria-hidden="true" />
+            </div>
+          )}
         </div>
-      )}
+        <div className="shrink-0 text-right">
+          <p className={`text-sm font-semibold tabular-nums ${scoreStyle.text}`}>{scoreLabel}</p>
+          <p className="text-[11px] tabular-nums text-muted-foreground">{score}/100</p>
+        </div>
+      </div>
     </motion.button>
   );
 }
@@ -523,25 +534,23 @@ function FinancialCopilotHero({
   const trendIsPositive = comparison?.available ? comparison.balanceChangeAmount >= 0 : metrics.balance >= 0;
 
   return (
-    <motion.div variants={itemMotion} className="rounded-[18px] border border-border bg-card/50 p-4">
-      <div className="min-w-0">
-        {metrics.currencyScope.mixedCurrencies && (
-          <div className="mb-2">
-            <Badge className="border-border bg-muted text-[11px] text-muted-foreground">
-              {metrics.currencyScope.ignoredCurrencies.join(", ")} separado
-            </Badge>
-          </div>
-        )}
-        <h2 className="max-w-2xl text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">
-          {hero.title}
-        </h2>
-        <p className="mt-2 max-w-xl text-sm leading-snug text-muted-foreground">
-          <SensitiveText text={hero.subtitle} />
-        </p>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          <SignalPill icon={trendIsPositive ? ArrowUpRight : ArrowDownRight} label={hero.trend} tone={trendIsPositive ? "emerald" : "amber"} />
-          <SignalPill icon={Wallet} label={`${formatPercent(metrics.savingsRate)} ahorro`} tone={metrics.savingsRate >= 0 ? "sky" : "rose"} />
+    <motion.div variants={itemMotion} className="overflow-hidden rounded-[18px] border border-border bg-[radial-gradient(circle_at_15%_0%,rgba(45,212,191,0.10),transparent_50%)] bg-card/50 p-4">
+      {metrics.currencyScope.mixedCurrencies && (
+        <div className="mb-2">
+          <Badge className="border-border bg-muted text-[11px] text-muted-foreground">
+            {metrics.currencyScope.ignoredCurrencies.join(", ")} separado
+          </Badge>
         </div>
+      )}
+      <h2 className="max-w-2xl text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">
+        {hero.title}
+      </h2>
+      <p className="mt-2 max-w-xl text-sm leading-snug text-muted-foreground">
+        <SensitiveText text={hero.subtitle} />
+      </p>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <SignalPill icon={trendIsPositive ? ArrowUpRight : ArrowDownRight} label={hero.trend} tone={trendIsPositive ? "emerald" : "amber"} />
+        <SignalPill icon={Wallet} label={`${formatPercent(metrics.savingsRate)} ahorro`} tone={metrics.savingsRate >= 0 ? "sky" : "rose"} />
       </div>
     </motion.div>
   );
