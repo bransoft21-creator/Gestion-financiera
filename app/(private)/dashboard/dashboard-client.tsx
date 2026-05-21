@@ -6,14 +6,11 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   AlertTriangle,
-  ArrowLeftCircle,
-  ArrowRightCircle,
   ChevronDown,
   Plus,
   ReceiptText,
 } from "lucide-react";
 import { SensitiveAmount, SensitiveText } from "@/components/app/sensitive-amount";
-import { useUser } from "@/components/app/user-context";
 import { EmptyState } from "@/components/app/empty-state";
 import { Button } from "@/components/ui/button";
 import { FinancialAiAnalysisCard } from "@/components/dashboard/financial-ai-analysis-card";
@@ -37,9 +34,7 @@ import { useSectionCollapse } from "@/hooks/use-section-collapse";
 import { getDashboardEducation } from "@/lib/finance/contextual-education";
 import { trackProductEvent } from "@/lib/observability/client";
 import {
-  MONTH_NAMES,
   formatMoney,
-  getTimeContext,
   sectionReveal,
 } from "./utils";
 import type { DashboardSummary } from "./types";
@@ -88,14 +83,11 @@ function SectionCollapseButton({
 
 export function DashboardClient() {
   const now = new Date();
-  const { userName } = useUser();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const { data: summary = null, isLoading, error: queryError } = useDashboardSummary(year, month);
   const error = queryError ? queryError.message : null;
   const [selectedExpenseCategoryPreference, setSelectedExpenseCategoryPreference] = useState<string | null>(null);
-  const firstName = userName?.split(" ")[0] ?? null;
-  const [timeContext] = useState(() => getTimeContext(firstName));
   const shouldReduceMotion = useReducedMotion();
   const sectionDistribucion = useSectionCollapse("distribucion", false);
   const sectionMapa = useSectionCollapse("mapa", false);
@@ -124,84 +116,33 @@ export function DashboardClient() {
     else setMonth((m) => m + 1);
   }
 
-  const monthNav = (
-    <div className="mb-4">
-      {isCurrentMonth && (
-        <p className="mb-3 text-sm font-medium text-muted-foreground" suppressHydrationWarning>
-          {timeContext.greeting}
-        </p>
-      )}
-      <div className="grid gap-3 sm:flex sm:items-center">
-        <div className="flex items-center gap-3 sm:flex-1">
-          <button
-            type="button"
-            onClick={navigatePrev}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
-            aria-label="Mes anterior"
-          >
-            <ArrowLeftCircle className="h-4 w-4" aria-hidden="true" />
-          </button>
-          <h2 className="flex-1 text-center text-[17px] font-bold text-foreground">
-            {MONTH_NAMES[month - 1]} {year}
-          </h2>
-          <button
-            type="button"
-            onClick={navigateNext}
-            disabled={isCurrentMonth}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-muted/50 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
-            aria-label="Mes siguiente"
-          >
-            <ArrowRightCircle className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
-        <Button asChild size="sm" className="h-9 w-full sm:w-auto">
-          <Link href="/transactions?new=1">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Nueva transacción
-          </Link>
-        </Button>
-      </div>
-    </div>
-  );
-
   if (isLoading) {
-    return (
-      <>
-        {monthNav}
-        <DashboardSkeleton />
-      </>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (error) {
     return (
-      <>
-        {monthNav}
-        <PremiumCard>
-          <PremiumCardContent className="flex h-48 flex-col items-center justify-center p-6 text-center sm:h-64">
-            <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />
-            <h2 className="mt-4 text-lg font-semibold">No pudimos traer tu información</h2>
-            <p className="mt-2 text-sm text-muted-foreground">{error}</p>
-          </PremiumCardContent>
-        </PremiumCard>
-      </>
+      <PremiumCard>
+        <PremiumCardContent className="flex h-48 flex-col items-center justify-center p-6 text-center sm:h-64">
+          <AlertTriangle className="h-8 w-8 text-destructive" aria-hidden="true" />
+          <h2 className="mt-4 text-lg font-semibold">No pudimos traer tu información</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+        </PremiumCardContent>
+      </PremiumCard>
     );
   }
 
   if (!summary) {
     return (
-      <>
-        {monthNav}
-        <EmptyState
-          icon={ReceiptText}
-          title="Tu historia financiera empieza acá."
-          description="Importá un resumen o agregá tu primer movimiento para que la app empiece a darte contexto."
-          actions={[
-            { label: "Smart Import", href: "/smart-import", primary: true },
-            { label: "Agregar movimiento", href: "/transactions?new=1" },
-          ]}
-        />
-      </>
+      <EmptyState
+        icon={ReceiptText}
+        title="Tu historia financiera empieza acá."
+        description="Importá un resumen o agregá tu primer movimiento para que la app empiece a darte contexto."
+        actions={[
+          { label: "Smart Import", href: "/smart-import", primary: true },
+          { label: "Agregar movimiento", href: "/transactions?new=1" },
+        ]}
+      />
     );
   }
 
@@ -224,10 +165,25 @@ export function DashboardClient() {
 
   return (
     <div className="fade-in">
-      {monthNav}
-
       {/* 1. Hero */}
-      <DashboardHero metrics={metrics} year={year} month={month} usdBalance={usdBalance} />
+      <DashboardHero
+        metrics={metrics}
+        year={year}
+        month={month}
+        usdBalance={usdBalance}
+        onPrevMonth={navigatePrev}
+        onNextMonth={navigateNext}
+        isCurrentMonth={isCurrentMonth}
+      />
+
+      <div className="mb-4">
+        <Button asChild size="sm" className="h-9 w-full sm:w-auto">
+          <Link href="/transactions?new=1">
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Nueva transacción
+          </Link>
+        </Button>
+      </div>
 
       <GettingStartedCard activation={summary.activation} />
 
