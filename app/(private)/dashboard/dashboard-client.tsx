@@ -7,7 +7,6 @@ import { motion, useReducedMotion } from "framer-motion";
 import {
   AlertTriangle,
   ChevronDown,
-  Plus,
   ReceiptText,
 } from "lucide-react";
 import { SensitiveAmount, SensitiveText } from "@/components/app/sensitive-amount";
@@ -175,15 +174,6 @@ export function DashboardClient() {
         onNextMonth={navigateNext}
         isCurrentMonth={isCurrentMonth}
       />
-
-      <div className="mb-4">
-        <Button asChild size="sm" className="h-9 w-full sm:w-auto">
-          <Link href="/transactions?new=1">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Nueva transacción
-          </Link>
-        </Button>
-      </div>
 
       <GettingStartedCard activation={summary.activation} />
 
