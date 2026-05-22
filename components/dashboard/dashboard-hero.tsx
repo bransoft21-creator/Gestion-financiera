@@ -120,7 +120,7 @@ export function DashboardHero({
             </div>
             <Link
               href="/transactions?new=1"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-teal-500/25 bg-teal-500/[0.08] px-3 py-1.5 text-[12px] font-semibold text-teal-400 backdrop-blur-sm transition-all duration-200 hover:border-teal-500/40 hover:bg-teal-500/[0.14] hover:shadow-[0_0_14px_rgba(45,212,191,0.18)] active:scale-95"
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-teal-500/25 bg-teal-500/[0.08] px-3 text-[12px] font-semibold text-teal-400 backdrop-blur-sm transition-all duration-200 hover:border-teal-500/40 hover:bg-teal-500/[0.14] hover:shadow-[0_0_14px_rgba(45,212,191,0.18)] active:scale-95"
               aria-label="Nueva transacción"
             >
               <Plus className="h-3.5 w-3.5" aria-hidden="true" />
