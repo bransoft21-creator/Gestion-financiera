@@ -1,4 +1,4 @@
-import { DebtStatus, HouseholdInviteStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { AgreementStatus, DebtStatus, HouseholdInviteStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { argentinaDayStartFromInput, argentinaMonthRangeUtc, formatArgentinaDateInput } from "@/lib/dates";
 import { isSmartImportEnabled } from "@/lib/feature-flags";
 import { buildNavigationAwareness, type NavigationAwareness } from "@/lib/navigation-awareness";
@@ -27,6 +27,7 @@ export async function getNavigationAwareness(userProfileId: string): Promise<Nav
     openSharedItems,
     pendingHouseholdInvites,
     unreadActivityCount,
+    overdueAgreementsCount,
   ] = await Promise.all([
     prisma.transaction.count({
       where: {
@@ -79,6 +80,13 @@ export async function getNavigationAwareness(userProfileId: string): Promise<Nav
         resolvedAt: null,
       },
     }),
+    prisma.personalAgreement.count({
+      where: {
+        householdId: household.id,
+        deletedAt: null,
+        status: AgreementStatus.OVERDUE,
+      },
+    }),
   ]);
 
   return buildNavigationAwareness({
@@ -92,6 +100,7 @@ export async function getNavigationAwareness(userProfileId: string): Promise<Nav
     openSharedItems,
     pendingHouseholdInvites,
     unreadActivityCount,
+    overdueAgreementsCount,
   });
 }
 

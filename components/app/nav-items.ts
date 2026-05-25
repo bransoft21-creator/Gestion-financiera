@@ -92,6 +92,7 @@ export const navItems = [
     shortLabel: "Pendientes",
     icon: HandCoins,
     tier: "weekly",
+    awarenessTarget: "agreements",
   },
   {
     href: "/categories",

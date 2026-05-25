@@ -6,7 +6,11 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   AlertTriangle,
+  ArrowDownLeft,
+  ArrowUpRight,
   ChevronDown,
+  ChevronRight,
+  HandCoins,
   ReceiptText,
 } from "lucide-react";
 import { SensitiveAmount, SensitiveText } from "@/components/app/sensitive-amount";
@@ -145,7 +149,7 @@ export function DashboardClient() {
     );
   }
 
-  const { metrics, expensesByCategory, expenseCategoryDetails, latestTransactions, alerts, insights } = summary;
+  const { metrics, expensesByCategory, expenseCategoryDetails, latestTransactions, alerts, insights, interpersonalPosition } = summary;
   const selectedMonth = `${year}-${String(month).padStart(2, "0")}`;
   const selectedExpenseCategoryId =
     selectedExpenseCategoryPreference &&
@@ -179,6 +183,49 @@ export function DashboardClient() {
 
       {/* Cierre de mes anterior — solo mes actual, primeros 10 días */}
       {isCurrentMonth && <MonthlyCloseCard />}
+
+      {/* Dinero en tránsito — solo si hay acuerdos activos */}
+      {(interpersonalPosition.toReceive > 0 || interpersonalPosition.toPay > 0) && (
+        <Link href="/agreements" className="block mb-4">
+          <PremiumCard interactive className="overflow-hidden">
+            <PremiumCardContent className="px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <HandCoins className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                    Dinero en tránsito
+                    {interpersonalPosition.overdueCount > 0 && (
+                      <span className="ml-1.5 text-destructive normal-case">
+                        · {interpersonalPosition.overdueCount} vencido{interpersonalPosition.overdueCount > 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </p>
+                  <div className="flex items-center gap-3 text-sm">
+                    {interpersonalPosition.toReceive > 0 && (
+                      <div className="flex items-center gap-1 text-emerald-600">
+                        <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
+                        <SensitiveAmount value={formatMoney(interpersonalPosition.toReceive, interpersonalPosition.currency)} />
+                      </div>
+                    )}
+                    {interpersonalPosition.toReceive > 0 && interpersonalPosition.toPay > 0 && (
+                      <span className="text-muted-foreground text-xs">·</span>
+                    )}
+                    {interpersonalPosition.toPay > 0 && (
+                      <div className="flex items-center gap-1 text-amber-600">
+                        <ArrowDownLeft className="h-3.5 w-3.5 shrink-0" />
+                        <SensitiveAmount value={formatMoney(interpersonalPosition.toPay, interpersonalPosition.currency)} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </div>
+            </PremiumCardContent>
+          </PremiumCard>
+        </Link>
+      )}
 
       {/* 2. Financial Copilot */}
       <FinancialAiAnalysisCard month={selectedMonth} />

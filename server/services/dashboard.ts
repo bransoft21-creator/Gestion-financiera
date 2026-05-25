@@ -1,4 +1,4 @@
-import { DebtStatus, GoalStatus, HouseholdKind, HouseholdMemberStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { AgreementDirection, AgreementStatus, DebtStatus, GoalStatus, HouseholdKind, HouseholdMemberStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { argentinaMonthRangeUtc, formatArgentinaDateInput } from "@/lib/dates";
 import { isSmartImportEnabled } from "@/lib/feature-flags";
 import { prisma } from "../../lib/prisma";
@@ -62,6 +62,7 @@ export async function getDashboardSummary(
     recurringExpenseCount,
     sharedHouseholdCount,
     household,
+    activeAgreements,
   ] = await Promise.all([
     prisma.transaction.findMany({
       where: {
@@ -164,9 +165,32 @@ export async function getDashboardSummary(
       where: { id: householdId },
       select: { defaultCurrency: true },
     }),
+    prisma.personalAgreement.findMany({
+      where: {
+        householdId,
+        deletedAt: null,
+        status: { in: [AgreementStatus.OPEN, AgreementStatus.PARTIAL, AgreementStatus.OVERDUE] },
+      },
+      select: { direction: true, currentBalance: true, currency: true, status: true },
+    }),
   ]);
 
   const primaryCurrency = household.defaultCurrency;
+
+  const primaryActiveAgreements = activeAgreements.filter((a) => a.currency === primaryCurrency);
+  const interpersonalPosition = primaryActiveAgreements.reduce(
+    (acc, a) => {
+      const balance = toFiniteNumber(a.currentBalance);
+      if (a.direction === AgreementDirection.LENT || a.direction === AgreementDirection.SHARED) {
+        acc.toReceive += balance;
+      } else {
+        acc.toPay += balance;
+      }
+      if (a.status === AgreementStatus.OVERDUE) acc.overdueCount += 1;
+      return acc;
+    },
+    { toReceive: 0, toPay: 0, overdueCount: 0, currency: primaryCurrency },
+  );
   const primaryMonthTransactions = filterCurrency(monthTransactions, primaryCurrency, (transaction) => transaction.currency);
   const primaryBudgets = filterCurrency(budgets, primaryCurrency, (budget) => budget.currency);
   const primaryRecurringExpenses = filterCurrency(recurringExpenses, primaryCurrency, (expense) => expense.currency);
@@ -342,6 +366,7 @@ export async function getDashboardSummary(
       onboardingCompletedAt: profile.onboardingCompletedAt,
     }),
     awareness: await getNavigationAwareness(userProfileId).catch(() => EMPTY_NAVIGATION_AWARENESS),
+    interpersonalPosition,
   };
 }
 

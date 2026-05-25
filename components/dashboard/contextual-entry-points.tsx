@@ -3,6 +3,7 @@ import {
   BarChart3,
   Bell,
   CreditCard,
+  HandCoins,
   Home,
   ListChecks,
   RefreshCw,
@@ -21,6 +22,7 @@ const entryIcons: Record<AwarenessTarget, LucideIcon> = {
   household: Home,
   activity: Bell,
   "data-quality": ListChecks,
+  agreements: HandCoins,
 };
 
 export function ContextualEntryPoints({ entryPoints }: { entryPoints: ContextualEntryPoint[] }) {

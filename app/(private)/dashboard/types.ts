@@ -117,6 +117,12 @@ export type DashboardSummary = {
   }>;
   activation: NextStepRecommendation;
   awareness: NavigationAwareness;
+  interpersonalPosition: {
+    toReceive: number;
+    toPay: number;
+    overdueCount: number;
+    currency: string;
+  };
 };
 
 export type ActivityPreviewItem = {

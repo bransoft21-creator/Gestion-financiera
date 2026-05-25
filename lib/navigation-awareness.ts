@@ -5,7 +5,8 @@ export type AwarenessTarget =
   | "debts"
   | "household"
   | "activity"
-  | "data-quality";
+  | "data-quality"
+  | "agreements";
 
 export type AwarenessTone = "info" | "attention" | "calm";
 
@@ -41,6 +42,7 @@ export type NavigationAwarenessInput = {
   openSharedItems: number;
   pendingHouseholdInvites: number;
   unreadActivityCount: number;
+  overdueAgreementsCount: number;
 };
 
 export const EMPTY_NAVIGATION_AWARENESS: NavigationAwareness = {
@@ -154,6 +156,23 @@ export function buildNavigationAwareness(input: NavigationAwarenessInput): Navig
       href: "/debts",
       tone: "attention",
       label: "Deudas",
+    });
+  }
+
+  if (input.overdueAgreementsCount > 0) {
+    signals.agreements = {
+      target: "agreements",
+      count: input.overdueAgreementsCount,
+      label: `${input.overdueAgreementsCount} vencido${input.overdueAgreementsCount === 1 ? "" : "s"}`,
+      tone: "attention",
+    };
+    entryPoints.push({
+      id: "agreements",
+      title: "Acuerdos con tiempo vencido",
+      body: "Hay dinero prestado o a devolver que pasó la fecha acordada.",
+      href: "/agreements",
+      tone: "attention",
+      label: "Pendientes",
     });
   }
 

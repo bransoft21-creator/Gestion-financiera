@@ -13,6 +13,7 @@ const baseInput: NavigationAwarenessInput = {
   openSharedItems: 0,
   pendingHouseholdInvites: 0,
   unreadActivityCount: 0,
+  overdueAgreementsCount: 0,
 };
 
 describe("navigation awareness", () => {
