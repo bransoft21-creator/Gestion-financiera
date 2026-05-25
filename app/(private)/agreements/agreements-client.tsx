@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   useAgreements,
   useCloseAgreement,
@@ -15,24 +15,25 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Ban,
+  CalendarDays,
   Check,
   ChevronDown,
   ChevronRight,
   Clock,
+  CircleDollarSign,
   HandCoins,
   Heart,
   Plus,
   RefreshCw,
+  Sparkles,
   Users,
   X,
 } from "lucide-react";
 import {
   PremiumCard,
-  PremiumCardContent,
 } from "@/components/ui-v2/premium-card";
 import {
   AppFormPanel,
-  MobileCreateFab,
   appFormActionsClass,
   appFormContentClass,
   appFormHeaderClass,
@@ -70,6 +71,70 @@ const DIRECTION_LABELS: Record<AgreementDirection, { label: string; icon: React.
   BORROWED: { label: "Me prestaron", icon: ArrowDownLeft, color: "text-amber-600" },
   SHARED:   { label: "Compartimos",  icon: RefreshCw,     color: "text-blue-600" },
 };
+
+type AgreementTab = "active" | "attention" | "closed";
+
+const ACTIVE_STATUSES = ["OPEN", "PARTIAL", "OVERDUE"] as const;
+const CLOSED_STATUSES = ["CLOSED", "FORGIVEN", "CANCELED"] as const;
+
+function isActiveAgreement(agreement: AgreementItem) {
+  return ACTIVE_STATUSES.some((status) => status === agreement.status);
+}
+
+function isClosedAgreement(agreement: AgreementItem) {
+  return CLOSED_STATUSES.some((status) => status === agreement.status);
+}
+
+function daysUntil(date: string | null) {
+  if (!date) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+
+  return Math.ceil((target.getTime() - today.getTime()) / 86_400_000);
+}
+
+function getDueLabel(agreement: AgreementItem) {
+  const diff = daysUntil(agreement.agreedReturnDate);
+
+  if (agreement.status === "OVERDUE") {
+    return agreement.agreedReturnDate ? `Venció ${formatDate(agreement.agreedReturnDate)}` : "Vencido";
+  }
+
+  if (diff === null) return formatRelativeDate(agreement.occurredAt);
+  if (diff < 0) return `Venció ${formatDate(agreement.agreedReturnDate!)}`;
+  if (diff === 0) return "Vence hoy";
+  if (diff === 1) return "Vence mañana";
+  if (diff <= 7) return `Vence en ${diff} días`;
+  return `Para ${formatDate(agreement.agreedReturnDate!)}`;
+}
+
+function needsAttention(agreement: AgreementItem) {
+  const diff = daysUntil(agreement.agreedReturnDate);
+  return agreement.status === "OVERDUE" || (isActiveAgreement(agreement) && diff !== null && diff <= 7);
+}
+
+function formatDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return formatDateInput(date);
+}
+
+function addMonths(months: number) {
+  const date = new Date();
+  date.setMonth(date.getMonth() + months);
+  return formatDateInput(date);
+}
 
 // ---------------------------------------------------------------------------
 // Status badge
@@ -123,13 +188,14 @@ function ProgressBar({ percent, status }: { percent: number; status: AgreementIt
 }
 
 // ---------------------------------------------------------------------------
-// Agreement card — compact 2-row layout
+// Agreement row — compact ledger layout
 // ---------------------------------------------------------------------------
 
-function AgreementCard({ agreement, onClick }: { agreement: AgreementItem; onClick: () => void }) {
+function AgreementLedgerRow({ agreement, onClick }: { agreement: AgreementItem; onClick: () => void }) {
   const dir = DIRECTION_LABELS[agreement.direction];
   const DirIcon = dir.icon;
-  const isActive = ["OPEN", "PARTIAL", "OVERDUE"].includes(agreement.status);
+  const isActive = isActiveAgreement(agreement);
+  const isAttention = needsAttention(agreement);
 
   return (
     <motion.button
@@ -138,98 +204,252 @@ function AgreementCard({ agreement, onClick }: { agreement: AgreementItem; onCli
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       onClick={onClick}
-      className="w-full text-left"
+      className={cn(
+        "group w-full text-left transition-colors active:bg-muted/40",
+        !isActive && "opacity-60",
+      )}
     >
-      <PremiumCard className={cn("transition-colors hover:border-primary/40", !isActive && "opacity-60")}>
-        <PremiumCardContent className="px-4 py-3">
-          <div className="flex items-center gap-3">
-            <ContactAvatar name={agreement.contact.name} color={agreement.contact.avatarColor} size="sm" />
-            <div className="flex-1 min-w-0">
-              {/* Row 1: name + amount */}
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-semibold text-sm truncate leading-tight">{agreement.contact.name}</span>
-                <SensitiveAmount value={formatMoney(agreement.currentBalance, agreement.currency)} className="text-sm font-semibold shrink-0" />
+      <div className="flex min-h-[62px] items-center gap-3 px-3 py-2.5 sm:px-4">
+        <ContactAvatar name={agreement.contact.name} color={agreement.contact.avatarColor} size="sm" />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-[14px] font-semibold leading-tight">{agreement.contact.name}</p>
+              <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] leading-none text-muted-foreground">
+                <DirIcon className={cn("h-3.5 w-3.5 shrink-0", dir.color)} />
+                <span className={cn("shrink-0 font-medium", dir.color)}>{dir.label}</span>
+                <span className="text-muted-foreground/50">·</span>
+                <span className={cn("truncate", isAttention && "font-medium text-amber-400")}>
+                  {getDueLabel(agreement)}
+                </span>
               </div>
-              {/* Row 2: direction + date + status */}
-              <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
-                <DirIcon className={cn("h-3 w-3 shrink-0", dir.color)} />
-                <span className={cn("font-medium", dir.color)}>{dir.label}</span>
-                <span className="mx-0.5">·</span>
-                <span className="truncate">{formatRelativeDate(agreement.occurredAt)}</span>
-                {agreement.status === "OVERDUE" && agreement.agreedReturnDate && (
-                  <>
-                    <span className="mx-0.5">·</span>
-                    <Clock className="h-3 w-3 shrink-0 text-destructive" />
-                    <span className="text-destructive shrink-0">venció {formatDate(agreement.agreedReturnDate)}</span>
-                  </>
-                )}
-                <div className="ml-auto shrink-0">
-                  <StatusBadge status={agreement.status} />
-                </div>
-              </div>
-              {/* Progress (only when partially paid) */}
-              {agreement.paidPercent > 0 && agreement.paidPercent < 100 && (
-                <ProgressBar percent={agreement.paidPercent} status={agreement.status} />
-              )}
             </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="shrink-0 text-right">
+              <SensitiveAmount
+                value={formatMoney(agreement.currentBalance, agreement.currency)}
+                className="text-[14px] font-semibold tabular-nums leading-tight"
+              />
+              <div className="mt-1 flex justify-end">
+                <StatusBadge status={agreement.status} />
+              </div>
+            </div>
           </div>
-        </PremiumCardContent>
-      </PremiumCard>
+          {agreement.paidPercent > 0 && agreement.paidPercent < 100 && (
+            <ProgressBar percent={agreement.paidPercent} status={agreement.status} />
+          )}
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/70 transition group-hover:text-foreground" />
+      </div>
     </motion.button>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Summary strip — compact horizontal MetricStrip
+// Agreements overview
 // ---------------------------------------------------------------------------
 
-function SummaryStrip({
-  totalToReceive,
-  totalToPay,
-  netPosition,
-  overdueCount,
-  currency,
+function AgreementLedgerList({
+  agreements,
+  onSelect,
 }: {
-  totalToReceive: number;
-  totalToPay: number;
-  netPosition: number;
-  overdueCount: number;
-  currency: string;
+  agreements: AgreementItem[];
+  onSelect: (agreement: AgreementItem) => void;
 }) {
-  if (totalToReceive === 0 && totalToPay === 0) return null;
+  return (
+    <AnimatePresence mode="popLayout">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card/55 shadow-[var(--elevation-1)]">
+        <div className="divide-y divide-border/70">
+          {agreements.map((agreement) => (
+            <AgreementLedgerRow
+              key={agreement.id}
+              agreement={agreement}
+              onClick={() => onSelect(agreement)}
+            />
+          ))}
+        </div>
+      </div>
+    </AnimatePresence>
+  );
+}
 
-  const netColor = netPosition >= 0 ? "text-emerald-600" : "text-destructive";
+function AgreementsHero({
+  summary,
+  activeCount,
+  attentionCount,
+  currency,
+  onCreate,
+}: {
+  summary?: { totalToReceive: number; totalToPay: number; netPosition: number; activeCount: number; overdueCount: number };
+  activeCount: number;
+  attentionCount: number;
+  currency: string;
+  onCreate: () => void;
+}) {
+  const totalToReceive = summary?.totalToReceive ?? 0;
+  const totalToPay = summary?.totalToPay ?? 0;
+  const netPosition = summary?.netPosition ?? 0;
+  const isPositive = netPosition >= 0;
+  const headline =
+    activeCount === 0
+      ? "Sin dinero interpersonal en movimiento."
+      : attentionCount > 0
+        ? `${attentionCount} pendiente${attentionCount === 1 ? "" : "s"} pide${attentionCount === 1 ? "" : "n"} atención.`
+        : `${activeCount} acuerdo${activeCount === 1 ? "" : "s"} en tránsito.`;
 
   return (
-    <div className="mb-4 rounded-xl border border-border bg-card overflow-hidden">
-      <div className="flex items-center">
-        <div className="flex-1 text-center py-2.5 px-3">
-          <p className="text-[10px] text-muted-foreground mb-0.5">Por cobrar</p>
-          <p className="text-sm font-semibold text-emerald-600 leading-tight">
+    <PremiumCard variant="raised" className="mb-4 overflow-hidden p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <HandCoins className="h-3.5 w-3.5 text-primary" />
+            Dinero humano en tránsito
+          </div>
+          <h2 className="text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">
+            {headline}
+          </h2>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          onClick={onCreate}
+          className="h-9 shrink-0 rounded-full border border-teal-500/25 bg-teal-500/[0.08] px-3 text-teal-300 shadow-none hover:bg-teal-500/[0.14]"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Nuevo
+        </Button>
+      </div>
+
+      <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-end gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] text-muted-foreground">Por cobrar</p>
+          <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-emerald-400">
             <SensitiveAmount value={formatMoney(totalToReceive, currency)} />
           </p>
         </div>
-        <div className="w-px h-10 bg-border shrink-0" />
-        <div className="flex-1 text-center py-2.5 px-3">
-          <p className="text-[10px] text-muted-foreground mb-0.5">Posición neta</p>
-          <p className={cn("text-sm font-bold leading-tight", netColor)}>
-            <SensitiveAmount value={`${netPosition >= 0 ? "+" : ""}${formatMoney(netPosition, currency)}`} />
+        <div className="min-w-0 text-center">
+          <p className="text-[11px] text-muted-foreground">Neto</p>
+          <p className={cn("mt-0.5 truncate text-xl font-semibold tabular-nums", isPositive ? "text-emerald-400" : "text-rose-400")}>
+            <SensitiveAmount value={`${isPositive ? "+" : ""}${formatMoney(netPosition, currency)}`} />
           </p>
         </div>
-        <div className="w-px h-10 bg-border shrink-0" />
-        <div className="flex-1 text-center py-2.5 px-3">
-          <p className="text-[10px] text-muted-foreground mb-0.5">Por pagar</p>
-          <p className="text-sm font-semibold text-amber-600 leading-tight">
+        <div className="min-w-0 text-right">
+          <p className="text-[11px] text-muted-foreground">Por pagar</p>
+          <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-amber-400">
             <SensitiveAmount value={formatMoney(totalToPay, currency)} />
           </p>
         </div>
       </div>
-      {overdueCount > 0 && (
-        <div className="border-t border-border py-1.5 text-center text-xs text-destructive">
-          {overdueCount} acuerdo{overdueCount > 1 ? "s" : ""} vencido{overdueCount > 1 ? "s" : ""}
+
+      {(activeCount > 0 || attentionCount > 0) && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <span className="rounded-full border border-border bg-muted/35 px-2.5 py-1 text-[11px] text-muted-foreground">
+            {activeCount} activo{activeCount === 1 ? "" : "s"}
+          </span>
+          {attentionCount > 0 && (
+            <span className="rounded-full border border-amber-400/15 bg-amber-400/[0.08] px-2.5 py-1 text-[11px] font-medium text-amber-400">
+              {attentionCount} requiere{attentionCount === 1 ? "" : "n"} revisión
+            </span>
+          )}
         </div>
       )}
+    </PremiumCard>
+  );
+}
+
+function AgreementTabs({
+  activeTab,
+  onChange,
+  activeCount,
+  attentionCount,
+  closedCount,
+}: {
+  activeTab: AgreementTab;
+  onChange: (tab: AgreementTab) => void;
+  activeCount: number;
+  attentionCount: number;
+  closedCount: number;
+}) {
+  const tabs: Array<{ id: AgreementTab; label: string; count: number }> = [
+    { id: "active", label: "En curso", count: activeCount },
+    { id: "attention", label: "Atención", count: attentionCount },
+    { id: "closed", label: "Resueltos", count: closedCount },
+  ];
+
+  return (
+    <div className="mb-3 flex items-center gap-1 overflow-x-auto rounded-full border border-border bg-muted/30 p-1">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => onChange(tab.id)}
+          className={cn(
+            "flex min-h-8 flex-1 items-center justify-center gap-1.5 rounded-full px-3 text-[12px] font-semibold transition-colors",
+            activeTab === tab.id
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <span>{tab.label}</span>
+          {tab.count > 0 && (
+            <span className={cn(
+              "rounded-full px-1.5 py-0.5 text-[10px] leading-none",
+              activeTab === tab.id ? "bg-muted text-foreground" : "bg-background/60 text-muted-foreground",
+            )}>
+              {tab.count}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function AgreementsEmptyState({
+  activeTab,
+  onCreate,
+}: {
+  activeTab: AgreementTab;
+  onCreate: () => void;
+}) {
+  const copy = {
+    active: {
+      title: "Nada circulando ahora.",
+      body: "Cuando prestes, debas o compartas dinero con alguien, Meridian lo va a seguir como parte de tu posición real.",
+      action: "Registrar pendiente",
+    },
+    attention: {
+      title: "Nada urgente.",
+      body: "Los vencimientos cercanos y acuerdos atrasados van a aparecer acá sin mezclar ruido con el resto.",
+      action: "Nuevo pendiente",
+    },
+    closed: {
+      title: "Sin historial resuelto.",
+      body: "Los acuerdos cerrados quedan como memoria financiera, no como tareas vivas.",
+      action: "Registrar pendiente",
+    },
+  }[activeTab];
+
+  return (
+    <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6">
+      <div className="flex items-start gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/60">
+          <Users className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">{copy.title}</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">{copy.body}</p>
+          {activeTab !== "closed" && (
+            <button
+              type="button"
+              onClick={onCreate}
+              className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary transition hover:text-primary/80"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {copy.action}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -547,10 +767,16 @@ function AgreementDetailPanel({
 }
 
 // ---------------------------------------------------------------------------
-// Create agreement form — 2-step flow
+// Create agreement form — financial intent flow
 // ---------------------------------------------------------------------------
 
-type Step = 1 | 2;
+type Step = "relation" | "amount" | "context";
+
+const CREATE_STEPS: Array<{ id: Step; label: string }> = [
+  { id: "relation", label: "Relación" },
+  { id: "amount", label: "Monto" },
+  { id: "context", label: "Contexto" },
+];
 
 function CreateAgreementForm({
   householdId,
@@ -570,7 +796,7 @@ function CreateAgreementForm({
   const createAgreement = useCreateAgreement();
   const createContact = useCreateContact();
 
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<Step>("relation");
   const [direction, setDirection] = useState<AgreementDirection>("LENT");
   const [contactId, setContactId] = useState("");
   const [newContactName, setNewContactName] = useState("");
@@ -581,12 +807,57 @@ function CreateAgreementForm({
   const [agreedReturnDate, setAgreedReturnDate] = useState("");
   const [sourceAccountId, setSourceAccountId] = useState("");
 
-  const step1Valid = contactId || (showNewContact && newContactName.trim());
-  const step2Valid = !!amount && !createAgreement.isPending;
+  const selectedContact = contacts.find((contact) => contact.id === contactId);
+  const parsedAmount = parseMoneyInput(amount);
+  const parsedAmountValue = parsedAmount.success ? parsedAmount.data : undefined;
+  const hasRelation = Boolean(contactId || (showNewContact && newContactName.trim()));
+  const hasAmount = Boolean(parsedAmountValue);
+  const isSaving = createAgreement.isPending || createContact.isPending;
+  const currentStepIndex = CREATE_STEPS.findIndex((item) => item.id === step);
+
+  const personLabel = direction === "LENT"
+    ? "A quién le prestaste"
+    : direction === "BORROWED"
+      ? "Quién te prestó"
+      : "Con quién compartieron";
+
+  const selectedPersonName = selectedContact?.name || newContactName.trim();
+  const amountPreview = hasAmount ? formatMoney(parsedAmountValue!, currency) : "monto";
+  const primaryLabel =
+    step === "relation"
+      ? selectedPersonName ? `Continuar con ${selectedPersonName}` : "Elegir persona"
+      : step === "amount"
+        ? hasAmount ? `Contexto para ${amountPreview}` : "Ingresar monto"
+        : isSaving
+          ? "Guardando..."
+          : "Guardar pendiente";
+
+  function goBack() {
+    if (step === "context") {
+      setStep("amount");
+      return;
+    }
+    if (step === "amount") {
+      setStep("relation");
+    }
+  }
+
+  function handlePrimary() {
+    if (step === "relation") {
+      if (hasRelation) setStep("amount");
+      return;
+    }
+
+    if (step === "amount") {
+      if (hasAmount) setStep("context");
+      return;
+    }
+
+    void handleSubmit();
+  }
 
   async function handleSubmit() {
-    const parsed = parseMoneyInput(amount);
-    if (!parsed.success || !parsed.data) return;
+    if (!hasAmount) return;
 
     let finalContactId = contactId;
 
@@ -606,7 +877,7 @@ function CreateAgreementForm({
       contactId: finalContactId,
       direction,
       currency,
-      originalAmount: parsed.data,
+      originalAmount: parsedAmountValue!,
       description: description.trim() || null,
       agreedReturnDate: agreedReturnDate ? new Date(agreedReturnDate).toISOString() : null,
       occurredAt: new Date().toISOString(),
@@ -617,212 +888,300 @@ function CreateAgreementForm({
     onClose();
   }
 
-  const personLabel = direction === "LENT"
-    ? "¿A quién le prestaste?"
-    : direction === "BORROWED"
-    ? "¿Quién te prestó?"
-    : "¿Con quién compartieron?";
-
   return (
-    <div className={appFormContentClass(true)}>
-      <div className={appFormHeaderClass()}>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className={appFormHeaderClass("flex items-center justify-between px-4 py-3")}>
         <div className="flex items-center gap-2">
-          {step === 2 && (
-            <button onClick={() => setStep(1)} className="text-muted-foreground hover:text-foreground mr-1">
+          {step !== "relation" && (
+            <button
+              type="button"
+              onClick={goBack}
+              className="mr-1 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+              aria-label="Volver"
+            >
               <ChevronDown className="h-5 w-5 rotate-90" />
             </button>
           )}
-          <h2 className="font-semibold text-base">
-            {step === 1 ? "Nuevo acuerdo" : "Monto y detalles"}
-          </h2>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Nuevo pendiente
+            </p>
+            <h2 className="text-base font-semibold leading-tight">Dinero en tránsito</h2>
+          </div>
         </div>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+          aria-label="Cerrar"
+        >
           <X className="h-5 w-5" />
         </button>
       </div>
 
-      {/* Step indicator */}
-      <div className="flex gap-1 px-4 pt-2 pb-0">
-        <div className={cn("h-0.5 flex-1 rounded-full transition-colors", step >= 1 ? "bg-primary" : "bg-muted")} />
-        <div className={cn("h-0.5 flex-1 rounded-full transition-colors", step >= 2 ? "bg-primary" : "bg-muted")} />
+      <div className="border-b border-border px-4 py-3">
+        <div className="flex items-center gap-2">
+          {CREATE_STEPS.map((item, index) => {
+            const isDone = index < currentStepIndex;
+            const isActive = item.id === step;
+            return (
+              <div key={item.id} className="flex min-w-0 flex-1 items-center gap-2">
+                <span
+                  className={cn(
+                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold transition-colors",
+                    isActive && "border-primary bg-primary/10 text-primary",
+                    isDone && "border-emerald-400/30 bg-emerald-400/10 text-emerald-400",
+                    !isActive && !isDone && "border-border bg-muted/30 text-muted-foreground",
+                  )}
+                >
+                  {isDone ? <Check className="h-3 w-3" /> : index + 1}
+                </span>
+                <span className={cn("truncate text-[11px] font-medium", isActive ? "text-foreground" : "text-muted-foreground")}>
+                  {item.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {step === 1 ? (
-        <div className="px-4 space-y-5 py-4">
-          {/* Dirección */}
-          <div>
-            <Label className="mb-2 block text-sm">Tipo de acuerdo</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {(["LENT", "BORROWED", "SHARED"] as AgreementDirection[]).map((d) => {
-                const info = DIRECTION_LABELS[d];
-                const Icon = info.icon;
-                return (
+      <div className="app-form-content-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-4 pb-28 pt-4">
+        {step === "relation" && (
+          <div className="space-y-5">
+            <div>
+              <div className="mb-3 flex items-center gap-2 text-muted-foreground">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <p className="text-sm">Estoy registrando dinero que...</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {(["LENT", "BORROWED", "SHARED"] as AgreementDirection[]).map((d) => {
+                  const info = DIRECTION_LABELS[d];
+                  const Icon = info.icon;
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setDirection(d)}
+                      className={cn(
+                        "flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-2xl border px-2 text-center text-[11px] font-semibold transition-colors",
+                        direction === d
+                          ? "border-primary/40 bg-primary/[0.08] text-primary"
+                          : "border-border bg-muted/25 text-muted-foreground hover:border-primary/30 hover:text-foreground",
+                      )}
+                    >
+                      <Icon className={cn("h-4 w-4", direction === d ? "text-primary" : info.color)} />
+                      {info.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <Label className="mb-2 block text-sm">{personLabel}</Label>
+              {!showNewContact && contacts.length > 0 ? (
+                <div className="space-y-3">
+                  <div className="grid gap-2">
+                    {contacts.slice(0, 8).map((contact) => (
+                      <button
+                        key={contact.id}
+                        type="button"
+                        onClick={() => setContactId(contact.id)}
+                        className={cn(
+                          "flex min-h-11 items-center gap-3 rounded-2xl border px-3 text-left transition-colors",
+                          contactId === contact.id
+                            ? "border-primary/40 bg-primary/[0.08]"
+                            : "border-border bg-muted/20 hover:bg-muted/40",
+                        )}
+                      >
+                        <ContactAvatar name={contact.name} color={contact.avatarColor} size="sm" />
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium">{contact.name}</span>
+                        {contactId === contact.id && <Check className="h-4 w-4 shrink-0 text-primary" />}
+                      </button>
+                    ))}
+                  </div>
+                  {contacts.length > 8 && (
+                    <select
+                      value={contactId}
+                      onChange={(event) => setContactId(event.target.value)}
+                      className="flex h-10 w-full rounded-2xl border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <option value="">Ver más personas...</option>
+                      {contacts.map((contact) => (
+                        <option key={contact.id} value={contact.id}>{contact.name}{contact.alias ? ` (${contact.alias})` : ""}</option>
+                      ))}
+                    </select>
+                  )}
                   <button
-                    key={d}
                     type="button"
-                    onClick={() => setDirection(d)}
-                    className={cn(
-                      "flex flex-col items-center gap-1.5 p-3 rounded-lg border text-xs font-medium transition-colors",
-                      direction === d
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-border text-muted-foreground hover:border-primary/40",
-                    )}
+                    onClick={() => { setShowNewContact(true); setContactId(""); }}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary transition hover:text-primary/80"
                   >
-                    <Icon className={cn("h-4 w-4", direction === d ? "text-primary" : info.color)} />
-                    {info.label}
+                    <Plus className="h-3.5 w-3.5" />
+                    Nueva persona
                   </button>
-                );
-              })}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Input
+                    placeholder="Nombre (ej: Juan, Mamá, El Ruso)"
+                    value={newContactName}
+                    onChange={(event) => setNewContactName(event.target.value)}
+                    autoFocus
+                    className="h-11 rounded-2xl"
+                  />
+                  {contacts.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => { setShowNewContact(false); setNewContactName(""); }}
+                      className="text-xs font-medium text-muted-foreground transition hover:text-foreground"
+                    >
+                      Elegir una persona existente
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
+        )}
 
-          {/* Persona */}
-          <div>
-            <Label className="mb-1.5 block text-sm">{personLabel}</Label>
-            {!showNewContact ? (
-              <div className="space-y-2">
-                <select
-                  value={contactId}
-                  onChange={(e) => setContactId(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="">Elegir persona...</option>
-                  {contacts.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}{c.alias ? ` (${c.alias})` : ""}</option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => { setShowNewContact(true); setContactId(""); }}
-                  className="flex items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  <Plus className="h-3 w-3" />
-                  Nueva persona
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2">
+        {step === "amount" && (
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-border bg-muted/25 px-4 py-3">
+              <p className="text-xs text-muted-foreground">Acuerdo con</p>
+              <p className="mt-0.5 text-sm font-semibold">{selectedPersonName}</p>
+            </div>
+
+            <div>
+              <Label className="mb-2 flex items-center gap-2 text-sm">
+                <CircleDollarSign className="h-4 w-4 text-primary" />
+                Monto pendiente
+              </Label>
+              <div className="flex gap-2">
                 <Input
-                  placeholder="Nombre (ej: Juan, Mamá, El Ruso)"
-                  value={newContactName}
-                  onChange={(e) => setNewContactName(e.target.value)}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={amount}
+                  onChange={(event) => setAmount(event.target.value)}
+                  onKeyDown={onMoneyKeyDown}
+                  className="h-14 flex-1 rounded-2xl text-2xl font-semibold tabular-nums"
                   autoFocus
                 />
-                {contacts.length > 0 && (
+                <div className="grid w-20 shrink-0 overflow-hidden rounded-2xl border border-input">
+                  {(["ARS", "USD"] as CurrencyCode[]).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setCurrency(c)}
+                      className={cn(
+                        "text-xs font-semibold transition-colors",
+                        currency === c
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-transparent text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === "context" && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-primary/15 bg-primary/[0.06] px-4 py-3">
+              <p className="text-xs text-muted-foreground">Vas a registrar</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">
+                <SensitiveAmount value={amountPreview} /> · {selectedPersonName}
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="agreementDesc" className="mb-1.5 block text-sm">Para qué fue</Label>
+              <Input
+                id="agreementDesc"
+                placeholder="Ej: viaje, alquiler, cena compartida"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                className="h-11 rounded-2xl"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="agreementDate" className="mb-2 flex items-center gap-2 text-sm">
+                <CalendarDays className="h-4 w-4 text-primary" />
+                Cuándo debería resolverse
+              </Label>
+              <div className="mb-2 flex flex-wrap gap-2">
+                {[
+                  { label: "Hoy", value: addDays(0) },
+                  { label: "7 días", value: addDays(7) },
+                  { label: "30 días", value: addDays(30) },
+                  { label: "1 mes", value: addMonths(1) },
+                ].map((option) => (
                   <button
+                    key={option.label}
                     type="button"
-                    onClick={() => { setShowNewContact(false); setNewContactName(""); }}
-                    className="text-xs text-muted-foreground hover:underline"
+                    onClick={() => setAgreedReturnDate(option.value)}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                      agreedReturnDate === option.value
+                        ? "border-primary/40 bg-primary/[0.08] text-primary"
+                        : "border-border bg-muted/20 text-muted-foreground hover:text-foreground",
+                    )}
                   >
-                    ← Elegir uno existente
+                    {option.label}
                   </button>
+                ))}
+              </div>
+              <Input
+                id="agreementDate"
+                type="date"
+                value={agreedReturnDate}
+                onChange={(event) => setAgreedReturnDate(event.target.value)}
+                className="h-11 rounded-2xl"
+              />
+            </div>
+
+            {accounts.length > 0 && (
+              <div>
+                <Label htmlFor="sourceAccount" className="mb-1.5 block text-sm">Cuenta vinculada</Label>
+                <AccountSelect
+                  id="sourceAccount"
+                  value={sourceAccountId}
+                  onChange={setSourceAccountId}
+                  accounts={accounts}
+                />
+                {sourceAccountId && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Meridian va a reflejar el movimiento en esa cuenta.
+                  </p>
                 )}
               </div>
             )}
           </div>
-        </div>
-      ) : (
-        <div className="px-4 space-y-4 py-4">
-          {/* Monto + moneda */}
-          <div>
-            <Label className="mb-1.5 block text-sm">Monto</Label>
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                inputMode="decimal"
-                placeholder="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                onKeyDown={onMoneyKeyDown}
-                className="flex-1"
-                autoFocus
-              />
-              {/* Currency pill toggle */}
-              <div className="flex rounded-md border border-input overflow-hidden shrink-0">
-                {(["ARS", "USD"] as CurrencyCode[]).map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setCurrency(c)}
-                    className={cn(
-                      "px-3 h-9 text-sm font-medium transition-colors",
-                      currency === c
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-transparent text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+        )}
+      </div>
 
-          {/* Descripción */}
-          <div>
-            <Label htmlFor="agreementDesc" className="mb-1.5 block text-sm">¿Para qué? (opcional)</Label>
-            <Input
-              id="agreementDesc"
-              placeholder="Ej: Para el viaje, Para el alquiler..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-
-          {/* Fecha */}
-          <div>
-            <Label htmlFor="agreementDate" className="mb-1.5 block text-sm">¿Cuándo acordaron devolver? (opcional)</Label>
-            <Input
-              id="agreementDate"
-              type="date"
-              value={agreedReturnDate}
-              onChange={(e) => setAgreedReturnDate(e.target.value)}
-            />
-          </div>
-
-          {/* Cuenta origen */}
-          {accounts.length > 0 && (
-            <div>
-              <Label htmlFor="sourceAccount" className="mb-1.5 block text-sm">¿De qué cuenta? (opcional)</Label>
-              <AccountSelect
-                id="sourceAccount"
-                value={sourceAccountId}
-                onChange={setSourceAccountId}
-                accounts={accounts}
-              />
-              {sourceAccountId && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  El monto se registrará automáticamente en esa cuenta.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className={appFormActionsClass()}>
-        {step === 1 ? (
-          <Button
-            className="w-full"
-            disabled={!step1Valid}
-            onClick={() => setStep(2)}
-          >
-            Siguiente
-          </Button>
-        ) : (
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
+      <div className="shrink-0 border-t border-border bg-card/95 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 backdrop-blur-xl">
+        <div className="flex gap-2">
+          {step !== "relation" && (
+            <Button type="button" variant="outline" className="h-12 flex-1 rounded-2xl" onClick={goBack}>
               Atrás
             </Button>
-            <Button
-              className="flex-1"
-              disabled={!step2Valid}
-              onClick={handleSubmit}
-            >
-              {createAgreement.isPending ? "Guardando..." : "Registrar"}
-            </Button>
-          </div>
-        )}
+          )}
+          <Button
+            type="button"
+            className="h-12 flex-[2] rounded-2xl"
+            disabled={(step === "relation" && !hasRelation) || (step === "amount" && !hasAmount) || isSaving}
+            onClick={handlePrimary}
+          >
+            {primaryLabel}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -833,8 +1192,8 @@ function CreateAgreementForm({
 // ---------------------------------------------------------------------------
 
 export function AgreementsClient({ householdId, accounts, defaultCurrency }: Props) {
-  const [activeTab, setActiveTab] = useState<"active" | "closed">("active");
-  const [selectedAgreement, setSelectedAgreement] = useState<AgreementItem | null>(null);
+  const [activeTab, setActiveTab] = useState<AgreementTab>("active");
+  const [selectedAgreementId, setSelectedAgreementId] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   const { data, isLoading } = useAgreements(householdId);
@@ -848,115 +1207,53 @@ export function AgreementsClient({ householdId, accounts, defaultCurrency }: Pro
 
   const agreements = data?.agreements ?? [];
   const summary = data?.summary;
+  const selectedAgreement = selectedAgreementId
+    ? agreements.find((agreement) => agreement.id === selectedAgreementId) ?? null
+    : null;
 
-  // Sync selected agreement when data refreshes
-  useEffect(() => {
-    if (selectedAgreement) {
-      const updated = agreements.find((a) => a.id === selectedAgreement.id);
-      if (updated) setSelectedAgreement(updated);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agreements]);
+  const activeAgreements = agreements.filter(isActiveAgreement);
+  const attentionAgreements = activeAgreements.filter(needsAttention);
+  const closedAgreements = agreements.filter(isClosedAgreement);
 
-  const activeAgreements = agreements.filter((a) =>
-    ["OPEN", "PARTIAL", "OVERDUE"].includes(a.status),
-  );
-  const closedAgreements = agreements.filter((a) =>
-    ["CLOSED", "FORGIVEN", "CANCELED"].includes(a.status),
-  );
-
-  const displayed = activeTab === "active" ? activeAgreements : closedAgreements;
+  const displayed =
+    activeTab === "active"
+      ? activeAgreements
+      : activeTab === "attention"
+        ? attentionAgreements
+        : closedAgreements;
 
   return (
-    <div className="relative">
-      {/* Summary strip */}
-      {summary && summary.activeCount > 0 && (
-        <SummaryStrip
-          totalToReceive={summary.totalToReceive}
-          totalToPay={summary.totalToPay}
-          netPosition={summary.netPosition}
-          overdueCount={summary.overdueCount}
-          currency={defaultCurrency}
-        />
-      )}
+    <div>
+      <AgreementsHero
+        summary={summary}
+        activeCount={activeAgreements.length}
+        attentionCount={attentionAgreements.length}
+        currency={defaultCurrency}
+        onCreate={() => setShowCreateForm(true)}
+      />
 
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-muted rounded-lg mb-4">
-        <button
-          onClick={() => setActiveTab("active")}
-          className={cn(
-            "flex-1 text-sm py-1.5 rounded-md font-medium transition-colors",
-            activeTab === "active"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          Activos
-          {activeAgreements.length > 0 && (
-            <span className="ml-1.5 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
-              {activeAgreements.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab("closed")}
-          className={cn(
-            "flex-1 text-sm py-1.5 rounded-md font-medium transition-colors",
-            activeTab === "closed"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          Cerrados
-        </button>
-      </div>
+      <AgreementTabs
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        activeCount={activeAgreements.length}
+        attentionCount={attentionAgreements.length}
+        closedCount={closedAgreements.length}
+      />
 
-      {/* List */}
       {isLoading ? (
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-xl" />
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-[62px] w-full rounded-2xl" />
           ))}
         </div>
       ) : displayed.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
-            <Users className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <p className="font-medium text-sm">
-            {activeTab === "active" ? "Sin acuerdos activos" : "Sin acuerdos cerrados"}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-            {activeTab === "active"
-              ? "Registrá cuando le prestás a alguien o te prestan a vos."
-              : "Los acuerdos que cierres o se resuelvan aparecerán acá."}
-          </p>
-          {activeTab === "active" && (
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="mt-4 flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
-            >
-              <Plus className="h-4 w-4" />
-              Registrar primer acuerdo
-            </button>
-          )}
-        </div>
+        <AgreementsEmptyState activeTab={activeTab} onCreate={() => setShowCreateForm(true)} />
       ) : (
-        <AnimatePresence mode="popLayout">
-          <div className="space-y-2">
-            {displayed.map((a) => (
-              <AgreementCard
-                key={a.id}
-                agreement={a}
-                onClick={() => setSelectedAgreement(a)}
-              />
-            ))}
-          </div>
-        </AnimatePresence>
+        <AgreementLedgerList
+          agreements={displayed}
+          onSelect={(agreement) => setSelectedAgreementId(agreement.id)}
+        />
       )}
-
-      {/* FAB */}
-      <MobileCreateFab label="Nuevo acuerdo" onClick={() => setShowCreateForm(true)} />
 
       {/* Create form panel */}
       <AppFormPanel isOpen={showCreateForm} onClose={() => setShowCreateForm(false)}>
@@ -973,13 +1270,13 @@ export function AgreementsClient({ householdId, accounts, defaultCurrency }: Pro
       </AppFormPanel>
 
       {/* Detail panel */}
-      <AppFormPanel isOpen={!!selectedAgreement} onClose={() => setSelectedAgreement(null)}>
+      <AppFormPanel isOpen={!!selectedAgreement} onClose={() => setSelectedAgreementId(null)}>
         {selectedAgreement && (
           <AgreementDetailPanel
             agreement={selectedAgreement}
             accounts={accounts}
             householdId={householdId}
-            onClose={() => setSelectedAgreement(null)}
+            onClose={() => setSelectedAgreementId(null)}
           />
         )}
       </AppFormPanel>

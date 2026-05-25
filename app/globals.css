@@ -67,6 +67,12 @@
     font-feature-settings: "cv11", "ss01";
   }
 
+  body[data-app-overlay-open="true"] [data-bottom-nav] {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(calc(100% + env(safe-area-inset-bottom)));
+  }
+
   /* Selection color matches brand */
   ::selection {
     background-color: hsl(var(--primary) / 0.28);

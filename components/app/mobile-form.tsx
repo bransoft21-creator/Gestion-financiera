@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
 
+let activeMobileOverlayCount = 0;
+
 type AppFormPanelProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -27,6 +29,7 @@ export function AppFormPanel({
   const mobilePanelRef = useRef<HTMLDivElement>(null);
 
   useLockBodyScroll(isOpen);
+  useMobileOverlayPresence(isOpen);
 
   useEffect(() => {
     if (isOpen) {
@@ -114,6 +117,29 @@ function useLockBodyScroll(isOpen: boolean) {
       document.body.style.overflow = previousOverflow;
       document.body.style.overscrollBehavior = previousOverscroll;
       document.documentElement.style.overscrollBehavior = previousHtmlOverscroll;
+    };
+  }, [isOpen]);
+}
+
+function useMobileOverlayPresence(isOpen: boolean) {
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") {
+      return;
+    }
+
+    const media = window.matchMedia("(max-width: 1279px)");
+    if (!media.matches) {
+      return;
+    }
+
+    activeMobileOverlayCount += 1;
+    document.body.dataset.appOverlayOpen = "true";
+
+    return () => {
+      activeMobileOverlayCount = Math.max(0, activeMobileOverlayCount - 1);
+      if (activeMobileOverlayCount === 0) {
+        delete document.body.dataset.appOverlayOpen;
+      }
     };
   }, [isOpen]);
 }

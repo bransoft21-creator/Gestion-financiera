@@ -122,8 +122,9 @@ export function BottomNav({ awareness }: { awareness?: NavigationAwareness }) {
       </div>
 
       <nav
+        data-bottom-nav
         data-tutorial="nav-mobile"
-        className="fixed inset-x-0 bottom-0 z-[120] border-t border-border lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-[120] border-t border-border transition-all duration-300 ease-out lg:hidden"
         style={{
           background: "hsl(var(--background) / 0.88)",
           backdropFilter: "blur(16px)",
