@@ -262,7 +262,7 @@ export function RecurringExpensesClient({ householdId, accounts, categories, def
     await payRecurring.mutateAsync({
       householdId,
       item,
-      occurredAt: new Date().toISOString().slice(0, 10),
+      occurredAt: new Date().toISOString(),
     });
   }
 
@@ -686,7 +686,7 @@ function RecurringRow({
           variant="glass"
           size="sm"
           disabled={isPaying || !item.isActive || !item.account}
-          title={!item.account ? "Asigná una cuenta para registrar el pago" : "Registrar pago"}
+          title={!item.account ? "Asigná una cuenta para registrar el pago" : "Registrar pago y avanzar vencimiento"}
           onClick={onPay}
         >
           {isPaying ? (

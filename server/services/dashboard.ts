@@ -46,6 +46,7 @@ export async function getDashboardSummary(
   await assertHouseholdAccess(userProfileId, householdId);
 
   const { start: monthStart, end: nextMonthStart } = argentinaMonthRangeUtc(year, month);
+  const monthKey = `${year}-${String(month).padStart(2, "0")}`;
 
   const [
     monthTransactions,
@@ -63,6 +64,7 @@ export async function getDashboardSummary(
     sharedHouseholdCount,
     household,
     activeAgreements,
+    unpaidHouseholdRecurring,
   ] = await Promise.all([
     prisma.transaction.findMany({
       where: {
@@ -105,6 +107,7 @@ export async function getDashboardSummary(
         deletedAt: null,
         nextDueDate: { gte: monthStart, lt: nextMonthStart },
         OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
+        occurrences: { none: { monthKey, status: "PAID" } },
       },
       select: { currency: true, amount: true },
     }),
@@ -173,6 +176,15 @@ export async function getDashboardSummary(
       },
       select: { direction: true, currentBalance: true, currency: true, status: true },
     }),
+    prisma.householdRecurringPayment.findMany({
+      where: {
+        householdId,
+        isActive: true,
+        deletedAt: null,
+        occurrences: { none: { monthKey, status: "PAID" } },
+      },
+      select: { currency: true, estimatedAmount: true },
+    }),
   ]);
 
   const primaryCurrency = household.defaultCurrency;
@@ -198,6 +210,11 @@ export async function getDashboardSummary(
   const primaryUpcomingDebts = filterCurrency(upcomingDebts, primaryCurrency, (debt) => debt.currency);
   const primaryCurrentDebts = filterCurrency(currentDebts, primaryCurrency, (debt) => debt.currency);
   const primaryAccounts = filterCurrency(accounts, primaryCurrency, (account) => account.currency);
+  const primaryUnpaidHouseholdRecurring = filterCurrency(
+    unpaidHouseholdRecurring,
+    primaryCurrency,
+    (p) => p.currency,
+  );
   const transactionTotalsByCurrency = sumByCurrency(
     monthTransactions,
     (transaction) => transaction.currency,
@@ -233,10 +250,14 @@ export async function getDashboardSummary(
       plannedAmount: budget.plannedAmount,
       spentAmount: expensesByCategoryId.get(budget.categoryId) ?? 0,
     })),
-    recurringExpenses: primaryRecurringExpenses,
+    recurringExpenses: [
+      ...primaryRecurringExpenses,
+      ...primaryUnpaidHouseholdRecurring.map((p) => ({ amount: p.estimatedAmount })),
+    ],
     goals: primaryActiveGoals,
     debts: primaryUpcomingDebts,
     totalOutstandingDebt: liabilitySummary.liabilities,
+    interpersonalToPay: interpersonalPosition.toPay,
   });
 
   const argDateStr = formatArgentinaDateInput();

@@ -1,12 +1,15 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, RecurrenceFrequency, TransactionOrigin, TransactionStatus, TransactionType } from "@prisma/client";
+import { argentinaMonthKey } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
-import { ForbiddenError, NotFoundError } from "../api/errors";
+import { ApiError, ForbiddenError, NotFoundError } from "../api/errors";
 import type {
   CreateRecurringExpenseInput,
   ListRecurringExpensesInput,
+  PayRecurringExpenseInput,
   UpdateRecurringExpenseInput,
 } from "../schemas/recurring-expenses";
 import { assertHouseholdAccess } from "./households";
+import { createTransaction } from "./transactions";
 
 const recurringInclude = {
   account: { select: { id: true, name: true } },
@@ -164,6 +167,90 @@ async function assertRecurringExpenseAccess(
   }
 
   return item;
+}
+
+export async function payRecurringExpense(
+  userProfileId: string,
+  id: string,
+  input: PayRecurringExpenseInput,
+) {
+  const item = await prisma.recurringExpense.findFirst({
+    where: { id, householdId: input.householdId, deletedAt: null, isActive: true },
+    include: recurringInclude,
+  });
+  if (!item) throw new NotFoundError("Recurrente no encontrado o inactivo.");
+
+  const monthKey = argentinaMonthKey(new Date(input.occurredAt));
+
+  const existingOccurrence = await prisma.recurringExpenseOccurrence.findUnique({
+    where: { recurringExpenseId_monthKey: { recurringExpenseId: id, monthKey } },
+  });
+  if (existingOccurrence?.status === "PAID") {
+    throw new ApiError(409, "Este recurrente ya fue registrado como pagado para este mes.");
+  }
+
+  const finalAmount = input.finalAmount ?? Number(item.amount);
+
+  const transaction = await createTransaction(userProfileId, {
+    householdId: input.householdId,
+    accountId: input.accountId,
+    type: TransactionType.EXPENSE,
+    status: TransactionStatus.CONFIRMED,
+    currency: item.currency,
+    amount: finalAmount,
+    description: item.name,
+    categoryId: item.categoryId ?? undefined,
+    occurredAt: new Date(input.occurredAt),
+    isRecurring: true,
+    isInstallment: false,
+    origin: TransactionOrigin.MANUAL,
+  });
+
+  const nextDueDate = computeNextDueDate(new Date(item.nextDueDate), item.frequency);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.recurringExpenseOccurrence.upsert({
+      where: { recurringExpenseId_monthKey: { recurringExpenseId: id, monthKey } },
+      update: { status: "PAID", paidAt: new Date(), transactionId: transaction.id, finalAmount },
+      create: {
+        recurringExpenseId: id,
+        monthKey,
+        status: "PAID",
+        paidAt: new Date(),
+        transactionId: transaction.id,
+        finalAmount,
+      },
+    });
+
+    await tx.recurringExpense.update({
+      where: { id },
+      data: { nextDueDate, lastGeneratedAt: new Date() },
+    });
+  });
+
+  return { transactionId: transaction.id, nextDueDate: nextDueDate.toISOString() };
+}
+
+function computeNextDueDate(current: Date, frequency: RecurrenceFrequency): Date {
+  const next = new Date(current);
+  switch (frequency) {
+    case RecurrenceFrequency.WEEKLY:
+      next.setDate(next.getDate() + 7);
+      break;
+    case RecurrenceFrequency.BIWEEKLY:
+      next.setDate(next.getDate() + 14);
+      break;
+    case RecurrenceFrequency.MONTHLY:
+      next.setMonth(next.getMonth() + 1);
+      break;
+    case RecurrenceFrequency.QUARTERLY:
+      next.setMonth(next.getMonth() + 3);
+      break;
+    case RecurrenceFrequency.YEARLY:
+      next.setFullYear(next.getFullYear() + 1);
+      break;
+  }
+  return next;
 }
 
 async function assertReferencesInHousehold(

@@ -168,28 +168,25 @@ export function usePayRecurring() {
   return useMutation({
     mutationFn: async ({ householdId, item, occurredAt }: PayRecurringInput) => {
       if (!item.account) throw new Error("Asigná una cuenta al recurrente antes de registrar el pago.");
-      const response = await fetch("/api/transactions", {
+      const response = await fetch(`/api/recurring-expenses/${item.id}/pay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           householdId,
-          type: "EXPENSE",
-          status: "CONFIRMED",
           accountId: item.account.id,
-          categoryId: item.category?.id ?? undefined,
-          amount: item.amount,
-          currency: item.currency,
-          description: item.name,
           occurredAt,
         }),
       });
-      const payload = (await response.json()) as { error?: string };
+      const payload = (await response.json()) as { data?: { transactionId: string; nextDueDate: string }; error?: string };
       if (!response.ok) throw new Error(payload.error ?? "No se pudo registrar el pago.");
-      return { name: item.name };
+      return { name: item.name, nextDueDate: payload.data?.nextDueDate };
     },
-    onSuccess: ({ name }) => {
-      toast.success(`Pago de ${name} registrado correctamente.`);
-      invalidateFinancialData(queryClient, "transactionChanged");
+    onSuccess: ({ name, nextDueDate }) => {
+      const nextFormatted = nextDueDate
+        ? new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "short", timeZone: "UTC" }).format(new Date(nextDueDate))
+        : null;
+      toast.success(`Pago de ${name} registrado.${nextFormatted ? ` Próximo: ${nextFormatted}.` : ""}`);
+      invalidateFinancialData(queryClient, "recurringChanged");
     },
     onError: (err) => toast.error(err.message),
   });

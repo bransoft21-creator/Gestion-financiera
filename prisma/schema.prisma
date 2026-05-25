@@ -482,7 +482,6 @@ model Budget {
   year          Int
   month         Int
   plannedAmount Decimal      @db.Decimal(18, 2)
-  reservedAmount Decimal     @default(0) @db.Decimal(18, 2)
   alertThreshold Decimal?    @db.Decimal(5, 2)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
@@ -516,15 +515,33 @@ model RecurringExpense {
   updatedAt       DateTime            @updatedAt
   deletedAt       DateTime?
 
-  household Household   @relation(fields: [householdId], references: [id])
-  createdBy UserProfile @relation("RecurringExpenseCreatedBy", fields: [createdById], references: [id])
-  account   Account?    @relation(fields: [accountId], references: [id])
-  category  Category?   @relation(fields: [categoryId], references: [id])
+  household   Household                    @relation(fields: [householdId], references: [id])
+  createdBy   UserProfile                  @relation("RecurringExpenseCreatedBy", fields: [createdById], references: [id])
+  account     Account?                     @relation(fields: [accountId], references: [id])
+  category    Category?                    @relation(fields: [categoryId], references: [id])
+  occurrences RecurringExpenseOccurrence[]
 
   @@index([householdId, nextDueDate])
   @@index([createdById])
   @@index([accountId])
   @@index([categoryId])
+}
+
+model RecurringExpenseOccurrence {
+  id                 String                 @id @default(cuid())
+  recurringExpenseId String
+  monthKey           String                 // "2026-05"
+  status             RecurringPaymentStatus @default(PENDING)
+  paidAt             DateTime?
+  transactionId      String?
+  finalAmount        Decimal?               @db.Decimal(18, 2)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  recurringExpense RecurringExpense @relation(fields: [recurringExpenseId], references: [id])
+
+  @@unique([recurringExpenseId, monthKey])
+  @@index([recurringExpenseId, status])
 }
 
 model Goal {

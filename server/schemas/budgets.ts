@@ -17,14 +17,12 @@ export const createBudgetSchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100),
   month: z.coerce.number().int().min(1).max(12),
   plannedAmount: moneySchema(),
-  reservedAmount: moneySchema({ allowZero: true }).default(0),
   alertThreshold: z.coerce.number().finite().positive().max(100).optional(),
 });
 
 export const updateBudgetSchema = createBudgetSchema.partial().extend({
   householdId: z.string().min(1),
   plannedAmount: optionalMoneySchema(),
-  reservedAmount: optionalMoneySchema({ allowZero: true }),
   alertThreshold: z.coerce.number().finite().positive().max(100).nullable().optional(),
 });
 

@@ -56,6 +56,7 @@ describe("dashboard calculation e2e", () => {
       upcomingRecurringExpenses: 30_000,
       requiredGoalContributions: 25_000,
       upcomingDebtPayments: 20_000,
+      interpersonalToPay: 0,
       upcomingObligations: 75_000,
       realAvailable: 235_000,
       totalOutstandingDebt: 90_000,

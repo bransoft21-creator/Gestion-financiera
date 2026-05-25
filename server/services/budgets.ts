@@ -271,7 +271,6 @@ export async function createBudget(userProfileId: string, input: CreateBudgetInp
       year: input.year,
       month: input.month,
       plannedAmount: input.plannedAmount,
-      reservedAmount: input.reservedAmount,
       alertThreshold: input.alertThreshold,
     },
   });
@@ -294,7 +293,6 @@ export async function updateBudget(userProfileId: string, budgetId: string, inpu
       year: input.year,
       month: input.month,
       plannedAmount: input.plannedAmount,
-      reservedAmount: input.reservedAmount,
       alertThreshold: input.alertThreshold,
     },
   });

@@ -73,7 +73,7 @@ describe("financial ledger", () => {
           outstandingAmount: 80_000,
         },
         {
-          type: DebtType.PERSONAL,
+          type: DebtType.LOAN,
           status: DebtStatus.PAID,
           outstandingAmount: 12_000,
         },
@@ -228,6 +228,7 @@ describe("financial ledger", () => {
         upcomingRecurringExpenses: 50_000,
         requiredGoalContributions: 30_000,
         upcomingDebtPayments: 52_000,
+        interpersonalToPay: 0,
         upcomingObligations: 132_000,
         realAvailable: 153_000,
         totalOutstandingDebt: 162_000,

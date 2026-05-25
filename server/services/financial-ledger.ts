@@ -61,6 +61,7 @@ type AvailableMoneyInput = {
   recurringExpenses: number;
   requiredGoalContributions: number;
   debtPayments: number;
+  interpersonalToPay?: number;
 };
 
 type BudgetReservationInput = {
@@ -87,6 +88,7 @@ type FinancialHealthInput = {
   goals: Array<{ requiredMonthlyAmount: Prisma.Decimal | number | null }>;
   debts: MonthlyDebtPaymentInput[];
   totalOutstandingDebt: Prisma.Decimal | number;
+  interpersonalToPay?: number;
 };
 
 // Ledger convention: account balances are signed. Credit-card debt is negative,
@@ -244,7 +246,7 @@ export function computeRealLiabilitySummary(
 export function computeAvailableMoney(input: AvailableMoneyInput) {
   const balance = input.income - input.expenses;
   const upcomingObligations =
-    input.recurringExpenses + input.requiredGoalContributions + input.debtPayments;
+    input.recurringExpenses + input.requiredGoalContributions + input.debtPayments + (input.interpersonalToPay ?? 0);
 
   return {
     balance,
@@ -381,6 +383,14 @@ export function getDebtPaymentAmountError(
 // real available = income - expenses - reserved budget - obligations.
 // savings rate = max(income - expenses, 0) / income.
 // total debt = active outstanding debt, independent from this month's minimum payments.
+//
+// KNOWN LIMITATION — recurring expense double-counting:
+// RecurringExpense entries are projections: they do not auto-generate Transaction records.
+// If a user pays a recurring obligation manually (creates an EXPENSE transaction), that
+// amount appears in `expenses` (reducing available money) AND the RecurringExpense remains
+// in `upcomingRecurringExpenses` until the user manually advances its nextDueDate.
+// Until nextDueDate is advanced, the same cash outflow is counted twice.
+// Fix: always advance nextDueDate immediately after registering the payment.
 export function computeFinancialHealth(input: FinancialHealthInput) {
   const balance = input.income - input.expenses;
   const reservedBudget = input.budgets.reduce(
@@ -399,6 +409,7 @@ export function computeFinancialHealth(input: FinancialHealthInput) {
     (sum, debt) => sum + computeMonthlyDebtPayment(debt),
     0,
   );
+  const interpersonalToPay = input.interpersonalToPay ?? 0;
   const availableMoney = computeAvailableMoney({
     income: input.income,
     expenses: input.expenses,
@@ -406,6 +417,7 @@ export function computeFinancialHealth(input: FinancialHealthInput) {
     recurringExpenses,
     requiredGoalContributions,
     debtPayments,
+    interpersonalToPay,
   });
 
   return {
@@ -420,6 +432,7 @@ export function computeFinancialHealth(input: FinancialHealthInput) {
     upcomingRecurringExpenses: recurringExpenses,
     requiredGoalContributions,
     upcomingDebtPayments: debtPayments,
+    interpersonalToPay,
     upcomingObligations: availableMoney.upcomingObligations,
     realAvailable: availableMoney.realAvailable,
     totalOutstandingDebt: toFiniteNumber(input.totalOutstandingDebt),
@@ -429,6 +442,62 @@ export function computeFinancialHealth(input: FinancialHealthInput) {
 export function toFiniteNumber(value: Prisma.Decimal | number) {
   const amount = Number(value);
   return Number.isFinite(amount) ? amount : 0;
+}
+
+// ---------------------------------------------------------------------------
+// Granular state-of-affairs helpers
+// These are additive exports that expose the sub-computations inside
+// computeFinancialHealth as individually testable, well-named units.
+// ---------------------------------------------------------------------------
+
+export type MonthlyPnL = {
+  income: number;
+  expenses: number;
+  balance: number;
+  estimatedSavings: number;
+  savingsRate: number;
+};
+
+// P&L statement for a single month: income vs expense transactions only.
+// Does NOT include budget reservations or forward-looking obligations.
+export function computeMonthlyPnL(income: number, expenses: number): MonthlyPnL {
+  const balance = income - expenses;
+  return {
+    income,
+    expenses,
+    balance,
+    estimatedSavings: Math.max(balance, 0),
+    savingsRate: income > 0 ? Math.round((Math.max(balance, 0) / income) * 100) : 0,
+  };
+}
+
+export type ObligationsSummary = {
+  reservedBudget: number;
+  upcomingRecurringExpenses: number;
+  requiredGoalContributions: number;
+  upcomingDebtPayments: number;
+  totalObligations: number;
+};
+
+// Forward-looking obligations that reduce available real money.
+// See computeFinancialHealth for the KNOWN LIMITATION about recurring expense double-counting.
+export function computeObligationsSummary(
+  budgets: BudgetReservationInput[],
+  recurringExpenses: Array<{ amount: Prisma.Decimal | number }>,
+  goals: Array<{ requiredMonthlyAmount: Prisma.Decimal | number | null }>,
+  debts: MonthlyDebtPaymentInput[],
+): ObligationsSummary {
+  const reservedBudget = budgets.reduce((sum, b) => sum + computeBudgetReservation(b), 0);
+  const upcomingRecurringExpenses = recurringExpenses.reduce((sum, r) => sum + toFiniteNumber(r.amount), 0);
+  const requiredGoalContributions = goals.reduce((sum, g) => sum + toFiniteNumber(g.requiredMonthlyAmount ?? 0), 0);
+  const upcomingDebtPayments = debts.reduce((sum, d) => sum + computeMonthlyDebtPayment(d), 0);
+  return {
+    reservedBudget,
+    upcomingRecurringExpenses,
+    requiredGoalContributions,
+    upcomingDebtPayments,
+    totalObligations: reservedBudget + upcomingRecurringExpenses + requiredGoalContributions + upcomingDebtPayments,
+  };
 }
 
 async function applyDebtDelta(

@@ -111,12 +111,13 @@ const debtStatusLabels: Record<DebtStatus, string> = {
 };
 
 const debtTypes = Object.keys(debtTypeLabels) as DebtType[];
+const creatableDebtTypes = debtTypes.filter((t) => t !== "PERSONAL");
 const debtStatuses = Object.keys(debtStatusLabels) as DebtStatus[];
 
 const formSchema = z.object({
   name: z.string().trim().min(2, "Ingresá un nombre.").max(100),
   lender: z.string().trim().max(100).optional(),
-  type: z.enum(debtTypes as [DebtType, ...DebtType[]]),
+  type: z.enum(creatableDebtTypes as [DebtType, ...DebtType[]]),
   status: z.enum(debtStatuses as [DebtStatus, ...DebtStatus[]]),
   currency: z.enum(["ARS", "USD"]),
   originalAmount: moneySchema(),
@@ -376,7 +377,10 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Tipo" error={errors.type}>
                   <select className={selectClass} value={form.type} onChange={(e) => updateForm("type", e.target.value as DebtType)}>
-                    {debtTypes.map((type) => <option key={type} value={type}>{debtTypeLabels[type]}</option>)}
+                    {form.type === "PERSONAL" && (
+                      <option value="PERSONAL" disabled>{debtTypeLabels["PERSONAL"]} (legacy)</option>
+                    )}
+                    {creatableDebtTypes.map((type) => <option key={type} value={type}>{debtTypeLabels[type]}</option>)}
                   </select>
                 </Field>
                 <Field label="Estado" error={errors.status}>
@@ -685,6 +689,9 @@ function DebtCard({
           <div className="flex flex-wrap items-center gap-2">
             <p className="truncate text-base font-semibold text-foreground">{debt.name}</p>
             <Badge className={getDebtStatusClass(debt.status)}>{debtStatusLabels[debt.status]}</Badge>
+            {debt.type === "PERSONAL" && (
+              <Badge className="border-amber-300/20 bg-amber-300/10 text-amber-600">Legacy</Badge>
+            )}
           </div>
           {debt.lender ? <p className="mt-1 text-sm text-muted-foreground">{debt.lender}</p> : null}
           <p className="mt-1 text-xs text-muted-foreground">

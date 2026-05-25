@@ -22,8 +22,9 @@ export async function captureMonthlySnapshot(
   if (isCurrentOrFuture) return null;
 
   const { start: monthStart, end: nextMonthStart } = argentinaMonthRangeUtc(year, month);
+  const monthKey = `${year}-${String(month).padStart(2, "0")}`;
 
-  const [household, monthTransactions, budgets, recurringExpenses, activeGoals, upcomingDebts, currentDebts, accounts] =
+  const [household, monthTransactions, budgets, recurringExpenses, activeGoals, upcomingDebts, currentDebts, accounts, unpaidHouseholdRecurring] =
     await Promise.all([
       prisma.household.findUniqueOrThrow({
         where: { id: householdId },
@@ -50,6 +51,7 @@ export async function captureMonthlySnapshot(
           deletedAt: null,
           nextDueDate: { gte: monthStart, lt: nextMonthStart },
           OR: [{ endDate: null }, { endDate: { gte: monthStart } }],
+          occurrences: { none: { monthKey, status: "PAID" } },
         },
         select: { currency: true, amount: true },
       }),
@@ -85,10 +87,19 @@ export async function captureMonthlySnapshot(
         where: { householdId, deletedAt: null, isArchived: false },
         select: { id: true, type: true, currency: true, currentBalance: true, isArchived: true, deletedAt: true },
       }),
+      prisma.householdRecurringPayment.findMany({
+        where: {
+          householdId,
+          isActive: true,
+          deletedAt: null,
+          occurrences: { none: { monthKey, status: "PAID" } },
+        },
+        select: { currency: true, estimatedAmount: true },
+      }),
     ]);
 
   const currencies = new Set<CurrencyCode>([household.defaultCurrency]);
-  for (const collection of [monthTransactions, budgets, recurringExpenses, activeGoals, upcomingDebts, currentDebts, accounts]) {
+  for (const collection of [monthTransactions, budgets, recurringExpenses, activeGoals, upcomingDebts, currentDebts, accounts, unpaidHouseholdRecurring]) {
     for (const item of collection) currencies.add(item.currency);
   }
 
@@ -101,6 +112,7 @@ export async function captureMonthlySnapshot(
     const currencyUpcomingDebts = filterCurrency(upcomingDebts, currency, (debt) => debt.currency);
     const currencyCurrentDebts = filterCurrency(currentDebts, currency, (debt) => debt.currency);
     const currencyAccounts = filterCurrency(accounts, currency, (account) => account.currency);
+    const currencyUnpaidHouseholdRecurring = filterCurrency(unpaidHouseholdRecurring, currency, (p) => p.currency);
 
     const income = currencyTransactions
       .filter((t) => t.type === TransactionType.INCOME)
@@ -140,7 +152,10 @@ export async function captureMonthlySnapshot(
         plannedAmount: b.plannedAmount,
         spentAmount: expensesByCategoryId.get(b.categoryId) ?? 0,
       })),
-      recurringExpenses: currencyRecurringExpenses,
+      recurringExpenses: [
+        ...currencyRecurringExpenses,
+        ...currencyUnpaidHouseholdRecurring.map((p) => ({ amount: p.estimatedAmount })),
+      ],
       goals: currencyActiveGoals,
       debts: currencyUpcomingDebts,
       totalOutstandingDebt: liabilitySummary.liabilities,

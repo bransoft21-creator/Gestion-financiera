@@ -53,6 +53,7 @@ export type DashboardSummary = {
     upcomingRecurringExpenses: number;
     requiredGoalContributions: number;
     upcomingDebtPayments: number;
+    interpersonalToPay: number;
     upcomingObligations: number;
     realAvailable: number;
     savingsRate: number;

@@ -103,7 +103,7 @@ describe("money validation", () => {
     const debt = createDebtSchema.parse({
       ...base,
       name: "Prestamo",
-      type: "PERSONAL",
+      type: "LOAN",
       originalAmount: "1000",
       outstandingAmount: "500.50",
       minimumPayment: undefined,

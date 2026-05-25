@@ -50,7 +50,15 @@ export const toggleRecurringExpenseSchema = z.object({
   isActive: z.boolean(),
 });
 
+export const payRecurringExpenseSchema = z.object({
+  householdId: z.string().min(1),
+  accountId: z.string().min(1),
+  finalAmount: moneySchema().optional(),
+  occurredAt: z.string().datetime({ offset: true }),
+});
+
 export type ListRecurringExpensesInput = z.infer<typeof listRecurringExpensesSchema>;
 export type CreateRecurringExpenseInput = z.infer<typeof createRecurringExpenseSchema>;
 export type UpdateRecurringExpenseInput = z.infer<typeof updateRecurringExpenseSchema>;
 export type ToggleRecurringExpenseInput = z.infer<typeof toggleRecurringExpenseSchema>;
+export type PayRecurringExpenseInput = z.infer<typeof payRecurringExpenseSchema>;

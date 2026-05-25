@@ -4,6 +4,7 @@ import { moneySchema, nullableMoneySchema } from "@/lib/money";
 
 const currencyValues = Object.values(CurrencyCode) as [CurrencyCode, ...CurrencyCode[]];
 const debtTypeValues = Object.values(DebtType) as [DebtType, ...DebtType[]];
+const creatableDebtTypeValues = debtTypeValues.filter((t) => t !== DebtType.PERSONAL) as [DebtType, ...DebtType[]];
 const debtStatusValues = Object.values(DebtStatus) as [DebtStatus, ...DebtStatus[]];
 
 export const listDebtsSchema = z.object({
@@ -15,7 +16,7 @@ export const createDebtSchema = z.object({
   householdId: z.string().min(1),
   name: z.string().trim().min(2).max(100),
   lender: z.string().trim().max(100).optional(),
-  type: z.enum(debtTypeValues),
+  type: z.enum(creatableDebtTypeValues),
   currency: z.enum(currencyValues).default(CurrencyCode.ARS),
   originalAmount: moneySchema(),
   outstandingAmount: moneySchema({ allowZero: true }),

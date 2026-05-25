@@ -202,7 +202,7 @@ export function DashboardClient() {
                       </span>
                     )}
                   </p>
-                  <div className="flex items-center gap-3 text-sm">
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
                     {interpersonalPosition.toReceive > 0 && (
                       <div className="flex items-center gap-1 text-emerald-600">
                         <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
@@ -217,6 +217,11 @@ export function DashboardClient() {
                         <ArrowDownLeft className="h-3.5 w-3.5 shrink-0" />
                         <SensitiveAmount value={formatMoney(interpersonalPosition.toPay, interpersonalPosition.currency)} />
                       </div>
+                    )}
+                    {interpersonalPosition.toPay > 0 && (
+                      <span className="rounded-full border border-amber-500/20 bg-amber-500/[0.07] px-2 py-0.5 text-[10px] font-medium text-amber-600">
+                        descontado del disponible
+                      </span>
                     )}
                   </div>
                 </div>
