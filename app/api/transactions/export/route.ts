@@ -29,6 +29,8 @@ const typeLabels: Record<TransactionType, string> = {
   DEBT_PAYMENT: "Pago de deuda",
   GOAL_CONTRIBUTION: "Aporte a meta",
   INVESTMENT: "Inversión",
+  PERSONAL_LOAN_GIVEN: "Préstamo otorgado",
+  PERSONAL_LOAN_RETURN: "Devolución recibida",
 };
 
 function escapeCsv(value: string) {

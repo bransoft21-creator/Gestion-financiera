@@ -5,6 +5,7 @@ import {
   CreditCard,
   FolderTree,
   Gauge,
+  HandCoins,
   Home,
   Landmark,
   ListChecks,
@@ -84,6 +85,13 @@ export const navItems = [
     icon: CreditCard,
     tier: "weekly",
     awarenessTarget: "debts",
+  },
+  {
+    href: "/agreements",
+    label: "Pendientes",
+    shortLabel: "Pendientes",
+    icon: HandCoins,
+    tier: "weekly",
   },
   {
     href: "/categories",

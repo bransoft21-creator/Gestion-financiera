@@ -107,7 +107,11 @@ export function computeTransactionBalanceDeltas(transaction: BalanceInput): Bala
     case TransactionType.DEBT_PAYMENT:
     case TransactionType.GOAL_CONTRIBUTION:
     case TransactionType.INVESTMENT:
+    case TransactionType.PERSONAL_LOAN_GIVEN:
       return [{ accountId: transaction.accountId, delta: -amount }];
+
+    case TransactionType.PERSONAL_LOAN_RETURN:
+      return [{ accountId: transaction.accountId, delta: amount }];
 
     case TransactionType.TRANSFER:
       if (!transaction.transferAccountId) {

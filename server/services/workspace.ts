@@ -242,3 +242,13 @@ export async function getReportsWorkspace(userProfileId: string) {
   const household = await getPrimaryHousehold(userProfileId);
   return { household };
 }
+
+export async function getAgreementsWorkspace(userProfileId: string) {
+  const household = await getPrimaryHousehold(userProfileId);
+  const accounts = await prisma.account.findMany({
+    where: { householdId: household.id, deletedAt: null, isArchived: false },
+    select: { id: true, name: true, type: true, currency: true },
+    orderBy: { name: "asc" },
+  });
+  return { household, accounts };
+}

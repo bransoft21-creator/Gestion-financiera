@@ -74,6 +74,48 @@ enum TransactionType {
   DEBT_PAYMENT
   GOAL_CONTRIBUTION
   INVESTMENT
+  PERSONAL_LOAN_GIVEN
+  PERSONAL_LOAN_RETURN
+}
+
+enum AgreementDirection {
+  LENT
+  BORROWED
+  SHARED
+}
+
+enum AgreementCategory {
+  PERSONAL
+  FAMILY
+  WORK
+  SOCIAL
+  OTHER
+}
+
+enum AgreementStatus {
+  OPEN
+  PARTIAL
+  OVERDUE
+  CLOSED
+  FORGIVEN
+  CANCELED
+}
+
+enum AgreementInterestType {
+  FIXED
+  PERCENTAGE
+}
+
+enum AgreementEventType {
+  PAYMENT_RECEIVED
+  PAYMENT_SENT
+  INTEREST_APPLIED
+  DATE_EXTENDED
+  REFINANCED
+  PARTIAL_FORGIVEN
+  NOTE_ADDED
+  CLOSED
+  CANCELED
 }
 
 enum TransactionStatus {
@@ -211,6 +253,9 @@ model UserProfile {
   householdRecurringPaymentsCreated        HouseholdRecurringPayment[]            @relation("HouseholdRecurringPaymentCreatedBy")
   householdRecurringPaymentParticipations  HouseholdRecurringPaymentParticipant[] @relation("HouseholdRecurringPaymentParticipations")
   householdRecurringPaymentOccurrencesPaid HouseholdRecurringPaymentOccurrence[]  @relation("HouseholdRecurringPaymentOccurrencePaidBy")
+  personContactsCreated   PersonContact[]       @relation("PersonContactCreatedBy")
+  personalAgreementsCreated PersonalAgreement[] @relation("PersonalAgreementCreatedBy")
+  agreementEventsCreated  AgreementEvent[]      @relation("AgreementEventCreatedBy")
 }
 
 model Household {
@@ -242,6 +287,8 @@ model Household {
   investmentTransactions InvestmentTransaction[]
   smartImportCaches      SmartImportCache[]
   recurringPayments      HouseholdRecurringPayment[]
+  personContacts         PersonContact[]
+  personalAgreements     PersonalAgreement[]
 
   @@index([createdById])
 }
@@ -305,6 +352,7 @@ model Account {
   transferTransactionsTo Transaction[]           @relation("TransactionTransferAccount")
   recurringExpenses      RecurringExpense[]
   investmentAccounts     InvestmentAccount[]
+  agreementsAsSource     PersonalAgreement[]     @relation("AgreementSourceAccount")
 
   @@index([householdId])
   @@index([createdById])
@@ -379,6 +427,7 @@ model Transaction {
   debt                  Debt?                  @relation(fields: [debtId], references: [id])
   investmentTransaction InvestmentTransaction? @relation("FinanceTransactionInvestmentTransaction", fields: [investmentTransactionId], references: [id])
   sharedTransaction     SharedTransaction?
+  agreementEvents       AgreementEvent[]  @relation("AgreementEventTransaction")
 
   @@index([householdId, occurredAt])
   @@index([accountId])
@@ -797,4 +846,106 @@ model InvestmentTransaction {
   @@index([createdById])
   @@index([investmentAccountId])
   @@index([assetId])
+}
+
+model PersonContact {
+  id          String   @id @default(cuid())
+  householdId String
+  createdById String
+
+  name        String
+  alias       String?
+  phone       String?
+  email       String?
+  notes       String?
+  avatarColor String?
+
+  // Desnormalizados para performance — actualizados en cada cierre de acuerdo
+  totalLentToThem       Decimal @default(0) @db.Decimal(18, 2)
+  totalBorrowedFromThem Decimal @default(0) @db.Decimal(18, 2)
+  avgReturnDays         Int?
+  agreementCount        Int     @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  household  Household           @relation(fields: [householdId], references: [id])
+  createdBy  UserProfile         @relation("PersonContactCreatedBy", fields: [createdById], references: [id])
+  agreements PersonalAgreement[]
+
+  @@index([householdId])
+  @@index([createdById])
+}
+
+model PersonalAgreement {
+  id          String   @id @default(cuid())
+  householdId String
+  createdById String
+  contactId   String
+
+  direction AgreementDirection
+  status    AgreementStatus    @default(OPEN)
+
+  currency        CurrencyCode @default(ARS)
+  originalAmount  Decimal      @db.Decimal(18, 2)
+  currentBalance  Decimal      @db.Decimal(18, 2) // saldo pendiente; derivado de eventos, nunca editado directo
+
+  description         String?
+  category            AgreementCategory @default(PERSONAL)
+  agreedReturnDate    DateTime?
+  occurredAt          DateTime
+
+  hasInterest   Boolean               @default(false)
+  interestType  AgreementInterestType?
+  interestAmount Decimal?             @db.Decimal(18, 2)
+  interestRate  Decimal?              @db.Decimal(7, 4)
+
+  expectedInstallments Int?
+
+  // Cuenta desde la que salió / entró el dinero (opcional)
+  sourceAccountId String?
+
+  closedAt  DateTime?
+  notes     String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  household     Household        @relation(fields: [householdId], references: [id])
+  createdBy     UserProfile      @relation("PersonalAgreementCreatedBy", fields: [createdById], references: [id])
+  contact       PersonContact    @relation(fields: [contactId], references: [id])
+  sourceAccount Account?         @relation("AgreementSourceAccount", fields: [sourceAccountId], references: [id])
+  events        AgreementEvent[]
+
+  @@index([householdId, status])
+  @@index([householdId, contactId])
+  @@index([createdById])
+  @@index([contactId])
+  @@index([agreedReturnDate])
+}
+
+model AgreementEvent {
+  id          String   @id @default(cuid())
+  agreementId String
+  createdById String
+
+  type        AgreementEventType
+  amount      Decimal?           @db.Decimal(18, 2)
+  currency    CurrencyCode?
+
+  description   String?
+  transactionId String? // link opcional a Transaction real
+
+  occurredAt DateTime
+  createdAt  DateTime @default(now())
+
+  agreement   PersonalAgreement @relation(fields: [agreementId], references: [id])
+  createdBy   UserProfile       @relation("AgreementEventCreatedBy", fields: [createdById], references: [id])
+  transaction Transaction?      @relation("AgreementEventTransaction", fields: [transactionId], references: [id])
+
+  @@index([agreementId, occurredAt])
+  @@index([createdById])
+  @@index([transactionId])
 }

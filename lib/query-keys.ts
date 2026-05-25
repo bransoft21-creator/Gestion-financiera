@@ -43,4 +43,17 @@ export const queryKeys = {
     balance: (householdId: string) =>
       ["household", "balance", householdId] as const,
   },
+
+  agreements: {
+    all: ["agreements"] as const,
+    list: (householdId: string, filters?: Record<string, string>) =>
+      ["agreements", "list", householdId, filters] as const,
+    detail: (id: string) => ["agreements", "detail", id] as const,
+  },
+
+  contacts: {
+    all: ["contacts"] as const,
+    list: (householdId: string, search?: string) =>
+      ["contacts", "list", householdId, search] as const,
+  },
 } as const;

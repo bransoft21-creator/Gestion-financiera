@@ -14,7 +14,9 @@ export type InvalidationScope =
   | "recurringChanged"    // create / edit / toggle / delete recurring definition
   | "budgetChanged"       // create / edit / delete budget
   | "importConfirmed"     // Smart Import batch confirm
-  | "dataQualityChanged"; // bulk categorize / merge / reclassify
+  | "dataQualityChanged"  // bulk categorize / merge / reclassify
+  | "agreementChanged"    // create / event / close personal agreement
+  | "contactChanged";     // create / update contact
 
 type QueryKey = readonly unknown[];
 
@@ -55,6 +57,13 @@ const SCOPE_KEYS: Record<InvalidationScope, QueryKey[]> = {
     queryKeys.transactions.all,
     queryKeys.dashboard.all,
     queryKeys.budgets.all,
+  ],
+  agreementChanged: [
+    queryKeys.agreements.all,
+    queryKeys.contacts.all,
+  ],
+  contactChanged: [
+    queryKeys.contacts.all,
   ],
 };
 
