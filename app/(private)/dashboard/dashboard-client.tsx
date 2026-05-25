@@ -313,11 +313,11 @@ export function DashboardClient() {
                 </Link>
                 <Link href="/debts" className="block min-w-0">
                   <PremiumCard interactive className="p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Deuda total</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Pasivo formal</p>
                     <p className="mt-2 text-lg font-bold tabular-nums text-muted-foreground">
                       <SensitiveAmount value={formatMoney(metrics.totalOutstandingDebt, metrics.currency)} />
                     </p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">ver deudas →</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">ver créditos →</p>
                   </PremiumCard>
                 </Link>
               </div>

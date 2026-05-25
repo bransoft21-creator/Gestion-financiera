@@ -151,11 +151,11 @@ export function buildNavigationAwareness(input: NavigationAwarenessInput): Navig
     };
     entryPoints.push({
       id: "debts",
-      title: "Deudas con vencimiento cercano",
+      title: "Créditos o cuotas con vencimiento cercano",
       body: "Tené a mano mínimos, saldos y próximos pagos.",
       href: "/debts",
       tone: "attention",
-      label: "Deudas",
+      label: "Créditos",
     });
   }
 
@@ -168,11 +168,11 @@ export function buildNavigationAwareness(input: NavigationAwarenessInput): Navig
     };
     entryPoints.push({
       id: "agreements",
-      title: "Acuerdos con tiempo vencido",
-      body: "Hay dinero prestado o a devolver que pasó la fecha acordada.",
+      title: "Dinero en tránsito vencido",
+      body: "Hay acuerdos entre personas que pasaron la fecha acordada.",
       href: "/agreements",
       tone: "attention",
-      label: "Pendientes",
+      label: "Tránsito",
     });
   }
 

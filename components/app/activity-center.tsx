@@ -57,7 +57,7 @@ const FILTERS: Array<{ id: Filter; label: string }> = [
   { id: "all",       label: "Todas" },
   { id: "important", label: "Importantes" },
   { id: "positive",  label: "Positivas" },
-  { id: "pending",   label: "Pendientes" },
+  { id: "pending",   label: "Por resolver" },
   { id: "archived",  label: "Archivadas" },
 ];
 
@@ -158,7 +158,10 @@ function SwipeCard({
     axis: null as "x" | "y" | null, baseOffset: 0, raf: 0,
   });
   const actionsRef = useRef({ onArchive, onDelete, onResolve, onPostpone });
-  actionsRef.current = { onArchive, onDelete, onResolve, onPostpone };
+
+  useEffect(() => {
+    actionsRef.current = { onArchive, onDelete, onResolve, onPostpone };
+  }, [onArchive, onDelete, onResolve, onPostpone]);
 
   // Fixed button width — independent of card width, comfortable tap target
   const ACTION_W = 72;
@@ -174,13 +177,13 @@ function SwipeCard({
     phaseRef.current = p;  setPhase(p);
   }
 
-  function getSnap(x: number, w: number): number {
+  const getSnap = useCallback((x: number, w: number): number => {
     const r = Math.abs(x) / w;
     const s = x < 0 ? -1 : 1;
     if (r < DEAD_ZONE) return 0;
     if (r < TWO_RATIO) return s * SNAP_ONE;
     return s * SNAP_TWO;
-  }
+  }, [DEAD_ZONE, SNAP_ONE, SNAP_TWO, TWO_RATIO]);
 
   function executeAction(key: "onArchive" | "onDelete" | "onResolve" | "onPostpone") {
     if (phaseRef.current === "executing") return;
@@ -262,7 +265,7 @@ function SwipeCard({
       el.removeEventListener("touchcancel",onTouchEnd);
       cancelAnimationFrame(g.raf);
     };
-  }, []);
+  }, [getSnap]);
 
   // Derived visual state
   const leftW  = Math.max(0, offset);   // right swipe → left strip (Resolve/Postpone)

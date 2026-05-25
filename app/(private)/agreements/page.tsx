@@ -10,8 +10,8 @@ export default async function AgreementsPage() {
   return (
     <V2PageShell
       eyebrow="Dinero en tránsito"
-      title="Pendientes"
-      description="Acuerdos financieros con personas — lo que te deben, lo que debés, lo que compartieron."
+      title="Entre personas"
+      description="Dinero que circula con otras personas: lo que te deben, lo que debés y lo que compartieron."
     >
       <AgreementsClient
         householdId={household.id}

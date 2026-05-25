@@ -315,7 +315,7 @@ export function AccountsClient({ householdId, defaultCurrency = "ARS" }: Account
                 </select>
               </Field>
               <Field
-                label={form.type === "CREDIT_CARD" ? "Saldo inicial (deuda en negativo)" : "Saldo inicial"}
+                label={form.type === "CREDIT_CARD" ? "Saldo inicial (saldo negativo)" : "Saldo inicial"}
                 error={errors.openingBalance}
               >
                 <Input
@@ -374,7 +374,7 @@ export function AccountsClient({ householdId, defaultCurrency = "ARS" }: Account
         {netWorthByCurrency.length === 0 ? (
           <div className="grid gap-3 sm:grid-cols-3">
             <SummaryCard label="Activos ARS" value={formatMoney(0, "ARS")} tone="positive" description="Sin cuentas activas" />
-            <SummaryCard label="Pasivos ARS" value={formatMoney(0, "ARS")} tone="danger" description="Sin deudas activas" />
+            <SummaryCard label="Pasivos ARS" value={formatMoney(0, "ARS")} tone="danger" description="Sin pasivos formales activos" />
             <SummaryCard label="Patrimonio ARS" value={formatMoney(0, "ARS")} tone="default" description="Sin cuentas activas" highlight />
           </div>
         ) : (
@@ -391,13 +391,13 @@ export function AccountsClient({ householdId, defaultCurrency = "ARS" }: Account
                   label={`Pasivos ${item.currency}`}
                   value={formatMoney(item.liabilities, item.currency)}
                   tone="danger"
-                  description={`Deudas y saldos negativos en ${item.currency}`}
+                  description={`Créditos, cuotas y saldos negativos en ${item.currency}`}
                 />
                 <SummaryCard
                   label={`Patrimonio ${item.currency}`}
                   value={formatMoney(item.netWorth, item.currency)}
                   tone={item.netWorth >= 0 ? "default" : "warning"}
-                  description={`Activos menos deuda en ${item.currency}`}
+                  description={`Activos menos pasivos en ${item.currency}`}
                   highlight
                 />
               </div>

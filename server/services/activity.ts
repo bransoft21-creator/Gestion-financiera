@@ -420,7 +420,7 @@ export async function upsertReminderActivities(params: {
     upserts.push(resolveReminderIfPresent(userId, `reminder-recurring-${periodKey}`));
   }
 
-  // Outstanding debt reminder (P0 if overdue, P1 if active)
+  // Outstanding formal commitment reminder (P0 if overdue, P1 if active)
   if (debt > 0) {
     upserts.push(
       upsertActivity({
@@ -429,13 +429,13 @@ export async function upsertReminderActivities(params: {
         source: "monthly-reminders",
         tone: hasOverdueDebt ? ActivityTone.warning : ActivityTone.neutral,
         priority: hasOverdueDebt ? 2 : 1,
-        title: hasOverdueDebt ? "Hay un vencimiento de deuda para revisar" : "Deuda activa registrada",
+        title: hasOverdueDebt ? "Hay un crédito o cuota para revisar" : "Compromiso formal registrado",
         body: hasOverdueDebt
-          ? formatARS(debt) + " de deuda activa. Hay al menos un vencimiento para revisar."
-          : formatARS(debt) + " de deuda activa este mes.",
+          ? formatARS(debt) + " en créditos y cuotas. Hay al menos un vencimiento para revisar."
+          : formatARS(debt) + " en créditos y cuotas activos este mes.",
         dedupeKey: `reminder-debt-${periodKey}`,
         periodKey,
-        actionLabel: "Ver deudas",
+        actionLabel: "Ver créditos",
         actionLink: "/debts",
       }),
     );

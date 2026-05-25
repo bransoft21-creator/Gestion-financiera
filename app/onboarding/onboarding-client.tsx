@@ -22,7 +22,7 @@ const GOALS = [
   { id: "entender-gastos", label: "Entender mis gastos" },
   { id: "ahorrar", label: "Ahorrar más" },
   { id: "salir-excel", label: "Dejar el Excel" },
-  { id: "organizar-deudas", label: "Organizar deudas" },
+  { id: "organizar-deudas", label: "Ordenar créditos y cuotas" },
   { id: "compartir-hogar", label: "Compartir hogar" },
 ];
 

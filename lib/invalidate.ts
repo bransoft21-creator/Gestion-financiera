@@ -61,6 +61,7 @@ const SCOPE_KEYS: Record<InvalidationScope, QueryKey[]> = {
   agreementChanged: [
     queryKeys.agreements.all,
     queryKeys.contacts.all,
+    queryKeys.dashboard.all,
   ],
   contactChanged: [
     queryKeys.contacts.all,

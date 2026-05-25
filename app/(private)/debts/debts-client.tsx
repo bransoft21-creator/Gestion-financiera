@@ -224,7 +224,7 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
     } catch (err: unknown) {
       const e = err as Error & { fieldErrors?: FormErrors };
       if (e.fieldErrors) setErrors(e.fieldErrors);
-      setMessage(e.message ?? "No se pudo guardar la deuda.");
+      setMessage(e.message ?? "No se pudo guardar el compromiso.");
     }
   }
 
@@ -462,7 +462,7 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <PremiumCardTitle>Compromisos pendientes</PremiumCardTitle>
-                  <PremiumCardDescription>Solo deuda real con saldo abierto hoy.</PremiumCardDescription>
+                  <PremiumCardDescription>Solo pasivos formales con saldo abierto hoy.</PremiumCardDescription>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <select
@@ -470,7 +470,7 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                   >
-                    <option value="">Pendientes hoy</option>
+                    <option value="">Con saldo hoy</option>
                     {debtStatuses.map((status) => <option key={status} value={status}>{debtStatusLabels[status]}</option>)}
                   </select>
                   <ActionButton type="button" size="sm" className="hidden xl:inline-flex" onClick={openNewDebt}>
@@ -516,7 +516,7 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
           </PremiumCard>
         </div>
 
-        <MobileCreateFab label="Nueva deuda" onClick={openNewDebt} />
+        <MobileCreateFab label="Nuevo crédito o cuota" onClick={openNewDebt} />
       </div>
 
       <DeleteDebtDialog
@@ -935,14 +935,14 @@ function getDebtState(summary: DebtSummary, debtCount: number) {
   if (debtCount === 0) {
     return {
       title: "No hay carga financiera visible.",
-      description: "Cuando registres una deuda, el sistema va a ordenar saldo, vencimiento y próximo pago en un solo lugar.",
+      description: "Cuando registres un crédito o cuota, el sistema va a ordenar saldo, vencimiento y próximo pago en un solo lugar.",
     };
   }
 
   if (summary.defaulted > 0) {
     return {
       title: "Hay compromisos que necesitan atención hoy.",
-      description: "Tenés deuda en mora. Conviene priorizar contacto, pago mínimo o reordenamiento antes de sumar nuevos gastos.",
+      description: "Tenés un compromiso formal en mora. Conviene priorizar contacto, pago mínimo o reordenamiento antes de sumar nuevos gastos.",
     };
   }
 

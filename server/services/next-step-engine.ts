@@ -136,10 +136,10 @@ function getGoalActions(context: NextStepContext): ActivationAction[] {
       case "organizar-deudas":
         return [{
           id: "organize-debts",
-          title: context.hasActiveDebts ? "Revisá tus deudas" : "Cargá una deuda pendiente",
+          title: context.hasActiveDebts ? "Revisá tus créditos y cuotas" : "Cargá un crédito o cuota",
           description: "Poné cuotas, saldos y vencimientos en un solo lugar.",
           href: "/debts",
-          reason: "Elegiste ordenar deudas.",
+          reason: "Elegiste ordenar créditos y cuotas.",
         }];
       case "ahorrar":
         return [{

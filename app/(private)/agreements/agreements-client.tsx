@@ -419,7 +419,7 @@ function AgreementsEmptyState({
     attention: {
       title: "Nada urgente.",
       body: "Los vencimientos cercanos y acuerdos atrasados van a aparecer acá sin mezclar ruido con el resto.",
-      action: "Nuevo pendiente",
+      action: "Nuevo acuerdo",
     },
     closed: {
       title: "Sin historial resuelto.",
@@ -944,7 +944,7 @@ function CreateAgreementForm({
         </button>
         <div className="text-center">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Nuevo acuerdo</p>
-          <p className="text-xs font-medium text-foreground/80">Pendientes</p>
+          <p className="text-xs font-medium text-foreground/80">Dinero en tránsito</p>
         </div>
         <button
           type="button"

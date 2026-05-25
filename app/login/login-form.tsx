@@ -240,7 +240,7 @@ export function LoginForm({ initialError, initialMode = "login", nextPath }: Log
   }
 
   const bullets = [
-    { icon: BarChart3, title: "Disponible real", desc: "Tu margen después de reservas, metas, deudas y compromisos próximos." },
+    { icon: BarChart3, title: "Disponible real", desc: "Tu margen después de reservas, metas, créditos y compromisos próximos." },
     { icon: Target, title: "Plan con intención", desc: "Cada peso importante queda asignado antes de diluirse en movimientos chicos." },
     { icon: TrendingUp, title: "Patrones claros", desc: "Señales mensuales para entender qué cambió y dónde conviene mirar." },
   ];

@@ -559,7 +559,7 @@ function SnapshotHistorySection({ snapshots, currency }: { snapshots: MonthlySna
       <div>
         <h2 className="text-base font-semibold text-foreground">Historial de patrimonio</h2>
         <p className="mt-0.5 text-sm leading-6 text-muted-foreground">
-          Snapshot mensual capturado al cierre de cada período. Refleja el dinero disponible real y la deuda total en ese momento.
+          Snapshot mensual capturado al cierre de cada período. Refleja el dinero disponible real y el pasivo formal en ese momento.
         </p>
       </div>
 
@@ -623,8 +623,8 @@ function SnapshotHistorySection({ snapshots, currency }: { snapshots: MonthlySna
 
         <PremiumCard>
           <PremiumCardHeader>
-            <PremiumCardTitle>Deuda total al cierre</PremiumCardTitle>
-            <PremiumCardDescription>Saldo pendiente de deudas activas registrado en cada snapshot.</PremiumCardDescription>
+            <PremiumCardTitle>Pasivo formal al cierre</PremiumCardTitle>
+            <PremiumCardDescription>Saldo pendiente de créditos, cuotas y pasivos activos registrado en cada snapshot.</PremiumCardDescription>
           </PremiumCardHeader>
           <PremiumCardContent>
             <ChartErrorBoundary>
@@ -641,7 +641,7 @@ function SnapshotHistorySection({ snapshots, currency }: { snapshots: MonthlySna
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                   <YAxis tickFormatter={(value) => formatMoneyShort(value, currency)} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} width={70} />
                   <Tooltip
-                    formatter={(value) => [formatMoney(Number(value), currency), "Deuda total"]}
+                    formatter={(value) => [formatMoney(Number(value), currency), "Pasivo formal"]}
                     contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem", fontSize: 12, color: "hsl(var(--foreground))", padding: "8px 12px" }}
                   />
                   <Area type="monotone" dataKey="deuda" stroke="#f87171" strokeWidth={2.5} fill="url(#gradDeuda)" dot={{ fill: "#f87171", r: 3 }} activeDot={{ r: 5 }} />

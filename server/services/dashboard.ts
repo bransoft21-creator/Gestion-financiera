@@ -609,7 +609,7 @@ function buildFinancialInsights({
   } else if (realAvailable > 0 && upcomingObligations > 0) {
     insights.push({
       title: "Tenés margen después de obligaciones",
-      message: "El disponible real ya contempla gastos recurrentes, metas, deuda y presupuestos pendientes.",
+      message: "El disponible real ya contempla gastos recurrentes, metas, créditos y presupuestos pendientes.",
       tone: "positive",
       actionLabel: "Ver metas",
       href: "/goals",
@@ -692,10 +692,10 @@ function buildFinancialInsights({
 
   if (totalOutstandingDebt > 0) {
     insights.push({
-      title: "Seguimiento de deuda",
-      message: "Revisar pagos mínimos y próximos vencimientos evita que la deuda compita con tus metas.",
+      title: "Seguimiento de créditos y cuotas",
+      message: "Revisar pagos mínimos y próximos vencimientos evita que los compromisos formales compitan con tus metas.",
       tone: "warning",
-      actionLabel: "Ver deudas",
+      actionLabel: "Ver créditos",
       href: "/debts",
     });
   }

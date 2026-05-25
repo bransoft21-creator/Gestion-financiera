@@ -13,7 +13,7 @@ import type { AwarenessSignal, NavigationAwareness } from "@/lib/navigation-awar
 const bottomNavItems = navItems.filter((item) => item.mobile === "primary");
 const drawerSections = [
   { tier: "core", label: "También diario" },
-  { tier: "weekly", label: "Plan semanal" },
+  { tier: "weekly", label: "Plan y compromisos" },
   { tier: "advanced", label: "Sistema" },
 ] as const;
 

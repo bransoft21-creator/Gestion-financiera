@@ -10,8 +10,8 @@ export default async function DebtsPage() {
   return (
     <V2PageShell
       eyebrow="Compromisos financieros"
-      title="Lo que pesa sobre tu mes"
-      description="Seguís deuda, vencimientos y pagos mínimos como compromisos vivos, no como un listado frío."
+      title="Créditos y cuotas"
+      description="Seguís saldos formales, vencimientos y pagos mínimos como compromisos vivos, separados del dinero entre personas."
     >
       <DebtsClient householdId={household.id} accounts={accounts} defaultCurrency={userProfile.currency as "ARS" | "USD"} />
     </V2PageShell>
