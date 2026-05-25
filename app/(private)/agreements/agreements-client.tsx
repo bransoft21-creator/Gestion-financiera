@@ -25,7 +25,6 @@ import {
   Heart,
   Plus,
   RefreshCw,
-  Sparkles,
   Users,
   X,
 } from "lucide-react";
@@ -525,7 +524,7 @@ function AccountSelect({
       id={id}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="flex h-11 w-full rounded-2xl border border-input bg-background/35 px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
       <option value="">{placeholder}</option>
       {accounts.map((a) => (
@@ -778,6 +777,48 @@ const CREATE_STEPS: Array<{ id: Step; label: string }> = [
   { id: "context", label: "Contexto" },
 ];
 
+const FLOW_DIRECTIONS: Record<AgreementDirection, {
+  label: string;
+  phrase: string;
+  detail: string;
+  activeClass: string;
+  iconClass: string;
+}> = {
+  LENT: {
+    label: "Presté",
+    phrase: "salió de mí",
+    detail: "Alguien te lo devuelve después.",
+    activeClass: "border-emerald-400/35 bg-emerald-400/[0.09] text-emerald-300",
+    iconClass: "text-emerald-400",
+  },
+  BORROWED: {
+    label: "Me prestaron",
+    phrase: "entra ahora",
+    detail: "Es dinero que todavía no es completamente tuyo.",
+    activeClass: "border-amber-400/35 bg-amber-400/[0.09] text-amber-300",
+    iconClass: "text-amber-400",
+  },
+  SHARED: {
+    label: "Compartimos",
+    phrase: "está repartido",
+    detail: "Un gasto o saldo dividido con otra persona.",
+    activeClass: "border-sky-400/35 bg-sky-400/[0.09] text-sky-300",
+    iconClass: "text-sky-400",
+  },
+};
+
+function getStepTitle(step: Step) {
+  if (step === "relation") return "Qué dinero está en tránsito";
+  if (step === "amount") return "Cuánto queda flotando";
+  return "Qué contexto necesita Meridian";
+}
+
+function getStepSignal(step: Step, direction: AgreementDirection, personName: string, amountPreview: string) {
+  if (step === "relation") return "Definí la relación humana antes del número.";
+  if (step === "amount") return personName ? `${FLOW_DIRECTIONS[direction].label} · ${personName}` : FLOW_DIRECTIONS[direction].detail;
+  return `${amountPreview} · ${personName || "persona"}`;
+}
+
 function CreateAgreementForm({
   householdId,
   accounts,
@@ -889,118 +930,142 @@ function CreateAgreementForm({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className={appFormHeaderClass("flex items-center justify-between px-4 py-3")}>
-        <div className="flex items-center gap-2">
-          {step !== "relation" && (
-            <button
-              type="button"
-              onClick={goBack}
-              className="mr-1 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
-              aria-label="Volver"
-            >
-              <ChevronDown className="h-5 w-5 rotate-90" />
-            </button>
-          )}
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Nuevo pendiente
-            </p>
-            <h2 className="text-base font-semibold leading-tight">Dinero en tránsito</h2>
-          </div>
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-card">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-[linear-gradient(180deg,hsl(var(--primary)/0.12),hsl(var(--card)/0.96)_64%,transparent)]" />
+
+      <div className={appFormHeaderClass("relative flex items-center justify-between border-b-0 bg-transparent px-4 pb-2 pt-3 backdrop-blur-none")}>
+        <button
+          type="button"
+          onClick={step === "relation" ? onClose : goBack}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-background/45 text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+          aria-label={step === "relation" ? "Cerrar" : "Volver"}
+        >
+          {step === "relation" ? <X className="h-4 w-4" /> : <ChevronDown className="h-5 w-5 rotate-90" />}
+        </button>
+        <div className="text-center">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Nuevo acuerdo</p>
+          <p className="text-xs font-medium text-foreground/80">Pendientes</p>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+          className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-background/45 text-muted-foreground transition hover:bg-muted/60 hover:text-foreground",
+            step === "relation" && "opacity-0 pointer-events-none",
+          )}
           aria-label="Cerrar"
         >
-          <X className="h-5 w-5" />
+          <X className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="border-b border-border px-4 py-3">
-        <div className="flex items-center gap-2">
-          {CREATE_STEPS.map((item, index) => {
-            const isDone = index < currentStepIndex;
-            const isActive = item.id === step;
-            return (
-              <div key={item.id} className="flex min-w-0 flex-1 items-center gap-2">
+      <div className="relative px-4 pb-3">
+        <div className="rounded-[22px] border border-border/70 bg-background/35 px-4 py-3 shadow-[var(--elevation-1)]">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/[0.08]">
+              <HandCoins className="h-4 w-4 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-balance text-lg font-semibold leading-tight">{getStepTitle(step)}</h2>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {getStepSignal(step, direction, selectedPersonName, amountPreview)}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <div className="h-1 overflow-hidden rounded-full bg-muted/70">
+              <div
+                className="h-full rounded-full bg-foreground transition-all duration-300"
+                style={{ width: `${((currentStepIndex + 1) / CREATE_STEPS.length) * 100}%` }}
+              />
+            </div>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {CREATE_STEPS.map((item, index) => (
                 <span
+                  key={item.id}
                   className={cn(
-                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold transition-colors",
-                    isActive && "border-primary bg-primary/10 text-primary",
-                    isDone && "border-emerald-400/30 bg-emerald-400/10 text-emerald-400",
-                    !isActive && !isDone && "border-border bg-muted/30 text-muted-foreground",
+                    "truncate text-[10px] font-semibold uppercase tracking-[0.08em]",
+                    index <= currentStepIndex ? "text-foreground" : "text-muted-foreground/55",
                   )}
                 >
-                  {isDone ? <Check className="h-3 w-3" /> : index + 1}
-                </span>
-                <span className={cn("truncate text-[11px] font-medium", isActive ? "text-foreground" : "text-muted-foreground")}>
                   {item.label}
                 </span>
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="app-form-content-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-4 pb-28 pt-4">
+      <div className="app-form-content-scroll relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain px-4 pb-24 pt-1">
         {step === "relation" && (
-          <div className="space-y-5">
-            <div>
-              <div className="mb-3 flex items-center gap-2 text-muted-foreground">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <p className="text-sm">Estoy registrando dinero que...</p>
+          <div className="space-y-4">
+            <section className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Movimiento</Label>
+                <span className="text-[11px] text-muted-foreground">{FLOW_DIRECTIONS[direction].phrase}</span>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-1 rounded-full border border-border bg-background/45 p-1">
                 {(["LENT", "BORROWED", "SHARED"] as AgreementDirection[]).map((d) => {
-                  const info = DIRECTION_LABELS[d];
-                  const Icon = info.icon;
+                  const info = FLOW_DIRECTIONS[d];
+                  const Icon = DIRECTION_LABELS[d].icon;
                   return (
                     <button
                       key={d}
                       type="button"
                       onClick={() => setDirection(d)}
                       className={cn(
-                        "flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-2xl border px-2 text-center text-[11px] font-semibold transition-colors",
+                        "flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-full px-2 text-[11px] font-semibold transition-colors",
                         direction === d
-                          ? "border-primary/40 bg-primary/[0.08] text-primary"
-                          : "border-border bg-muted/25 text-muted-foreground hover:border-primary/30 hover:text-foreground",
+                          ? info.activeClass
+                          : "text-muted-foreground hover:bg-muted/45 hover:text-foreground",
                       )}
                     >
-                      <Icon className={cn("h-4 w-4", direction === d ? "text-primary" : info.color)} />
-                      {info.label}
+                      <Icon className={cn("h-3.5 w-3.5 shrink-0", direction === d ? info.iconClass : "text-muted-foreground")} />
+                      <span className="truncate">{info.label}</span>
                     </button>
                   );
                 })}
               </div>
-            </div>
+              <p className="px-1 text-xs leading-5 text-muted-foreground">{FLOW_DIRECTIONS[direction].detail}</p>
+            </section>
 
-            <div>
-              <Label className="mb-2 block text-sm">{personLabel}</Label>
+            <section className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{personLabel}</Label>
+                {contacts.length > 0 && showNewContact && (
+                  <button
+                    type="button"
+                    onClick={() => { setShowNewContact(false); setNewContactName(""); }}
+                    className="text-[11px] font-semibold text-primary"
+                  >
+                    Existente
+                  </button>
+                )}
+              </div>
+
               {!showNewContact && contacts.length > 0 ? (
-                <div className="space-y-3">
-                  <div className="grid gap-2">
-                    {contacts.slice(0, 8).map((contact) => (
+                <div className="space-y-2">
+                  <div className="grid gap-1.5">
+                    {contacts.slice(0, 6).map((contact) => (
                       <button
                         key={contact.id}
                         type="button"
                         onClick={() => setContactId(contact.id)}
                         className={cn(
-                          "flex min-h-11 items-center gap-3 rounded-2xl border px-3 text-left transition-colors",
+                          "flex min-h-10 items-center gap-3 rounded-2xl px-3 text-left transition-colors",
                           contactId === contact.id
-                            ? "border-primary/40 bg-primary/[0.08]"
-                            : "border-border bg-muted/20 hover:bg-muted/40",
+                            ? "bg-foreground text-background"
+                            : "bg-muted/25 text-foreground hover:bg-muted/45",
                         )}
                       >
                         <ContactAvatar name={contact.name} color={contact.avatarColor} size="sm" />
                         <span className="min-w-0 flex-1 truncate text-sm font-medium">{contact.name}</span>
-                        {contactId === contact.id && <Check className="h-4 w-4 shrink-0 text-primary" />}
+                        {contactId === contact.id && <Check className="h-4 w-4 shrink-0" />}
                       </button>
                     ))}
                   </div>
-                  {contacts.length > 8 && (
+                  {contacts.length > 6 && (
                     <select
                       value={contactId}
                       onChange={(event) => setContactId(event.target.value)}
@@ -1015,49 +1080,44 @@ function CreateAgreementForm({
                   <button
                     type="button"
                     onClick={() => { setShowNewContact(true); setContactId(""); }}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary transition hover:text-primary/80"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full px-1 text-xs font-semibold text-primary transition hover:text-primary/80"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     Nueva persona
                   </button>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="rounded-2xl border border-border bg-background/35 p-2">
                   <Input
-                    placeholder="Nombre (ej: Juan, Mamá, El Ruso)"
+                    placeholder="Nombre"
                     value={newContactName}
                     onChange={(event) => setNewContactName(event.target.value)}
                     autoFocus
-                    className="h-11 rounded-2xl"
+                    className="h-10 rounded-xl border-0 bg-transparent px-2 shadow-none focus-visible:ring-0"
                   />
-                  {contacts.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => { setShowNewContact(false); setNewContactName(""); }}
-                      className="text-xs font-medium text-muted-foreground transition hover:text-foreground"
-                    >
-                      Elegir una persona existente
-                    </button>
-                  )}
                 </div>
               )}
-            </div>
+            </section>
           </div>
         )}
 
         {step === "amount" && (
-          <div className="space-y-5">
-            <div className="rounded-2xl border border-border bg-muted/25 px-4 py-3">
-              <p className="text-xs text-muted-foreground">Acuerdo con</p>
-              <p className="mt-0.5 text-sm font-semibold">{selectedPersonName}</p>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold", FLOW_DIRECTIONS[direction].activeClass)}>
+                {FLOW_DIRECTIONS[direction].label}
+              </span>
+              <span className="rounded-full border border-border bg-muted/25 px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+                {selectedPersonName}
+              </span>
             </div>
 
-            <div>
-              <Label className="mb-2 flex items-center gap-2 text-sm">
+            <section className="rounded-[24px] border border-border bg-background/35 p-3">
+              <Label className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 <CircleDollarSign className="h-4 w-4 text-primary" />
-                Monto pendiente
+                Monto
               </Label>
-              <div className="flex gap-2">
+              <div className="flex items-stretch gap-2">
                 <Input
                   type="text"
                   inputMode="decimal"
@@ -1065,20 +1125,20 @@ function CreateAgreementForm({
                   value={amount}
                   onChange={(event) => setAmount(event.target.value)}
                   onKeyDown={onMoneyKeyDown}
-                  className="h-14 flex-1 rounded-2xl text-2xl font-semibold tabular-nums"
+                  className="h-16 flex-1 rounded-2xl border-0 bg-muted/30 text-3xl font-semibold tabular-nums shadow-none focus-visible:ring-1"
                   autoFocus
                 />
-                <div className="grid w-20 shrink-0 overflow-hidden rounded-2xl border border-input">
+                <div className="grid w-16 shrink-0 overflow-hidden rounded-2xl border border-border bg-muted/20">
                   {(["ARS", "USD"] as CurrencyCode[]).map((c) => (
                     <button
                       key={c}
                       type="button"
                       onClick={() => setCurrency(c)}
                       className={cn(
-                        "text-xs font-semibold transition-colors",
+                        "text-[11px] font-semibold transition-colors",
                         currency === c
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-transparent text-muted-foreground hover:text-foreground",
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:text-foreground",
                       )}
                     >
                       {c}
@@ -1086,36 +1146,43 @@ function CreateAgreementForm({
                   ))}
                 </div>
               </div>
-            </div>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                Este monto entra en tu posición interpersonal, separado de gastos y deuda formal.
+              </p>
+            </section>
           </div>
         )}
 
         {step === "context" && (
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-primary/15 bg-primary/[0.06] px-4 py-3">
-              <p className="text-xs text-muted-foreground">Vas a registrar</p>
-              <p className="mt-1 text-lg font-semibold tabular-nums">
-                <SensitiveAmount value={amountPreview} /> · {selectedPersonName}
-              </p>
+          <div className="space-y-3">
+            <div className="rounded-[22px] border border-border bg-background/35 px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Resumen</p>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{selectedPersonName}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{FLOW_DIRECTIONS[direction].label}</p>
+                </div>
+                <SensitiveAmount value={amountPreview} className="shrink-0 text-lg font-semibold tabular-nums" />
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="agreementDesc" className="mb-1.5 block text-sm">Para qué fue</Label>
+            <section className="space-y-2">
+              <Label htmlFor="agreementDesc" className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Motivo</Label>
               <Input
                 id="agreementDesc"
-                placeholder="Ej: viaje, alquiler, cena compartida"
+                placeholder="Viaje, alquiler, cena compartida..."
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                className="h-11 rounded-2xl"
+                className="h-11 rounded-2xl bg-background/35"
               />
-            </div>
+            </section>
 
-            <div>
-              <Label htmlFor="agreementDate" className="mb-2 flex items-center gap-2 text-sm">
+            <section className="space-y-2">
+              <Label htmlFor="agreementDate" className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 <CalendarDays className="h-4 w-4 text-primary" />
-                Cuándo debería resolverse
+                Resolución
               </Label>
-              <div className="mb-2 flex flex-wrap gap-2">
+              <div className="grid grid-cols-4 gap-1.5">
                 {[
                   { label: "Hoy", value: addDays(0) },
                   { label: "7 días", value: addDays(7) },
@@ -1127,7 +1194,7 @@ function CreateAgreementForm({
                     type="button"
                     onClick={() => setAgreedReturnDate(option.value)}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                      "h-9 rounded-full border px-2 text-[11px] font-semibold transition-colors",
                       agreedReturnDate === option.value
                         ? "border-primary/40 bg-primary/[0.08] text-primary"
                         : "border-border bg-muted/20 text-muted-foreground hover:text-foreground",
@@ -1142,13 +1209,13 @@ function CreateAgreementForm({
                 type="date"
                 value={agreedReturnDate}
                 onChange={(event) => setAgreedReturnDate(event.target.value)}
-                className="h-11 rounded-2xl"
+                className="h-11 rounded-2xl bg-background/35"
               />
-            </div>
+            </section>
 
             {accounts.length > 0 && (
-              <div>
-                <Label htmlFor="sourceAccount" className="mb-1.5 block text-sm">Cuenta vinculada</Label>
+              <section className="space-y-2">
+                <Label htmlFor="sourceAccount" className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Cuenta vinculada</Label>
                 <AccountSelect
                   id="sourceAccount"
                   value={sourceAccountId}
@@ -1156,26 +1223,30 @@ function CreateAgreementForm({
                   accounts={accounts}
                 />
                 {sourceAccountId && (
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     Meridian va a reflejar el movimiento en esa cuenta.
                   </p>
                 )}
-              </div>
+              </section>
             )}
           </div>
         )}
       </div>
 
-      <div className="shrink-0 border-t border-border bg-card/95 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 backdrop-blur-xl">
+      <div className="relative shrink-0 border-t border-border bg-card/95 px-4 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 backdrop-blur-xl">
+        <div className="mb-2 flex items-center justify-between px-1 text-[11px] text-muted-foreground">
+          <span>{CREATE_STEPS[currentStepIndex]?.label}</span>
+          <span>{currentStepIndex + 1}/{CREATE_STEPS.length}</span>
+        </div>
         <div className="flex gap-2">
           {step !== "relation" && (
-            <Button type="button" variant="outline" className="h-12 flex-1 rounded-2xl" onClick={goBack}>
-              Atrás
+            <Button type="button" variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-full" onClick={goBack} aria-label="Atrás">
+              <ChevronDown className="h-5 w-5 rotate-90" />
             </Button>
           )}
           <Button
             type="button"
-            className="h-12 flex-[2] rounded-2xl"
+            className="h-11 flex-1 rounded-full"
             disabled={(step === "relation" && !hasRelation) || (step === "amount" && !hasAmount) || isSaving}
             onClick={handlePrimary}
           >
