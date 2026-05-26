@@ -188,7 +188,20 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
 
   const debts = useMemo(() => debtsData?.debts ?? [], [debtsData]);
   const totalOutstanding = debtsData?.totalOutstanding ?? 0;
-  const summary = useMemo(() => buildDebtSummary(debts, totalOutstanding, todayMs), [debts, totalOutstanding, todayMs]);
+
+  // CC accounts that are NOT linked to any Debt record — shown as virtual items in the list
+  const unlinkedCCSummaries = useMemo(
+    () => ccSummaries.filter((s) => !debts.some((d) => d.accountId === s.id) && Math.abs(s.currentBalance) > 0),
+    [ccSummaries, debts],
+  );
+  const ccUnlinkedTotal = useMemo(
+    () => unlinkedCCSummaries.reduce((sum, s) => sum + Math.abs(s.currentBalance), 0),
+    [unlinkedCCSummaries],
+  );
+  const totalItemCount = debts.length + unlinkedCCSummaries.length;
+  const augmentedTotal = totalOutstanding + ccUnlinkedTotal;
+
+  const summary = useMemo(() => buildDebtSummary(debts, augmentedTotal, todayMs), [debts, augmentedTotal, todayMs]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -499,20 +512,14 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
         </AppFormPanel>
 
         <div className="space-y-5">
-          <DebtBriefing summary={summary} debtCount={debts.length} isLoading={isLoading} onCreate={openNewDebt} />
-
-          <CCAccountsSection
-            summaries={ccSummaries}
-            isLoading={isCCLoading}
-            onOpen={setActiveCCAccount}
-          />
+          <DebtBriefing summary={summary} debtCount={totalItemCount} isLoading={isLoading || isCCLoading} onCreate={openNewDebt} />
 
           <PremiumCard variant="default" className="overflow-hidden">
             <PremiumCardHeader className="pb-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <PremiumCardTitle>Compromisos pendientes</PremiumCardTitle>
-                  <PremiumCardDescription>Solo pasivos formales con saldo abierto hoy.</PremiumCardDescription>
+                  <PremiumCardDescription>Pasivos formales y tarjetas con saldo pendiente.</PremiumCardDescription>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <select
@@ -531,13 +538,20 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
               </div>
             </PremiumCardHeader>
             <PremiumCardContent>
-              {isLoading ? (
+              {isLoading || isCCLoading ? (
                 <DebtSkeletonList />
-              ) : debts.length === 0 ? (
+              ) : totalItemCount === 0 ? (
                 <DebtEmptyState onCreate={openNewDebt} />
               ) : (
                 <div className="grid gap-3">
                   <AnimatePresence initial={false}>
+                    {unlinkedCCSummaries.map((account) => (
+                      <CCVirtualCard
+                        key={account.id}
+                        account={account}
+                        onViewMovements={() => setActiveCCAccount(account)}
+                      />
+                    ))}
                     {debts.map((debt) => (
                       <DebtCard
                         key={debt.id}
@@ -891,6 +905,54 @@ function DebtEmptyState({ onCreate }: { onCreate: () => void }) {
         Crear compromiso
       </ActionButton>
     </div>
+  );
+}
+
+function CCVirtualCard({
+  account,
+  onViewMovements,
+}: {
+  account: CCSummary;
+  onViewMovements: () => void;
+}) {
+  const shouldReduceMotion = useReducedMotion();
+  const owed = Math.abs(account.currentBalance);
+  const currency = account.currency as "ARS" | "USD";
+
+  return (
+    <motion.article
+      layout
+      {...(shouldReduceMotion ? { initial: false } : cardMotion)}
+      className="rounded-[1.75rem] border border-border bg-muted/25 p-4 sm:p-5"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="truncate text-base font-semibold text-foreground">{account.name}</p>
+            <Badge className="border-sky-300/20 bg-sky-300/10 text-sky-400">Tarjeta importada</Badge>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Tarjeta de crédito · {account.currency}
+          </p>
+          {account.importedCount > 0 ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              {account.importedCount} mov. importados
+              {account.lastImportDate ? ` · Últ. ${formatDate(account.lastImportDate)}` : ""}
+            </p>
+          ) : null}
+        </div>
+        <div className="shrink-0 text-left sm:text-right">
+          <p className="text-xl font-semibold tabular-nums text-destructive">{formatMoney(owed, currency)}</p>
+          <p className="text-xs text-muted-foreground">saldo a pagar</p>
+        </div>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <ActionButton type="button" variant="glass" size="sm" onClick={onViewMovements}>
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          Ver movimientos
+        </ActionButton>
+      </div>
+    </motion.article>
   );
 }
 
