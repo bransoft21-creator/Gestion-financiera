@@ -1,4 +1,4 @@
-import { AgreementDirection, AgreementStatus, CardStatementStatus, DebtStatus, DebtType, GoalStatus, HouseholdKind, HouseholdMemberStatus, Prisma, TransactionOrigin, TransactionStatus, TransactionType } from "@prisma/client";
+import { AccountType, AgreementDirection, AgreementStatus, CardStatementStatus, DebtStatus, DebtType, GoalStatus, HouseholdKind, HouseholdMemberStatus, Prisma, TransactionOrigin, TransactionStatus, TransactionType } from "@prisma/client";
 import { argentinaMonthRangeUtc, formatArgentinaDateInput } from "@/lib/dates";
 import { isSmartImportEnabled } from "@/lib/feature-flags";
 import { prisma } from "../../lib/prisma";
@@ -80,6 +80,9 @@ export async function getDashboardSummary(
         occurredAt: { gte: monthStart, lt: nextMonthStart },
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
         origin: { not: TransactionOrigin.CARD_SUMMARY },
+        // CC purchases reduce the card balance but aren't a cash outflow — exclude them
+        // from monthly P&L regardless of origin. Cash impact only comes at payment time.
+        NOT: { type: TransactionType.EXPENSE, account: { type: AccountType.CREDIT_CARD } },
       },
       include: dashboardTransactionInclude,
       orderBy: { occurredAt: "desc" },
@@ -91,6 +94,9 @@ export async function getDashboardSummary(
         occurredAt: { gte: monthStart, lt: nextMonthStart },
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
         origin: { not: TransactionOrigin.CARD_SUMMARY },
+        // CC purchases reduce the card balance but aren't a cash outflow — exclude them
+        // from monthly P&L regardless of origin. Cash impact only comes at payment time.
+        NOT: { type: TransactionType.EXPENSE, account: { type: AccountType.CREDIT_CARD } },
       },
       include: dashboardTransactionInclude,
       orderBy: { occurredAt: "desc" },
