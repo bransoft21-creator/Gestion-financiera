@@ -79,10 +79,11 @@ export async function getDashboardSummary(
         ...activeTransactionWhere,
         occurredAt: { gte: monthStart, lt: nextMonthStart },
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
-        origin: { not: TransactionOrigin.CARD_SUMMARY },
-        // CC purchases reduce the card balance but aren't a cash outflow — exclude them
-        // from monthly P&L regardless of origin. Cash impact only comes at payment time.
-        NOT: { type: TransactionType.EXPENSE, account: { type: AccountType.CREDIT_CARD } },
+        // Exclude CC statement imports regardless of origin: these are card charges
+        // tracked via StatementTransaction, not real cash outflows. The actual cashflow
+        // impact comes when the card bill is paid (CARD_PAYMENT). This preserves
+        // manually-entered CC expenses (no statementTransaction link) in the P&L.
+        NOT: { type: TransactionType.EXPENSE, statementTransactions: { some: { deletedAt: null } } },
       },
       include: dashboardTransactionInclude,
       orderBy: { occurredAt: "desc" },
@@ -93,10 +94,11 @@ export async function getDashboardSummary(
         ...activeTransactionWhere,
         occurredAt: { gte: monthStart, lt: nextMonthStart },
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
-        origin: { not: TransactionOrigin.CARD_SUMMARY },
-        // CC purchases reduce the card balance but aren't a cash outflow — exclude them
-        // from monthly P&L regardless of origin. Cash impact only comes at payment time.
-        NOT: { type: TransactionType.EXPENSE, account: { type: AccountType.CREDIT_CARD } },
+        // Exclude CC statement imports regardless of origin: these are card charges
+        // tracked via StatementTransaction, not real cash outflows. The actual cashflow
+        // impact comes when the card bill is paid (CARD_PAYMENT). This preserves
+        // manually-entered CC expenses (no statementTransaction link) in the P&L.
+        NOT: { type: TransactionType.EXPENSE, statementTransactions: { some: { deletedAt: null } } },
       },
       include: dashboardTransactionInclude,
       orderBy: { occurredAt: "desc" },
