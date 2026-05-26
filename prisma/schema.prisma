@@ -70,6 +70,7 @@ enum TransactionType {
   INCOME
   EXPENSE
   TRANSFER
+  CARD_PAYMENT
   ADJUSTMENT
   DEBT_PAYMENT
   GOAL_CONTRIBUTION
@@ -185,6 +186,22 @@ enum DebtStatus {
   CANCELED
 }
 
+enum CardStatementStatus {
+  OPEN
+  CLOSED_PENDING_PAYMENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  ARCHIVED
+}
+
+enum CardPaymentKind {
+  MINIMUM
+  FULL
+  PARTIAL
+  CUSTOM
+}
+
 enum InvestmentAccountType {
   BROKERAGE
   RETIREMENT
@@ -243,6 +260,7 @@ model UserProfile {
   recurringExpenses    RecurringExpense[]      @relation("RecurringExpenseCreatedBy")
   goals                Goal[]                  @relation("GoalCreatedBy")
   debts                Debt[]                  @relation("DebtCreatedBy")
+  creditCards          CreditCard[]            @relation("CreditCardCreatedBy")
   investmentAccounts   InvestmentAccount[]     @relation("InvestmentAccountCreatedBy")
   investmentAssets     InvestmentAsset[]       @relation("InvestmentAssetCreatedBy")
   investmentActivities InvestmentTransaction[] @relation("InvestmentTransactionCreatedBy")
@@ -275,6 +293,10 @@ model Household {
   accounts               Account[]
   categories             Category[]
   transactions           Transaction[]
+  creditCards            CreditCard[]
+  cardStatements         CardStatement[]
+  statementTransactions  StatementTransaction[]
+  cardPayments           CardPayment[]
   sharedTransactions     SharedTransaction[]
   settlements            HouseholdSettlement[]
   budgets                Budget[]
@@ -354,6 +376,8 @@ model Account {
   investmentAccounts     InvestmentAccount[]
   agreementsAsSource     PersonalAgreement[]     @relation("AgreementSourceAccount")
   linkedDebts            Debt[]
+  creditCard             CreditCard?
+  cardPaymentsAsSource   CardPayment[]            @relation("CardPaymentSourceAccount")
 
   @@index([householdId])
   @@index([createdById])
@@ -427,6 +451,8 @@ model Transaction {
   goal                  Goal?                  @relation(fields: [goalId], references: [id])
   debt                  Debt?                  @relation(fields: [debtId], references: [id])
   investmentTransaction InvestmentTransaction? @relation("FinanceTransactionInvestmentTransaction", fields: [investmentTransactionId], references: [id])
+  statementTransactions StatementTransaction[]
+  cardPayments          CardPayment[]
   sharedTransaction     SharedTransaction?
   agreementEvents       AgreementEvent[]  @relation("AgreementEventTransaction")
 
@@ -599,6 +625,127 @@ model Debt {
   @@index([householdId, nextDueDate])
   @@index([createdById])
   @@index([accountId])
+}
+
+model CreditCard {
+  id          String       @id @default(cuid())
+  householdId String
+  createdById String
+  accountId   String?      @unique
+  name        String
+  issuer      String?
+  network     String?
+  last4       String?
+  closeDay    Int?
+  dueDay      Int?
+  currency    CurrencyCode @default(ARS)
+  creditLimit Decimal?     @db.Decimal(18, 2)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  household  Household              @relation(fields: [householdId], references: [id])
+  createdBy  UserProfile            @relation("CreditCardCreatedBy", fields: [createdById], references: [id])
+  account    Account?               @relation(fields: [accountId], references: [id])
+  statements CardStatement[]
+  statementTransactions StatementTransaction[]
+  payments   CardPayment[]
+
+  @@index([householdId, isActive])
+  @@index([createdById])
+  @@index([accountId])
+}
+
+model CardStatement {
+  id             String              @id @default(cuid())
+  householdId    String
+  creditCardId   String
+  currency       CurrencyCode
+  periodYear     Int
+  periodMonth    Int
+  cycleStartDate DateTime
+  cycleEndDate   DateTime
+  closeDate      DateTime?
+  dueDate        DateTime?
+  status         CardStatementStatus @default(OPEN)
+  totalAmount    Decimal             @default(0) @db.Decimal(18, 2)
+  pendingAmount  Decimal             @default(0) @db.Decimal(18, 2)
+  minimumPayment Decimal?            @db.Decimal(18, 2)
+  paidAmount     Decimal             @default(0) @db.Decimal(18, 2)
+  importedAt     DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  deletedAt      DateTime?
+
+  household    Household              @relation(fields: [householdId], references: [id])
+  creditCard   CreditCard             @relation(fields: [creditCardId], references: [id])
+  transactions StatementTransaction[]
+  payments     CardPayment[]
+
+  @@unique([creditCardId, periodYear, periodMonth])
+  @@index([householdId, status, dueDate])
+  @@index([creditCardId, status])
+}
+
+model StatementTransaction {
+  id                 String       @id @default(cuid())
+  householdId        String
+  creditCardId       String
+  statementId        String
+  transactionId      String?
+  categoryId         String?
+  description        String?
+  currency           CurrencyCode
+  amount             Decimal      @db.Decimal(18, 2)
+  occurredAt         DateTime
+  installmentGroupId String?
+  installmentNumber  Int?
+  totalInstallments  Int?
+  isTax              Boolean      @default(false)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  deletedAt          DateTime?
+
+  household   Household     @relation(fields: [householdId], references: [id])
+  creditCard  CreditCard    @relation(fields: [creditCardId], references: [id])
+  statement   CardStatement @relation(fields: [statementId], references: [id])
+  transaction Transaction?  @relation(fields: [transactionId], references: [id])
+
+  @@index([householdId, occurredAt])
+  @@index([creditCardId, occurredAt])
+  @@index([statementId])
+  @@index([transactionId])
+  @@unique([transactionId])
+  @@index([installmentGroupId])
+}
+
+model CardPayment {
+  id              String          @id @default(cuid())
+  householdId     String
+  creditCardId    String
+  statementId     String
+  sourceAccountId String
+  transactionId   String?
+  kind            CardPaymentKind
+  currency        CurrencyCode
+  amount          Decimal         @db.Decimal(18, 2)
+  paidAt          DateTime
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  deletedAt       DateTime?
+
+  household     Household     @relation(fields: [householdId], references: [id])
+  creditCard    CreditCard    @relation(fields: [creditCardId], references: [id])
+  statement     CardStatement @relation(fields: [statementId], references: [id])
+  sourceAccount Account       @relation("CardPaymentSourceAccount", fields: [sourceAccountId], references: [id])
+  transaction   Transaction?  @relation(fields: [transactionId], references: [id])
+
+  @@index([householdId, paidAt])
+  @@index([creditCardId, paidAt])
+  @@index([statementId, paidAt])
+  @@index([sourceAccountId])
+  @@index([transactionId])
 }
 
 model MonthlySnapshot {

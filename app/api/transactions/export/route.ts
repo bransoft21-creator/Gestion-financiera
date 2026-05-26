@@ -27,6 +27,7 @@ const typeLabels: Record<TransactionType, string> = {
   TRANSFER: "Transferencia",
   ADJUSTMENT: "Ajuste",
   DEBT_PAYMENT: "Pago de deuda",
+  CARD_PAYMENT: "Pago de tarjeta",
   GOAL_CONTRIBUTION: "Aporte a meta",
   INVESTMENT: "Inversión",
   PERSONAL_LOAN_GIVEN: "Préstamo otorgado",

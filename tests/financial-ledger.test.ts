@@ -137,6 +137,22 @@ describe("financial ledger", () => {
     ]);
   });
 
+  it("treats credit card payments as liability transfers, not expenses", () => {
+    const deltas = computeTransactionBalanceDeltas({
+      type: TransactionType.CARD_PAYMENT,
+      status: TransactionStatus.CONFIRMED,
+      accountId: "bank",
+      transferAccountId: "visa",
+      amount: 48_000,
+      transferAmount: 48_000,
+    });
+
+    assert.deepEqual(deltas, [
+      { accountId: "bank", delta: -48_000 },
+      { accountId: "visa", delta: 48_000 },
+    ]);
+  });
+
   it("ignores canceled transactions for balances and linked entities", () => {
     assert.deepEqual(
       computeTransactionBalanceDeltas({

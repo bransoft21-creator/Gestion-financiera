@@ -21,7 +21,7 @@ describe("transaction validation", () => {
     assert.equal(parsed.occurredAt.toISOString(), "2026-03-15T12:00:00.000Z");
   });
 
-  it("accepts income, expense, transfer and adjustment creations", () => {
+  it("accepts income, expense, transfer, card payment and adjustment creations", () => {
     const income = createTransactionSchema.parse({ ...base, type: "INCOME" });
     const expense = createTransactionSchema.parse({ ...base, type: "EXPENSE" });
     const transfer = createTransactionSchema.parse({
@@ -29,12 +29,29 @@ describe("transaction validation", () => {
       type: "TRANSFER",
       transferAccountId: "account-2",
     });
+    const cardPayment = createTransactionSchema.parse({
+      ...base,
+      type: "CARD_PAYMENT",
+      transferAccountId: "credit-card-account",
+    });
     const adjustment = createTransactionSchema.parse({ ...base, type: "ADJUSTMENT" });
 
     assert.equal(income.type, "INCOME");
     assert.equal(expense.type, "EXPENSE");
     assert.equal(transfer.transferAccountId, "account-2");
+    assert.equal(cardPayment.transferAccountId, "credit-card-account");
     assert.equal(adjustment.type, "ADJUSTMENT");
+  });
+
+  it("requires a destination account for card payments", () => {
+    const parsed = createTransactionSchema.safeParse({
+      ...base,
+      type: "CARD_PAYMENT",
+    });
+
+    assert.equal(parsed.success, false);
+    if (parsed.success) return;
+    assert.equal(parsed.error.issues[0].path[0], "transferAccountId");
   });
 
   it("treats blank optional transaction metadata as omitted", () => {

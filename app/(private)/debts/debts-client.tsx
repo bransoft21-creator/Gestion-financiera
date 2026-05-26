@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDebts, useCreateDebt, useUpdateDebt, useDeleteDebt, usePayDebt } from "@/hooks/use-debts";
 import { useCCSummaries, type CCSummary } from "@/hooks/use-cc-summary";
+import {
+  useCreditCards,
+  usePayCardStatement,
+  type CardStatementItem,
+  type CreditCardItem,
+} from "@/hooks/use-credit-cards";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   AlertTriangle,
@@ -164,10 +170,12 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
   const [statusFilter, setStatusFilter] = useState<string>("");
   const { data: debtsData, isLoading } = useDebts(householdId, statusFilter || undefined);
   const { data: ccSummaries = [], isLoading: isCCLoading } = useCCSummaries(householdId);
+  const { data: creditCards = [], isLoading: isCreditCardsLoading } = useCreditCards(householdId);
   const createDebt = useCreateDebt();
   const updateDebt = useUpdateDebt();
   const deleteDebt = useDeleteDebt();
   const payDebt = usePayDebt();
+  const payCardStatement = usePayCardStatement();
 
   const [activeCCAccount, setActiveCCAccount] = useState<CCSummary | null>(null);
 
@@ -185,21 +193,31 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
   const [quickPayAccountId, setQuickPayAccountId] = useState<string>("");
   const [quickPayAmount, setQuickPayAmount] = useState<string>("");
   const [quickPayErrors, setQuickPayErrors] = useState<{ accountId?: string; amount?: string; debtId?: string }>({});
+  const [payingStatementId, setPayingStatementId] = useState<string | null>(null);
+  const [cardPayAccountId, setCardPayAccountId] = useState("");
+  const [cardPayAmount, setCardPayAmount] = useState("");
+  const [cardPayErrors, setCardPayErrors] = useState<{ sourceAccountId?: string; amount?: string }>({});
 
   const debts = useMemo(() => debtsData?.debts ?? [], [debtsData]);
   const totalOutstanding = debtsData?.totalOutstanding ?? 0;
 
   // CC accounts that are NOT linked to any Debt record — shown as virtual items in the list
   const unlinkedCCSummaries = useMemo(
-    () => ccSummaries.filter((s) => !debts.some((d) => d.accountId === s.id) && Math.abs(s.currentBalance) > 0),
-    [ccSummaries, debts],
+    () => creditCards.length > 0
+      ? []
+      : ccSummaries.filter((s) => !debts.some((d) => d.accountId === s.id) && Math.abs(s.currentBalance) > 0),
+    [ccSummaries, creditCards.length, debts],
   );
   const ccUnlinkedTotal = useMemo(
     () => unlinkedCCSummaries.reduce((sum, s) => sum + Math.abs(s.currentBalance), 0),
     [unlinkedCCSummaries],
   );
+  const cardStatementTotal = useMemo(
+    () => creditCards.reduce((sum, card) => sum + (card.activeStatement?.pendingAmount ?? 0), 0),
+    [creditCards],
+  );
   const totalItemCount = debts.length + unlinkedCCSummaries.length;
-  const augmentedTotal = totalOutstanding + ccUnlinkedTotal;
+  const augmentedTotal = totalOutstanding + ccUnlinkedTotal + cardStatementTotal;
 
   const summary = useMemo(() => buildDebtSummary(debts, augmentedTotal, todayMs), [debts, augmentedTotal, todayMs]);
 
@@ -315,6 +333,60 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
     } catch (err: unknown) {
       const e = err as Error & { fieldErrors?: { accountId?: string; amount?: string; debtId?: string } };
       if (e.fieldErrors) setQuickPayErrors(e.fieldErrors);
+      else toast.error(e.message);
+    }
+  }
+
+  function openCardPayment(statement: CardStatementItem) {
+    const defaultPayAccount = getPreferredPaymentAccount(accounts, statement.currency);
+    setPayingStatementId(statement.id);
+    setCardPayAccountId(defaultPayAccount?.id ?? "");
+    setCardPayAmount(String(statement.minimumPayment ?? statement.pendingAmount));
+    setCardPayErrors({});
+  }
+
+  function cancelCardPayment() {
+    setPayingStatementId(null);
+    setCardPayAccountId("");
+    setCardPayAmount("");
+    setCardPayErrors({});
+  }
+
+  async function handleCardPaymentConfirm(statement: CardStatementItem) {
+    if (!cardPayAccountId) {
+      setCardPayErrors({ sourceAccountId: "Seleccioná una cuenta origen." });
+      return;
+    }
+
+    const parsedAmount = parseMoneyInput(cardPayAmount);
+    if (!parsedAmount.success || parsedAmount.data == null) {
+      setCardPayErrors({ amount: parsedAmount.success ? "Ingresá un monto." : parsedAmount.error });
+      return;
+    }
+
+    if (parsedAmount.data > statement.pendingAmount) {
+      setCardPayErrors({ amount: `El pago no puede superar el saldo pendiente (${formatMoney(statement.pendingAmount, statement.currency)}).` });
+      return;
+    }
+
+    setCardPayErrors({});
+    try {
+      await payCardStatement.mutateAsync({
+        householdId,
+        statementId: statement.id,
+        sourceAccountId: cardPayAccountId,
+        amount: parsedAmount.data,
+        kind: parsedAmount.data >= statement.pendingAmount
+          ? "FULL"
+          : statement.minimumPayment != null && Math.abs(parsedAmount.data - statement.minimumPayment) < 0.01
+            ? "MINIMUM"
+            : "PARTIAL",
+        paidAt: formatArgentinaDateInput(),
+      });
+      cancelCardPayment();
+    } catch (err: unknown) {
+      const e = err as Error & { fieldErrors?: { sourceAccountId?: string; amount?: string } };
+      if (e.fieldErrors) setCardPayErrors(e.fieldErrors);
       else toast.error(e.message);
     }
   }
@@ -512,7 +584,23 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
         </AppFormPanel>
 
         <div className="space-y-5">
-          <DebtBriefing summary={summary} debtCount={totalItemCount} isLoading={isLoading || isCCLoading} onCreate={openNewDebt} />
+          <DebtBriefing summary={summary} debtCount={totalItemCount + creditCards.length} isLoading={isLoading || isCCLoading || isCreditCardsLoading} onCreate={openNewDebt} />
+
+          <CreditCardsStatementPanel
+            cards={creditCards}
+            accounts={accounts}
+            isLoading={isCreditCardsLoading}
+            payingStatementId={payingStatementId}
+            payAccountId={cardPayAccountId}
+            payAmount={cardPayAmount}
+            payErrors={cardPayErrors}
+            isPaying={payCardStatement.isPending}
+            onOpenPayment={openCardPayment}
+            onCancelPayment={cancelCardPayment}
+            onPayAccountChange={setCardPayAccountId}
+            onPayAmountChange={setCardPayAmount}
+            onConfirmPayment={handleCardPaymentConfirm}
+          />
 
           <PremiumCard variant="default" className="overflow-hidden">
             <PremiumCardHeader className="pb-4">
@@ -538,10 +626,14 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
               </div>
             </PremiumCardHeader>
             <PremiumCardContent>
-              {isLoading || isCCLoading ? (
+              {isLoading || isCCLoading || isCreditCardsLoading ? (
                 <DebtSkeletonList />
-              ) : totalItemCount === 0 ? (
+              ) : totalItemCount === 0 && creditCards.length === 0 ? (
                 <DebtEmptyState onCreate={openNewDebt} />
+              ) : totalItemCount === 0 ? (
+                <div className="rounded-[1.75rem] border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+                  Las tarjetas ya se gestionan por resumen arriba. Acá van a aparecer préstamos y cuotas no vinculadas.
+                </div>
               ) : (
                 <div className="grid gap-3">
                   <AnimatePresence initial={false}>
@@ -687,6 +779,259 @@ function DebtBriefMetric({
     <div className="min-w-0 rounded-3xl border border-border bg-muted/30 p-4">
       <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
       <p className="mt-3 text-[11px] font-medium uppercase text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function CreditCardsStatementPanel({
+  cards,
+  accounts,
+  isLoading,
+  payingStatementId,
+  payAccountId,
+  payAmount,
+  payErrors,
+  isPaying,
+  onOpenPayment,
+  onCancelPayment,
+  onPayAccountChange,
+  onPayAmountChange,
+  onConfirmPayment,
+}: {
+  cards: CreditCardItem[];
+  accounts: AccountOption[];
+  isLoading: boolean;
+  payingStatementId: string | null;
+  payAccountId: string;
+  payAmount: string;
+  payErrors: { sourceAccountId?: string; amount?: string };
+  isPaying: boolean;
+  onOpenPayment: (statement: CardStatementItem) => void;
+  onCancelPayment: () => void;
+  onPayAccountChange: (value: string) => void;
+  onPayAmountChange: (value: string) => void;
+  onConfirmPayment: (statement: CardStatementItem) => void;
+}) {
+  if (!isLoading && cards.length === 0) return null;
+
+  return (
+    <PremiumCard variant="raised" className="overflow-hidden">
+      <PremiumCardHeader className="pb-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <PremiumCardTitle>Tarjetas de crédito</PremiumCardTitle>
+            <PremiumCardDescription>Resúmenes, ciclos y pagos separados del historial.</PremiumCardDescription>
+          </div>
+          <Badge className="w-fit border-sky-300/20 bg-sky-300/10 text-sky-400">
+            Statements
+          </Badge>
+        </div>
+      </PremiumCardHeader>
+      <PremiumCardContent>
+        {isLoading ? (
+          <div className="grid gap-3">
+            {[0, 1].map((item) => (
+              <Skeleton key={item} className="h-56 rounded-[1.75rem] bg-muted" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {cards.map((card) => (
+              <CreditCardStatementCard
+                key={card.id}
+                card={card}
+                accounts={accounts}
+                isPaymentOpen={payingStatementId === card.activeStatement?.id}
+                payAccountId={payAccountId}
+                payAmount={payAmount}
+                payErrors={payErrors}
+                isPaying={isPaying}
+                onOpenPayment={onOpenPayment}
+                onCancelPayment={onCancelPayment}
+                onPayAccountChange={onPayAccountChange}
+                onPayAmountChange={onPayAmountChange}
+                onConfirmPayment={onConfirmPayment}
+              />
+            ))}
+          </div>
+        )}
+      </PremiumCardContent>
+    </PremiumCard>
+  );
+}
+
+function CreditCardStatementCard({
+  card,
+  accounts,
+  isPaymentOpen,
+  payAccountId,
+  payAmount,
+  payErrors,
+  isPaying,
+  onOpenPayment,
+  onCancelPayment,
+  onPayAccountChange,
+  onPayAmountChange,
+  onConfirmPayment,
+}: {
+  card: CreditCardItem;
+  accounts: AccountOption[];
+  isPaymentOpen: boolean;
+  payAccountId: string;
+  payAmount: string;
+  payErrors: { sourceAccountId?: string; amount?: string };
+  isPaying: boolean;
+  onOpenPayment: (statement: CardStatementItem) => void;
+  onCancelPayment: () => void;
+  onPayAccountChange: (value: string) => void;
+  onPayAmountChange: (value: string) => void;
+  onConfirmPayment: (statement: CardStatementItem) => void;
+}) {
+  const statement = card.activeStatement;
+  const pending = statement?.pendingAmount ?? 0;
+  const currency = card.currency;
+  const pressure = getCardPressureCopy(card.pressure);
+  const paymentAccounts = accounts.filter((account) => account.currency === currency && account.type !== "CREDIT_CARD");
+  const canPay = !!statement && pending > 0 && !!card.accountId && paymentAccounts.length > 0;
+
+  return (
+    <article className="rounded-[1.75rem] border border-border bg-muted/25 p-4 sm:p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="truncate text-base font-semibold text-foreground">{card.name}</p>
+            <Badge className={getStatementBadgeClass(statement?.status ?? "OPEN")}>
+              {statement ? getStatementStatusLabel(statement.status) : "Sin resumen"}
+            </Badge>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {card.issuer ?? "Tarjeta"} · {card.currency}
+            {card.last4 ? ` · **** ${card.last4}` : ""}
+          </p>
+          {statement?.dueDate ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Vence {formatDate(statement.dueDate)} · {pressure}
+            </p>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">{pressure}</p>
+          )}
+        </div>
+        <div className="shrink-0 text-left lg:text-right">
+          <p className="text-[11px] font-semibold uppercase text-muted-foreground">Saldo pendiente</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+            {formatMoney(pending, currency)}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Mínimo: {statement?.minimumPayment != null ? formatMoney(statement.minimumPayment, currency) : "No informado"}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <CardStatementMetric label="Pendiente" value={statement ? formatMoney(pending, currency) : "Sin resumen"} />
+        <CardStatementMetric
+          label="Ciclo actual"
+          value={card.currentStatement ? formatMoney(card.currentStatement.totalAmount, currency) : "Sin consumos"}
+        />
+        <CardStatementMetric label="Historial" value={`${card.history.length} resúmenes`} />
+      </div>
+
+      {card.utilizationPercent != null ? (
+        <div className="mt-4">
+          <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+            <span>Uso de límite</span>
+            <span>{card.utilizationPercent}%</span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted/70">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-sky-300 via-cyan-300 to-emerald-200"
+              style={{ width: `${Math.min(card.utilizationPercent, 100)}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {canPay && statement ? (
+          <ActionButton
+            type="button"
+            size="sm"
+            onClick={isPaymentOpen ? onCancelPayment : () => onOpenPayment(statement)}
+          >
+            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+            Pagar tarjeta
+          </ActionButton>
+        ) : null}
+        <Badge className="border-border bg-muted/30 text-muted-foreground">
+          {statement?.transactionCount ?? 0} movimientos del resumen
+        </Badge>
+        <Badge className="border-border bg-muted/30 text-muted-foreground">
+          {statement?.paymentCount ?? 0} pagos
+        </Badge>
+      </div>
+
+      <AnimatePresence initial={false}>
+        {isPaymentOpen && statement ? (
+          <motion.div
+            {...cardMotion}
+            className="mt-4 space-y-3 rounded-[1.5rem] border border-emerald-300/20 bg-emerald-300/10 p-4"
+          >
+            <p className="text-xs font-semibold uppercase text-emerald-400">Pago de resumen</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Desde</label>
+                <select
+                  className="v2-focus-ring h-10 w-full rounded-2xl border border-border bg-card/70 px-3 text-base md:text-sm text-foreground outline-none"
+                  value={payAccountId}
+                  onChange={(e) => onPayAccountChange(e.target.value)}
+                >
+                  {paymentAccounts.map((account) => (
+                    <option key={account.id} value={account.id}>{account.name}</option>
+                  ))}
+                </select>
+                {payErrors.sourceAccountId ? <p className="text-xs text-rose-200">{payErrors.sourceAccountId}</p> : null}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Monto ({currency})</label>
+                <Input
+                  inputMode="decimal"
+                  onKeyDown={onMoneyKeyDown}
+                  value={payAmount}
+                  onChange={(e) => onPayAmountChange(e.target.value)}
+                  className="v2-focus-ring h-10 rounded-2xl border-border bg-card/70 text-foreground placeholder:text-muted-foreground"
+                />
+                {payErrors.amount ? <p className="text-xs text-rose-200">{payErrors.amount}</p> : null}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {statement.minimumPayment != null ? (
+                <ActionButton type="button" variant="glass" size="sm" onClick={() => onPayAmountChange(String(statement.minimumPayment))}>
+                  Mínimo
+                </ActionButton>
+              ) : null}
+              <ActionButton type="button" variant="glass" size="sm" onClick={() => onPayAmountChange(String(statement.pendingAmount))}>
+                Total
+              </ActionButton>
+              <ActionButton type="button" size="sm" disabled={isPaying} onClick={() => onConfirmPayment(statement)}>
+                {isPaying ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+                Confirmar
+              </ActionButton>
+              <ActionButton type="button" variant="quiet" size="sm" onClick={onCancelPayment}>
+                Cancelar
+              </ActionButton>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </article>
+  );
+}
+
+function CardStatementMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-border bg-muted/30 p-3">
+      <p className="text-[10px] font-semibold uppercase text-muted-foreground">{label}</p>
       <p className="mt-1 truncate text-sm font-semibold tabular-nums text-foreground">{value}</p>
     </div>
   );
@@ -1424,6 +1769,40 @@ function getDebtStatusClass(status: DebtStatus) {
   if (status === "PAUSED") return "border-sky-300/20 bg-sky-300/10 text-sky-400";
   if (status === "DEFAULTED") return "border-rose-300/20 bg-rose-400/10 text-destructive";
   return "border-border bg-muted/20 text-muted-foreground";
+}
+
+function getStatementStatusLabel(status: CardStatementItem["status"]) {
+  if (status === "OPEN") return "Ciclo actual";
+  if (status === "CLOSED_PENDING_PAYMENT") return "Resumen cerrado";
+  if (status === "PARTIALLY_PAID") return "Pago parcial";
+  if (status === "PAID") return "Pagado";
+  if (status === "OVERDUE") return "Vencido";
+  return "Archivado";
+}
+
+function getStatementBadgeClass(status: CardStatementItem["status"]) {
+  if (status === "OVERDUE") return "border-rose-300/20 bg-rose-400/10 text-destructive";
+  if (status === "CLOSED_PENDING_PAYMENT") return "border-amber-300/20 bg-amber-300/10 text-amber-500";
+  if (status === "PARTIALLY_PAID") return "border-sky-300/20 bg-sky-300/10 text-sky-400";
+  if (status === "PAID") return "border-emerald-300/20 bg-emerald-300/10 text-emerald-400";
+  if (status === "ARCHIVED") return "border-border bg-muted/20 text-muted-foreground";
+  return "border-cyan-300/20 bg-cyan-300/10 text-cyan-400";
+}
+
+function getCardPressureCopy(pressure: CreditCardItem["pressure"]) {
+  if (pressure === "overdue") return "Presión financiera alta: vencida";
+  if (pressure === "high") return "Presión financiera alta";
+  if (pressure === "medium") return "Presión financiera media";
+  if (pressure === "low") return "Presión financiera baja";
+  return "Sin presión financiera";
+}
+
+function getPreferredPaymentAccount(accounts: AccountOption[], currency: CurrencyCode) {
+  return (
+    accounts.find((account) => account.currency === currency && account.type === "BANK") ??
+    accounts.find((account) => account.currency === currency && account.type !== "CREDIT_CARD") ??
+    accounts.find((account) => account.type !== "CREDIT_CARD")
+  );
 }
 
 function formatDate(value: string) {

@@ -1,4 +1,4 @@
-import { AgreementDirection, AgreementStatus, DebtStatus, GoalStatus, HouseholdKind, HouseholdMemberStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { AgreementDirection, AgreementStatus, CardStatementStatus, DebtStatus, DebtType, GoalStatus, HouseholdKind, HouseholdMemberStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { argentinaMonthRangeUtc, formatArgentinaDateInput } from "@/lib/dates";
 import { isSmartImportEnabled } from "@/lib/feature-flags";
 import { prisma } from "../../lib/prisma";
@@ -65,6 +65,7 @@ export async function getDashboardSummary(
     household,
     activeAgreements,
     unpaidHouseholdRecurring,
+    cardStatementsDue,
   ] = await Promise.all([
     prisma.transaction.findMany({
       where: {
@@ -128,7 +129,7 @@ export async function getDashboardSummary(
         deletedAt: null,
         nextDueDate: { gte: monthStart, lt: nextMonthStart },
       },
-      select: { currency: true, minimumPayment: true, outstandingAmount: true },
+      select: { type: true, currency: true, minimumPayment: true, outstandingAmount: true },
     }),
     prisma.account.findMany({
       where: { householdId, deletedAt: null, isArchived: false },
@@ -185,6 +186,29 @@ export async function getDashboardSummary(
       },
       select: { currency: true, estimatedAmount: true },
     }),
+    prisma.cardStatement.findMany({
+      where: {
+        householdId,
+        deletedAt: null,
+        status: {
+          in: [
+            CardStatementStatus.CLOSED_PENDING_PAYMENT,
+            CardStatementStatus.PARTIALLY_PAID,
+            CardStatementStatus.OVERDUE,
+          ],
+        },
+        pendingAmount: { gt: 0 },
+        OR: [
+          { dueDate: { gte: monthStart, lt: nextMonthStart } },
+          { status: CardStatementStatus.OVERDUE },
+        ],
+      },
+      select: {
+        currency: true,
+        pendingAmount: true,
+        minimumPayment: true,
+      },
+    }),
   ]);
 
   const primaryCurrency = household.defaultCurrency;
@@ -208,6 +232,8 @@ export async function getDashboardSummary(
   const primaryRecurringExpenses = filterCurrency(recurringExpenses, primaryCurrency, (expense) => expense.currency);
   const primaryActiveGoals = filterCurrency(activeGoals, primaryCurrency, (goal) => goal.currency);
   const primaryUpcomingDebts = filterCurrency(upcomingDebts, primaryCurrency, (debt) => debt.currency);
+  const primaryUpcomingNonCardDebts = primaryUpcomingDebts.filter((debt) => debt.type !== DebtType.CREDIT_CARD);
+  const primaryCardStatementsDue = filterCurrency(cardStatementsDue, primaryCurrency, (statement) => statement.currency);
   const primaryCurrentDebts = filterCurrency(currentDebts, primaryCurrency, (debt) => debt.currency);
   const primaryAccounts = filterCurrency(accounts, primaryCurrency, (account) => account.currency);
   const primaryUnpaidHouseholdRecurring = filterCurrency(
@@ -255,7 +281,13 @@ export async function getDashboardSummary(
       ...primaryUnpaidHouseholdRecurring.map((p) => ({ amount: p.estimatedAmount })),
     ],
     goals: primaryActiveGoals,
-    debts: primaryUpcomingDebts,
+    debts: [
+      ...primaryUpcomingNonCardDebts,
+      ...primaryCardStatementsDue.map((statement) => ({
+        minimumPayment: statement.minimumPayment,
+        outstandingAmount: statement.pendingAmount,
+      })),
+    ],
     totalOutstandingDebt: liabilitySummary.liabilities,
     interpersonalToPay: interpersonalPosition.toPay,
   });

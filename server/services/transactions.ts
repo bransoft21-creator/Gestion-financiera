@@ -46,8 +46,8 @@ export async function createTransaction(
 
   // Cross-field business rules (schema covers the simple cases; service covers
   // the merged-state cases that need current DB values in update/delete).
-  if (input.type === TransactionType.TRANSFER && !input.transferAccountId) {
-    throw new ApiError(400, "transferAccountId es requerido para transferencias");
+  if ((input.type === TransactionType.TRANSFER || input.type === TransactionType.CARD_PAYMENT) && !input.transferAccountId) {
+    throw new ApiError(400, "transferAccountId es requerido para este movimiento");
   }
   if (input.transferAccountId && input.accountId === input.transferAccountId) {
     throw new ApiError(400, "La cuenta destino no puede ser igual a la cuenta origen");
@@ -210,7 +210,7 @@ export async function listTransactions(
       count += row._count.id;
       const amount = Number(row._sum.amount ?? 0);
       if (row.type === "INCOME") income += amount;
-      else if (row.type !== "TRANSFER") expenses += amount;
+      else if (row.type !== "TRANSFER" && row.type !== "CARD_PAYMENT") expenses += amount;
     }
     totals = { income, expenses, count };
   }
@@ -251,8 +251,8 @@ export async function updateTransaction(
     const newGoalId =
       input.goalId !== undefined ? input.goalId : current.goalId;
 
-    if (newType === TransactionType.TRANSFER && !newTransferAccountId) {
-      throw new ApiError(400, "transferAccountId es requerido para transferencias");
+    if ((newType === TransactionType.TRANSFER || newType === TransactionType.CARD_PAYMENT) && !newTransferAccountId) {
+      throw new ApiError(400, "transferAccountId es requerido para este movimiento");
     }
     if (newTransferAccountId && newAccountId === newTransferAccountId) {
       throw new ApiError(400, "La cuenta destino no puede ser igual a la cuenta origen");

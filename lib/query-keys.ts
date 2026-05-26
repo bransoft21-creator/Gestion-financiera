@@ -38,6 +38,11 @@ export const queryKeys = {
       ["debts", "list", householdId, status] as const,
   },
 
+  creditCards: {
+    all: ["creditCards"] as const,
+    list: (householdId: string) => ["creditCards", "list", householdId] as const,
+  },
+
   household: {
     all: ["household"] as const,
     balance: (householdId: string) =>

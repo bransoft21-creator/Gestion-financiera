@@ -116,6 +116,7 @@ export function computeTransactionBalanceDeltas(transaction: BalanceInput): Bala
       return [{ accountId: transaction.accountId, delta: amount }];
 
     case TransactionType.TRANSFER:
+    case TransactionType.CARD_PAYMENT:
       if (!transaction.transferAccountId) {
         return [{ accountId: transaction.accountId, delta: -amount }];
       }

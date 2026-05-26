@@ -83,10 +83,10 @@ const createTransactionBaseSchema = z.object({
 });
 
 export const createTransactionSchema = createTransactionBaseSchema.superRefine((data, ctx) => {
-  if (data.type === TransactionType.TRANSFER && !data.transferAccountId) {
+  if ((data.type === TransactionType.TRANSFER || data.type === TransactionType.CARD_PAYMENT) && !data.transferAccountId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "transferAccountId es requerido para transferencias",
+      message: "transferAccountId es requerido para este movimiento",
       path: ["transferAccountId"],
     });
   }
@@ -136,6 +136,16 @@ export const updateTransactionSchema = createTransactionBaseSchema
     sharedHouseholdId: z.string().min(1).nullable().optional(),
   })
   .superRefine((data, ctx) => {
+    if (
+      (data.type === TransactionType.TRANSFER || data.type === TransactionType.CARD_PAYMENT) &&
+      !data.transferAccountId
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "transferAccountId es requerido para este movimiento",
+        path: ["transferAccountId"],
+      });
+    }
     if (
       data.transferAccountId &&
       data.accountId &&
