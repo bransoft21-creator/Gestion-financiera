@@ -56,4 +56,9 @@ export const queryKeys = {
     list: (householdId: string, search?: string) =>
       ["contacts", "list", householdId, search] as const,
   },
+
+  ccSummary: {
+    all: ["ccSummary"] as const,
+    list: (householdId: string) => ["ccSummary", "list", householdId] as const,
+  },
 } as const;

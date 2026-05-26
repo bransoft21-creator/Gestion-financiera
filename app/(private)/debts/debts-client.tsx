@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDebts, useCreateDebt, useUpdateDebt, useDeleteDebt, usePayDebt } from "@/hooks/use-debts";
+import { useCCSummaries, type CCSummary } from "@/hooks/use-cc-summary";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   AlertTriangle,
+  ArrowRight,
   CalendarClock,
   CheckCircle2,
   CreditCard,
@@ -17,6 +19,7 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { z } from "zod";
 import { ActionButton } from "@/components/ui-v2/action-button";
@@ -160,10 +163,13 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
   const [todayMs] = useState(() => Date.now());
   const [statusFilter, setStatusFilter] = useState<string>("");
   const { data: debtsData, isLoading } = useDebts(householdId, statusFilter || undefined);
+  const { data: ccSummaries = [], isLoading: isCCLoading } = useCCSummaries(householdId);
   const createDebt = useCreateDebt();
   const updateDebt = useUpdateDebt();
   const deleteDebt = useDeleteDebt();
   const payDebt = usePayDebt();
+
+  const [activeCCAccount, setActiveCCAccount] = useState<CCSummary | null>(null);
 
   const isSaving = createDebt.isPending || updateDebt.isPending;
   const deletingDebtId = deleteDebt.isPending ? (deleteDebt.variables?.debtId ?? null) : null;
@@ -495,6 +501,12 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
         <div className="space-y-5">
           <DebtBriefing summary={summary} debtCount={debts.length} isLoading={isLoading} onCreate={openNewDebt} />
 
+          <CCAccountsSection
+            summaries={ccSummaries}
+            isLoading={isCCLoading}
+            onOpen={setActiveCCAccount}
+          />
+
           <PremiumCard variant="default" className="overflow-hidden">
             <PremiumCardHeader className="pb-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -556,6 +568,12 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
 
         <MobileCreateFab label="Nuevo crédito o cuota" onClick={openNewDebt} />
       </div>
+
+      <CCTransactionsSheet
+        householdId={householdId}
+        account={activeCCAccount}
+        onClose={() => setActiveCCAccount(null)}
+      />
 
       <DeleteDebtDialog
         debt={pendingDeleteDebt}
@@ -871,6 +889,198 @@ function DebtEmptyState({ onCreate }: { onCreate: () => void }) {
         Crear compromiso
       </ActionButton>
     </div>
+  );
+}
+
+type CCTransaction = {
+  id: string;
+  description: string | null;
+  amount: number;
+  type: string;
+  occurredAt: string;
+  category: { name: string; emoji: string | null } | null;
+};
+
+function CCAccountsSection({
+  summaries,
+  isLoading,
+  onOpen,
+}: {
+  summaries: CCSummary[];
+  isLoading: boolean;
+  onOpen: (account: CCSummary) => void;
+}) {
+  if (!isLoading && summaries.length === 0) return null;
+
+  return (
+    <PremiumCard variant="default" className="overflow-hidden">
+      <PremiumCardHeader className="pb-4">
+        <PremiumCardTitle>Tarjetas de crédito</PremiumCardTitle>
+        <PremiumCardDescription>Saldo importado desde resúmenes.</PremiumCardDescription>
+      </PremiumCardHeader>
+      <PremiumCardContent>
+        {isLoading ? (
+          <div className="grid gap-3">
+            {[0, 1].map((i) => (
+              <div key={i} className="flex items-center gap-3 rounded-3xl border border-border bg-muted/25 p-4">
+                <Skeleton className="h-10 w-10 rounded-2xl bg-muted" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-32 bg-muted" />
+                  <Skeleton className="h-3 w-48 bg-muted" />
+                </div>
+                <Skeleton className="h-6 w-20 bg-muted" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {summaries.map((account) => {
+              const owed = Math.abs(account.currentBalance);
+              return (
+                <button
+                  key={account.id}
+                  type="button"
+                  onClick={() => onOpen(account)}
+                  className="v2-focus-ring flex w-full items-center gap-3 rounded-3xl border border-border bg-muted/25 p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:bg-muted/40"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/50 text-muted-foreground">
+                    <CreditCard className="h-5 w-5" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">{account.name}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {account.importedCount > 0
+                        ? `${account.importedCount} mov. importados`
+                        : "Sin movimientos importados"}
+                      {account.lastImportDate
+                        ? ` · Últ. ${formatDate(account.lastImportDate)}`
+                        : ""}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-semibold tabular-nums text-destructive">
+                      {formatMoney(owed, account.currency as "ARS" | "USD")}
+                    </p>
+                    <div className="mt-1 flex items-center justify-end gap-1 text-xs text-muted-foreground">
+                      Ver movimientos
+                      <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </PremiumCardContent>
+    </PremiumCard>
+  );
+}
+
+function CCTransactionsSheet({
+  householdId,
+  account,
+  onClose,
+}: {
+  householdId: string;
+  account: CCSummary | null;
+  onClose: () => void;
+}) {
+  const [transactions, setTransactions] = useState<CCTransaction[]>([]);
+  const [fetching, setFetching] = useState(false);
+
+  useEffect(() => {
+    if (!account) { setTransactions([]); return; }
+    setFetching(true);
+    const params = new URLSearchParams({ householdId, accountId: account.id, limit: "50" });
+    fetch(`/api/transactions?${params}`)
+      .then((r) => r.json() as Promise<{ data?: { data?: CCTransaction[] } }>)
+      .then((payload) => setTransactions(payload.data?.data ?? []))
+      .catch(() => setTransactions([]))
+      .finally(() => setFetching(false));
+  }, [account, householdId]);
+
+  return (
+    <AppFormPanel
+      isOpen={account !== null}
+      onClose={onClose}
+      className="border-border bg-card/80 shadow-[0_24px_80px_rgba(0,0,0,0.32)] xl:rounded-[var(--v2-radius-xl)]"
+    >
+      <div className={appFormHeaderClass("border-border bg-card/95 xl:bg-transparent")}>
+        <div className="flex items-start gap-3 p-5 sm:p-6">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/50 text-foreground">
+            <CreditCard className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-base font-semibold leading-tight text-foreground">
+              {account?.name ?? "Tarjeta"}
+            </h2>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              Movimientos importados desde el resumen.
+            </p>
+          </div>
+          <ActionButton
+            type="button"
+            variant="quiet"
+            size="icon"
+            aria-label="Cerrar"
+            onClick={onClose}
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </ActionButton>
+        </div>
+      </div>
+      <div className={appFormContentClass(account !== null, "px-5 sm:px-6 pb-6")}>
+        {fetching ? (
+          <div className="grid gap-3 pt-1">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 rounded-3xl border border-border bg-muted/25 p-3">
+                <Skeleton className="h-8 w-8 rounded-xl bg-muted" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-3.5 w-40 bg-muted" />
+                  <Skeleton className="h-3 w-28 bg-muted" />
+                </div>
+                <Skeleton className="h-5 w-20 bg-muted" />
+              </div>
+            ))}
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="mt-4 rounded-[1.75rem] border border-dashed border-border bg-muted/20 p-6 text-center">
+            <p className="text-sm text-muted-foreground">No hay movimientos importados para esta tarjeta.</p>
+          </div>
+        ) : (
+          <div className="grid gap-2 pt-1">
+            {transactions.map((tx) => (
+              <div key={tx.id} className="flex items-center gap-3 rounded-3xl border border-border bg-muted/25 p-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-sm">
+                  {tx.category?.emoji ?? "💳"}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {tx.description ?? "Sin descripción"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {tx.category?.name ?? "Sin categoría"} · {formatDate(tx.occurredAt)}
+                  </p>
+                </div>
+                <p className="shrink-0 text-sm font-semibold tabular-nums text-destructive">
+                  {formatMoney(tx.amount, account?.currency as "ARS" | "USD" ?? "ARS")}
+                </p>
+              </div>
+            ))}
+            <div className="mt-2 flex justify-center">
+              <Link
+                href={`/transactions?accountId=${account?.id ?? ""}`}
+                className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/30 px-4 py-2 text-xs font-medium text-muted-foreground transition hover:bg-muted/50"
+                onClick={onClose}
+              >
+                Ver todos en Movimientos
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+    </AppFormPanel>
   );
 }
 

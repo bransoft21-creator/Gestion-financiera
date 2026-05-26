@@ -28,6 +28,7 @@ const SCOPE_KEYS: Record<InvalidationScope, QueryKey[]> = {
     queryKeys.debts.all,
     queryKeys.recurring.all,
     queryKeys.budgets.all,
+    queryKeys.ccSummary.all,
   ],
   goalChanged: [
     queryKeys.goals.all,
@@ -52,6 +53,7 @@ const SCOPE_KEYS: Record<InvalidationScope, QueryKey[]> = {
     queryKeys.debts.all,
     queryKeys.recurring.all,
     queryKeys.budgets.all,
+    queryKeys.ccSummary.all,
   ],
   dataQualityChanged: [
     queryKeys.transactions.all,
