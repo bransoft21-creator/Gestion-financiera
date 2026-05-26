@@ -194,31 +194,35 @@ export async function getDashboardSummary(
       },
       select: { currency: true, estimatedAmount: true },
     }),
-    prisma.cardStatement.findMany({
-      where: {
-        householdId,
-        deletedAt: null,
-        status: {
-          in: [
-            CardStatementStatus.CLOSED_PENDING_PAYMENT,
-            CardStatementStatus.PARTIALLY_PAID,
-            CardStatementStatus.OVERDUE,
-          ],
-        },
-        pendingAmount: { gt: 0 },
-        OR: [
-          { dueDate: { gte: monthStart, lt: nextMonthStart } },
-          // For past months, overdue statements belong to their due-date month —
-          // not to every month until paid. Only surface them in current/future views.
-          ...(isCurrentOrFutureMonth ? [{ status: CardStatementStatus.OVERDUE }] : []),
-        ],
-      },
-      select: {
-        currency: true,
-        pendingAmount: true,
-        minimumPayment: true,
-      },
-    }),
+    // Past-month views are retrospective: CC obligations don't surface there because
+    // the user can't act on them and they distort the historical P&L. Obligations
+    // only appear in the current month (due this month + overdue) and future months
+    // (due that month), where the user needs to plan or take action.
+    isCurrentOrFutureMonth
+      ? prisma.cardStatement.findMany({
+          where: {
+            householdId,
+            deletedAt: null,
+            status: {
+              in: [
+                CardStatementStatus.CLOSED_PENDING_PAYMENT,
+                CardStatementStatus.PARTIALLY_PAID,
+                CardStatementStatus.OVERDUE,
+              ],
+            },
+            pendingAmount: { gt: 0 },
+            OR: [
+              { dueDate: { gte: monthStart, lt: nextMonthStart } },
+              { status: CardStatementStatus.OVERDUE },
+            ],
+          },
+          select: {
+            currency: true,
+            pendingAmount: true,
+            minimumPayment: true,
+          },
+        })
+      : Promise.resolve([]),
   ]);
 
   const primaryCurrency = household.defaultCurrency;
