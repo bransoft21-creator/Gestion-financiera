@@ -55,6 +55,7 @@ type DebtItem = {
   type: DebtType;
   status: DebtStatus;
   currency: CurrencyCode;
+  accountId: string | null;
   originalAmount: number;
   outstandingAmount: number;
   minimumPayment: number | null;
@@ -69,6 +70,7 @@ type DebtsClientProps = { householdId: string; accounts: AccountOption[]; defaul
 
 type FormState = {
   name: string;
+  accountId: string;
   lender: string;
   type: DebtType;
   status: DebtStatus;
@@ -116,6 +118,7 @@ const debtStatuses = Object.keys(debtStatusLabels) as DebtStatus[];
 
 const formSchema = z.object({
   name: z.string().trim().min(2, "Ingresá un nombre.").max(100),
+  accountId: z.string().optional(),
   lender: z.string().trim().max(100).optional(),
   type: z.enum(creatableDebtTypes as [DebtType, ...DebtType[]]),
   status: z.enum(debtStatuses as [DebtStatus, ...DebtStatus[]]),
@@ -131,6 +134,7 @@ const formSchema = z.object({
 
 const defaultForm: FormState = {
   name: "",
+  accountId: "",
   lender: "",
   type: "LOAN",
   status: "ACTIVE",
@@ -208,6 +212,7 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
     const input = {
       householdId,
       ...parsed.data,
+      accountId: form.accountId || (editingDebtId ? null : undefined),
       nextDueDate: parsed.data.nextDueDate || (editingDebtId ? null : undefined),
       lender: parsed.data.lender || (editingDebtId ? null : undefined),
       minimumPayment: parsed.data.minimumPayment ?? (editingDebtId ? null : undefined),
@@ -302,6 +307,7 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
     setMessage(null);
     setForm({
       name: debt.name,
+      accountId: debt.accountId ?? "",
       lender: debt.lender ?? "",
       type: debt.type,
       status: debt.status,
@@ -376,7 +382,15 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Tipo" error={errors.type}>
-                  <select className={selectClass} value={form.type} onChange={(e) => updateForm("type", e.target.value as DebtType)}>
+                  <select
+                    className={selectClass}
+                    value={form.type}
+                    onChange={(e) => {
+                      const newType = e.target.value as DebtType;
+                      updateForm("type", newType);
+                      if (newType !== "CREDIT_CARD") updateForm("accountId", "");
+                    }}
+                  >
                     {form.type === "PERSONAL" && (
                       <option value="PERSONAL" disabled>{debtTypeLabels["PERSONAL"]} (legacy)</option>
                     )}
@@ -389,6 +403,26 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
                   </select>
                 </Field>
               </div>
+
+              {form.type === "CREDIT_CARD" && (
+                <Field label="Cuenta de tarjeta vinculada" error={errors.accountId}>
+                  <select
+                    className={selectClass}
+                    value={form.accountId}
+                    onChange={(e) => updateForm("accountId", e.target.value)}
+                  >
+                    <option value="">Sin vincular</option>
+                    {accounts
+                      .filter((a) => a.type === "CREDIT_CARD")
+                      .map((a) => (
+                        <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
+                      ))}
+                  </select>
+                  <p className="text-[11px] text-muted-foreground">
+                    Si vinculás una cuenta, los gastos en esa TDC suman automáticamente al saldo pendiente.
+                  </p>
+                </Field>
+              )}
 
               <Field label="Moneda" error={errors.currency}>
                 <select className={selectClass} value={form.currency} onChange={(e) => updateForm("currency", e.target.value as CurrencyCode)}>

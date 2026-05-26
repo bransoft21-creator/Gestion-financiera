@@ -12,6 +12,7 @@ export type DebtItem = {
   type: "LOAN" | "CREDIT_CARD" | "PERSONAL" | "INSTALLMENT" | "OTHER";
   status: "ACTIVE" | "PAID" | "PAUSED" | "DEFAULTED" | "CANCELED";
   currency: "ARS" | "USD";
+  accountId: string | null;
   originalAmount: number;
   outstandingAmount: number;
   minimumPayment: number | null;
@@ -45,6 +46,7 @@ export function useDebts(householdId: string, statusFilter?: string) {
 type SaveDebtInput = {
   householdId: string;
   name: string;
+  accountId?: string | null;
   lender?: string | null;
   type: string;
   status: string;

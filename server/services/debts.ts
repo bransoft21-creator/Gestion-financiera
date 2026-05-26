@@ -20,6 +20,7 @@ function serializeDebt(debt: DebtRecord) {
   return {
     id: debt.id,
     householdId: debt.householdId,
+    accountId: debt.accountId,
     name: debt.name,
     lender: debt.lender,
     type: debt.type,
@@ -77,6 +78,7 @@ export async function createDebt(userProfileId: string, input: CreateDebtInput) 
     data: {
       householdId: input.householdId,
       createdById: userProfileId,
+      accountId: input.accountId,
       name: input.name,
       lender: input.lender,
       type: input.type,
@@ -109,6 +111,7 @@ export async function updateDebt(
   const debt = await prisma.debt.update({
     where: { id: debtId },
     data: {
+      accountId: input.accountId,
       name: input.name,
       lender: input.lender,
       type: input.type,

@@ -353,6 +353,7 @@ model Account {
   recurringExpenses      RecurringExpense[]
   investmentAccounts     InvestmentAccount[]
   agreementsAsSource     PersonalAgreement[]     @relation("AgreementSourceAccount")
+  linkedDebts            Debt[]
 
   @@index([householdId])
   @@index([createdById])
@@ -572,6 +573,7 @@ model Debt {
   id                String       @id @default(cuid())
   householdId       String
   createdById       String
+  accountId         String?
   name              String
   lender            String?
   type              DebtType
@@ -590,11 +592,13 @@ model Debt {
 
   household    Household     @relation(fields: [householdId], references: [id])
   createdBy    UserProfile   @relation("DebtCreatedBy", fields: [createdById], references: [id])
+  account      Account?      @relation(fields: [accountId], references: [id])
   transactions Transaction[]
 
   @@index([householdId, status])
   @@index([householdId, nextDueDate])
   @@index([createdById])
+  @@index([accountId])
 }
 
 model MonthlySnapshot {

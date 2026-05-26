@@ -14,6 +14,7 @@ export const listDebtsSchema = z.object({
 
 export const createDebtSchema = z.object({
   householdId: z.string().min(1),
+  accountId: z.string().min(1).optional(),
   name: z.string().trim().min(2).max(100),
   lender: z.string().trim().max(100).optional(),
   type: z.enum(creatableDebtTypeValues),
@@ -29,6 +30,7 @@ export const createDebtSchema = z.object({
 
 export const updateDebtSchema = createDebtSchema.partial().extend({
   householdId: z.string().min(1),
+  accountId: z.string().min(1).nullable().optional(),
   lender: z.string().trim().max(100).nullable().optional(),
   minimumPayment: nullableMoneySchema(),
   interestRate: z.coerce.number().finite().nonnegative().max(999).nullable().optional(),

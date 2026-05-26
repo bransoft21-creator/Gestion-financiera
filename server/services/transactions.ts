@@ -1,4 +1,4 @@
-import { HouseholdKind, HouseholdMemberStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { DebtStatus, DebtType, HouseholdKind, HouseholdMemberStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { nextArgentinaDayStart } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { ApiError, FieldApiError, ForbiddenError, NotFoundError } from "../api/errors";
@@ -119,6 +119,8 @@ export async function createTransaction(
           amount: transaction.amount,
         }),
       );
+
+      await applyAccountLinkedDebtCharge(tx, transaction.accountId, transaction.type, transaction.status, transaction.amount, 1);
 
       if (input.sharedHouseholdId) {
         await createSharedTransaction(tx, {
@@ -304,6 +306,8 @@ export async function updateTransaction(
       ),
     );
 
+    await applyAccountLinkedDebtCharge(tx, current.accountId, current.type, current.status, current.amount, -1);
+
     // 2. Persist the update.
     const updated = await tx.transaction.update({
       where: { id: transactionId },
@@ -356,6 +360,8 @@ export async function updateTransaction(
         amount: updated.amount,
       }),
     );
+
+    await applyAccountLinkedDebtCharge(tx, updated.accountId, updated.type, updated.status, updated.amount, 1);
 
     // Resolve the shared-household state before and after the update.
     const prevSharedHouseholdId = current.sharedTransaction?.householdId ?? null;
@@ -525,6 +531,8 @@ export async function deleteTransaction(
       ),
     );
 
+    await applyAccountLinkedDebtCharge(tx, current.accountId, current.type, current.status, current.amount, -1);
+
     await removeSharedTransactionForTransaction(tx, transactionId);
 
     // 2. Soft-delete the transaction.
@@ -532,6 +540,41 @@ export async function deleteTransaction(
       where: { id: transactionId },
       data: { deletedAt: new Date() },
     });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// CC account → linked debt auto-charge
+// ---------------------------------------------------------------------------
+
+async function applyAccountLinkedDebtCharge(
+  tx: Prisma.TransactionClient,
+  accountId: string,
+  type: TransactionType,
+  status: TransactionStatus,
+  amount: Prisma.Decimal | number,
+  direction: 1 | -1,
+): Promise<void> {
+  if (type !== TransactionType.EXPENSE || status === TransactionStatus.CANCELED) return;
+
+  const debt = await tx.debt.findFirst({
+    where: {
+      accountId,
+      type: DebtType.CREDIT_CARD,
+      status: { in: [DebtStatus.ACTIVE, DebtStatus.DEFAULTED] },
+      deletedAt: null,
+    },
+    select: { id: true, outstandingAmount: true },
+  });
+
+  if (!debt) return;
+
+  const delta = direction * toFiniteNumber(amount);
+  const newOutstanding = Math.max(0, toFiniteNumber(debt.outstandingAmount) + delta);
+
+  await tx.debt.update({
+    where: { id: debt.id },
+    data: { outstandingAmount: newOutstanding },
   });
 }
 
