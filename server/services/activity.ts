@@ -337,16 +337,20 @@ export async function upsertReminderActivities(params: {
   const expenses = Number(expensesAgg._sum.amount ?? 0);
   const budgetRatio = income > 0 ? expenses / income : 0;
   const liabilitySummary = computeRealLiabilitySummary(accounts, debts);
-  const debt = liabilitySummary.liabilities;
+  // Use the raw sum of Debt records (not liabilitySummary.liabilities, which includes negative
+  // account balances). actionLink "/debts" only shows Debt entity records, so the condition and
+  // the amount must be anchored to actual Debt records — not CC account balance states.
+  const totalDebtOutstanding = debts.reduce((sum, d) => sum + toFiniteNumber(d.outstandingAmount), 0);
   const hasOverdueDebt = debts.some((item) => item.nextDueDate && item.nextDueDate < now);
   traceFinancialSource({
     endpoint: "/api/activity",
     householdId,
-    source: "monthly-reminders.debt <- computeRealLiabilitySummary.liabilities",
+    source: "monthly-reminders.totalDebtOutstanding <- debts.reduce(outstandingAmount)",
     computed: {
-      debt,
+      totalDebtOutstanding,
       accountLiabilities: liabilitySummary.accountLiabilities,
       debtLiabilities: liabilitySummary.debtLiabilities,
+      liabilities: liabilitySummary.liabilities,
     },
     accounts: accounts.filter((account) => toFiniteNumber(account.currentBalance) < 0),
     debts,
@@ -420,8 +424,12 @@ export async function upsertReminderActivities(params: {
     upserts.push(resolveReminderIfPresent(userId, `reminder-recurring-${periodKey}`));
   }
 
-  // Outstanding formal commitment reminder (P0 if overdue, P1 if active)
-  if (debt > 0) {
+  // Outstanding formal commitment reminder (P0 if overdue, P1 if active).
+  // Only fires when there are actual Debt entity records — not just negative CC account balances.
+  // The actionLink "/debts" shows Debt records; creating this announcement without Debt records
+  // causes an empty-screen navigation (the original bug: CC import → negative balance → stale
+  // announcement → /debts shows nothing).
+  if (totalDebtOutstanding > 0) {
     upserts.push(
       upsertActivity({
         userId,
@@ -431,8 +439,8 @@ export async function upsertReminderActivities(params: {
         priority: hasOverdueDebt ? 2 : 1,
         title: hasOverdueDebt ? "Hay un crédito o cuota para revisar" : "Compromiso formal registrado",
         body: hasOverdueDebt
-          ? formatARS(debt) + " en créditos y cuotas. Hay al menos un vencimiento para revisar."
-          : formatARS(debt) + " en créditos y cuotas activos este mes.",
+          ? formatARS(totalDebtOutstanding) + " en créditos y cuotas. Hay al menos un vencimiento para revisar."
+          : formatARS(totalDebtOutstanding) + " en créditos y cuotas activos este mes.",
         dedupeKey: `reminder-debt-${periodKey}`,
         periodKey,
         actionLabel: "Ver créditos",
