@@ -10,6 +10,7 @@ import { buildNextStepRecommendation } from "./next-step-engine";
 import { EMPTY_NAVIGATION_AWARENESS } from "@/lib/navigation-awareness";
 import { getNavigationAwareness } from "./navigation-awareness";
 import { filterCurrency, sumByCurrency } from "@/lib/finance/currency-safe";
+import { syncLegacyCreditCards } from "./credit-cards";
 
 const chartColors = ["#f97316", "#ef4444", "#06b6d4", "#eab308", "#8b5cf6", "#14b8a6"];
 const activeTransactionWhere = {
@@ -44,6 +45,7 @@ export async function getDashboardSummary(
   month: number,
 ) {
   await assertHouseholdAccess(userProfileId, householdId);
+  await syncLegacyCreditCards(userProfileId, householdId);
 
   const { start: monthStart, end: nextMonthStart } = argentinaMonthRangeUtc(year, month);
   const monthKey = `${year}-${String(month).padStart(2, "0")}`;

@@ -356,7 +356,7 @@ function serializeStatement(statement: CardStatementInput & {
   };
 }
 
-async function syncLegacyCreditCards(userProfileId: string, householdId: string) {
+export async function syncLegacyCreditCards(userProfileId: string, householdId: string) {
   const accounts = await prisma.account.findMany({
     where: {
       householdId,
