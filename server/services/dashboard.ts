@@ -50,6 +50,10 @@ export async function getDashboardSummary(
   const { start: monthStart, end: nextMonthStart } = argentinaMonthRangeUtc(year, month);
   const monthKey = `${year}-${String(month).padStart(2, "0")}`;
 
+  const argDateStr = formatArgentinaDateInput();
+  const [argYear, argMonth] = argDateStr.split("-").map(Number);
+  const isCurrentOrFutureMonth = year > argYear || (year === argYear && month >= argMonth);
+
   const [
     monthTransactions,
     latestTransactions,
@@ -204,7 +208,9 @@ export async function getDashboardSummary(
         pendingAmount: { gt: 0 },
         OR: [
           { dueDate: { gte: monthStart, lt: nextMonthStart } },
-          { status: CardStatementStatus.OVERDUE },
+          // For past months, overdue statements belong to their due-date month —
+          // not to every month until paid. Only surface them in current/future views.
+          ...(isCurrentOrFutureMonth ? [{ status: CardStatementStatus.OVERDUE }] : []),
         ],
       },
       select: {
@@ -296,8 +302,7 @@ export async function getDashboardSummary(
     interpersonalToPay: interpersonalPosition.toPay,
   });
 
-  const argDateStr = formatArgentinaDateInput();
-  const [argYear, argMonth, argDay] = argDateStr.split("-").map(Number);
+  const [, , argDay] = argDateStr.split("-").map(Number);
   const isCurrentMonth = argYear === year && argMonth === month;
   const daysInMonth = new Date(year, month, 0).getDate();
   const dayOfMonth = isCurrentMonth ? argDay : daysInMonth;
