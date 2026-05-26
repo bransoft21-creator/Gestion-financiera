@@ -1,4 +1,4 @@
-import { AgreementDirection, AgreementStatus, CardStatementStatus, DebtStatus, DebtType, GoalStatus, HouseholdKind, HouseholdMemberStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { AgreementDirection, AgreementStatus, CardStatementStatus, DebtStatus, DebtType, GoalStatus, HouseholdKind, HouseholdMemberStatus, Prisma, TransactionOrigin, TransactionStatus, TransactionType } from "@prisma/client";
 import { argentinaMonthRangeUtc, formatArgentinaDateInput } from "@/lib/dates";
 import { isSmartImportEnabled } from "@/lib/feature-flags";
 import { prisma } from "../../lib/prisma";
@@ -75,6 +75,7 @@ export async function getDashboardSummary(
         ...activeTransactionWhere,
         occurredAt: { gte: monthStart, lt: nextMonthStart },
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
+        origin: { not: TransactionOrigin.CARD_SUMMARY },
       },
       include: dashboardTransactionInclude,
       orderBy: { occurredAt: "desc" },
@@ -85,6 +86,7 @@ export async function getDashboardSummary(
         ...activeTransactionWhere,
         occurredAt: { gte: monthStart, lt: nextMonthStart },
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
+        origin: { not: TransactionOrigin.CARD_SUMMARY },
       },
       include: dashboardTransactionInclude,
       orderBy: { occurredAt: "desc" },
