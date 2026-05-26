@@ -178,6 +178,10 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
   const payCardStatement = usePayCardStatement();
 
   const [activeCCAccount, setActiveCCAccount] = useState<CCSummary | null>(null);
+  const [activeStatementView, setActiveStatementView] = useState<{
+    card: CreditCardItem;
+    statement: CardStatementItem;
+  } | null>(null);
 
   const isSaving = createDebt.isPending || updateDebt.isPending;
   const deletingDebtId = deleteDebt.isPending ? (deleteDebt.variables?.debtId ?? null) : null;
@@ -584,12 +588,13 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
         </AppFormPanel>
 
         <div className="space-y-5">
-          <DebtBriefing summary={summary} debtCount={totalItemCount + creditCards.length} isLoading={isLoading || isCCLoading || isCreditCardsLoading} onCreate={openNewDebt} />
-
-          <CreditCardsStatementPanel
+          <DebtBriefing
+            summary={summary}
+            debtCount={totalItemCount + creditCards.length}
             cards={creditCards}
             accounts={accounts}
-            isLoading={isCreditCardsLoading}
+            isLoading={isLoading || isCCLoading || isCreditCardsLoading}
+            isCardsLoading={isCreditCardsLoading}
             payingStatementId={payingStatementId}
             payAccountId={cardPayAccountId}
             payAmount={cardPayAmount}
@@ -600,6 +605,8 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
             onPayAccountChange={setCardPayAccountId}
             onPayAmountChange={setCardPayAmount}
             onConfirmPayment={handleCardPaymentConfirm}
+            onOpenStatement={(card, statement) => setActiveStatementView({ card, statement })}
+            onCreate={openNewDebt}
           />
 
           <PremiumCard variant="default" className="overflow-hidden">
@@ -683,6 +690,11 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
         onClose={() => setActiveCCAccount(null)}
       />
 
+      <StatementMovementsSheet
+        view={activeStatementView}
+        onClose={() => setActiveStatementView(null)}
+      />
+
       <DeleteDebtDialog
         debt={pendingDeleteDebt}
         isDeleting={deletingDebtId === pendingDeleteDebt?.id}
@@ -699,12 +711,40 @@ const selectClass = "v2-focus-ring h-11 w-full rounded-2xl border border-border 
 function DebtBriefing({
   summary,
   debtCount,
+  cards,
+  accounts,
   isLoading,
+  isCardsLoading,
+  payingStatementId,
+  payAccountId,
+  payAmount,
+  payErrors,
+  isPaying,
+  onOpenPayment,
+  onCancelPayment,
+  onPayAccountChange,
+  onPayAmountChange,
+  onConfirmPayment,
+  onOpenStatement,
   onCreate,
 }: {
   summary: DebtSummary;
   debtCount: number;
+  cards: CreditCardItem[];
+  accounts: AccountOption[];
   isLoading: boolean;
+  isCardsLoading: boolean;
+  payingStatementId: string | null;
+  payAccountId: string;
+  payAmount: string;
+  payErrors: { sourceAccountId?: string; amount?: string };
+  isPaying: boolean;
+  onOpenPayment: (statement: CardStatementItem) => void;
+  onCancelPayment: () => void;
+  onPayAccountChange: (value: string) => void;
+  onPayAmountChange: (value: string) => void;
+  onConfirmPayment: (statement: CardStatementItem) => void;
+  onOpenStatement: (card: CreditCardItem, statement: CardStatementItem) => void;
   onCreate: () => void;
 }) {
   const state = getDebtState(summary, debtCount);
@@ -758,6 +798,44 @@ function DebtBriefing({
                   value={summary.nextDebt?.nextDueDate ? formatDate(summary.nextDebt.nextDueDate) : "Sin fecha"}
                 />
               </div>
+
+              {isCardsLoading ? (
+                <div className="mt-5 grid gap-3">
+                  <Skeleton className="h-64 rounded-[1.75rem] bg-muted" />
+                </div>
+              ) : cards.length > 0 ? (
+                <div className="mt-5 border-t border-border pt-5">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Tarjetas de crédito</p>
+                      <p className="text-xs text-muted-foreground">Resúmenes, movimientos pendientes e historial en el mismo lugar.</p>
+                    </div>
+                    <Badge className="border-sky-300/20 bg-sky-300/10 text-sky-400">
+                      Ciclos
+                    </Badge>
+                  </div>
+                  <div className="grid gap-3">
+                    {cards.map((card) => (
+                      <CreditCardStatementCard
+                        key={card.id}
+                        card={card}
+                        accounts={accounts}
+                        isPaymentOpen={payingStatementId === card.activeStatement?.id}
+                        payAccountId={payAccountId}
+                        payAmount={payAmount}
+                        payErrors={payErrors}
+                        isPaying={isPaying}
+                        onOpenPayment={onOpenPayment}
+                        onCancelPayment={onCancelPayment}
+                        onPayAccountChange={onPayAccountChange}
+                        onPayAmountChange={onPayAmountChange}
+                        onConfirmPayment={onConfirmPayment}
+                        onOpenStatement={onOpenStatement}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </>
           )}
         </PremiumCardContent>
@@ -784,83 +862,6 @@ function DebtBriefMetric({
   );
 }
 
-function CreditCardsStatementPanel({
-  cards,
-  accounts,
-  isLoading,
-  payingStatementId,
-  payAccountId,
-  payAmount,
-  payErrors,
-  isPaying,
-  onOpenPayment,
-  onCancelPayment,
-  onPayAccountChange,
-  onPayAmountChange,
-  onConfirmPayment,
-}: {
-  cards: CreditCardItem[];
-  accounts: AccountOption[];
-  isLoading: boolean;
-  payingStatementId: string | null;
-  payAccountId: string;
-  payAmount: string;
-  payErrors: { sourceAccountId?: string; amount?: string };
-  isPaying: boolean;
-  onOpenPayment: (statement: CardStatementItem) => void;
-  onCancelPayment: () => void;
-  onPayAccountChange: (value: string) => void;
-  onPayAmountChange: (value: string) => void;
-  onConfirmPayment: (statement: CardStatementItem) => void;
-}) {
-  if (!isLoading && cards.length === 0) return null;
-
-  return (
-    <PremiumCard variant="raised" className="overflow-hidden">
-      <PremiumCardHeader className="pb-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <PremiumCardTitle>Tarjetas de crédito</PremiumCardTitle>
-            <PremiumCardDescription>Resúmenes, ciclos y pagos separados del historial.</PremiumCardDescription>
-          </div>
-          <Badge className="w-fit border-sky-300/20 bg-sky-300/10 text-sky-400">
-            Statements
-          </Badge>
-        </div>
-      </PremiumCardHeader>
-      <PremiumCardContent>
-        {isLoading ? (
-          <div className="grid gap-3">
-            {[0, 1].map((item) => (
-              <Skeleton key={item} className="h-56 rounded-[1.75rem] bg-muted" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-3">
-            {cards.map((card) => (
-              <CreditCardStatementCard
-                key={card.id}
-                card={card}
-                accounts={accounts}
-                isPaymentOpen={payingStatementId === card.activeStatement?.id}
-                payAccountId={payAccountId}
-                payAmount={payAmount}
-                payErrors={payErrors}
-                isPaying={isPaying}
-                onOpenPayment={onOpenPayment}
-                onCancelPayment={onCancelPayment}
-                onPayAccountChange={onPayAccountChange}
-                onPayAmountChange={onPayAmountChange}
-                onConfirmPayment={onConfirmPayment}
-              />
-            ))}
-          </div>
-        )}
-      </PremiumCardContent>
-    </PremiumCard>
-  );
-}
-
 function CreditCardStatementCard({
   card,
   accounts,
@@ -874,6 +875,7 @@ function CreditCardStatementCard({
   onPayAccountChange,
   onPayAmountChange,
   onConfirmPayment,
+  onOpenStatement,
 }: {
   card: CreditCardItem;
   accounts: AccountOption[];
@@ -887,6 +889,7 @@ function CreditCardStatementCard({
   onPayAccountChange: (value: string) => void;
   onPayAmountChange: (value: string) => void;
   onConfirmPayment: (statement: CardStatementItem) => void;
+  onOpenStatement: (card: CreditCardItem, statement: CardStatementItem) => void;
 }) {
   const statement = card.activeStatement;
   const pending = statement?.pendingAmount ?? 0;
@@ -894,6 +897,8 @@ function CreditCardStatementCard({
   const pressure = getCardPressureCopy(card.pressure);
   const paymentAccounts = accounts.filter((account) => account.currency === currency && account.type !== "CREDIT_CARD");
   const canPay = !!statement && pending > 0 && !!card.accountId && paymentAccounts.length > 0;
+  const previousStatement = card.history[0] ?? null;
+  const currentCloseAmount = statement?.totalAmount ?? 0;
 
   return (
     <article className="rounded-[1.75rem] border border-border bg-muted/25 p-4 sm:p-5">
@@ -929,12 +934,9 @@ function CreditCardStatementCard({
       </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-3">
-        <CardStatementMetric label="Pendiente" value={statement ? formatMoney(pending, currency) : "Sin resumen"} />
-        <CardStatementMetric
-          label="Ciclo actual"
-          value={card.currentStatement ? formatMoney(card.currentStatement.totalAmount, currency) : "Sin consumos"}
-        />
-        <CardStatementMetric label="Historial" value={`${card.history.length} resúmenes`} />
+        <CardStatementMetric label="Este cierre" value={statement ? formatMoney(currentCloseAmount, currency) : "Sin resumen"} />
+        <CardStatementMetric label="Cierre anterior" value={previousStatement ? formatMoney(previousStatement.totalAmount, currency) : "Sin historial"} />
+        <CardStatementMetric label="Ciclo actual" value={card.currentStatement ? formatMoney(card.currentStatement.totalAmount, currency) : "Sin consumos"} />
       </div>
 
       {card.utilizationPercent != null ? (
@@ -963,13 +965,52 @@ function CreditCardStatementCard({
             Pagar tarjeta
           </ActionButton>
         ) : null}
-        <Badge className="border-border bg-muted/30 text-muted-foreground">
-          {statement?.transactionCount ?? 0} movimientos del resumen
-        </Badge>
+        {statement ? (
+          <ActionButton
+            type="button"
+            variant="glass"
+            size="sm"
+            onClick={() => onOpenStatement(card, statement)}
+          >
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            {statement.transactionCount} movimientos
+          </ActionButton>
+        ) : null}
         <Badge className="border-border bg-muted/30 text-muted-foreground">
           {statement?.paymentCount ?? 0} pagos
         </Badge>
       </div>
+
+      {card.statements.length > 0 ? (
+        <div className="mt-4 space-y-2 rounded-[1.5rem] border border-border bg-muted/20 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase text-muted-foreground">Historial de cierres</p>
+            <span className="text-xs text-muted-foreground">{card.statements.length} ciclos</span>
+          </div>
+          <div className="grid gap-2">
+            {card.statements.slice(0, 3).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onOpenStatement(card, item)}
+                className="v2-focus-ring flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-border bg-card/40 px-3 py-2 text-left transition hover:bg-card/70"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium text-foreground">
+                    {getStatementStatusLabel(item.status)}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {formatStatementPeriod(item)}
+                  </span>
+                </span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                  {formatMoney(item.totalAmount || item.pendingAmount, currency)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <AnimatePresence initial={false}>
         {isPaymentOpen && statement ? (
@@ -1309,6 +1350,124 @@ type CCTransaction = {
   occurredAt: string;
   category: { name: string; emoji: string | null } | null;
 };
+
+function StatementMovementsSheet({
+  view,
+  onClose,
+}: {
+  view: { card: CreditCardItem; statement: CardStatementItem } | null;
+  onClose: () => void;
+}) {
+  const card = view?.card ?? null;
+  const statement = view?.statement ?? null;
+  const movements = statement?.movements ?? [];
+  const history = card?.statements ?? [];
+  const currency = statement?.currency ?? card?.currency ?? "ARS";
+
+  return (
+    <AppFormPanel
+      isOpen={view !== null}
+      onClose={onClose}
+      className="border-border bg-card/80 shadow-[0_24px_80px_rgba(0,0,0,0.32)] xl:rounded-[var(--v2-radius-xl)]"
+    >
+      <div className={appFormHeaderClass("border-border bg-card/95 xl:bg-transparent")}>
+        <div className="flex items-start gap-3 p-5 sm:p-6">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/50 text-foreground">
+            <CreditCard className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-base font-semibold leading-tight text-foreground">
+              {card?.name ?? "Tarjeta"}
+            </h2>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              {statement ? `${getStatementStatusLabel(statement.status)} · ${formatStatementPeriod(statement)}` : "Resumen"}
+            </p>
+          </div>
+          <ActionButton
+            type="button"
+            variant="quiet"
+            size="icon"
+            aria-label="Cerrar"
+            onClick={onClose}
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </ActionButton>
+        </div>
+      </div>
+
+      <div className={appFormContentClass(view !== null, "px-5 sm:px-6 pb-6")}>
+        {statement ? (
+          <div className="space-y-4">
+            <div className="grid gap-2 sm:grid-cols-3">
+              <CardStatementMetric label="Cierre" value={formatMoney(statement.totalAmount, currency)} />
+              <CardStatementMetric label="Pendiente" value={formatMoney(statement.pendingAmount, currency)} />
+              <CardStatementMetric
+                label="Mínimo"
+                value={statement.minimumPayment != null ? formatMoney(statement.minimumPayment, currency) : "No informado"}
+              />
+            </div>
+
+            <div className="rounded-[1.5rem] border border-border bg-muted/20 p-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase text-muted-foreground">Movimientos del resumen</p>
+                <span className="text-xs text-muted-foreground">{statement.transactionCount}</span>
+              </div>
+              {movements.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+                  Este resumen todavía no tiene movimientos vinculados.
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  {movements.map((movement) => (
+                    <div key={movement.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card/40 p-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-sm">
+                        {movement.category?.icon ?? "💳"}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {movement.description ?? "Movimiento de tarjeta"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {movement.category?.name ?? "Sin categoría"} · {formatDate(movement.occurredAt)}
+                          {movement.installmentNumber && movement.totalInstallments
+                            ? ` · Cuota ${movement.installmentNumber}/${movement.totalInstallments}`
+                            : ""}
+                        </p>
+                      </div>
+                      <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                        {formatMoney(movement.amount, movement.currency)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {history.length > 1 ? (
+              <div className="rounded-[1.5rem] border border-border bg-muted/20 p-3">
+                <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Historial de cierres</p>
+                <div className="grid gap-2">
+                  {history.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card/40 p-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">{getStatementStatusLabel(item.status)}</p>
+                        <p className="text-xs text-muted-foreground">{formatStatementPeriod(item)}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-sm font-semibold tabular-nums text-foreground">{formatMoney(item.totalAmount || item.pendingAmount, item.currency)}</p>
+                        <p className="text-xs text-muted-foreground">{item.transactionCount} mov.</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </AppFormPanel>
+  );
+}
 
 function CCAccountsSection({
   summaries,
@@ -1812,6 +1971,15 @@ function formatDate(value: string) {
     year: "numeric",
     timeZone: "UTC",
   }).format(new Date(value));
+}
+
+function formatStatementPeriod(statement: CardStatementItem) {
+  const month = new Intl.DateTimeFormat("es-AR", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(statement.cycleEndDate));
+  return statement.dueDate ? `${month} · vence ${formatDate(statement.dueDate)}` : month;
 }
 
 function formatMoney(value: number, currency: CurrencyCode) {

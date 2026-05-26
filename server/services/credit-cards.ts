@@ -66,6 +66,25 @@ export async function listCreditCards(userProfileId: string, input: ListCreditCa
       statements: {
         where: { deletedAt: null },
         include: {
+          transactions: {
+            where: { deletedAt: null },
+            include: {
+              transaction: {
+                select: {
+                  id: true,
+                  description: true,
+                  category: {
+                    select: {
+                      name: true,
+                      icon: true,
+                    },
+                  },
+                },
+              },
+            },
+            orderBy: { occurredAt: "desc" },
+            take: 100,
+          },
           _count: {
             select: {
               transactions: true,
@@ -332,6 +351,21 @@ function serializeStatement(statement: CardStatementInput & {
   cycleEndDate: Date;
   closeDate: Date | null;
   importedAt: Date | null;
+  transactions?: Array<{
+    id: string;
+    transactionId: string | null;
+    description: string | null;
+    currency: string;
+    amount: Prisma.Decimal | number;
+    occurredAt: Date;
+    installmentNumber: number | null;
+    totalInstallments: number | null;
+    transaction: {
+      id: string;
+      description: string | null;
+      category: { name: string; icon: string | null } | null;
+    } | null;
+  }>;
   _count?: { transactions: number; payments: number };
 }) {
   return {
@@ -351,6 +385,17 @@ function serializeStatement(statement: CardStatementInput & {
     minimumPayment: statement.minimumPayment != null ? toFiniteNumber(statement.minimumPayment) : null,
     paidAmount: toFiniteNumber(statement.paidAmount),
     importedAt: statement.importedAt?.toISOString() ?? null,
+    movements: statement.transactions?.map((movement) => ({
+      id: movement.id,
+      transactionId: movement.transactionId,
+      description: movement.transaction?.description ?? movement.description,
+      currency: movement.currency,
+      amount: toFiniteNumber(movement.amount),
+      occurredAt: movement.occurredAt.toISOString(),
+      category: movement.transaction?.category ?? null,
+      installmentNumber: movement.installmentNumber,
+      totalInstallments: movement.totalInstallments,
+    })) ?? [],
     transactionCount: statement._count?.transactions ?? 0,
     paymentCount: statement._count?.payments ?? 0,
   };

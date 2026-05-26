@@ -16,6 +16,18 @@ export type CardStatementStatus =
 export type CardPaymentKind = "MINIMUM" | "FULL" | "PARTIAL" | "CUSTOM";
 export type CardPressure = "none" | "low" | "medium" | "high" | "overdue";
 
+export type CardStatementMovementItem = {
+  id: string;
+  transactionId: string | null;
+  description: string | null;
+  currency: "ARS" | "USD";
+  amount: number;
+  occurredAt: string;
+  category: { name: string; icon: string | null } | null;
+  installmentNumber: number | null;
+  totalInstallments: number | null;
+};
+
 export type CardStatementItem = {
   id: string;
   creditCardId: string;
@@ -33,6 +45,7 @@ export type CardStatementItem = {
   minimumPayment: number | null;
   paidAmount: number;
   importedAt: string | null;
+  movements: CardStatementMovementItem[];
   transactionCount: number;
   paymentCount: number;
 };
