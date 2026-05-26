@@ -607,76 +607,73 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
             onConfirmPayment={handleCardPaymentConfirm}
             onOpenStatement={(card, statement) => setActiveStatementView({ card, statement })}
             onCreate={openNewDebt}
-          />
-
-          <PremiumCard variant="default" className="overflow-hidden">
-            <PremiumCardHeader className="pb-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <PremiumCardTitle>Compromisos pendientes</PremiumCardTitle>
-                  <PremiumCardDescription>Pasivos formales y tarjetas con saldo pendiente.</PremiumCardDescription>
+            debtSection={
+              <div>
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Compromisos pendientes</p>
+                    <p className="text-xs text-muted-foreground">Pasivos formales y tarjetas con saldo pendiente.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <select
+                      className="v2-focus-ring h-9 rounded-2xl border border-border bg-muted/40 px-3 text-base md:text-sm text-foreground outline-none"
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                      <option value="">Con saldo hoy</option>
+                      {debtStatuses.map((status) => <option key={status} value={status}>{debtStatusLabels[status]}</option>)}
+                    </select>
+                    <ActionButton type="button" size="sm" className="hidden xl:inline-flex" onClick={openNewDebt}>
+                      <Plus className="h-4 w-4" aria-hidden="true" />
+                      Nuevo
+                    </ActionButton>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <select
-                    className="v2-focus-ring h-9 rounded-2xl border border-border bg-muted/40 px-3 text-base md:text-sm text-foreground outline-none"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="">Con saldo hoy</option>
-                    {debtStatuses.map((status) => <option key={status} value={status}>{debtStatusLabels[status]}</option>)}
-                  </select>
-                  <ActionButton type="button" size="sm" className="hidden xl:inline-flex" onClick={openNewDebt}>
-                    <Plus className="h-4 w-4" aria-hidden="true" />
-                    Nuevo
-                  </ActionButton>
-                </div>
+                {isLoading || isCCLoading || isCreditCardsLoading ? (
+                  <DebtSkeletonList />
+                ) : totalItemCount === 0 && creditCards.length === 0 ? (
+                  <DebtEmptyState onCreate={openNewDebt} />
+                ) : totalItemCount === 0 ? (
+                  <div className="rounded-[1.75rem] border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
+                    Las tarjetas ya se gestionan por resumen arriba. Acá van a aparecer préstamos y cuotas no vinculadas.
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    <AnimatePresence initial={false}>
+                      {unlinkedCCSummaries.map((account) => (
+                        <CCVirtualCard
+                          key={account.id}
+                          account={account}
+                          onViewMovements={() => setActiveCCAccount(account)}
+                        />
+                      ))}
+                      {debts.map((debt) => (
+                        <DebtCard
+                          key={debt.id}
+                          debt={debt}
+                          todayMs={todayMs}
+                          accounts={accounts}
+                          isDeleting={deletingDebtId === debt.id}
+                          isPaying={payingDebtId === debt.id}
+                          isQuickPayOpen={quickPayDebtId === debt.id}
+                          quickPayAccountId={quickPayAccountId}
+                          quickPayAmount={quickPayAmount}
+                          quickPayErrors={quickPayErrors}
+                          onEdit={() => startEditing(debt)}
+                          onDelete={() => requestDelete(debt)}
+                          onQuickPayOpen={() => openQuickPay(debt)}
+                          onQuickPayCancel={cancelQuickPay}
+                          onQuickPayAccountChange={setQuickPayAccountId}
+                          onQuickPayAmountChange={setQuickPayAmount}
+                          onQuickPayConfirm={() => handlePayConfirm(debt)}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                )}
               </div>
-            </PremiumCardHeader>
-            <PremiumCardContent>
-              {isLoading || isCCLoading || isCreditCardsLoading ? (
-                <DebtSkeletonList />
-              ) : totalItemCount === 0 && creditCards.length === 0 ? (
-                <DebtEmptyState onCreate={openNewDebt} />
-              ) : totalItemCount === 0 ? (
-                <div className="rounded-[1.75rem] border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
-                  Las tarjetas ya se gestionan por resumen arriba. Acá van a aparecer préstamos y cuotas no vinculadas.
-                </div>
-              ) : (
-                <div className="grid gap-3">
-                  <AnimatePresence initial={false}>
-                    {unlinkedCCSummaries.map((account) => (
-                      <CCVirtualCard
-                        key={account.id}
-                        account={account}
-                        onViewMovements={() => setActiveCCAccount(account)}
-                      />
-                    ))}
-                    {debts.map((debt) => (
-                      <DebtCard
-                        key={debt.id}
-                        debt={debt}
-                        todayMs={todayMs}
-                        accounts={accounts}
-                        isDeleting={deletingDebtId === debt.id}
-                        isPaying={payingDebtId === debt.id}
-                        isQuickPayOpen={quickPayDebtId === debt.id}
-                        quickPayAccountId={quickPayAccountId}
-                        quickPayAmount={quickPayAmount}
-                        quickPayErrors={quickPayErrors}
-                        onEdit={() => startEditing(debt)}
-                        onDelete={() => requestDelete(debt)}
-                        onQuickPayOpen={() => openQuickPay(debt)}
-                        onQuickPayCancel={cancelQuickPay}
-                        onQuickPayAccountChange={setQuickPayAccountId}
-                        onQuickPayAmountChange={setQuickPayAmount}
-                        onQuickPayConfirm={() => handlePayConfirm(debt)}
-                      />
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )}
-            </PremiumCardContent>
-          </PremiumCard>
+            }
+          />
         </div>
 
         <MobileCreateFab label="Nuevo crédito o cuota" onClick={openNewDebt} />
@@ -692,6 +689,7 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
 
       <StatementMovementsSheet
         view={activeStatementView}
+        householdId={householdId}
         onClose={() => setActiveStatementView(null)}
       />
 
@@ -727,6 +725,7 @@ function DebtBriefing({
   onConfirmPayment,
   onOpenStatement,
   onCreate,
+  debtSection,
 }: {
   summary: DebtSummary;
   debtCount: number;
@@ -746,6 +745,7 @@ function DebtBriefing({
   onConfirmPayment: (statement: CardStatementItem) => void;
   onOpenStatement: (card: CreditCardItem, statement: CardStatementItem) => void;
   onCreate: () => void;
+  debtSection?: React.ReactNode;
 }) {
   const state = getDebtState(summary, debtCount);
   const shouldReduceMotion = useReducedMotion();
@@ -834,6 +834,12 @@ function DebtBriefing({
                       />
                     ))}
                   </div>
+                </div>
+              ) : null}
+
+              {debtSection ? (
+                <div className="mt-5 border-t border-border pt-5">
+                  {debtSection}
                 </div>
               ) : null}
             </>
@@ -1353,16 +1359,47 @@ type CCTransaction = {
 
 function StatementMovementsSheet({
   view,
+  householdId,
   onClose,
 }: {
   view: { card: CreditCardItem; statement: CardStatementItem } | null;
+  householdId: string;
   onClose: () => void;
 }) {
   const card = view?.card ?? null;
   const statement = view?.statement ?? null;
-  const movements = statement?.movements ?? [];
+  const linkedMovements = statement?.movements ?? [];
   const history = card?.statements ?? [];
   const currency = statement?.currency ?? card?.currency ?? "ARS";
+
+  const [allTransactions, setAllTransactions] = useState<CCTransaction[]>([]);
+  const [fetchingTx, setFetchingTx] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!view || !view.card.accountId) {
+      setAllTransactions([]);
+      return;
+    }
+    setFetchingTx(true);
+    const params = new URLSearchParams({
+      householdId,
+      accountId: view.card.accountId,
+      from: view.statement.cycleStartDate.slice(0, 10),
+      to: view.statement.cycleEndDate.slice(0, 10),
+      limit: "100",
+    });
+    fetch(`/api/transactions?${params}`)
+      .then((r) => r.json() as Promise<{ data?: { data?: CCTransaction[] } }>)
+      .then((payload) => { if (!cancelled) setAllTransactions(payload.data?.data ?? []); })
+      .catch(() => { if (!cancelled) setAllTransactions([]); })
+      .finally(() => { if (!cancelled) setFetchingTx(false); });
+    return () => { cancelled = true; };
+  }, [view, householdId]);
+
+  const movements = allTransactions.length > 0 ? allTransactions : linkedMovements;
+  const movementCount = allTransactions.length > 0 ? allTransactions.length : (statement?.transactionCount ?? 0);
+  const fetching = fetchingTx;
 
   return (
     <AppFormPanel
@@ -1409,36 +1446,85 @@ function StatementMovementsSheet({
 
             <div className="rounded-[1.5rem] border border-border bg-muted/20 p-3">
               <div className="mb-2 flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase text-muted-foreground">Movimientos del resumen</p>
-                <span className="text-xs text-muted-foreground">{statement.transactionCount}</span>
+                <p className="text-xs font-semibold uppercase text-muted-foreground">
+                  {allTransactions.length > 0 ? "Movimientos en el período" : "Movimientos del resumen"}
+                </p>
+                <span className="text-xs text-muted-foreground">
+                  {fetching ? "…" : movementCount}
+                </span>
               </div>
-              {movements.length === 0 ? (
+              {fetching ? (
+                <div className="grid gap-2">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex items-center gap-3 rounded-2xl border border-border bg-card/40 p-3">
+                      <Skeleton className="h-9 w-9 rounded-xl bg-muted" />
+                      <div className="flex-1 space-y-1.5">
+                        <Skeleton className="h-3.5 w-36 bg-muted" />
+                        <Skeleton className="h-3 w-24 bg-muted" />
+                      </div>
+                      <Skeleton className="h-4 w-20 bg-muted" />
+                    </div>
+                  ))}
+                </div>
+              ) : movements.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
-                  Este resumen todavía no tiene movimientos vinculados.
+                  Sin movimientos registrados en este período.
                 </div>
               ) : (
                 <div className="grid gap-2">
-                  {movements.map((movement) => (
-                    <div key={movement.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card/40 p-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-sm">
-                        {movement.category?.icon ?? "💳"}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-foreground">
-                          {movement.description ?? "Movimiento de tarjeta"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {movement.category?.name ?? "Sin categoría"} · {formatDate(movement.occurredAt)}
-                          {movement.installmentNumber && movement.totalInstallments
-                            ? ` · Cuota ${movement.installmentNumber}/${movement.totalInstallments}`
-                            : ""}
-                        </p>
-                      </div>
-                      <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-                        {formatMoney(movement.amount, movement.currency)}
-                      </p>
+                  {allTransactions.length > 0
+                    ? allTransactions.map((tx) => (
+                        <div key={tx.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card/40 p-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-sm">
+                            {tx.category?.emoji ?? "💳"}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-foreground">
+                              {tx.description ?? "Movimiento de tarjeta"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {tx.category?.name ?? "Sin categoría"} · {formatDate(tx.occurredAt)}
+                            </p>
+                          </div>
+                          <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                            {formatMoney(Math.abs(tx.amount), currency)}
+                          </p>
+                        </div>
+                      ))
+                    : linkedMovements.map((movement) => (
+                        <div key={movement.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card/40 p-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-sm">
+                            {movement.category?.icon ?? "💳"}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-foreground">
+                              {movement.description ?? "Movimiento de tarjeta"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {movement.category?.name ?? "Sin categoría"} · {formatDate(movement.occurredAt)}
+                              {movement.installmentNumber && movement.totalInstallments
+                                ? ` · Cuota ${movement.installmentNumber}/${movement.totalInstallments}`
+                                : ""}
+                            </p>
+                          </div>
+                          <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                            {formatMoney(movement.amount, movement.currency)}
+                          </p>
+                        </div>
+                      ))
+                  }
+                  {card?.accountId ? (
+                    <div className="mt-1 flex justify-center">
+                      <Link
+                        href={`/transactions?accountId=${card.accountId}`}
+                        className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/30 px-4 py-2 text-xs font-medium text-muted-foreground transition hover:bg-muted/50"
+                        onClick={onClose}
+                      >
+                        Ver todos en Movimientos
+                        <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                      </Link>
                     </div>
-                  ))}
+                  ) : null}
                 </div>
               )}
             </div>
