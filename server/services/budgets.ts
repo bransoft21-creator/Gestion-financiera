@@ -1,4 +1,4 @@
-import { BudgetPeriod, CategoryType, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { BudgetPeriod, CategoryType, CurrencyCode, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { argentinaMonthRangeUtc } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { ForbiddenError, NotFoundError } from "../api/errors";
@@ -17,6 +17,73 @@ const activeTransactionWhere = {
 
 const SUGGESTION_HISTORY_MONTHS = 3;
 const MAX_SUGGESTIONS = 8;
+
+type SuggestionCategory = {
+  id: string;
+  name: string;
+  color: string | null;
+};
+
+type SuggestionTransaction = {
+  householdId: string;
+  type: TransactionType;
+  status: TransactionStatus;
+  currency: CurrencyCode;
+  amount: Prisma.Decimal | number;
+  categoryId: string | null;
+  occurredAt: Date;
+  origin?: string | null;
+  category?: {
+    type: CategoryType;
+    deletedAt: Date | null;
+    isArchived: boolean;
+  } | null;
+};
+
+type SuggestionRecurringExpense = {
+  categoryId: string | null;
+  currency: CurrencyCode;
+  amount: Prisma.Decimal | number;
+  frequency: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
+};
+
+export type BudgetSuggestionDiagnosticCode =
+  | "NO_ACTIVITY"
+  | "UNCATEGORIZED_ACTIVITY"
+  | "OTHER_CURRENCY"
+  | "PENDING_ACTIVITY"
+  | "NO_CLASSIFIED_EXPENSES"
+  | "ALL_CATEGORIES_BUDGETED";
+
+export type BudgetSuggestionDiagnostic = {
+  code: BudgetSuggestionDiagnosticCode;
+  title: string;
+  message: string;
+  transactionCount: number;
+  eligibleExpenseCount: number;
+  classifiedExpenseCount: number;
+  uncategorizedExpenseCount: number;
+  pendingTransactionCount: number;
+  otherCurrencyTransactionCount: number;
+  excludedTypeTransactionCount: number;
+  unsupportedCategoryTransactionCount: number;
+  currency: CurrencyCode;
+  otherCurrencies: { currency: CurrencyCode; count: number }[];
+};
+
+export function getBudgetSuggestionWindow(year: number, month: number, now = new Date()) {
+  const { start: targetMonthStart, end: targetMonthEnd } = argentinaMonthRangeUtc(year, month);
+  const includesTargetMonth = now >= targetMonthStart;
+
+  return {
+    start: addMonths(targetMonthStart, includesTargetMonth ? -(SUGGESTION_HISTORY_MONTHS - 1) : -SUGGESTION_HISTORY_MONTHS),
+    end: includesTargetMonth ? targetMonthEnd : targetMonthStart,
+    targetMonthStart,
+    targetMonthEnd,
+    includesTargetMonth,
+    historyMonths: SUGGESTION_HISTORY_MONTHS,
+  };
+}
 
 export async function listBudgets(userProfileId: string, input: BudgetPeriodInput) {
   const period = resolvePeriod(input.year, input.month);
@@ -79,14 +146,15 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
   const period = resolvePeriod(input.year, input.month);
   await assertHouseholdAccess(userProfileId, input.householdId);
 
-  const { start: targetMonthStart } = argentinaMonthRangeUtc(period.year, period.month);
-  const historyStart = addMonths(targetMonthStart, -SUGGESTION_HISTORY_MONTHS);
+  const suggestionWindow = getBudgetSuggestionWindow(period.year, period.month);
 
-  const [household, categories, existingBudgets, historicalTransactions, recurringExpenses] = await Promise.all([
-    prisma.household.findFirst({
-      where: { id: input.householdId, deletedAt: null },
-      select: { kind: true },
-    }),
+  const household = await prisma.household.findFirst({
+    where: { id: input.householdId, deletedAt: null },
+    select: { kind: true, defaultCurrency: true },
+  });
+  const primaryCurrency = household?.defaultCurrency ?? CurrencyCode.ARS;
+
+  const [categories, existingBudgets, historicalTransactions, recurringExpenses] = await Promise.all([
     prisma.category.findMany({
       where: {
         householdId: input.householdId,
@@ -109,15 +177,25 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
     prisma.transaction.findMany({
       where: {
         householdId: input.householdId,
-        ...activeTransactionWhere,
-        type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
-        occurredAt: { gte: historyStart, lt: targetMonthStart },
+        deletedAt: null,
+        occurredAt: { gte: suggestionWindow.start, lt: suggestionWindow.end },
       },
       select: {
+        householdId: true,
         type: true,
+        status: true,
+        currency: true,
         amount: true,
         categoryId: true,
         occurredAt: true,
+        origin: true,
+        category: {
+          select: {
+            type: true,
+            deletedAt: true,
+            isArchived: true,
+          },
+        },
       },
     }),
     prisma.recurringExpense.findMany({
@@ -125,22 +203,63 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
         householdId: input.householdId,
         isActive: true,
         deletedAt: null,
-        OR: [{ endDate: null }, { endDate: { gte: targetMonthStart } }],
+        currency: primaryCurrency,
+        OR: [{ endDate: null }, { endDate: { gte: suggestionWindow.targetMonthStart } }],
       },
       select: {
         categoryId: true,
+        currency: true,
         amount: true,
         frequency: true,
       },
     }),
   ]);
 
-  const budgetedCategoryIds = new Set(existingBudgets.map((budget) => budget.categoryId));
+  return buildBudgetSuggestionsFromActivity({
+    householdId: input.householdId,
+    period,
+    householdKind: household?.kind ?? "PERSONAL",
+    primaryCurrency,
+    categories,
+    existingBudgetCategoryIds: existingBudgets.map((budget) => budget.categoryId),
+    transactions: historicalTransactions,
+    recurringExpenses,
+    historyMonths: suggestionWindow.historyMonths,
+  });
+}
+
+export function buildBudgetSuggestionsFromActivity({
+  householdId,
+  period,
+  householdKind,
+  primaryCurrency,
+  categories,
+  existingBudgetCategoryIds,
+  transactions,
+  recurringExpenses,
+  historyMonths = SUGGESTION_HISTORY_MONTHS,
+}: {
+  householdId: string;
+  period: { year: number; month: number };
+  householdKind: "PERSONAL" | "HOUSEHOLD";
+  primaryCurrency: CurrencyCode;
+  categories: SuggestionCategory[];
+  existingBudgetCategoryIds: string[];
+  transactions: SuggestionTransaction[];
+  recurringExpenses: SuggestionRecurringExpense[];
+  historyMonths?: number;
+}) {
+  const budgetedCategoryIds = new Set(existingBudgetCategoryIds);
   const availableCategories = categories.filter((category) => !budgetedCategoryIds.has(category.id));
   const incomeByMonth = new Map<string, number>();
-  const spending = new Map<string, { total: number; count: number; months: Map<string, number> }>();
+  const spending = new Map<string, { total: number; count: number; months: Map<string, number>; days: Set<string> }>();
+  const scopedTransactions = transactions.filter((transaction) => transaction.householdId === householdId);
 
-  historicalTransactions.forEach((transaction) => {
+  scopedTransactions.forEach((transaction) => {
+    if (transaction.status !== TransactionStatus.CONFIRMED) return;
+    if (transaction.currency !== primaryCurrency) return;
+    if (transaction.type !== TransactionType.INCOME && transaction.type !== TransactionType.EXPENSE) return;
+
     const month = getHistoryMonthKey(transaction.occurredAt);
     const amount = toFiniteNumber(transaction.amount);
 
@@ -149,16 +268,26 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
       return;
     }
 
-    if (transaction.type !== TransactionType.EXPENSE || !transaction.categoryId) return;
+    if (
+      transaction.type !== TransactionType.EXPENSE ||
+      !transaction.categoryId ||
+      transaction.category?.type !== CategoryType.EXPENSE ||
+      transaction.category?.deletedAt ||
+      transaction.category?.isArchived
+    ) {
+      return;
+    }
 
     const current = spending.get(transaction.categoryId) ?? {
       total: 0,
       count: 0,
       months: new Map<string, number>(),
+      days: new Set<string>(),
     };
     current.total += amount;
     current.count += 1;
     current.months.set(month, (current.months.get(month) ?? 0) + amount);
+    current.days.add(getHistoryDayKey(transaction.occurredAt));
     spending.set(transaction.categoryId, current);
   });
 
@@ -167,6 +296,7 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
 
   const recurringByCategory = recurringExpenses.reduce((totals, expense) => {
     if (!expense.categoryId) return totals;
+    if (expense.currency !== primaryCurrency) return totals;
     totals.set(
       expense.categoryId,
       (totals.get(expense.categoryId) ?? 0) + monthlyRecurringAmount(expense),
@@ -174,14 +304,15 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
     return totals;
   }, new Map<string, number>());
 
-  const isHouseholdPlan = household?.kind === "HOUSEHOLD";
+  const isHouseholdPlan = householdKind === "HOUSEHOLD";
   const suggestions = availableCategories
     .map((category) => {
       const historical = spending.get(category.id);
       const recurringAmount = recurringByCategory.get(category.id) ?? 0;
       const activeMonths = historical?.months.size ?? 0;
+      const activeDays = historical?.days.size ?? 0;
       const monthlyAmounts = historical ? Array.from(historical.months.values()) : [];
-      const recentAverage = historical ? historical.total / SUGGESTION_HISTORY_MONTHS : 0;
+      const recentAverage = historical ? historical.total / historyMonths : 0;
       const activeAverage = activeMonths > 0 && historical ? historical.total / activeMonths : 0;
       const medianAmount = getMedian(monthlyAmounts);
       const variability = getVariability(monthlyAmounts, activeAverage);
@@ -203,7 +334,7 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
       return {
         categoryId: category.id,
         category,
-        currency: "ARS" as const,
+        currency: primaryCurrency,
         suggestedAmount,
         recentAverage: Math.round(recentAverage),
         recurringAmount: Math.round(recurringAmount),
@@ -211,7 +342,7 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
         transactionCount: historical?.count ?? 0,
         variability: getVariabilityLabel(variability, activeMonths),
         incomeSharePercent,
-        confidence: getSuggestionConfidence(historical?.count ?? 0, recurringAmount, activeMonths),
+        confidence: getSuggestionConfidence(historical?.count ?? 0, recurringAmount, activeMonths, activeDays),
         reason: getSuggestionReason({
           transactionCount: historical?.count ?? 0,
           recurringAmount,
@@ -247,12 +378,28 @@ export async function listBudgetSuggestions(userProfileId: string, input: Budget
           : suggestion.reason,
     };
   });
+  const classifiedExpenseCount = Array.from(spending.values()).reduce((sum, item) => sum + item.count, 0);
+  const unbudgetedClassifiedExpenseCount = Array.from(spending.entries()).reduce((sum, [categoryId, item]) => {
+    if (budgetedCategoryIds.has(categoryId)) return sum;
+    return sum + item.count;
+  }, 0);
 
   return {
     period,
     recentMonthlyIncome: Math.round(recentMonthlyIncome),
-    historyMonths: SUGGESTION_HISTORY_MONTHS,
-    hasHistoricalActivity: spending.size > 0 || recurringByCategory.size > 0,
+    historyMonths,
+    hasHistoricalActivity: scopedTransactions.length > 0 || recurringByCategory.size > 0,
+    activitySummary: buildSuggestionActivitySummary(scopedTransactions, primaryCurrency),
+    diagnostic: getBudgetSuggestionDiagnostic({
+      transactions: scopedTransactions,
+      primaryCurrency,
+      classifiedExpenseCount,
+      eligibleExpenseCount: classifiedExpenseCount,
+      unbudgetedClassifiedExpenseCount,
+      recurringCategoryCount: recurringByCategory.size,
+      availableCategoryCount: availableCategories.length,
+      suggestionCount: adjustedSuggestions.length,
+    }),
     suggestions: adjustedSuggestions,
   };
 }
@@ -407,6 +554,155 @@ function getHistoryMonthKey(date: Date) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+function getHistoryDayKey(date: Date) {
+  return `${getHistoryMonthKey(date)}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function buildSuggestionActivitySummary(transactions: SuggestionTransaction[], primaryCurrency: CurrencyCode) {
+  const activeTransactions = transactions.filter((transaction) => transaction.status !== TransactionStatus.CANCELED);
+  const confirmedPrimaryExpenses = activeTransactions.filter(
+    (transaction) =>
+      transaction.status === TransactionStatus.CONFIRMED &&
+      transaction.currency === primaryCurrency &&
+      transaction.type === TransactionType.EXPENSE,
+  );
+  const classifiedExpenseCount = confirmedPrimaryExpenses.filter(isActiveExpenseCategoryTransaction).length;
+  const uncategorizedExpenseCount = confirmedPrimaryExpenses.filter((transaction) => !transaction.categoryId).length;
+  const unsupportedCategoryTransactionCount = confirmedPrimaryExpenses.filter(
+    (transaction) => transaction.categoryId && !isActiveExpenseCategoryTransaction(transaction),
+  ).length;
+  const otherCurrencyCounts = activeTransactions.reduce((totals, transaction) => {
+    if (transaction.currency === primaryCurrency) return totals;
+    totals.set(transaction.currency, (totals.get(transaction.currency) ?? 0) + 1);
+    return totals;
+  }, new Map<CurrencyCode, number>());
+
+  return {
+    transactionCount: transactions.length,
+    confirmedTransactionCount: activeTransactions.filter((transaction) => transaction.status === TransactionStatus.CONFIRMED).length,
+    pendingTransactionCount: activeTransactions.filter((transaction) => transaction.status === TransactionStatus.PENDING).length,
+    incomeCount: activeTransactions.filter(
+      (transaction) => transaction.currency === primaryCurrency && transaction.type === TransactionType.INCOME,
+    ).length,
+    expenseCount: confirmedPrimaryExpenses.length,
+    classifiedExpenseCount,
+    uncategorizedExpenseCount,
+    otherCurrencyTransactionCount: Array.from(otherCurrencyCounts.values()).reduce((sum, count) => sum + count, 0),
+    excludedTypeTransactionCount: activeTransactions.filter(
+      (transaction) =>
+        transaction.currency === primaryCurrency &&
+        transaction.type !== TransactionType.INCOME &&
+        transaction.type !== TransactionType.EXPENSE,
+    ).length,
+    unsupportedCategoryTransactionCount,
+    currency: primaryCurrency,
+    otherCurrencies: Array.from(otherCurrencyCounts.entries()).map(([currency, count]) => ({ currency, count })),
+  };
+}
+
+function getBudgetSuggestionDiagnostic({
+  transactions,
+  primaryCurrency,
+  classifiedExpenseCount,
+  eligibleExpenseCount,
+  unbudgetedClassifiedExpenseCount,
+  recurringCategoryCount,
+  availableCategoryCount,
+  suggestionCount,
+}: {
+  transactions: SuggestionTransaction[];
+  primaryCurrency: CurrencyCode;
+  classifiedExpenseCount: number;
+  eligibleExpenseCount: number;
+  unbudgetedClassifiedExpenseCount: number;
+  recurringCategoryCount: number;
+  availableCategoryCount: number;
+  suggestionCount: number;
+}): BudgetSuggestionDiagnostic | null {
+  if (suggestionCount > 0) return null;
+
+  const summary = buildSuggestionActivitySummary(transactions, primaryCurrency);
+  const base = {
+    transactionCount: summary.transactionCount,
+    eligibleExpenseCount,
+    classifiedExpenseCount,
+    uncategorizedExpenseCount: summary.uncategorizedExpenseCount,
+    pendingTransactionCount: summary.pendingTransactionCount,
+    otherCurrencyTransactionCount: summary.otherCurrencyTransactionCount,
+    excludedTypeTransactionCount: summary.excludedTypeTransactionCount,
+    unsupportedCategoryTransactionCount: summary.unsupportedCategoryTransactionCount,
+    currency: primaryCurrency,
+    otherCurrencies: summary.otherCurrencies,
+  };
+
+  if (summary.transactionCount === 0 && recurringCategoryCount === 0) {
+    return {
+      ...base,
+      code: "NO_ACTIVITY",
+      title: "Creá tu primer plan de distribución",
+      message: "No encontramos movimientos en el período analizado. Cuando cargues gastos reales, Meridian va a preparar una base editable.",
+    };
+  }
+
+  if (summary.otherCurrencyTransactionCount > 0 && classifiedExpenseCount === 0) {
+    const currencies = summary.otherCurrencies.map((item) => item.currency).join(", ");
+    return {
+      ...base,
+      code: "OTHER_CURRENCY",
+      title: "Hay movimientos en otra moneda",
+      message: `Encontramos ${summary.transactionCount} movimientos, pero el plan actual está en ${primaryCurrency}${currencies ? ` y la actividad está en ${currencies}` : ""}.`,
+    };
+  }
+
+  if (summary.pendingTransactionCount > 0 && classifiedExpenseCount === 0) {
+    return {
+      ...base,
+      code: "PENDING_ACTIVITY",
+      title: "Tus movimientos están pendientes de revisión",
+      message: `Encontramos ${summary.pendingTransactionCount} movimientos pendientes. Confirmalos para que entren en las sugerencias del presupuesto.`,
+    };
+  }
+
+  if (summary.uncategorizedExpenseCount > 0 && classifiedExpenseCount === 0) {
+    return {
+      ...base,
+      code: "UNCATEGORIZED_ACTIVITY",
+      title: "Tenés movimientos sin clasificar",
+      message: `Encontramos ${summary.transactionCount} movimientos, pero ${summary.uncategorizedExpenseCount} gastos están sin clasificar. Clasificalos para generar sugerencias.`,
+    };
+  }
+
+  if (classifiedExpenseCount > 0 && (availableCategoryCount === 0 || unbudgetedClassifiedExpenseCount === 0)) {
+    return {
+      ...base,
+      code: "ALL_CATEGORIES_BUDGETED",
+      title: "Las categorías activas ya tienen plan",
+      message: "Todas las categorías con actividad ya están cubiertas. Podés ajustar cualquier intención activa o agregar una nueva manualmente.",
+    };
+  }
+
+  return {
+    ...base,
+    code: "NO_CLASSIFIED_EXPENSES",
+    title: "Todavía no hay gastos clasificados suficientes",
+    message:
+      summary.excludedTypeTransactionCount > 0 || summary.unsupportedCategoryTransactionCount > 0
+        ? `Encontramos ${summary.transactionCount} movimientos, pero no hay gastos clasificados compatibles con el presupuesto.`
+        : "Ya hay movimientos, pero necesitamos algunos gastos clasificados para sugerir montos.",
+  };
+}
+
+function isActiveExpenseCategoryTransaction(transaction: SuggestionTransaction) {
+  const category = transaction.category;
+
+  return (
+    !!transaction.categoryId &&
+    category?.type === CategoryType.EXPENSE &&
+    !category.deletedAt &&
+    !category.isArchived
+  );
+}
+
 function monthlyRecurringAmount(expense: {
   amount: Prisma.Decimal | number;
   frequency: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
@@ -475,14 +771,15 @@ function getSuggestedBudgetAmount({
   }
 
   if (activeMonths === 0) return 0;
-  if (activeMonths === 1) return recentAverage;
+  if (activeMonths === 1) return activeAverage;
   if (variability >= 0.8) return medianAmount;
   return activeAverage;
 }
 
-function getSuggestionConfidence(transactionCount: number, recurringAmount: number, activeMonths: number) {
+function getSuggestionConfidence(transactionCount: number, recurringAmount: number, activeMonths: number, activeDays: number) {
   if (recurringAmount > 0 || (transactionCount >= 4 && activeMonths >= 2)) return "high" as const;
-  if (transactionCount > 0 && activeMonths >= 2) return "medium" as const;
+  if (transactionCount >= 12 && activeDays >= 20) return "high" as const;
+  if (transactionCount >= 4 || (transactionCount > 0 && activeMonths >= 2)) return "medium" as const;
   return "starter" as const;
 }
 

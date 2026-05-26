@@ -1064,14 +1064,34 @@ function CCTransactionsSheet({
   const defaultAccount = getPreferredArsBankAccount(accounts);
 
   useEffect(() => {
-    if (!account) { setTransactions([]); setIsPayOpen(false); return; }
-    setFetching(true);
-    const params = new URLSearchParams({ householdId, accountId: account.id, limit: "50" });
-    fetch(`/api/transactions?${params}`)
-      .then((r) => r.json() as Promise<{ data?: { data?: CCTransaction[] } }>)
-      .then((payload) => setTransactions(payload.data?.data ?? []))
-      .catch(() => setTransactions([]))
-      .finally(() => setFetching(false));
+    let cancelled = false;
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+      if (!account) {
+        setTransactions([]);
+        setIsPayOpen(false);
+        return;
+      }
+
+      setFetching(true);
+      const params = new URLSearchParams({ householdId, accountId: account.id, limit: "50" });
+      fetch(`/api/transactions?${params}`)
+        .then((r) => r.json() as Promise<{ data?: { data?: CCTransaction[] } }>)
+        .then((payload) => {
+          if (!cancelled) setTransactions(payload.data?.data ?? []);
+        })
+        .catch(() => {
+          if (!cancelled) setTransactions([]);
+        })
+        .finally(() => {
+          if (!cancelled) setFetching(false);
+        });
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [account, householdId]);
 
   function openPay() {

@@ -79,6 +79,24 @@ type BudgetSuggestion = {
   reason: string;
 };
 
+type BudgetSuggestionDiagnostic = {
+  title: string;
+  message: string;
+  transactionCount: number;
+  classifiedExpenseCount: number;
+  uncategorizedExpenseCount: number;
+  pendingTransactionCount: number;
+  otherCurrencyTransactionCount: number;
+};
+
+type BudgetSuggestionActivitySummary = {
+  transactionCount: number;
+  classifiedExpenseCount: number;
+  uncategorizedExpenseCount: number;
+  pendingTransactionCount: number;
+  otherCurrencyTransactionCount: number;
+};
+
 type BudgetsClientProps = {
   householdId: string;
   categories: CategoryOption[];
@@ -148,6 +166,8 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
   const suggestions = useMemo(() => suggestionsData?.suggestions ?? [], [suggestionsData]);
   const recentMonthlyIncome = suggestionsData?.recentMonthlyIncome ?? 0;
   const hasHistoricalActivity = suggestionsData?.hasHistoricalActivity ?? false;
+  const suggestionDiagnostic = suggestionsData?.diagnostic ?? null;
+  const suggestionActivitySummary = suggestionsData?.activitySummary;
   const suggestionDrafts = useMemo(
     () => ({
       ...Object.fromEntries(suggestions.map((s) => [s.categoryId, String(s.suggestedAmount)])),
@@ -400,6 +420,8 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
                       selectedIds={selectedSuggestionIds}
                       recentMonthlyIncome={recentMonthlyIncome}
                       hasHistoricalActivity={hasHistoricalActivity}
+                      diagnostic={suggestionDiagnostic}
+                      activitySummary={suggestionActivitySummary}
                       isLoading={isLoadingSuggestions}
                       isApplying={isApplyingSuggestions}
                       onAmountChange={updateSuggestionDraft}
@@ -619,6 +641,8 @@ function SuggestedPlanPanel({
   selectedIds,
   recentMonthlyIncome,
   hasHistoricalActivity,
+  diagnostic,
+  activitySummary,
   isLoading,
   isApplying,
   onAmountChange,
@@ -630,6 +654,8 @@ function SuggestedPlanPanel({
   selectedIds: string[];
   recentMonthlyIncome: number;
   hasHistoricalActivity: boolean;
+  diagnostic: BudgetSuggestionDiagnostic | null;
+  activitySummary?: BudgetSuggestionActivitySummary;
   isLoading: boolean;
   isApplying: boolean;
   onAmountChange: (categoryId: string, value: string) => void;
@@ -653,16 +679,28 @@ function SuggestedPlanPanel({
   }
 
   if (suggestions.length === 0) {
+    const emptyTitle = diagnostic?.title ?? (hasHistoricalActivity ? "Las categorías activas ya tienen plan" : "Creá tu primer plan de distribución");
+    const emptyMessage =
+      diagnostic?.message ??
+      (hasHistoricalActivity
+        ? "Todas las categorías con actividad ya están cubiertas. Podés ajustar cualquier intención activa o agregar una nueva manualmente."
+        : "No encontramos movimientos en el período analizado. Cuando cargues gastos reales, Meridian va a preparar una base editable.");
+    const shouldShowCounts = (activitySummary?.transactionCount ?? 0) > 0;
+
     return (
       <div className="rounded-3xl border border-border bg-muted/30 p-4">
-        <p className="text-sm font-semibold text-foreground">
-          {hasHistoricalActivity ? "Las categorías activas ya tienen plan" : "Creá tu primer plan de distribución"}
-        </p>
+        <p className="text-sm font-semibold text-foreground">{emptyTitle}</p>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          {hasHistoricalActivity
-            ? "Todas las categorías con actividad ya están cubiertas. Podés ajustar cualquier intención activa o agregar una nueva manualmente."
-            : "Las sugerencias automáticas se activan cuando hay movimientos registrados. Como punto de partida, una distribución saludable destina ~50% a necesidades esenciales, ~30% a gastos variables y ~20% a ahorro."}
+          {emptyMessage}
         </p>
+        {shouldShowCounts ? (
+          <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
+            Detectados: {activitySummary?.transactionCount} movimientos · {activitySummary?.classifiedExpenseCount} gastos clasificados
+            {activitySummary?.uncategorizedExpenseCount ? ` · ${activitySummary.uncategorizedExpenseCount} sin clasificar` : ""}
+            {activitySummary?.pendingTransactionCount ? ` · ${activitySummary.pendingTransactionCount} pendientes` : ""}
+            {activitySummary?.otherCurrencyTransactionCount ? ` · ${activitySummary.otherCurrencyTransactionCount} en otra moneda` : ""}
+          </p>
+        ) : null}
       </div>
     );
   }

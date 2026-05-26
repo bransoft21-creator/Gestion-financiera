@@ -34,10 +34,49 @@ export type BudgetSuggestion = {
   reason: string;
 };
 
+export type BudgetSuggestionDiagnostic = {
+  code:
+    | "NO_ACTIVITY"
+    | "UNCATEGORIZED_ACTIVITY"
+    | "OTHER_CURRENCY"
+    | "PENDING_ACTIVITY"
+    | "NO_CLASSIFIED_EXPENSES"
+    | "ALL_CATEGORIES_BUDGETED";
+  title: string;
+  message: string;
+  transactionCount: number;
+  eligibleExpenseCount: number;
+  classifiedExpenseCount: number;
+  uncategorizedExpenseCount: number;
+  pendingTransactionCount: number;
+  otherCurrencyTransactionCount: number;
+  excludedTypeTransactionCount: number;
+  unsupportedCategoryTransactionCount: number;
+  currency: "ARS" | "USD";
+  otherCurrencies: { currency: "ARS" | "USD"; count: number }[];
+};
+
+export type BudgetSuggestionActivitySummary = {
+  transactionCount: number;
+  confirmedTransactionCount: number;
+  pendingTransactionCount: number;
+  incomeCount: number;
+  expenseCount: number;
+  classifiedExpenseCount: number;
+  uncategorizedExpenseCount: number;
+  otherCurrencyTransactionCount: number;
+  excludedTypeTransactionCount: number;
+  unsupportedCategoryTransactionCount: number;
+  currency: "ARS" | "USD";
+  otherCurrencies: { currency: "ARS" | "USD"; count: number }[];
+};
+
 type BudgetSuggestionsData = {
   suggestions: BudgetSuggestion[];
   recentMonthlyIncome: number;
   hasHistoricalActivity: boolean;
+  activitySummary?: BudgetSuggestionActivitySummary;
+  diagnostic?: BudgetSuggestionDiagnostic | null;
 };
 
 async function fetchBudgets(householdId: string, year: number, month: number): Promise<BudgetItem[]> {
@@ -56,7 +95,7 @@ async function fetchBudgetSuggestions(householdId: string, year: number, month: 
     error?: string;
   };
   if (!response.ok) throw new Error(payload.error ?? "No pudimos preparar sugerencias.");
-  return payload.data ?? { suggestions: [], recentMonthlyIncome: 0, hasHistoricalActivity: false };
+  return payload.data ?? { suggestions: [], recentMonthlyIncome: 0, hasHistoricalActivity: false, diagnostic: null };
 }
 
 export function useBudgets(householdId: string, year: number, month: number) {
