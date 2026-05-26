@@ -572,6 +572,8 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
       <CCTransactionsSheet
         householdId={householdId}
         account={activeCCAccount}
+        accounts={accounts}
+        linkedDebt={activeCCAccount ? (debts.find((d) => d.accountId === activeCCAccount.id) ?? null) : null}
         onClose={() => setActiveCCAccount(null)}
       />
 
@@ -979,17 +981,28 @@ function CCAccountsSection({
 function CCTransactionsSheet({
   householdId,
   account,
+  accounts,
+  linkedDebt,
   onClose,
 }: {
   householdId: string;
   account: CCSummary | null;
+  accounts: AccountOption[];
+  linkedDebt: DebtItem | null;
   onClose: () => void;
 }) {
   const [transactions, setTransactions] = useState<CCTransaction[]>([]);
   const [fetching, setFetching] = useState(false);
+  const [isPayOpen, setIsPayOpen] = useState(false);
+  const [payAccountId, setPayAccountId] = useState("");
+  const [payAmount, setPayAmount] = useState("");
+  const [payErrors, setPayErrors] = useState<{ accountId?: string; amount?: string }>({});
+  const payDebt = usePayDebt();
+
+  const defaultAccount = getPreferredArsBankAccount(accounts);
 
   useEffect(() => {
-    if (!account) { setTransactions([]); return; }
+    if (!account) { setTransactions([]); setIsPayOpen(false); return; }
     setFetching(true);
     const params = new URLSearchParams({ householdId, accountId: account.id, limit: "50" });
     fetch(`/api/transactions?${params}`)
@@ -998,6 +1011,54 @@ function CCTransactionsSheet({
       .catch(() => setTransactions([]))
       .finally(() => setFetching(false));
   }, [account, householdId]);
+
+  function openPay() {
+    setPayAccountId(defaultAccount?.id ?? "");
+    setPayAmount(linkedDebt ? String(linkedDebt.outstandingAmount) : "");
+    setPayErrors({});
+    setIsPayOpen(true);
+  }
+
+  function cancelPay() {
+    setIsPayOpen(false);
+    setPayErrors({});
+  }
+
+  async function handlePayConfirm() {
+    if (!linkedDebt || !account) return;
+    if (!payAccountId) { setPayErrors({ accountId: "Seleccioná una cuenta." }); return; }
+    const parsedAmount = parseMoneyInput(payAmount);
+    if (!parsedAmount.success || parsedAmount.data == null) {
+      setPayErrors({ amount: parsedAmount.success ? "Ingresá un monto." : parsedAmount.error });
+      return;
+    }
+    if (parsedAmount.data > linkedDebt.outstandingAmount) {
+      setPayErrors({ amount: `El pago no puede superar el saldo pendiente (${formatMoney(linkedDebt.outstandingAmount, linkedDebt.currency)}).` });
+      return;
+    }
+    setPayErrors({});
+    try {
+      await payDebt.mutateAsync({
+        householdId,
+        debtId: linkedDebt.id,
+        accountId: payAccountId,
+        amount: parsedAmount.data,
+        currency: linkedDebt.currency,
+        debtName: linkedDebt.name,
+        occurredAt: formatArgentinaDateInput(),
+      });
+      toast.success(`Pago de ${linkedDebt.name} registrado.`);
+      cancelPay();
+      onClose();
+    } catch (err: unknown) {
+      const e = err as Error & { fieldErrors?: { accountId?: string; amount?: string } };
+      if (e.fieldErrors) setPayErrors(e.fieldErrors);
+      else toast.error((err as Error).message);
+    }
+  }
+
+  const currency = account?.currency as "ARS" | "USD" | undefined ?? "ARS";
+  const owed = account ? Math.abs(account.currentBalance) : 0;
 
   return (
     <AppFormPanel
@@ -1015,7 +1076,7 @@ function CCTransactionsSheet({
               {account?.name ?? "Tarjeta"}
             </h2>
             <p className="mt-1 text-sm leading-5 text-muted-foreground">
-              Movimientos importados desde el resumen.
+              {owed > 0 ? `Saldo a pagar: ${formatMoney(owed, currency)}` : "Sin saldo pendiente"}
             </p>
           </div>
           <ActionButton
@@ -1028,6 +1089,56 @@ function CCTransactionsSheet({
             <X className="h-5 w-5" aria-hidden="true" />
           </ActionButton>
         </div>
+
+        {linkedDebt && !isPayOpen && (
+          <div className="px-5 pb-4 sm:px-6">
+            <ActionButton type="button" variant="glass" size="sm" onClick={openPay}>
+              <CheckCircle2 className="h-4 w-4 text-emerald-200" aria-hidden="true" />
+              Registrar pago
+            </ActionButton>
+          </div>
+        )}
+
+        {isPayOpen && linkedDebt && (
+          <div className="mx-5 mb-4 space-y-3 rounded-[1.5rem] border border-emerald-300/20 bg-emerald-300/10 p-4 sm:mx-6">
+            <p className="text-xs font-semibold uppercase text-emerald-400">Registrar pago — {linkedDebt.name}</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Cuenta</label>
+                <select
+                  className="v2-focus-ring h-10 w-full rounded-2xl border border-border bg-card/70 px-3 text-base md:text-sm text-foreground outline-none"
+                  value={payAccountId}
+                  onChange={(e) => setPayAccountId(e.target.value)}
+                >
+                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                {payErrors.accountId ? <p className="text-xs text-rose-200">{payErrors.accountId}</p> : null}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Monto ({linkedDebt.currency})</label>
+                <Input
+                  inputMode="decimal"
+                  onKeyDown={onMoneyKeyDown}
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(e.target.value)}
+                  placeholder="0"
+                  className="v2-focus-ring h-10 rounded-2xl border-border bg-card/70 text-foreground placeholder:text-muted-foreground"
+                />
+                {payErrors.amount ? <p className="text-xs text-rose-200">{payErrors.amount}</p> : null}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <ActionButton type="button" size="sm" disabled={payDebt.isPending} onClick={handlePayConfirm}>
+                {payDebt.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
+                Confirmar
+              </ActionButton>
+              <ActionButton type="button" variant="quiet" size="sm" onClick={cancelPay}>
+                <X className="h-4 w-4" aria-hidden="true" />
+                Cancelar
+              </ActionButton>
+            </div>
+          </div>
+        )}
       </div>
       <div className={appFormContentClass(account !== null, "px-5 sm:px-6 pb-6")}>
         {fetching ? (
@@ -1063,7 +1174,7 @@ function CCTransactionsSheet({
                   </p>
                 </div>
                 <p className="shrink-0 text-sm font-semibold tabular-nums text-destructive">
-                  {formatMoney(tx.amount, account?.currency as "ARS" | "USD" ?? "ARS")}
+                  {formatMoney(tx.amount, currency)}
                 </p>
               </div>
             ))}
