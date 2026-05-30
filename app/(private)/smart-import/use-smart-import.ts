@@ -296,6 +296,7 @@ export function useSmartImport({ householdId, accounts }: Options) {
     try {
       const payload = {
         householdId,
+        statementSummary: metadata?.statementSummary ?? undefined,
         candidates: toImport.map((c) => ({
           accountId: c.editAccountId,
           categoryId: c.editCategoryId || undefined,
@@ -309,6 +310,8 @@ export function useSmartImport({ householdId, accounts }: Options) {
           isInstallment: c.isInstallment,
           installmentNumber: c.installmentNumber ?? undefined,
           totalInstallments: c.totalInstallments ?? undefined,
+          isCharge: c.isCharge,
+          isTax: c.isTax,
           occurredAt: c.editDate,
           status: "CONFIRMED",
         })),

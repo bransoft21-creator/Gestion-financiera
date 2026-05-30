@@ -26,6 +26,7 @@ export type CardStatementMovementItem = {
   category: { name: string; icon: string | null } | null;
   installmentNumber: number | null;
   totalInstallments: number | null;
+  isTax: boolean;
 };
 
 export type CardStatementItem = {
@@ -44,6 +45,9 @@ export type CardStatementItem = {
   pendingAmount: number;
   minimumPayment: number | null;
   paidAmount: number;
+  movementTotal: number;
+  reconciliationDelta: number;
+  isReconciled: boolean;
   importedAt: string | null;
   movements: CardStatementMovementItem[];
   transactionCount: number;

@@ -250,6 +250,7 @@ function NarrativeSummary({
   const medConf = candidates.filter((c) => c.confidence >= 0.65 && c.confidence < 0.85).length;
   const lowConf = candidates.filter((c) => c.confidence < 0.65).length;
   const duplicates = candidates.filter((c) => c.possibleDuplicate).length;
+  const statementSummary = metadata.statementSummary;
   return (
     <PremiumCard
       variant="default"
@@ -281,6 +282,12 @@ function NarrativeSummary({
                 Totales separados por moneda real. No hay suma ARS + USD.
               </p>
             )}
+            {statementSummary?.statementTotal ? (
+              <p className="text-xs text-muted-foreground">
+                Saldo resumen: {formatImportMoney(statementSummary.statementTotal, metadata.currency)}
+                {statementSummary.minimumPayment ? ` · mínimo ${formatImportMoney(statementSummary.minimumPayment, metadata.currency)}` : ""}
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-1.5 text-right">

@@ -100,9 +100,12 @@ type DebtSummary = {
   active: number;
   defaulted: number;
   urgent: number;
+  missingMinimumCount: number;
+  missingDueDateCount: number;
   averagePaid: number;
   minimumCommitments: Partial<Record<CurrencyCode, number>>;
   nextDebt: DebtItem | null;
+  nextDueDate: string | null;
 };
 
 const debtTypeLabels: Record<DebtType, string> = {
@@ -223,7 +226,10 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
   const totalItemCount = debts.length + unlinkedCCSummaries.length;
   const augmentedTotal = totalOutstanding + ccUnlinkedTotal + cardStatementTotal;
 
-  const summary = useMemo(() => buildDebtSummary(debts, augmentedTotal, todayMs), [debts, augmentedTotal, todayMs]);
+  const summary = useMemo(
+    () => buildDebtSummary(debts, creditCards, augmentedTotal, todayMs),
+    [debts, creditCards, augmentedTotal, todayMs],
+  );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -790,12 +796,16 @@ function DebtBriefing({
               </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <DebtBriefMetric icon={WalletCards} label="Pago mínimo" value={formatCommitments(summary.minimumCommitments)} />
-                <DebtBriefMetric icon={CalendarClock} label="Urgentes" value={`${summary.urgent}`} />
+                <DebtBriefMetric icon={WalletCards} label="Pago mínimo" value={formatCommitments(summary.minimumCommitments, summary.missingMinimumCount)} />
+                <DebtBriefMetric
+                  icon={CalendarClock}
+                  label="Urgentes"
+                  value={summary.urgent > 0 ? `${summary.urgent}` : summary.missingDueDateCount > 0 ? "Sin fecha" : "0"}
+                />
                 <DebtBriefMetric
                   icon={Landmark}
                   label="Próximo vencimiento"
-                  value={summary.nextDebt?.nextDueDate ? formatDate(summary.nextDebt.nextDueDate) : "Sin fecha"}
+                  value={summary.nextDueDate ? formatDate(summary.nextDueDate) : summary.missingDueDateCount > 0 ? "No informado" : "Sin fecha"}
                 />
               </div>
 
@@ -905,6 +915,7 @@ function CreditCardStatementCard({
   const canPay = !!statement && pending > 0 && !!card.accountId && paymentAccounts.length > 0;
   const previousStatement = card.history[0] ?? null;
   const currentCloseAmount = statement?.totalAmount ?? 0;
+  const hasReconciliationGap = Boolean(statement && !statement.isReconciled);
 
   return (
     <article className="rounded-[1.75rem] border border-border bg-muted/25 p-4 sm:p-5">
@@ -939,11 +950,20 @@ function CreditCardStatementCard({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+      <div className="mt-4 grid gap-2 sm:grid-cols-4">
         <CardStatementMetric label="Este cierre" value={statement ? formatMoney(currentCloseAmount, currency) : "Sin resumen"} />
+        <CardStatementMetric label="Movimientos" value={statement ? formatMoney(statement.movementTotal, currency) : "Sin resumen"} />
         <CardStatementMetric label="Cierre anterior" value={previousStatement ? formatMoney(previousStatement.totalAmount, currency) : "Sin historial"} />
         <CardStatementMetric label="Ciclo actual" value={card.currentStatement ? formatMoney(card.currentStatement.totalAmount, currency) : "Sin consumos"} />
       </div>
+
+      {hasReconciliationGap && statement ? (
+        <div className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
+          El saldo del resumen supera los movimientos visibles por{" "}
+          <span className="font-semibold tabular-nums">{formatMoney(Math.abs(statement.reconciliationDelta), currency)}</span>.
+          Puede venir de saldos anteriores, pagos no aplicados o movimientos sin asignar a este ciclo.
+        </div>
+      ) : null}
 
       {card.utilizationPercent != null ? (
         <div className="mt-4">
@@ -1397,8 +1417,10 @@ function StatementMovementsSheet({
     return () => { cancelled = true; };
   }, [view, householdId]);
 
-  const movements = allTransactions.length > 0 ? allTransactions : linkedMovements;
-  const movementCount = allTransactions.length > 0 ? allTransactions.length : (statement?.transactionCount ?? 0);
+  const linkedTransactionIds = new Set(linkedMovements.map((movement) => movement.transactionId).filter(Boolean));
+  const unassignedTransactions = allTransactions.filter((tx) => !linkedTransactionIds.has(tx.id));
+  const movements = linkedMovements;
+  const movementCount = statement?.transactionCount ?? linkedMovements.length;
   const fetching = fetchingTx;
 
   return (
@@ -1435,8 +1457,9 @@ function StatementMovementsSheet({
       <div className={appFormContentClass(view !== null, "px-5 sm:px-6 pb-6")}>
         {statement ? (
           <div className="space-y-4">
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-4">
               <CardStatementMetric label="Cierre" value={formatMoney(statement.totalAmount, currency)} />
+              <CardStatementMetric label="Movimientos" value={formatMoney(statement.movementTotal, currency)} />
               <CardStatementMetric label="Pendiente" value={formatMoney(statement.pendingAmount, currency)} />
               <CardStatementMetric
                 label="Mínimo"
@@ -1444,10 +1467,18 @@ function StatementMovementsSheet({
               />
             </div>
 
+            {!statement.isReconciled ? (
+              <div className="rounded-[1.5rem] border border-amber-300/20 bg-amber-300/10 p-3 text-sm leading-6 text-amber-100">
+                Este resumen no está conciliado: faltan{" "}
+                <span className="font-semibold tabular-nums">{formatMoney(Math.abs(statement.reconciliationDelta), currency)}</span>{" "}
+                para explicar el cierre sólo con los movimientos asignados.
+              </div>
+            ) : null}
+
             <div className="rounded-[1.5rem] border border-border bg-muted/20 p-3">
               <div className="mb-2 flex items-center justify-between gap-3">
                 <p className="text-xs font-semibold uppercase text-muted-foreground">
-                  {allTransactions.length > 0 ? "Movimientos en el período" : "Movimientos del resumen"}
+                  Movimientos asignados al resumen
                 </p>
                 <span className="text-xs text-muted-foreground">
                   {fetching ? "…" : movementCount}
@@ -1468,51 +1499,43 @@ function StatementMovementsSheet({
                 </div>
               ) : movements.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
-                  Sin movimientos registrados en este período.
+                  Sin movimientos asignados a este resumen.
                 </div>
               ) : (
                 <div className="grid gap-2">
-                  {allTransactions.length > 0
-                    ? allTransactions.map((tx) => (
-                        <div key={tx.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card/40 p-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-sm">
-                            {tx.category?.emoji ?? "💳"}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-foreground">
-                              {tx.description ?? "Movimiento de tarjeta"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {tx.category?.name ?? "Sin categoría"} · {formatDate(tx.occurredAt)}
-                            </p>
-                          </div>
-                          <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-                            {formatMoney(Math.abs(tx.amount), currency)}
+                  {linkedMovements.map((movement) => (
+                    <div key={movement.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card/40 p-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-sm">
+                        {movement.isTax ? <Landmark className="h-4 w-4 text-rose-300" aria-hidden="true" /> : movement.category?.icon ?? "💳"}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {movement.description ?? "Movimiento de tarjeta"}
                           </p>
+                          {movement.isTax ? (
+                            <span className="shrink-0 rounded-full border border-rose-400/20 bg-rose-400/10 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+                              Impuesto
+                            </span>
+                          ) : null}
                         </div>
-                      ))
-                    : linkedMovements.map((movement) => (
-                        <div key={movement.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card/40 p-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-sm">
-                            {movement.category?.icon ?? "💳"}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-foreground">
-                              {movement.description ?? "Movimiento de tarjeta"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {movement.category?.name ?? "Sin categoría"} · {formatDate(movement.occurredAt)}
-                              {movement.installmentNumber && movement.totalInstallments
-                                ? ` · Cuota ${movement.installmentNumber}/${movement.totalInstallments}`
-                                : ""}
-                            </p>
-                          </div>
-                          <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-                            {formatMoney(movement.amount, movement.currency)}
-                          </p>
-                        </div>
-                      ))
-                  }
+                        <p className="text-xs text-muted-foreground">
+                          {movement.category?.name ?? "Sin categoría"} · {formatDate(movement.occurredAt)}
+                          {movement.installmentNumber && movement.totalInstallments
+                            ? ` · Cuota ${movement.installmentNumber}/${movement.totalInstallments}`
+                            : ""}
+                        </p>
+                      </div>
+                      <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                        {formatMoney(movement.amount, movement.currency)}
+                      </p>
+                    </div>
+                  ))}
+                  {unassignedTransactions.length > 0 ? (
+                    <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
+                      Hay {unassignedTransactions.length} movimiento{unassignedTransactions.length === 1 ? "" : "s"} de la cuenta dentro del período que no está{unassignedTransactions.length === 1 ? "" : "n"} asignado{unassignedTransactions.length === 1 ? "" : "s"} a este resumen.
+                    </div>
+                  ) : null}
                   {card?.accountId ? (
                     <div className="mt-1 flex justify-center">
                       <Link
@@ -1937,31 +1960,64 @@ function DeleteDebtDialog({
   );
 }
 
-function buildDebtSummary(debts: DebtItem[], totalOutstanding: number, todayMs: number): DebtSummary {
+function buildDebtSummary(
+  debts: DebtItem[],
+  cards: CreditCardItem[],
+  totalOutstanding: number,
+  todayMs: number,
+): DebtSummary {
   const activeDebts = debts.filter((debt) => debt.status === "ACTIVE");
+  const activeStatements = cards
+    .map((card) => card.activeStatement)
+    .filter((statement): statement is CardStatementItem => Boolean(statement && statement.pendingAmount > 0));
   const nextDebt =
     activeDebts
       .filter((debt) => debt.nextDueDate)
       .sort((a, b) => new Date(a.nextDueDate ?? "").getTime() - new Date(b.nextDueDate ?? "").getTime())[0] ?? null;
-  const urgent = activeDebts.filter((debt) => {
+  const debtUrgent = activeDebts.filter((debt) => {
     if (!debt.nextDueDate) return false;
     const daysUntil = Math.round((new Date(debt.nextDueDate).getTime() - todayMs) / 86400000);
     return daysUntil <= 7;
   }).length;
+  const cardUrgent = activeStatements.filter((statement) => {
+    if (statement.status === "OVERDUE") return true;
+    if (!statement.dueDate) return false;
+    const daysUntil = Math.round((new Date(statement.dueDate).getTime() - todayMs) / 86400000);
+    return daysUntil <= 7;
+  }).length;
+  const nextCardDueDate =
+    activeStatements
+      .filter((statement) => statement.dueDate)
+      .map((statement) => statement.dueDate as string)
+      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0] ?? null;
+  const nextDueDate = [nextDebt?.nextDueDate ?? null, nextCardDueDate]
+    .filter((date): date is string => Boolean(date))
+    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0] ?? null;
+  const minimumCommitments = activeDebts.reduce<Partial<Record<CurrencyCode, number>>>((acc, debt) => {
+    if (debt.minimumPayment != null) {
+      acc[debt.currency] = (acc[debt.currency] ?? 0) + debt.minimumPayment;
+    }
+    return acc;
+  }, {});
+
+  activeStatements.forEach((statement) => {
+    if (statement.minimumPayment != null) {
+      minimumCommitments[statement.currency] =
+        (minimumCommitments[statement.currency] ?? 0) + statement.minimumPayment;
+    }
+  });
 
   return {
     totalOutstanding,
     active: activeDebts.length,
     defaulted: debts.filter((debt) => debt.status === "DEFAULTED").length,
-    urgent,
+    urgent: debtUrgent + cardUrgent,
+    missingMinimumCount: activeStatements.filter((statement) => statement.minimumPayment == null).length,
+    missingDueDateCount: activeStatements.filter((statement) => !statement.dueDate).length,
     averagePaid: debts.length > 0 ? Math.round(debts.reduce((sum, debt) => sum + Math.min(debt.paidPercent, 100), 0) / debts.length) : 0,
-    minimumCommitments: activeDebts.reduce<Partial<Record<CurrencyCode, number>>>((acc, debt) => {
-      if (debt.minimumPayment != null) {
-        acc[debt.currency] = (acc[debt.currency] ?? 0) + debt.minimumPayment;
-      }
-      return acc;
-    }, {}),
+    minimumCommitments,
     nextDebt,
+    nextDueDate,
   };
 }
 
@@ -1987,6 +2043,13 @@ function getDebtState(summary: DebtSummary, debtCount: number) {
     };
   }
 
+  if (summary.missingDueDateCount > 0 || summary.missingMinimumCount > 0) {
+    return {
+      title: "Hay saldos que todavía no están conciliados.",
+      description: "La carga existe, pero falta completar datos del resumen como vencimiento o pago mínimo para poder priorizarla con confianza.",
+    };
+  }
+
   if (summary.averagePaid >= 70) {
     return {
       title: "La carga viene bajando con buen ritmo.",
@@ -2000,11 +2063,12 @@ function getDebtState(summary: DebtSummary, debtCount: number) {
   };
 }
 
-function formatCommitments(commitments: Partial<Record<CurrencyCode, number>>) {
+function formatCommitments(commitments: Partial<Record<CurrencyCode, number>>, missingCount = 0) {
   const parts = (["ARS", "USD"] as CurrencyCode[])
     .filter((currency) => (commitments[currency] ?? 0) > 0)
     .map((currency) => formatMoney(commitments[currency] ?? 0, currency));
 
+  if (parts.length === 0 && missingCount > 0) return "No informado";
   return parts.length > 0 ? parts.join(" + ") : "Sin mínimo";
 }
 

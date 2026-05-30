@@ -40,6 +40,16 @@ export type ImportMetadata = {
   aiAssisted?: boolean;
   aiFallbackUsed?: boolean;
   aiReasoning?: string | null;
+  statementSummary?: {
+    statementTotal: number | null;
+    totalConsumptions: number | null;
+    minimumPayment: number | null;
+    dueDate: string | null;
+    closeDate: string | null;
+    periodYear: number | null;
+    periodMonth: number | null;
+    confidence: number;
+  } | null;
 };
 
 export type WorkspaceAccount = { id: string; name: string; type: string; currency: Currency };

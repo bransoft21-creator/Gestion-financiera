@@ -40,6 +40,7 @@ type ImportedCardTransaction = {
   isInstallment: boolean;
   installmentNumber: number | null;
   totalInstallments: number | null;
+  isTax?: boolean;
 };
 
 export type CardPressure = "none" | "low" | "medium" | "high" | "overdue";
@@ -97,10 +98,26 @@ export async function listCreditCards(userProfileId: string, input: ListCreditCa
     },
     orderBy: { name: "asc" },
   });
+  const statementIds = cards.flatMap((card) => card.statements.map((statement) => statement.id));
+  const statementMovementTotals = new Map(
+    statementIds.length > 0
+      ? (await prisma.statementTransaction.groupBy({
+          by: ["statementId"],
+          where: {
+            statementId: { in: statementIds },
+            deletedAt: null,
+          },
+          _sum: { amount: true },
+        })).map((row) => [row.statementId, toFiniteNumber(row._sum.amount ?? 0)])
+      : [],
+  );
 
   return {
     cards: cards.map((card) => {
-      const statements = card.statements.map(serializeStatement);
+      const statements = card.statements.map((statement) => serializeStatement({
+        ...statement,
+        movementTotal: statementMovementTotals.get(statement.id) ?? 0,
+      }));
       const pendingStatements = statements
         .filter((statement) =>
           ["OVERDUE", "CLOSED_PENDING_PAYMENT", "PARTIALLY_PAID"].includes(statement.status),
@@ -315,7 +332,11 @@ export async function payCardStatement(
         amount: toFiniteNumber(payment.amount),
         paidAt: payment.paidAt.toISOString(),
       },
-      statement: serializeStatement({ ...updatedStatement, _count: { transactions: 0, payments: 0 } }),
+      statement: serializeStatement({
+        ...updatedStatement,
+        movementTotal: updatedStatement.totalAmount,
+        _count: { transactions: 0, payments: 0 },
+      }),
     };
   });
 }
@@ -340,6 +361,224 @@ export function computeCardStatementPaymentResult(
   };
 }
 
+export async function linkImportedCardTransactionToStatement(
+  userProfileId: string,
+  input: { householdId: string; transactionId: string; isTax?: boolean },
+) {
+  await assertHouseholdAccess(userProfileId, input.householdId);
+
+  const transaction = await prisma.transaction.findFirst({
+    where: {
+      id: input.transactionId,
+      householdId: input.householdId,
+      origin: TransactionOrigin.CARD_SUMMARY,
+      deletedAt: null,
+      account: {
+        type: AccountType.CREDIT_CARD,
+        deletedAt: null,
+        isArchived: false,
+      },
+    },
+    select: {
+      id: true,
+      categoryId: true,
+      description: true,
+      currency: true,
+      amount: true,
+      occurredAt: true,
+      isInstallment: true,
+      installmentNumber: true,
+      totalInstallments: true,
+      account: {
+        select: {
+          id: true,
+          name: true,
+          currency: true,
+          creditLimit: true,
+          createdById: true,
+        },
+      },
+    },
+  });
+
+  if (!transaction) return null;
+
+  const card = await prisma.creditCard.upsert({
+    where: { accountId: transaction.account.id },
+    update: {
+      name: transaction.account.name,
+      currency: transaction.account.currency,
+      creditLimit: transaction.account.creditLimit,
+      isActive: true,
+    },
+    create: {
+      householdId: input.householdId,
+      createdById: transaction.account.createdById ?? userProfileId,
+      accountId: transaction.account.id,
+      name: transaction.account.name,
+      currency: transaction.account.currency,
+      creditLimit: transaction.account.creditLimit,
+      isActive: true,
+    },
+    select: { id: true },
+  });
+
+  const [statement] = await linkImportedCardTransactionsToStatements({
+    householdId: input.householdId,
+    creditCardId: card.id,
+    transactions: [
+      {
+        id: transaction.id,
+        categoryId: transaction.categoryId,
+        description: transaction.description,
+        currency: transaction.currency,
+        amount: transaction.amount,
+        occurredAt: transaction.occurredAt,
+        isInstallment: transaction.isInstallment,
+        installmentNumber: transaction.installmentNumber,
+        totalInstallments: transaction.totalInstallments,
+        isTax: input.isTax ?? isTaxDescription(transaction.description),
+      },
+    ],
+  });
+
+  return statement ?? null;
+}
+
+export async function applyImportedCardStatementSummary(
+  userProfileId: string,
+  input: {
+    householdId: string;
+    accountId: string;
+    statementTotal?: number;
+    totalConsumptions?: number;
+    minimumPayment?: number;
+    dueDate?: Date;
+    closeDate?: Date;
+    periodYear?: number;
+    periodMonth?: number;
+  },
+) {
+  await assertHouseholdAccess(userProfileId, input.householdId);
+
+  const account = await prisma.account.findFirst({
+    where: {
+      id: input.accountId,
+      householdId: input.householdId,
+      type: AccountType.CREDIT_CARD,
+      deletedAt: null,
+      isArchived: false,
+    },
+    select: {
+      id: true,
+      name: true,
+      currency: true,
+      creditLimit: true,
+      createdById: true,
+    },
+  });
+
+  if (!account) return null;
+
+  const anchor = input.closeDate ?? input.dueDate ?? new Date();
+  const fallbackPeriod = argentinaMonthParts(anchor);
+  const periodYear = input.periodYear ?? fallbackPeriod.year;
+  const periodMonth = input.periodMonth ?? fallbackPeriod.month;
+  const { start, end } = argentinaMonthRangeUtc(periodYear, periodMonth);
+
+  const card = await prisma.creditCard.upsert({
+    where: { accountId: account.id },
+    update: {
+      name: account.name,
+      currency: account.currency,
+      creditLimit: account.creditLimit,
+      isActive: true,
+    },
+    create: {
+      householdId: input.householdId,
+      createdById: account.createdById ?? userProfileId,
+      accountId: account.id,
+      name: account.name,
+      currency: account.currency,
+      creditLimit: account.creditLimit,
+      isActive: true,
+    },
+    select: { id: true },
+  });
+
+  const existing = await prisma.cardStatement.findUnique({
+    where: {
+      creditCardId_periodYear_periodMonth: {
+        creditCardId: card.id,
+        periodYear,
+        periodMonth,
+      },
+    },
+    select: {
+      id: true,
+      totalAmount: true,
+      pendingAmount: true,
+      paidAmount: true,
+      status: true,
+    },
+  });
+
+  const importedTotal = input.statementTotal ?? input.totalConsumptions;
+  if (importedTotal == null && !existing) return null;
+
+  const totalAmount = importedTotal ?? (existing ? toFiniteNumber(existing.totalAmount) : 0);
+  const paidAmount = existing ? toFiniteNumber(existing.paidAmount) : 0;
+  const pendingAmount = importedTotal != null
+    ? Math.max(totalAmount - paidAmount, 0)
+    : existing
+      ? toFiniteNumber(existing.pendingAmount)
+      : 0;
+  const status = getNextStatementStatus({
+    status: existing?.status ?? CardStatementStatus.CLOSED_PENDING_PAYMENT,
+    pendingAmount,
+    paidAmount,
+    dueDate: input.dueDate ?? null,
+    now: new Date(),
+  });
+
+  return prisma.cardStatement.upsert({
+    where: {
+      creditCardId_periodYear_periodMonth: {
+        creditCardId: card.id,
+        periodYear,
+        periodMonth,
+      },
+    },
+    update: {
+      totalAmount,
+      pendingAmount,
+      minimumPayment: input.minimumPayment,
+      dueDate: input.dueDate,
+      closeDate: input.closeDate,
+      status,
+      importedAt: new Date(),
+    },
+    create: {
+      householdId: input.householdId,
+      creditCardId: card.id,
+      currency: account.currency,
+      periodYear,
+      periodMonth,
+      cycleStartDate: start,
+      cycleEndDate: end,
+      closeDate: input.closeDate,
+      dueDate: input.dueDate,
+      status,
+      totalAmount,
+      pendingAmount,
+      paidAmount: 0,
+      minimumPayment: input.minimumPayment,
+      importedAt: new Date(),
+    },
+    select: { id: true },
+  });
+}
+
 function serializeStatement(statement: CardStatementInput & {
   id: string;
   creditCardId: string;
@@ -351,6 +590,7 @@ function serializeStatement(statement: CardStatementInput & {
   cycleEndDate: Date;
   closeDate: Date | null;
   importedAt: Date | null;
+  movementTotal?: Prisma.Decimal | number;
   transactions?: Array<{
     id: string;
     transactionId: string | null;
@@ -360,6 +600,7 @@ function serializeStatement(statement: CardStatementInput & {
     occurredAt: Date;
     installmentNumber: number | null;
     totalInstallments: number | null;
+    isTax: boolean;
     transaction: {
       id: string;
       description: string | null;
@@ -368,6 +609,10 @@ function serializeStatement(statement: CardStatementInput & {
   }>;
   _count?: { transactions: number; payments: number };
 }) {
+  const movementTotal = toFiniteNumber(statement.movementTotal ?? 0);
+  const totalAmount = toFiniteNumber(statement.totalAmount);
+  const reconciliationDelta = totalAmount - movementTotal;
+
   return {
     id: statement.id,
     creditCardId: statement.creditCardId,
@@ -380,10 +625,13 @@ function serializeStatement(statement: CardStatementInput & {
     closeDate: statement.closeDate?.toISOString() ?? null,
     dueDate: statement.dueDate?.toISOString() ?? null,
     status: statement.status,
-    totalAmount: toFiniteNumber(statement.totalAmount),
+    totalAmount,
     pendingAmount: toFiniteNumber(statement.pendingAmount),
     minimumPayment: statement.minimumPayment != null ? toFiniteNumber(statement.minimumPayment) : null,
     paidAmount: toFiniteNumber(statement.paidAmount),
+    movementTotal,
+    reconciliationDelta,
+    isReconciled: Math.abs(reconciliationDelta) < 0.01,
     importedAt: statement.importedAt?.toISOString() ?? null,
     movements: statement.transactions?.map((movement) => ({
       id: movement.id,
@@ -395,6 +643,7 @@ function serializeStatement(statement: CardStatementInput & {
       category: movement.transaction?.category ?? null,
       installmentNumber: movement.installmentNumber,
       totalInstallments: movement.totalInstallments,
+      isTax: movement.isTax,
     })) ?? [],
     transactionCount: statement._count?.transactions ?? 0,
     paymentCount: statement._count?.payments ?? 0,
@@ -535,6 +784,7 @@ async function linkImportedCardTransactionsToStatements({
   transactions: ImportedCardTransaction[];
 }) {
   const byPeriod = new Map<string, ImportedCardTransaction[]>();
+  const linkedStatements: Array<{ id: string }> = [];
 
   for (const transaction of transactions) {
     const { year, month } = argentinaMonthParts(transaction.occurredAt);
@@ -576,6 +826,7 @@ async function linkImportedCardTransactionsToStatements({
       },
       select: { id: true },
     });
+    linkedStatements.push(statement);
 
     await prisma.statementTransaction.createMany({
       data: periodTransactions.map((transaction) => ({
@@ -591,10 +842,17 @@ async function linkImportedCardTransactionsToStatements({
         installmentGroupId: transaction.isInstallment ? transaction.id : null,
         installmentNumber: transaction.installmentNumber,
         totalInstallments: transaction.totalInstallments,
+        isTax: transaction.isTax ?? isTaxDescription(transaction.description),
       })),
       skipDuplicates: true,
     });
   }
+
+  return linkedStatements;
+}
+
+function isTaxDescription(description: string | null) {
+  return /\b(iva|iibb|percep|percepcion|retencion|impuesto|pais|ganancias|rg\s*\d+|db\.?\s*rg)\b/i.test(description ?? "");
 }
 
 function getNextStatementStatus({
