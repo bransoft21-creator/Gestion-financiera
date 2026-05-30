@@ -72,6 +72,7 @@ export async function getDashboardSummary(
     activeAgreements,
     unpaidHouseholdRecurring,
     cardStatementsDue,
+    openCardMovements,
   ] = await Promise.all([
     prisma.transaction.findMany({
       where: {
@@ -233,6 +234,22 @@ export async function getDashboardSummary(
           },
         })
       : Promise.resolve([]),
+    // Purchases linked to OPEN CC statements (pendingAmount is 0 on OPEN statements, so we
+    // sum StatementTransactions directly to capture the true obligation for the current month).
+    isCurrentOrFutureMonth
+      ? prisma.statementTransaction.findMany({
+          where: {
+            householdId,
+            deletedAt: null,
+            statement: {
+              householdId,
+              deletedAt: null,
+              status: CardStatementStatus.OPEN,
+            },
+          },
+          select: { currency: true, amount: true },
+        })
+      : Promise.resolve([]),
   ]);
 
   const primaryCurrency = household.defaultCurrency;
@@ -258,6 +275,8 @@ export async function getDashboardSummary(
   const primaryUpcomingDebts = filterCurrency(upcomingDebts, primaryCurrency, (debt) => debt.currency);
   const primaryUpcomingNonCardDebts = primaryUpcomingDebts.filter((debt) => debt.type !== DebtType.CREDIT_CARD);
   const primaryCardStatementsDue = filterCurrency(cardStatementsDue, primaryCurrency, (statement) => statement.currency);
+  const primaryOpenCardMovements = filterCurrency(openCardMovements, primaryCurrency, (m) => m.currency);
+  const openStatementTotal = primaryOpenCardMovements.reduce((sum, m) => sum + toFiniteNumber(m.amount), 0);
   const primaryCurrentDebts = filterCurrency(currentDebts, primaryCurrency, (debt) => debt.currency);
   const primaryAccounts = filterCurrency(accounts, primaryCurrency, (account) => account.currency);
   const primaryUnpaidHouseholdRecurring = filterCurrency(
@@ -311,6 +330,9 @@ export async function getDashboardSummary(
         minimumPayment: statement.minimumPayment,
         outstandingAmount: statement.pendingAmount,
       })),
+      // OPEN statement purchases: pendingAmount is always 0 on OPEN statements, so we use the
+      // movement total (sum of linked StatementTransactions) as the upcoming obligation.
+      ...(openStatementTotal > 0 ? [{ minimumPayment: null, outstandingAmount: openStatementTotal }] : []),
     ],
     totalOutstandingDebt: liabilitySummary.liabilities,
     interpersonalToPay: interpersonalPosition.toPay,
