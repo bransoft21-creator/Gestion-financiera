@@ -1,4 +1,4 @@
-import { CurrencyCode, DebtStatus, GoalStatus, TransactionStatus, TransactionType } from "@prisma/client";
+import { CurrencyCode, DebtStatus, GoalStatus, TransactionOrigin, TransactionStatus, TransactionType } from "@prisma/client";
 import { argentinaMonthRangeUtc } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { assertHouseholdAccess } from "./households";
@@ -37,6 +37,10 @@ export async function captureMonthlySnapshot(
           status: { not: TransactionStatus.CANCELED },
           occurredAt: { gte: monthStart, lt: nextMonthStart },
           type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
+          NOT: [
+            { origin: TransactionOrigin.CARD_SUMMARY },
+            { type: TransactionType.EXPENSE, statementTransactions: { some: { deletedAt: null } } },
+          ],
         },
         select: { type: true, currency: true, amount: true, categoryId: true },
       }),

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { AccountType, PaymentMethod, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { AccountType, PaymentMethod, Prisma, TransactionOrigin, TransactionStatus, TransactionType } from "@prisma/client";
 import { argentinaMonthRangeUtc, formatArgentinaDateInput } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/server/api/errors";
@@ -415,6 +415,10 @@ async function buildCompactInputForMonth(householdId: string, month: string) {
         status: { not: TransactionStatus.CANCELED },
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
         occurredAt: { gte: start, lt: end },
+        NOT: [
+          { origin: TransactionOrigin.CARD_SUMMARY },
+          { type: TransactionType.EXPENSE, statementTransactions: { some: { deletedAt: null } } },
+        ],
       },
       include: analysisTransactionInclude,
       orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
@@ -426,6 +430,10 @@ async function buildCompactInputForMonth(householdId: string, month: string) {
         status: { not: TransactionStatus.CANCELED },
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
         occurredAt: { gte: previousStart, lt: previousEnd },
+        NOT: [
+          { origin: TransactionOrigin.CARD_SUMMARY },
+          { type: TransactionType.EXPENSE, statementTransactions: { some: { deletedAt: null } } },
+        ],
       },
       include: analysisTransactionInclude,
       orderBy: [{ occurredAt: "asc" }, { id: "asc" }],

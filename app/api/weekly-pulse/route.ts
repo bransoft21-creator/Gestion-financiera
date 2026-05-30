@@ -2,7 +2,7 @@ import { handleApiError, ok } from "@/server/api/http";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getPrimaryHousehold } from "@/server/services/workspace";
 import { prisma } from "@/lib/prisma";
-import { ActivityTone, ActivityType } from "@prisma/client";
+import { ActivityTone, ActivityType, TransactionOrigin } from "@prisma/client";
 import { upsertActivity } from "@/server/services/activity";
 import {
   getWeekWindow,
@@ -67,6 +67,10 @@ export async function GET() {
           status: "CONFIRMED",
           type: { in: ["INCOME", "EXPENSE"] },
           deletedAt: null,
+          NOT: [
+            { origin: TransactionOrigin.CARD_SUMMARY },
+            { type: "EXPENSE", statementTransactions: { some: { deletedAt: null } } },
+          ],
         },
         include: {
           category: { select: { name: true, type: true } },

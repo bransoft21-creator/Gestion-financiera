@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { ExpenseType, TransactionStatus, TransactionType } from "@prisma/client";
+import { ExpenseType, TransactionOrigin, TransactionStatus, TransactionType } from "@prisma/client";
 import { handleApiError, ok } from "../../../../server/api/http";
 import { getCurrentUser } from "../../../../server/auth/current-user";
 import { getPrimaryHousehold } from "../../../../server/services/workspace";
@@ -59,6 +59,10 @@ export async function GET(request: NextRequest) {
         currency: household.defaultCurrency,
         occurredAt: { gte: start, lt: end },
         ...expenseTypeWhere,
+        NOT: [
+          { origin: TransactionOrigin.CARD_SUMMARY },
+          { statementTransactions: { some: { deletedAt: null } } },
+        ],
       },
       select: {
         id: true,
