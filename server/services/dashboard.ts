@@ -79,11 +79,14 @@ export async function getDashboardSummary(
         ...activeTransactionWhere,
         occurredAt: { gte: monthStart, lt: nextMonthStart },
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
-        // Exclude CC statement imports regardless of origin: these are card charges
-        // tracked via StatementTransaction, not real cash outflows. The actual cashflow
-        // impact comes when the card bill is paid (CARD_PAYMENT). This preserves
-        // manually-entered CC expenses (no statementTransaction link) in the P&L.
-        NOT: { type: TransactionType.EXPENSE, statementTransactions: { some: { deletedAt: null } } },
+        // Exclude CC statement imports from P&L. Two discriminators cover all cases:
+        // 1. origin=CARD_SUMMARY: imports done before StatementTransaction links existed.
+        // 2. hasStatementTransaction: current imports that are linked to a statement.
+        // Manually-entered CC expenses (origin≠CARD_SUMMARY, no link) stay in P&L.
+        NOT: [
+          { origin: TransactionOrigin.CARD_SUMMARY },
+          { type: TransactionType.EXPENSE, statementTransactions: { some: { deletedAt: null } } },
+        ],
       },
       include: dashboardTransactionInclude,
       orderBy: { occurredAt: "desc" },
@@ -94,11 +97,10 @@ export async function getDashboardSummary(
         ...activeTransactionWhere,
         occurredAt: { gte: monthStart, lt: nextMonthStart },
         type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
-        // Exclude CC statement imports regardless of origin: these are card charges
-        // tracked via StatementTransaction, not real cash outflows. The actual cashflow
-        // impact comes when the card bill is paid (CARD_PAYMENT). This preserves
-        // manually-entered CC expenses (no statementTransaction link) in the P&L.
-        NOT: { type: TransactionType.EXPENSE, statementTransactions: { some: { deletedAt: null } } },
+        NOT: [
+          { origin: TransactionOrigin.CARD_SUMMARY },
+          { type: TransactionType.EXPENSE, statementTransactions: { some: { deletedAt: null } } },
+        ],
       },
       include: dashboardTransactionInclude,
       orderBy: { occurredAt: "desc" },
