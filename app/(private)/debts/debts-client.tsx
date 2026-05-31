@@ -1027,10 +1027,22 @@ function CreditCardStatementCard({
       </div>
 
       {hasReconciliationGap && statement ? (
-        <div className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
-          El saldo del resumen supera los movimientos visibles por{" "}
-          <span className="font-semibold tabular-nums">{formatMoney(Math.abs(statement.reconciliationDelta), currency)}</span>.
-          Puede venir de saldos anteriores, pagos no aplicados o movimientos sin asignar a este ciclo.
+        <div className="mt-3 space-y-2 rounded-2xl border border-amber-300/20 bg-amber-300/10 p-3">
+          <p className="text-xs leading-5 text-amber-100">
+            Diferencia de{" "}
+            <span className="font-semibold tabular-nums">{formatMoney(Math.abs(statement.reconciliationDelta), currency)}</span>{" "}
+            entre el cierre importado y los movimientos registrados.
+          </p>
+          <ActionButton
+            type="button"
+            variant="glass"
+            size="sm"
+            className="h-7 border-amber-300/30 px-3 text-[11px] text-amber-100"
+            onClick={() => onOpenStatement(card, statement)}
+          >
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            Ver movimientos y conciliar
+          </ActionButton>
         </div>
       ) : null}
 
