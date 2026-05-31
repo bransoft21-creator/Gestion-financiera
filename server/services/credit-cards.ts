@@ -851,6 +851,69 @@ async function linkImportedCardTransactionsToStatements({
   return linkedStatements;
 }
 
+export async function addManualMovementToStatement(
+  userProfileId: string,
+  statementId: string,
+  input: { householdId: string; description: string; amount: number; categoryId?: string | null; occurredAt: string },
+) {
+  await assertHouseholdAccess(userProfileId, input.householdId);
+
+  const statement = await prisma.cardStatement.findFirst({
+    where: { id: statementId, householdId: input.householdId, deletedAt: null },
+    select: {
+      id: true,
+      creditCardId: true,
+      householdId: true,
+      currency: true,
+      creditCard: { select: { id: true, accountId: true } },
+    },
+  });
+
+  if (!statement || !statement.creditCard.accountId) {
+    throw new NotFoundError("Resumen no encontrado o la tarjeta no tiene cuenta vinculada.");
+  }
+
+  const accountId = statement.creditCard.accountId;
+  const amount = new Prisma.Decimal(input.amount);
+  const occurredAt = new Date(input.occurredAt);
+
+  await prisma.$transaction(async (tx) => {
+    const transaction = await tx.transaction.create({
+      data: {
+        householdId: input.householdId,
+        accountId,
+        createdById: userProfileId,
+        type: TransactionType.EXPENSE,
+        origin: TransactionOrigin.CARD_SUMMARY,
+        status: TransactionStatus.CONFIRMED,
+        currency: statement.currency,
+        amount,
+        description: input.description,
+        categoryId: input.categoryId ?? null,
+        occurredAt,
+      },
+      select: { id: true },
+    });
+
+    await tx.statementTransaction.create({
+      data: {
+        householdId: input.householdId,
+        creditCardId: statement.creditCardId,
+        statementId: statement.id,
+        transactionId: transaction.id,
+        description: input.description,
+        currency: statement.currency,
+        amount,
+        occurredAt,
+        categoryId: input.categoryId ?? null,
+        isTax: false,
+      },
+    });
+
+    await applyBalanceDeltas(tx, [{ accountId, delta: -input.amount }]);
+  });
+}
+
 function isTaxDescription(description: string | null) {
   return /\b(iva|iibb|percep|percepcion|retencion|impuesto|pais|ganancias|rg\s*\d+|db\.?\s*rg)\b/i.test(description ?? "");
 }

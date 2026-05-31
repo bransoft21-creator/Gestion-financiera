@@ -13,17 +13,37 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   AlertTriangle,
   ArrowRight,
+  Briefcase,
+  Bus,
   CalendarClock,
+  Car,
+  ChartCandlestick,
   CheckCircle2,
+  Coins,
   CreditCard,
+  Gamepad2,
+  GraduationCap,
+  HeartPulse,
+  Home,
   Landmark,
+  LineChart,
   Loader2,
+  PawPrint,
   Pencil,
   Plus,
+  PlusCircle,
+  Receipt,
+  Repeat,
+  RotateCcw,
+  Shield,
   ShieldAlert,
+  Tag,
+  Target,
   Trash2,
+  Utensils,
   WalletCards,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -159,6 +179,38 @@ const defaultForm: FormState = {
   dueDay: "",
   notes: "",
 };
+
+const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
+  "alert-triangle": AlertTriangle,
+  "briefcase": Briefcase,
+  "bus": Bus,
+  "car": Car,
+  "chart-candlestick": ChartCandlestick,
+  "coins": Coins,
+  "credit-card": CreditCard,
+  "gamepad-2": Gamepad2,
+  "graduation-cap": GraduationCap,
+  "heart-pulse": HeartPulse,
+  "home": Home,
+  "landmark": Landmark,
+  "line-chart": LineChart,
+  "paw-print": PawPrint,
+  "plus-circle": PlusCircle,
+  "receipt": Receipt,
+  "repeat": Repeat,
+  "rotate-ccw": RotateCcw,
+  "shield": Shield,
+  "shield-alert": ShieldAlert,
+  "target": Target,
+  "utensils": Utensils,
+};
+
+function CategoryIcon({ icon, className }: { icon: string | null | undefined; className?: string }) {
+  if (!icon) return <Tag className={className ?? "h-4 w-4"} aria-hidden="true" />;
+  const Comp = CATEGORY_ICON_MAP[icon];
+  if (Comp) return <Comp className={className ?? "h-4 w-4"} aria-hidden="true" />;
+  return <span className="text-sm leading-none" aria-hidden="true">{icon}</span>;
+}
 
 const cardMotion = {
   initial: { opacity: 0, y: 16 },
@@ -1377,6 +1429,15 @@ type CCTransaction = {
   category: { name: string; emoji: string | null } | null;
 };
 
+type SimpleCategoryOption = { id: string; name: string; icon: string | null };
+
+type AddMovementForm = {
+  description: string;
+  amount: string;
+  categoryId: string;
+  occurredAt: string;
+};
+
 function StatementMovementsSheet({
   view,
   householdId,
@@ -1394,6 +1455,12 @@ function StatementMovementsSheet({
 
   const [allTransactions, setAllTransactions] = useState<CCTransaction[]>([]);
   const [fetchingTx, setFetchingTx] = useState(false);
+
+  const [expenseCategories, setExpenseCategories] = useState<SimpleCategoryOption[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addForm, setAddForm] = useState<AddMovementForm>({ description: "", amount: "", categoryId: "", occurredAt: "" });
+  const [addErrors, setAddErrors] = useState<Partial<Record<keyof AddMovementForm, string>>>({});
+  const [isSavingMovement, setIsSavingMovement] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -1416,6 +1483,75 @@ function StatementMovementsSheet({
       .finally(() => { if (!cancelled) setFetchingTx(false); });
     return () => { cancelled = true; };
   }, [view, householdId]);
+
+  useEffect(() => {
+    if (!view) return;
+    const params = new URLSearchParams({ householdId, type: "EXPENSE" });
+    fetch(`/api/categories?${params}`)
+      .then((r) => r.json() as Promise<{ data?: SimpleCategoryOption[] }>)
+      .then((payload) => setExpenseCategories(payload.data ?? []))
+      .catch(() => setExpenseCategories([]));
+  }, [view, householdId]);
+
+  function openAddForm() {
+    setAddForm({
+      description: "",
+      amount: "",
+      categoryId: expenseCategories[0]?.id ?? "",
+      occurredAt: statement?.cycleEndDate.slice(0, 10) ?? formatArgentinaDateInput(),
+    });
+    setAddErrors({});
+    setShowAddForm(true);
+  }
+
+  async function handleAddMovement(e: React.FormEvent) {
+    e.preventDefault();
+    if (!statement) return;
+    const errs: Partial<Record<keyof AddMovementForm, string>> = {};
+    if (!addForm.description.trim()) errs.description = "Ingresá una descripción.";
+    const parsedAmount = parseMoneyInput(addForm.amount);
+    if (!parsedAmount.success) errs.amount = parsedAmount.error;
+    if (!addForm.occurredAt) errs.occurredAt = "Ingresá la fecha.";
+    if (Object.keys(errs).length > 0) { setAddErrors(errs); return; }
+    const finalAmount = parsedAmount.success ? parsedAmount.data : undefined;
+
+    setIsSavingMovement(true);
+    try {
+      const res = await fetch(`/api/card-statements/${statement.id}/transactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          householdId,
+          description: addForm.description.trim(),
+          amount: finalAmount,
+          categoryId: addForm.categoryId || null,
+          occurredAt: addForm.occurredAt,
+        }),
+      });
+      if (!res.ok) {
+        const payload = await res.json() as { error?: string };
+        toast.error(payload.error ?? "No se pudo agregar el movimiento.");
+        return;
+      }
+      setShowAddForm(false);
+      // Re-fetch transactions to show the new movement
+      const params = new URLSearchParams({
+        householdId,
+        accountId: view!.card.accountId!,
+        from: statement.cycleStartDate.slice(0, 10),
+        to: statement.cycleEndDate.slice(0, 10),
+        limit: "100",
+      });
+      const txPayload = await fetch(`/api/transactions?${params}`)
+        .then((r) => r.json() as Promise<{ data?: { data?: CCTransaction[] } }>);
+      setAllTransactions(txPayload.data?.data ?? []);
+      toast.success("Movimiento agregado al resumen.");
+    } catch {
+      toast.error("Error de conexión. Intentá de nuevo.");
+    } finally {
+      setIsSavingMovement(false);
+    }
+  }
 
   const linkedTransactionIds = new Set(linkedMovements.map((movement) => movement.transactionId).filter(Boolean));
   const unassignedTransactions = allTransactions.filter((tx) => !linkedTransactionIds.has(tx.id));
@@ -1480,10 +1616,95 @@ function StatementMovementsSheet({
                 <p className="text-xs font-semibold uppercase text-muted-foreground">
                   Movimientos asignados al resumen
                 </p>
-                <span className="text-xs text-muted-foreground">
-                  {fetching ? "…" : movementCount}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {fetching ? "…" : movementCount}
+                  </span>
+                  {card?.accountId ? (
+                    <ActionButton
+                      type="button"
+                      variant="glass"
+                      size="sm"
+                      className="h-7 px-2.5 text-[11px]"
+                      onClick={openAddForm}
+                    >
+                      <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                      Agregar
+                    </ActionButton>
+                  ) : null}
+                </div>
               </div>
+
+              <AnimatePresence initial={false}>
+                {showAddForm ? (
+                  <motion.form
+                    {...cardMotion}
+                    onSubmit={handleAddMovement}
+                    className="mb-3 space-y-3 rounded-2xl border border-sky-300/20 bg-sky-300/10 p-3"
+                  >
+                    <p className="text-[11px] font-semibold uppercase text-sky-400">Nuevo movimiento manual</p>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Descripción</label>
+                      <Input
+                        className="v2-focus-ring h-9 rounded-xl border-border bg-card/70 text-sm text-foreground placeholder:text-muted-foreground"
+                        maxLength={200}
+                        value={addForm.description}
+                        onChange={(e) => setAddForm((f) => ({ ...f, description: e.target.value }))}
+                        placeholder="Ej: Compra supermercado"
+                      />
+                      {addErrors.description ? <p className="text-xs text-rose-300">{addErrors.description}</p> : null}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Monto ({currency})</label>
+                        <Input
+                          inputMode="decimal"
+                          onKeyDown={onMoneyKeyDown}
+                          className="v2-focus-ring h-9 rounded-xl border-border bg-card/70 text-sm text-foreground placeholder:text-muted-foreground"
+                          value={addForm.amount}
+                          onChange={(e) => setAddForm((f) => ({ ...f, amount: e.target.value }))}
+                          placeholder="0"
+                        />
+                        {addErrors.amount ? <p className="text-xs text-rose-300">{addErrors.amount}</p> : null}
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Fecha</label>
+                        <Input
+                          type="date"
+                          className="v2-focus-ring h-9 rounded-xl border-border bg-card/70 text-sm text-foreground"
+                          value={addForm.occurredAt}
+                          onChange={(e) => setAddForm((f) => ({ ...f, occurredAt: e.target.value }))}
+                        />
+                        {addErrors.occurredAt ? <p className="text-xs text-rose-300">{addErrors.occurredAt}</p> : null}
+                      </div>
+                    </div>
+                    {expenseCategories.length > 0 ? (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Categoría (opcional)</label>
+                        <select
+                          className="v2-focus-ring h-9 w-full rounded-xl border border-border bg-card/70 px-3 text-sm text-foreground outline-none"
+                          value={addForm.categoryId}
+                          onChange={(e) => setAddForm((f) => ({ ...f, categoryId: e.target.value }))}
+                        >
+                          <option value="">Sin categoría</option>
+                          {expenseCategories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : null}
+                    <div className="flex gap-2">
+                      <ActionButton type="submit" size="sm" disabled={isSavingMovement}>
+                        {isSavingMovement ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
+                        Guardar
+                      </ActionButton>
+                      <ActionButton type="button" variant="quiet" size="sm" onClick={() => setShowAddForm(false)}>
+                        Cancelar
+                      </ActionButton>
+                    </div>
+                  </motion.form>
+                ) : null}
+              </AnimatePresence>
               {fetching ? (
                 <div className="grid gap-2">
                   {[0, 1, 2].map((i) => (
@@ -1505,8 +1726,11 @@ function StatementMovementsSheet({
                 <div className="grid gap-2">
                   {linkedMovements.map((movement) => (
                     <div key={movement.id} className="flex w-full min-w-0 items-center gap-3 overflow-hidden rounded-2xl border border-border bg-card/40 p-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-sm">
-                        {movement.isTax ? <Landmark className="h-4 w-4 text-rose-300" aria-hidden="true" /> : movement.category?.icon ?? "💳"}
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-muted-foreground">
+                        {movement.isTax
+                          ? <Landmark className="h-4 w-4 text-rose-300" aria-hidden="true" />
+                          : <CategoryIcon icon={movement.category?.icon} className="h-4 w-4" />
+                        }
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-center gap-2">
