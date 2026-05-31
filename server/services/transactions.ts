@@ -67,6 +67,18 @@ export async function createTransaction(
         await assertDebtPaymentAllowed(tx, input);
       }
 
+      // Silently upgrade TRANSFER→CC to CARD_PAYMENT so it appears in P&L
+      let resolvedType = input.type;
+      if (input.type === TransactionType.TRANSFER && input.transferAccountId) {
+        const destAccount = await tx.account.findFirst({
+          where: { id: input.transferAccountId, householdId: input.householdId, deletedAt: null },
+          select: { type: true },
+        });
+        if (destAccount?.type === AccountType.CREDIT_CARD) {
+          resolvedType = TransactionType.CARD_PAYMENT;
+        }
+      }
+
       const transaction = await tx.transaction.create({
         data: {
           householdId: input.householdId,
@@ -78,7 +90,7 @@ export async function createTransaction(
           debtId: input.debtId,
           investmentTransactionId: input.investmentTransactionId,
           clientRequestId: input.clientRequestId,
-          type: input.type,
+          type: resolvedType,
           status: input.status,
           currency: input.currency,
           amount: input.amount,
