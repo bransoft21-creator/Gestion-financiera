@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateFinancialData } from "@/lib/invalidate";
 import { useDebts, useCreateDebt, useUpdateDebt, useDeleteDebt, usePayDebt } from "@/hooks/use-debts";
 import { useCCSummaries, type CCSummary } from "@/hooks/use-cc-summary";
 import {
@@ -232,11 +234,25 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
   const payDebt = usePayDebt();
   const payCardStatement = usePayCardStatement();
 
+  const queryClient = useQueryClient();
   const [activeCCAccount, setActiveCCAccount] = useState<CCSummary | null>(null);
-  const [activeStatementView, setActiveStatementView] = useState<{
-    card: CreditCardItem;
-    statement: CardStatementItem;
+  const [activeStatementIds, setActiveStatementIds] = useState<{
+    cardId: string;
+    statementId: string;
   } | null>(null);
+
+  const activeStatementView = useMemo(() => {
+    if (!activeStatementIds) return null;
+    const card = creditCards.find((c) => c.id === activeStatementIds.cardId) ?? null;
+    if (!card) return null;
+    const statement = card.statements.find((s) => s.id === activeStatementIds.statementId) ?? null;
+    if (!statement) return null;
+    return { card, statement };
+  }, [creditCards, activeStatementIds]);
+
+  function handleMovementAdded() {
+    invalidateFinancialData(queryClient, "transactionChanged");
+  }
 
   const isSaving = createDebt.isPending || updateDebt.isPending;
   const deletingDebtId = deleteDebt.isPending ? (deleteDebt.variables?.debtId ?? null) : null;
@@ -663,7 +679,7 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
             onPayAccountChange={setCardPayAccountId}
             onPayAmountChange={setCardPayAmount}
             onConfirmPayment={handleCardPaymentConfirm}
-            onOpenStatement={(card, statement) => setActiveStatementView({ card, statement })}
+            onOpenStatement={(card, statement) => setActiveStatementIds({ cardId: card.id, statementId: statement.id })}
             onCreate={openNewDebt}
             debtSection={
               <div>
@@ -748,7 +764,8 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
       <StatementMovementsSheet
         view={activeStatementView}
         householdId={householdId}
-        onClose={() => setActiveStatementView(null)}
+        onClose={() => setActiveStatementIds(null)}
+        onMovementAdded={handleMovementAdded}
       />
 
       <DeleteDebtDialog
@@ -1442,10 +1459,12 @@ function StatementMovementsSheet({
   view,
   householdId,
   onClose,
+  onMovementAdded,
 }: {
   view: { card: CreditCardItem; statement: CardStatementItem } | null;
   householdId: string;
   onClose: () => void;
+  onMovementAdded?: () => void;
 }) {
   const card = view?.card ?? null;
   const statement = view?.statement ?? null;
@@ -1545,6 +1564,8 @@ function StatementMovementsSheet({
       const txPayload = await fetch(`/api/transactions?${params}`)
         .then((r) => r.json() as Promise<{ data?: { data?: CCTransaction[] } }>);
       setAllTransactions(txPayload.data?.data ?? []);
+      // Invalidate TanStack Query so activeStatementView derives fresh data
+      onMovementAdded?.();
       toast.success("Movimiento agregado al resumen.");
     } catch {
       toast.error("Error de conexión. Intentá de nuevo.");
