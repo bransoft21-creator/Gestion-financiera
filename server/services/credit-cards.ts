@@ -910,6 +910,12 @@ export async function addManualMovementToStatement(
       },
     });
 
+    // Keep totalAmount in sync so the statement doesn't show a false reconciliation gap
+    await tx.cardStatement.update({
+      where: { id: statement.id },
+      data: { totalAmount: { increment: amount } },
+    });
+
     await applyBalanceDeltas(tx, [{ accountId, delta: -input.amount }]);
   });
 }
