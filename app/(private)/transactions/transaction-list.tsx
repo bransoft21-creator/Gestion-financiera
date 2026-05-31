@@ -43,6 +43,9 @@ const transactionIcons = {
   DEBT_PAYMENT: ArrowDownCircle,
   GOAL_CONTRIBUTION: ArrowDownCircle,
   INVESTMENT: ArrowDownCircle,
+  CARD_PAYMENT: ArrowRightLeft,
+  PERSONAL_LOAN_GIVEN: ArrowDownCircle,
+  PERSONAL_LOAN_RETURN: ArrowUpCircle,
 } satisfies Record<TransactionType, typeof ArrowDownCircle>;
 
 export function TransactionList({

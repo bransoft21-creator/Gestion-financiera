@@ -158,7 +158,11 @@ export function DashboardClient() {
       : null;
   const selectedExpenseCategory =
     expenseCategoryDetails.find((cat) => cat.id === selectedExpenseCategoryId) ?? undefined;
-  const usdBalance = metrics.accountBalances.find((b) => b.currency === "USD" && b.currency !== metrics.currency);
+  // accountBalances reflects current state, not historical — only show non-primary balances
+  // on the current month to avoid confusing past-month views with present-day account data.
+  const usdBalance = isCurrentMonth
+    ? metrics.accountBalances.find((b) => b.currency === "USD" && b.currency !== metrics.currency)
+    : undefined;
 
   function handleExpenseCategorySelect(categoryId: string) {
     setSelectedExpenseCategoryPreference((current) => (current === categoryId ? null : categoryId));

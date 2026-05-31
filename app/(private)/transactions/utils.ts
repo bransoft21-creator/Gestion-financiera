@@ -72,9 +72,9 @@ export function buildFeedSummary(transactions: TransactionItem[]): FeedSummary {
       const amount = Number(transaction.amount);
       if (!Number.isFinite(amount)) return summary;
 
-      if (transaction.type === "INCOME") {
+      if (transaction.type === "INCOME" || transaction.type === "PERSONAL_LOAN_RETURN") {
         summary.income += amount;
-      } else if (transaction.type !== "TRANSFER") {
+      } else if (transaction.type !== "TRANSFER" && transaction.type !== "PERSONAL_LOAN_GIVEN") {
         summary.expenses += amount;
       }
       summary.count += 1;
@@ -130,8 +130,8 @@ export function getTransactionTone(type: TransactionType) {
 export function getSignedAmount(transaction: TransactionItem) {
   const amount = Number(transaction.amount);
   if (!Number.isFinite(amount)) return 0;
-  if (transaction.type === "INCOME") return amount;
-  if (transaction.type === "TRANSFER") return 0;
+  if (transaction.type === "INCOME" || transaction.type === "PERSONAL_LOAN_RETURN") return amount;
+  if (transaction.type === "TRANSFER" || transaction.type === "CARD_PAYMENT" || transaction.type === "PERSONAL_LOAN_GIVEN") return 0;
   return -amount;
 }
 

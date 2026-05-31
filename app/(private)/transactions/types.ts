@@ -5,7 +5,10 @@ export type TransactionType =
   | "ADJUSTMENT"
   | "DEBT_PAYMENT"
   | "GOAL_CONTRIBUTION"
-  | "INVESTMENT";
+  | "INVESTMENT"
+  | "CARD_PAYMENT"
+  | "PERSONAL_LOAN_GIVEN"
+  | "PERSONAL_LOAN_RETURN";
 
 export type CategoryType = "INCOME" | "EXPENSE" | "TRANSFER" | "DEBT" | "GOAL" | "INVESTMENT" | "ADJUSTMENT";
 export type CurrencyCode = "ARS" | "USD";

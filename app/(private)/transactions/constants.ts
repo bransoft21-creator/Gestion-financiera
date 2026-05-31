@@ -8,6 +8,9 @@ export const transactionTypeLabels: Record<TransactionType, string> = {
   DEBT_PAYMENT: "Pago de deuda",
   GOAL_CONTRIBUTION: "Aporte a meta",
   INVESTMENT: "Inversión",
+  CARD_PAYMENT: "Pago de tarjeta",
+  PERSONAL_LOAN_GIVEN: "Préstamo otorgado",
+  PERSONAL_LOAN_RETURN: "Devolución de préstamo",
 };
 
 export const transactionTypes = Object.keys(transactionTypeLabels) as TransactionType[];
