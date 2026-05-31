@@ -65,7 +65,7 @@ export async function GET() {
           householdId: household.id,
           occurredAt: { gte: start, lte: end },
           status: "CONFIRMED",
-          type: { in: ["INCOME", "EXPENSE"] },
+          type: { in: ["INCOME", "EXPENSE", "CARD_PAYMENT"] },
           deletedAt: null,
           NOT: [
             { origin: TransactionOrigin.CARD_SUMMARY },

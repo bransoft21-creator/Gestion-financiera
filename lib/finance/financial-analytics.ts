@@ -71,14 +71,14 @@ export function getWeekWindow(date: Date = new Date()): { start: Date; end: Date
 
 /** Computes weekly metrics scoped to one real currency. Never sums mixed currencies. */
 export function computeWeeklyMetrics(txs: TxForAnalysis[], primaryCurrency = "ARS"): WeeklyMetrics {
-  const confirmedMoneyTxs = txs.filter((t) => t.status === "CONFIRMED" && (t.type === "EXPENSE" || t.type === "INCOME"));
+  const confirmedMoneyTxs = txs.filter((t) => t.status === "CONFIRMED" && (t.type === "EXPENSE" || t.type === "INCOME" || t.type === "CARD_PAYMENT"));
   const totalsByCurrency = sumByCurrency(
     confirmedMoneyTxs,
     (transaction) => transaction.currency,
     (transaction) => transaction.amount,
   );
   const scopedTxs = filterCurrency(confirmedMoneyTxs, primaryCurrency, (transaction) => transaction.currency);
-  const expenses = scopedTxs.filter((t) => t.type === "EXPENSE");
+  const expenses = scopedTxs.filter((t) => t.type === "EXPENSE" || t.type === "CARD_PAYMENT");
   const income = scopedTxs.filter((t) => t.type === "INCOME");
 
   const totalExpenses = expenses.reduce((s, t) => s + Number(t.amount), 0);

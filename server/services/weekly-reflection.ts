@@ -3,7 +3,7 @@
  * Coordinates: analytics → signals → cache check → AI → cache write.
  */
 
-import { ActivityTone, ActivityType, Prisma } from "@prisma/client";
+import { ActivityTone, ActivityType, Prisma, TransactionOrigin } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { upsertActivity } from "@/server/services/activity";
 import {
@@ -58,8 +58,12 @@ export async function getOrGenerateWeeklyReflection(params: {
         householdId,
         occurredAt: { gte: start, lte: end },
         status: "CONFIRMED",
-        type: { in: ["INCOME", "EXPENSE"] },
+        type: { in: ["INCOME", "EXPENSE", "CARD_PAYMENT"] },
         deletedAt: null,
+        NOT: [
+          { origin: TransactionOrigin.CARD_SUMMARY },
+          { type: "EXPENSE", statementTransactions: { some: { deletedAt: null } } },
+        ],
       },
       include: {
         category: { select: { name: true, type: true } },

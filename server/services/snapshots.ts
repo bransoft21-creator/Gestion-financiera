@@ -36,7 +36,7 @@ export async function captureMonthlySnapshot(
           deletedAt: null,
           status: { not: TransactionStatus.CANCELED },
           occurredAt: { gte: monthStart, lt: nextMonthStart },
-          type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
+          type: { in: [TransactionType.INCOME, TransactionType.EXPENSE, TransactionType.CARD_PAYMENT] },
           NOT: [
             { origin: TransactionOrigin.CARD_SUMMARY },
             { type: TransactionType.EXPENSE, statementTransactions: { some: { deletedAt: null } } },
@@ -122,7 +122,7 @@ export async function captureMonthlySnapshot(
       .filter((t) => t.type === TransactionType.INCOME)
       .reduce((s, t) => s + toFiniteNumber(t.amount), 0);
     const expenses = currencyTransactions
-      .filter((t) => t.type === TransactionType.EXPENSE)
+      .filter((t) => t.type === TransactionType.EXPENSE || t.type === TransactionType.CARD_PAYMENT)
       .reduce((s, t) => s + toFiniteNumber(t.amount), 0);
 
     const expensesByCategoryId = new Map<string, number>();

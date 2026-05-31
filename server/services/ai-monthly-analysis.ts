@@ -413,7 +413,7 @@ async function buildCompactInputForMonth(householdId: string, month: string) {
         householdId,
         deletedAt: null,
         status: { not: TransactionStatus.CANCELED },
-        type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
+        type: { in: [TransactionType.INCOME, TransactionType.EXPENSE, TransactionType.CARD_PAYMENT] },
         occurredAt: { gte: start, lt: end },
         NOT: [
           { origin: TransactionOrigin.CARD_SUMMARY },
@@ -428,7 +428,7 @@ async function buildCompactInputForMonth(householdId: string, month: string) {
         householdId,
         deletedAt: null,
         status: { not: TransactionStatus.CANCELED },
-        type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
+        type: { in: [TransactionType.INCOME, TransactionType.EXPENSE, TransactionType.CARD_PAYMENT] },
         occurredAt: { gte: previousStart, lt: previousEnd },
         NOT: [
           { origin: TransactionOrigin.CARD_SUMMARY },
@@ -555,7 +555,7 @@ function buildMonthMetrics({
   currencyScope: AiFinancialAnalysisMetrics["currencyScope"];
 }): AiFinancialAnalysisMetrics {
   const incomeTransactions = transactions.filter((tx) => tx.type === TransactionType.INCOME);
-  const expenseTransactions = transactions.filter((tx) => tx.type === TransactionType.EXPENSE);
+  const expenseTransactions = transactions.filter((tx) => tx.type === TransactionType.EXPENSE || tx.type === TransactionType.CARD_PAYMENT);
   const totalIncome = sumAmounts(incomeTransactions);
   const totalExpenses = sumAmounts(expenseTransactions);
   const balance = totalIncome - totalExpenses;

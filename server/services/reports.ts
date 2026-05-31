@@ -1,4 +1,4 @@
-import { Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { Prisma, TransactionOrigin, TransactionStatus, TransactionType } from "@prisma/client";
 import { ARGENTINA_TIME_ZONE, argentinaMonthStartUtc } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import type { MonthlyReportInput } from "../schemas/reports";
@@ -27,8 +27,12 @@ export async function getMonthlyReport(userProfileId: string, input: MonthlyRepo
       where: {
         householdId: input.householdId,
         ...activeTransactionWhere,
-        type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
+        type: { in: [TransactionType.INCOME, TransactionType.EXPENSE, TransactionType.CARD_PAYMENT] },
         occurredAt: { gte: rangeStart, lt: rangeEnd },
+        NOT: [
+          { origin: TransactionOrigin.CARD_SUMMARY },
+          { type: TransactionType.EXPENSE, statementTransactions: { some: { deletedAt: null } } },
+        ],
       },
       select: { type: true, currency: true, amount: true, occurredAt: true },
     }),
@@ -61,7 +65,7 @@ export async function getMonthlyReport(userProfileId: string, input: MonthlyRepo
       .reduce((s, t) => s + toFiniteNumber(t.amount), 0);
 
     const expenses = slice
-      .filter((t) => t.type === TransactionType.EXPENSE)
+      .filter((t) => t.type === TransactionType.EXPENSE || t.type === TransactionType.CARD_PAYMENT)
       .reduce((s, t) => s + toFiniteNumber(t.amount), 0);
 
     const balance = income - expenses;
