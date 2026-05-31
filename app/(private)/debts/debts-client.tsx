@@ -1480,6 +1480,7 @@ function StatementMovementsSheet({
   const [addForm, setAddForm] = useState<AddMovementForm>({ description: "", amount: "", categoryId: "", occurredAt: "" });
   const [addErrors, setAddErrors] = useState<Partial<Record<keyof AddMovementForm, string>>>({});
   const [isSavingMovement, setIsSavingMovement] = useState(false);
+  const [isReconciling, setIsReconciling] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -1512,15 +1513,38 @@ function StatementMovementsSheet({
       .catch(() => setExpenseCategories([]));
   }, [view, householdId]);
 
-  function openAddForm() {
+  function openAddForm(prefillAmount?: number) {
     setAddForm({
       description: "",
-      amount: "",
+      amount: prefillAmount != null ? String(prefillAmount) : "",
       categoryId: expenseCategories[0]?.id ?? "",
       occurredAt: statement?.cycleEndDate.slice(0, 10) ?? formatArgentinaDateInput(),
     });
     setAddErrors({});
     setShowAddForm(true);
+  }
+
+  async function handleReconcile() {
+    if (!statement) return;
+    setIsReconciling(true);
+    try {
+      const res = await fetch(`/api/card-statements/${statement.id}/reconcile`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ householdId }),
+      });
+      if (!res.ok) {
+        const payload = await res.json() as { error?: string };
+        toast.error(payload.error ?? "No se pudo ajustar el cierre.");
+        return;
+      }
+      onMovementAdded?.();
+      toast.success("Cierre ajustado a los movimientos registrados.");
+    } catch {
+      toast.error("Error de conexión. Intentá de nuevo.");
+    } finally {
+      setIsReconciling(false);
+    }
   }
 
   async function handleAddMovement(e: React.FormEvent) {
@@ -1625,10 +1649,35 @@ function StatementMovementsSheet({
             </div>
 
             {!statement.isReconciled ? (
-              <div className="rounded-[1.5rem] border border-amber-300/20 bg-amber-300/10 p-3 text-sm leading-6 text-amber-100">
-                Este resumen no está conciliado: faltan{" "}
-                <span className="font-semibold tabular-nums">{formatMoney(Math.abs(statement.reconciliationDelta), currency)}</span>{" "}
-                para explicar el cierre sólo con los movimientos asignados.
+              <div className="space-y-2 rounded-[1.5rem] border border-amber-300/20 bg-amber-300/10 p-3">
+                <p className="text-sm leading-6 text-amber-100">
+                  Diferencia de{" "}
+                  <span className="font-semibold tabular-nums">{formatMoney(Math.abs(statement.reconciliationDelta), currency)}</span>{" "}
+                  entre el cierre importado y los movimientos registrados.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <ActionButton
+                    type="button"
+                    variant="glass"
+                    size="sm"
+                    className="h-7 border-amber-300/30 px-3 text-[11px] text-amber-100"
+                    onClick={() => { openAddForm(Math.abs(statement.reconciliationDelta)); }}
+                  >
+                    <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                    Agregar movimiento faltante
+                  </ActionButton>
+                  <ActionButton
+                    type="button"
+                    variant="glass"
+                    size="sm"
+                    disabled={isReconciling}
+                    className="h-7 border-amber-300/30 px-3 text-[11px] text-amber-100"
+                    onClick={handleReconcile}
+                  >
+                    {isReconciling ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
+                    Ajustar cierre a movimientos
+                  </ActionButton>
+                </div>
               </div>
             ) : null}
 
@@ -1647,7 +1696,7 @@ function StatementMovementsSheet({
                       variant="glass"
                       size="sm"
                       className="h-7 px-2.5 text-[11px]"
-                      onClick={openAddForm}
+                      onClick={() => { openAddForm(); }}
                     >
                       <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                       Agregar

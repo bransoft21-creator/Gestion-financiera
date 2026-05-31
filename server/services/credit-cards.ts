@@ -910,13 +910,44 @@ export async function addManualMovementToStatement(
       },
     });
 
-    // Keep totalAmount in sync so the statement doesn't show a false reconciliation gap
-    await tx.cardStatement.update({
-      where: { id: statement.id },
-      data: { totalAmount: { increment: amount } },
-    });
-
     await applyBalanceDeltas(tx, [{ accountId, delta: -input.amount }]);
+  });
+}
+
+export async function reconcileStatement(
+  userProfileId: string,
+  statementId: string,
+  input: { householdId: string },
+) {
+  await assertHouseholdAccess(userProfileId, input.householdId);
+
+  const [statement, movementAgg] = await Promise.all([
+    prisma.cardStatement.findFirst({
+      where: { id: statementId, householdId: input.householdId, deletedAt: null },
+      select: { id: true, paidAmount: true, status: true, dueDate: true },
+    }),
+    prisma.statementTransaction.aggregate({
+      where: { statementId, deletedAt: null },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  if (!statement) throw new NotFoundError("Resumen no encontrado.");
+
+  const movementTotal = toFiniteNumber(movementAgg._sum.amount ?? 0);
+  const paidAmount = toFiniteNumber(statement.paidAmount);
+  const pendingAmount = Math.max(movementTotal - paidAmount, 0);
+  const status = getNextStatementStatus({
+    status: statement.status,
+    pendingAmount,
+    paidAmount,
+    dueDate: statement.dueDate,
+    now: new Date(),
+  });
+
+  await prisma.cardStatement.update({
+    where: { id: statement.id },
+    data: { totalAmount: movementTotal, pendingAmount, status },
   });
 }
 
