@@ -79,10 +79,12 @@ export async function getDashboardSummary(
         householdId,
         ...activeTransactionWhere,
         occurredAt: { gte: monthStart, lt: nextMonthStart },
-        type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
-        // Exclude CC statement imports from P&L. Two discriminators cover all cases:
+        // CARD_PAYMENT = actual cash out when paying the CC bill. Must be included so
+        // the cash outflow registers in P&L even though the purchase (CARD_SUMMARY) is excluded.
+        type: { in: [TransactionType.INCOME, TransactionType.EXPENSE, TransactionType.CARD_PAYMENT] },
+        // Exclude CC purchase imports from P&L. Two discriminators cover all cases:
         // 1. origin=CARD_SUMMARY: imports done before StatementTransaction links existed.
-        // 2. hasStatementTransaction: current imports that are linked to a statement.
+        // 2. hasStatementTransaction: current imports linked to a statement.
         // Manually-entered CC expenses (origin≠CARD_SUMMARY, no link) stay in P&L.
         NOT: [
           { origin: TransactionOrigin.CARD_SUMMARY },
@@ -97,7 +99,7 @@ export async function getDashboardSummary(
         householdId,
         ...activeTransactionWhere,
         occurredAt: { gte: monthStart, lt: nextMonthStart },
-        type: { in: [TransactionType.INCOME, TransactionType.EXPENSE] },
+        type: { in: [TransactionType.INCOME, TransactionType.EXPENSE, TransactionType.CARD_PAYMENT] },
         NOT: [
           { origin: TransactionOrigin.CARD_SUMMARY },
           { type: TransactionType.EXPENSE, statementTransactions: { some: { deletedAt: null } } },
@@ -471,8 +473,12 @@ export async function getDashboardSummary(
 function getExpensesByType(transactions: DashboardTransaction[]) {
   return transactions.reduce(
     (acc, tx) => {
-      if (tx.type !== TransactionType.EXPENSE) return acc;
+      if (tx.type !== TransactionType.EXPENSE && tx.type !== TransactionType.CARD_PAYMENT) return acc;
       const amount = toFiniteNumber(tx.amount);
+      if (tx.type === TransactionType.CARD_PAYMENT) {
+        acc.fixed += amount; // CC bill payments are fixed obligations
+        return acc;
+      }
       switch (tx.expenseType) {
         case "FIXED": acc.fixed += amount; break;
         case "VARIABLE": acc.variable += amount; break;
@@ -501,6 +507,7 @@ function getAccountBalancesByCurrency(
 
 function getExpenseTotalsByCategoryId(transactions: DashboardTransaction[]) {
   return transactions.reduce((totals, transaction) => {
+    // CARD_PAYMENT has no categoryId — doesn't affect budget reservations
     if (transaction.type !== TransactionType.EXPENSE || !transaction.category?.id) {
       return totals;
     }
@@ -516,31 +523,36 @@ function getExpenseTotalsByCategoryId(transactions: DashboardTransaction[]) {
 
 function sumTransactionsByType(transactions: DashboardTransaction[], type: TransactionType) {
   return transactions.reduce((total, transaction) => {
-    if (transaction.type !== type) {
-      return total;
-    }
-
-    return total + toFiniteNumber(transaction.amount);
+    const matches =
+      transaction.type === type ||
+      // CARD_PAYMENT counts as EXPENSE: it's the actual cash outflow when paying the CC bill
+      (type === TransactionType.EXPENSE && transaction.type === TransactionType.CARD_PAYMENT);
+    return matches ? total + toFiniteNumber(transaction.amount) : total;
   }, 0);
 }
+
+const CARD_PAYMENT_CATEGORY_KEY = "card-payment";
+const CARD_PAYMENT_CATEGORY_NAME = "Pago de tarjeta";
+const CARD_PAYMENT_CATEGORY_COLOR = "#64748b";
 
 function getExpensesByCategory(transactions: DashboardTransaction[]) {
   const totals = new Map<string, { id: string; name: string; value: number; color: string }>();
 
   transactions.forEach((transaction) => {
-    if (transaction.type !== TransactionType.EXPENSE) {
+    if (transaction.type !== TransactionType.EXPENSE && transaction.type !== TransactionType.CARD_PAYMENT) {
       return;
     }
 
-    const key = transaction.category?.id ?? "uncategorized";
+    const isCardPayment = transaction.type === TransactionType.CARD_PAYMENT;
+    const key = isCardPayment ? CARD_PAYMENT_CATEGORY_KEY : (transaction.category?.id ?? "uncategorized");
     const existing = totals.get(key);
     const nextValue = (existing?.value ?? 0) + toFiniteNumber(transaction.amount);
 
     totals.set(key, {
       id: key,
-      name: transaction.category?.name ?? "Sin categoría",
+      name: isCardPayment ? CARD_PAYMENT_CATEGORY_NAME : (transaction.category?.name ?? "Sin categoría"),
       value: nextValue,
-      color: transaction.category?.color ?? chartColors[totals.size % chartColors.length],
+      color: isCardPayment ? CARD_PAYMENT_CATEGORY_COLOR : (transaction.category?.color ?? chartColors[totals.size % chartColors.length]),
     });
   });
 
@@ -563,17 +575,18 @@ function getExpenseCategoryDetails(transactions: DashboardTransaction[]) {
   }>();
 
   transactions.forEach((transaction) => {
-    if (transaction.type !== TransactionType.EXPENSE) {
+    if (transaction.type !== TransactionType.EXPENSE && transaction.type !== TransactionType.CARD_PAYMENT) {
       return;
     }
 
-    const key = transaction.category?.id ?? "uncategorized";
+    const isCardPayment = transaction.type === TransactionType.CARD_PAYMENT;
+    const key = isCardPayment ? CARD_PAYMENT_CATEGORY_KEY : (transaction.category?.id ?? "uncategorized");
     const amount = toFiniteNumber(transaction.amount);
     const existing = details.get(key);
 
     details.set(key, {
       id: key,
-      name: transaction.category?.name ?? "Sin categoría",
+      name: isCardPayment ? CARD_PAYMENT_CATEGORY_NAME : (transaction.category?.name ?? "Sin categoría"),
       total: (existing?.total ?? 0) + amount,
       items: [
         ...(existing?.items ?? []),
