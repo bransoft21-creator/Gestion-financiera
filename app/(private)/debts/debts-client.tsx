@@ -950,7 +950,7 @@ function CreditCardStatementCard({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <CardStatementMetric label="Este cierre" value={statement ? formatMoney(currentCloseAmount, currency) : "Sin resumen"} />
         <CardStatementMetric label="Movimientos" value={statement ? formatMoney(statement.movementTotal, currency) : "Sin resumen"} />
         <CardStatementMetric label="Cierre anterior" value={previousStatement ? formatMoney(previousStatement.totalAmount, currency) : "Sin historial"} />
@@ -1019,13 +1019,13 @@ function CreditCardStatementCard({
                 key={item.id}
                 type="button"
                 onClick={() => onOpenStatement(card, item)}
-                className="v2-focus-ring flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-border bg-card/40 px-3 py-2 text-left transition hover:bg-card/70"
+                className="v2-focus-ring flex w-full min-w-0 min-h-12 items-center justify-between gap-3 overflow-hidden rounded-2xl border border-border bg-card/40 px-3 py-2 text-left transition hover:bg-card/70"
               >
-                <span className="min-w-0">
+                <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-foreground">
                     {getStatementStatusLabel(item.status)}
                   </span>
-                  <span className="block text-xs text-muted-foreground">
+                  <span className="block truncate text-xs text-muted-foreground">
                     {formatStatementPeriod(item)}
                   </span>
                 </span>
@@ -1456,8 +1456,8 @@ function StatementMovementsSheet({
 
       <div className={appFormContentClass(view !== null, "px-5 sm:px-6 pb-6")}>
         {statement ? (
-          <div className="space-y-4">
-            <div className="grid gap-2 sm:grid-cols-4">
+          <div className="w-full min-w-0 space-y-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <CardStatementMetric label="Cierre" value={formatMoney(statement.totalAmount, currency)} />
               <CardStatementMetric label="Movimientos" value={formatMoney(statement.movementTotal, currency)} />
               <CardStatementMetric label="Pendiente" value={formatMoney(statement.pendingAmount, currency)} />
@@ -1504,7 +1504,7 @@ function StatementMovementsSheet({
               ) : (
                 <div className="grid gap-2">
                   {linkedMovements.map((movement) => (
-                    <div key={movement.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card/40 p-3">
+                    <div key={movement.id} className="flex w-full min-w-0 items-center gap-3 overflow-hidden rounded-2xl border border-border bg-card/40 p-3">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/50 text-sm">
                         {movement.isTax ? <Landmark className="h-4 w-4 text-rose-300" aria-hidden="true" /> : movement.category?.icon ?? "💳"}
                       </div>
@@ -1519,7 +1519,7 @@ function StatementMovementsSheet({
                             </span>
                           ) : null}
                         </div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="truncate text-xs text-muted-foreground">
                           {movement.category?.name ?? "Sin categoría"} · {formatDate(movement.occurredAt)}
                           {movement.installmentNumber && movement.totalInstallments
                             ? ` · Cuota ${movement.installmentNumber}/${movement.totalInstallments}`
@@ -1557,10 +1557,10 @@ function StatementMovementsSheet({
                 <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Historial de cierres</p>
                 <div className="grid gap-2">
                   {history.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card/40 p-3">
-                      <div className="min-w-0">
+                    <div key={item.id} className="flex w-full min-w-0 items-center justify-between gap-3 overflow-hidden rounded-2xl border border-border bg-card/40 p-3">
+                      <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-foreground">{getStatementStatusLabel(item.status)}</p>
-                        <p className="text-xs text-muted-foreground">{formatStatementPeriod(item)}</p>
+                        <p className="truncate text-xs text-muted-foreground">{formatStatementPeriod(item)}</p>
                       </div>
                       <div className="shrink-0 text-right">
                         <p className="text-sm font-semibold tabular-nums text-foreground">{formatMoney(item.totalAmount || item.pendingAmount, item.currency)}</p>
