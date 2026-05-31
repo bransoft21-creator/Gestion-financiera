@@ -1559,6 +1559,29 @@ function StatementMovementsSheet({
     }
   }
 
+  async function handleMarkAsPaid() {
+    if (!statement) return;
+    setIsReconciling(true);
+    try {
+      const res = await fetch(`/api/card-statements/${statement.id}/mark-paid`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ householdId }),
+      });
+      if (!res.ok) {
+        const payload = await res.json() as { error?: string };
+        toast.error(payload.error ?? "No se pudo marcar como pagado.");
+        return;
+      }
+      onMovementAdded?.();
+      toast.success("Resumen marcado como pagado.");
+    } catch {
+      toast.error("Error de conexión. Intentá de nuevo.");
+    } finally {
+      setIsReconciling(false);
+    }
+  }
+
   async function handleAddMovement(e: React.FormEvent) {
     e.preventDefault();
     if (!statement) return;
@@ -1645,6 +1668,22 @@ function StatementMovementsSheet({
             <X className="h-5 w-5" aria-hidden="true" />
           </ActionButton>
         </div>
+        {statement && statement.pendingAmount > 0 && !["PAID", "ARCHIVED"].includes(statement.status) ? (
+          <div className="border-t border-border px-5 pb-4 pt-3 sm:px-6">
+            <ActionButton
+              type="button"
+              variant="glass"
+              size="sm"
+              disabled={isReconciling}
+              onClick={handleMarkAsPaid}
+            >
+              {isReconciling
+                ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                : <CheckCircle2 className="h-4 w-4 text-emerald-200" aria-hidden="true" />}
+              Ya pagué esta tarjeta (registrar pago)
+            </ActionButton>
+          </div>
+        ) : null}
       </div>
 
       <div className={appFormContentClass(view !== null, "px-5 sm:px-6 pb-6")}>

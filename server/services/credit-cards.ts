@@ -914,6 +914,31 @@ export async function addManualMovementToStatement(
   });
 }
 
+export async function markStatementAsPaid(
+  userProfileId: string,
+  statementId: string,
+  input: { householdId: string },
+) {
+  await assertHouseholdAccess(userProfileId, input.householdId);
+
+  const statement = await prisma.cardStatement.findFirst({
+    where: { id: statementId, householdId: input.householdId, deletedAt: null },
+    select: { id: true, totalAmount: true },
+  });
+
+  if (!statement) throw new NotFoundError("Resumen no encontrado.");
+
+  const totalAmount = toFiniteNumber(statement.totalAmount);
+  await prisma.cardStatement.update({
+    where: { id: statement.id },
+    data: {
+      paidAmount: totalAmount,
+      pendingAmount: 0,
+      status: CardStatementStatus.PAID,
+    },
+  });
+}
+
 export async function reconcileStatement(
   userProfileId: string,
   statementId: string,

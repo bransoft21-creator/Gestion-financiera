@@ -1,4 +1,4 @@
-import { DebtStatus, DebtType, HouseholdKind, HouseholdMemberStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
+import { AccountType, CardStatementStatus, DebtStatus, DebtType, HouseholdKind, HouseholdMemberStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
 import { nextArgentinaDayStart } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { ApiError, FieldApiError, ForbiddenError, NotFoundError } from "../api/errors";
@@ -121,6 +121,19 @@ export async function createTransaction(
       );
 
       await applyAccountLinkedDebtCharge(tx, transaction.accountId, transaction.type, transaction.status, transaction.amount, 1);
+
+      if (
+        (transaction.type === TransactionType.TRANSFER || transaction.type === TransactionType.CARD_PAYMENT) &&
+        transaction.transferAccountId &&
+        transaction.status === TransactionStatus.CONFIRMED
+      ) {
+        await applyCardStatementPaymentFromTransfer(tx, {
+          ccAccountId: transaction.transferAccountId,
+          householdId: transaction.householdId,
+          amount: toFiniteNumber(transaction.transferAmount ?? transaction.amount),
+          now: transaction.occurredAt,
+        });
+      }
 
       if (input.sharedHouseholdId) {
         await createSharedTransaction(tx, {
@@ -909,5 +922,53 @@ async function removeSharedTransactionForTransaction(
   });
   await tx.sharedTransaction.delete({
     where: { id: shared.id },
+  });
+}
+
+async function applyCardStatementPaymentFromTransfer(
+  tx: Prisma.TransactionClient,
+  input: { ccAccountId: string; householdId: string; amount: number; now: Date },
+) {
+  const ccAccount = await tx.account.findFirst({
+    where: { id: input.ccAccountId, type: AccountType.CREDIT_CARD, deletedAt: null },
+    select: { id: true },
+  });
+  if (!ccAccount) return;
+
+  const statement = await tx.cardStatement.findFirst({
+    where: {
+      householdId: input.householdId,
+      creditCard: { accountId: input.ccAccountId, deletedAt: null },
+      status: {
+        in: [
+          CardStatementStatus.CLOSED_PENDING_PAYMENT,
+          CardStatementStatus.PARTIALLY_PAID,
+          CardStatementStatus.OVERDUE,
+        ],
+      },
+      deletedAt: null,
+    },
+    orderBy: [{ dueDate: "asc" }, { cycleEndDate: "asc" }],
+    select: { id: true, pendingAmount: true, paidAmount: true, status: true, dueDate: true },
+  });
+  if (!statement) return;
+
+  const pendingAmount = toFiniteNumber(statement.pendingAmount);
+  const paidAmount = toFiniteNumber(statement.paidAmount);
+  const newPaidAmount = paidAmount + input.amount;
+  const newPendingAmount = Math.max(pendingAmount - input.amount, 0);
+
+  let newStatus: CardStatementStatus = statement.status;
+  if (newPendingAmount <= 0) {
+    newStatus = CardStatementStatus.PAID;
+  } else if (statement.dueDate && statement.dueDate < input.now) {
+    newStatus = CardStatementStatus.OVERDUE;
+  } else if (newPaidAmount > 0) {
+    newStatus = CardStatementStatus.PARTIALLY_PAID;
+  }
+
+  await tx.cardStatement.update({
+    where: { id: statement.id },
+    data: { paidAmount: newPaidAmount, pendingAmount: newPendingAmount, status: newStatus },
   });
 }
