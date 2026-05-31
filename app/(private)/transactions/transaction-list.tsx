@@ -296,7 +296,7 @@ function TransactionCard({
   const tone = getTransactionTone(transaction.type);
   const signedAmount = getSignedAmount(transaction);
   const displayAmount = getDisplayAmount(transaction);
-  const isTransfer = transaction.type === "TRANSFER";
+  const isTransfer = transaction.type === "TRANSFER" || transaction.type === "CARD_PAYMENT";
 
   return (
     <article
@@ -320,7 +320,7 @@ function TransactionCard({
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold leading-5 text-foreground">{transaction.description ?? "Sin descripción"}</p>
               <p className="mt-0.5 truncate text-xs leading-5 text-muted-foreground">
-                {transaction.type === "TRANSFER"
+                {isTransfer
                   ? `${transaction.account.name}${transaction.transferAccount ? ` → ${transaction.transferAccount.name}` : ""}`
                   : `${transaction.category?.name ?? "Sin categoría"} · ${transaction.account.name}`}
                 {" · "}{formatDate(transaction.occurredAt)}
