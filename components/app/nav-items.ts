@@ -61,7 +61,6 @@ export const navItems = [
     shortLabel: "Copiloto",
     icon: BotMessageSquare,
     tier: "core",
-    mobile: "primary",
     featured: true,
   },
   {

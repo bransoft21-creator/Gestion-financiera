@@ -25,7 +25,7 @@ type AppShellProps = {
 
 export function AppShell({ children, userId, userName, userEmail, awareness, copilotEnabled }: AppShellProps) {
   return (
-    <UserProvider userName={userName ?? null}>
+    <UserProvider userName={userName ?? null} copilotEnabled={copilotEnabled}>
       <PreferencesProvider>
       <TutorialProvider>
         <div className="v2-shell min-h-screen bg-background">
