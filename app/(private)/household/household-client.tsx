@@ -64,7 +64,8 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
   const [isPaying, setIsPaying] = useState(false);
   const [isAddingRecurring, setIsAddingRecurring] = useState(false);
   const [isAddingOneTime, setIsAddingOneTime] = useState(false);
-  const [newPaymentForm, setNewPaymentForm] = useState({ name: "", estimatedAmount: "", dueDay: "1", splitMode: "EQUAL" as const });
+  const [newPaymentForm, setNewPaymentForm] = useState({ name: "", estimatedAmount: "", dueDay: "1", splitMode: "EQUAL" as "EQUAL" | "PERCENTAGE" | "CUSTOM_AMOUNT" });
+  const [recurringCustomSplits, setRecurringCustomSplits] = useState<Record<string, string>>({});
   const [isCreatingRecurring, setIsCreatingRecurring] = useState(false);
   const [extName, setExtName] = useState("");
   const [extEmail, setExtEmail] = useState("");
@@ -296,6 +297,20 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
     if (!selectedHousehold || isCreatingRecurring) return;
     setIsCreatingRecurring(true);
     try {
+      const activeMembers = selectedHousehold.members.filter((m) => m.status === "ACTIVE");
+      const externals = selectedHousehold.externalParticipants ?? [];
+      const allParticipants = [
+        ...activeMembers.map((m) => ({ key: m.userProfileId, userId: m.userProfileId, externalParticipantId: undefined as string | undefined })),
+        ...externals.map((ep) => ({ key: ep.id, userId: undefined as string | undefined, externalParticipantId: ep.id })),
+      ];
+
+      const participants = newPaymentForm.splitMode !== "EQUAL" && allParticipants.length > 0
+        ? allParticipants.map((p) => ({
+            ...(p.userId ? { userId: p.userId } : { externalParticipantId: p.externalParticipantId }),
+            value: Number(recurringCustomSplits[p.key] ?? 0),
+          }))
+        : undefined;
+
       const response = await fetch("/api/households/recurring-payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -305,6 +320,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
           estimatedAmount: Number(newPaymentForm.estimatedAmount),
           dueDay: Number(newPaymentForm.dueDay),
           splitMode: newPaymentForm.splitMode,
+          participants,
         }),
       });
       const payload = (await response.json()) as { data?: unknown; error?: string };
@@ -312,6 +328,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
       toast.success("Pago del hogar agregado.");
       trackProductEvent("recurring_payment_created", {}, "household");
       setNewPaymentForm({ name: "", estimatedAmount: "", dueDay: "1", splitMode: "EQUAL" });
+      setRecurringCustomSplits({});
       setIsAddingRecurring(false);
       await loadRecurringPayments(selectedHousehold.id);
     } finally {
@@ -631,7 +648,12 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                       <div className="grid gap-2 sm:grid-cols-2">
                         {balance.members.map((member) => (
                           <div key={member.userId} className="rounded-2xl border border-border bg-muted/30 p-3">
-                            <p className="truncate text-sm font-semibold text-foreground">{member.name}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="truncate text-sm font-semibold text-foreground">{member.name}</p>
+                              {member.isExternal && (
+                                <span className="shrink-0 rounded-full border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">externo</span>
+                              )}
+                            </div>
                             <p className={`mt-1.5 text-base font-bold ${member.balance >= 0 ? "text-emerald-200" : "text-amber-200"}`}>
                               <SensitiveAmount value={formatMoney(Math.abs(member.balance), "ARS")} />
                             </p>
@@ -896,7 +918,11 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                           <select
                             className="flex h-10 w-full rounded-2xl border border-border bg-muted/30 px-3 py-2 text-base text-foreground md:text-sm"
                             value={newPaymentForm.splitMode}
-                            onChange={(e) => setNewPaymentForm((p) => ({ ...p, splitMode: e.target.value as "EQUAL" }))}
+                            onChange={(e) => {
+                              const mode = e.target.value as "EQUAL" | "PERCENTAGE" | "CUSTOM_AMOUNT";
+                              setNewPaymentForm((p) => ({ ...p, splitMode: mode }));
+                              setRecurringCustomSplits({});
+                            }}
                           >
                             <option value="EQUAL">Partes iguales</option>
                             <option value="PERCENTAGE">Porcentaje</option>
@@ -904,6 +930,42 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                           </select>
                         </div>
                       </div>
+                      {newPaymentForm.splitMode !== "EQUAL" && (
+                        <div className="space-y-2">
+                          <Label>{newPaymentForm.splitMode === "PERCENTAGE" ? "Porcentaje por persona" : "Monto por persona"}</Label>
+                          <div className="space-y-2">
+                            {[
+                              ...selectedHousehold.members.filter((m) => m.status === "ACTIVE").map((m) => ({
+                                key: m.userProfileId,
+                                name: m.userProfile.fullName ?? m.userProfile.email,
+                                isExternal: false,
+                              })),
+                              ...(selectedHousehold.externalParticipants ?? []).map((ep) => ({
+                                key: ep.id,
+                                name: ep.name,
+                                isExternal: true,
+                              })),
+                            ].map((p) => (
+                              <div key={p.key} className="flex items-center gap-2">
+                                <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                                  {p.name}
+                                  {p.isExternal && <span className="ml-1 text-xs text-muted-foreground/60">(externo)</span>}
+                                </span>
+                                <Input
+                                  type="number"
+                                  className="w-28"
+                                  value={recurringCustomSplits[p.key] ?? ""}
+                                  onChange={(e) => setRecurringCustomSplits((prev) => ({ ...prev, [p.key]: e.target.value }))}
+                                  placeholder={newPaymentForm.splitMode === "PERCENTAGE" ? "50" : "0"}
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                  {newPaymentForm.splitMode === "PERCENTAGE" ? "%" : "ARS"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <Button
                         className="w-full"
                         disabled={isCreatingRecurring || !newPaymentForm.name.trim() || !newPaymentForm.estimatedAmount}
