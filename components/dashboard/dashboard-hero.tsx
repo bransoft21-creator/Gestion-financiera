@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { BotMessageSquare, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SensitiveAmount } from "@/components/app/sensitive-amount";
 import { useCountUp } from "@/hooks/use-count-up";
 import { useFxRate } from "@/hooks/use-fx-rate";
 import { fxEstimate } from "@/lib/fx";
 import { PremiumCard } from "@/components/ui-v2/premium-card";
-import { useUser } from "@/components/app/user-context";
 import {
   formatMoney,
   MONTH_NAMES,
@@ -69,7 +68,6 @@ export function DashboardHero({
   const animated = useCountUp(metrics.realAvailable);
   const isPositive = metrics.realAvailable >= 0;
   const { rate: fxRate, loaded: fxLoaded } = useFxRate();
-  const { copilotEnabled } = useUser();
 
   const hasData = metrics.income > 0 || metrics.expenses > 0;
   const headline = getHeroHeadline(metrics);
@@ -294,19 +292,6 @@ export function DashboardHero({
             </div>
           ) : null}
 
-          {copilotEnabled ? (
-            <Link
-              href="/copilot"
-              className="col-span-2 flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/[0.06] p-4 transition-all duration-150 hover:bg-primary/[0.1] active:scale-[0.99] lg:hidden"
-            >
-              <BotMessageSquare className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-              <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-foreground">Copiloto</p>
-                <p className="text-[11px] text-muted-foreground">Preguntá sobre tus finanzas</p>
-              </div>
-              <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            </Link>
-          ) : null}
         </div>
       </div>
     </PremiumCard>

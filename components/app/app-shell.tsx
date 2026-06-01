@@ -12,6 +12,7 @@ import { Sidebar } from "./sidebar";
 import { TelemetryProvider } from "./telemetry-provider";
 import { UserProvider } from "./user-context";
 import { TutorialProvider, TutorialSpotlight } from "./tutorial";
+import { CopilotFab } from "./copilot-fab";
 import type { NavigationAwareness } from "@/lib/navigation-awareness";
 
 type AppShellProps = {
@@ -53,6 +54,7 @@ export function AppShell({ children, userId, userName, userEmail, awareness, cop
             </main>
           </div>
           <BottomNav awareness={awareness} copilotEnabled={copilotEnabled} />
+          <CopilotFab />
           <TutorialSpotlight />
           <Toaster
             className="meridian-toaster"
