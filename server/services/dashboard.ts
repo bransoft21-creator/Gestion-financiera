@@ -11,6 +11,7 @@ import { EMPTY_NAVIGATION_AWARENESS } from "@/lib/navigation-awareness";
 import { getNavigationAwareness } from "./navigation-awareness";
 import { filterCurrency, sumByCurrency } from "@/lib/finance/currency-safe";
 import { syncLegacyCreditCards } from "./credit-cards";
+import { buildPeriodContext } from "@/lib/period-status";
 
 const chartColors = ["#f97316", "#ef4444", "#06b6d4", "#eab308", "#8b5cf6", "#14b8a6"];
 const activeTransactionWhere = {
@@ -404,6 +405,7 @@ export async function getDashboardSummary(
       from: monthStart.toISOString(),
       to: nextMonthStart.toISOString(),
     },
+    periodContext: buildPeriodContext(year, month),
     metrics: {
       ...health,
       realAvailable,

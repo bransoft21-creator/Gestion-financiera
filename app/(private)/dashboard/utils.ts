@@ -245,8 +245,17 @@ export function getObligationsInsight(metrics: DashboardSummary["metrics"]): Ins
   };
 }
 
-export function getHeroHeadline(metrics: DashboardSummary["metrics"]): string {
+export function getHeroHeadline(metrics: DashboardSummary["metrics"], isCurrentMonth = true): string {
   const { realAvailable, spendingRate, fixedToIncomeRatio, savingsRate } = metrics;
+
+  if (!isCurrentMonth) {
+    if (realAvailable < 0) return "El mes cerró en negativo.";
+    if (spendingRate > 100) return "Los gastos superaron los ingresos.";
+    if (fixedToIncomeRatio > 70) return "Los gastos fijos pesaron fuerte.";
+    if (savingsRate >= 20) return "Un mes con ahorro sólido.";
+    return "El mes quedó registrado.";
+  }
+
   if (realAvailable < 0) return "Tu mes pide una corrección.";
   if (spendingRate > 100) return "El ritmo actual supera tus ingresos.";
   if (fixedToIncomeRatio > 70) return "Los gastos fijos están pesando fuerte.";
@@ -257,8 +266,26 @@ export function getHeroHeadline(metrics: DashboardSummary["metrics"]): string {
 
 export function getHeroPrimarySignal(
   metrics: DashboardSummary["metrics"],
+  isCurrentMonth = true,
 ): { text: string; tone: "positive" | "warning" | "danger" } {
   const { fixedToIncomeRatio, spendingRate, savingsRate, realAvailable, projection } = metrics;
+
+  if (!isCurrentMonth) {
+    // CLOSED: retrospective signals, no projections
+    if (realAvailable < 0)
+      return { text: "El mes cerró con disponible real negativo.", tone: "danger" };
+    if (spendingRate > 100)
+      return { text: "Los gastos superaron los ingresos registrados.", tone: "danger" };
+    if (fixedToIncomeRatio > 70)
+      return { text: `Gastos fijos al ${fixedToIncomeRatio}% del ingreso — mes de alta carga.`, tone: "danger" };
+    if (savingsRate >= 20)
+      return { text: `Tasa de ahorro final: ${savingsRate}% — resultado sólido.`, tone: "positive" };
+    if (savingsRate > 8)
+      return { text: `Ahorro final del ${savingsRate}% del ingreso.`, tone: "positive" };
+    return { text: `${spendingRate}% del ingreso consumido en el mes.`, tone: "positive" };
+  }
+
+  // OPEN: forward-looking signals
   if (realAvailable < 0)
     return { text: "Disponible real negativo — el mes necesita corrección.", tone: "danger" };
   if (spendingRate > 100)
@@ -278,9 +305,24 @@ export function getHeroPrimarySignal(
   return { text: `${spendingRate}% del ingreso consumido — dentro de lo esperado.`, tone: "positive" };
 }
 
-export function buildNarrative(metrics: DashboardSummary["metrics"]): string {
+export function buildNarrative(metrics: DashboardSummary["metrics"], isCurrentMonth = true): string {
   if (metrics.income === 0 && metrics.expenses === 0) return "";
   const parts: string[] = [];
+
+  if (!isCurrentMonth) {
+    // CLOSED period: definitive past-tense language
+    if (metrics.income > 0) {
+      parts.push(`Gastaste ${formatMoney(metrics.expenses, metrics.currency)} de ${formatMoney(metrics.income, metrics.currency)}.`);
+    }
+    if (metrics.realAvailable >= 0) {
+      parts.push(`El mes cerró con ${formatMoney(metrics.realAvailable, metrics.currency)} de balance.`);
+    } else {
+      parts.push("El mes cerró con el disponible real en negativo.");
+    }
+    return parts.join(" ");
+  }
+
+  // OPEN period: present/future language
   if (metrics.income > 0) {
     parts.push(`Vas gastando ${formatMoney(metrics.expenses, metrics.currency)} de ${formatMoney(metrics.income, metrics.currency)}.`);
   }

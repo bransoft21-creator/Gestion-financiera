@@ -218,7 +218,7 @@ const toneStyles: Record<InsightTone, {
   },
 };
 
-export function FinancialAiAnalysisCard({ month }: { month: string }) {
+export function FinancialAiAnalysisCard({ month, isCurrentMonth = true }: { month: string; isCurrentMonth?: boolean }) {
   const [analysis, setAnalysis] = useState<AiFinancialAnalysis | null>(null);
   const [metrics, setMetrics] = useState<AiFinancialAnalysisMetrics | null>(null);
   const [comparison, setComparison] = useState<AiFinancialAnalysisComparison | null>(null);
@@ -417,6 +417,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
                 metrics={metrics}
                 comparison={comparison}
                 onOpen={() => setIsOpen(true)}
+                isCurrentMonth={isCurrentMonth}
               />
             ) : analysis && metrics ? (
               <CopilotExperience
@@ -424,6 +425,7 @@ export function FinancialAiAnalysisCard({ month }: { month: string }) {
                 analysis={analysis}
                 metrics={metrics}
                 comparison={comparison}
+                isCurrentMonth={isCurrentMonth}
               />
             ) : (
               <CopilotEmptyState
@@ -446,13 +448,15 @@ function CollapsedCopilotPreview({
   metrics,
   comparison,
   onOpen,
+  isCurrentMonth,
 }: {
   analysis: AiFinancialAnalysis;
   metrics: AiFinancialAnalysisMetrics;
   comparison: AiFinancialAnalysisComparison | null;
   onOpen: () => void;
+  isCurrentMonth: boolean;
 }) {
-  const hero = useMemo(() => buildHeroNarrative(analysis, metrics, comparison), [analysis, metrics, comparison]);
+  const hero = useMemo(() => buildHeroNarrative(analysis, metrics, comparison, isCurrentMonth), [analysis, metrics, comparison, isCurrentMonth]);
   const insights = useMemo(() => buildImportantInsights(analysis, metrics, comparison), [analysis, metrics, comparison]);
   const primaryInsight = insights[0];
   const score = clamp(Math.round(analysis.score), 0, 100);
@@ -496,13 +500,15 @@ function CopilotExperience({
   analysis,
   metrics,
   comparison,
+  isCurrentMonth,
 }: {
   analysis: AiFinancialAnalysis;
   metrics: AiFinancialAnalysisMetrics;
   comparison: AiFinancialAnalysisComparison | null;
+  isCurrentMonth: boolean;
 }) {
   const insights = useMemo(() => buildImportantInsights(analysis, metrics, comparison), [analysis, metrics, comparison]);
-  const hero = useMemo(() => buildHeroNarrative(analysis, metrics, comparison), [analysis, metrics, comparison]);
+  const hero = useMemo(() => buildHeroNarrative(analysis, metrics, comparison, isCurrentMonth), [analysis, metrics, comparison, isCurrentMonth]);
   const invisibleExpenses = metrics.repeatedSmallExpenses.slice(0, 5);
 
   return (
@@ -519,9 +525,9 @@ function CopilotExperience({
       </motion.div>
       <ImportantInsights insights={insights} />
       <InvisibleExpenses items={invisibleExpenses} income={metrics.income} currency={metrics.currency} />
-      <MonthPrediction metrics={metrics} />
+      {isCurrentMonth && <MonthPrediction metrics={metrics} />}
       {comparison && <MonthComparison comparison={comparison} currency={metrics.currency} />}
-      <ActionPlan recommendations={analysis.recommendations} metrics={metrics} />
+      <ActionPlan recommendations={analysis.recommendations} metrics={metrics} isCurrentMonth={isCurrentMonth} />
     </motion.div>
   );
 }
@@ -773,15 +779,25 @@ function MonthComparison({ comparison, currency }: { comparison: AiFinancialAnal
 function ActionPlan({
   recommendations,
   metrics,
+  isCurrentMonth,
 }: {
   recommendations: AiFinancialAnalysis["recommendations"];
   metrics: AiFinancialAnalysisMetrics;
+  isCurrentMonth: boolean;
 }) {
-  const smartRecommendations = recommendations.length > 0 ? recommendations.slice(0, 3) : buildFallbackRecommendations(metrics);
+  const smartRecommendations = recommendations.length > 0
+    ? recommendations.slice(0, 3)
+    : isCurrentMonth
+      ? buildFallbackRecommendations(metrics)
+      : buildClosedMonthLearnings(metrics);
 
   return (
     <motion.section variants={itemMotion} className="space-y-2">
-      <SectionHeader eyebrow="Próximo paso" title="Recomendaciones accionables" icon={Target} />
+      <SectionHeader
+        eyebrow={isCurrentMonth ? "Próximo paso" : "Para el próximo mes"}
+        title={isCurrentMonth ? "Recomendaciones accionables" : "Aprendizajes del mes"}
+        icon={Target}
+      />
       <div className="grid gap-2 lg:grid-cols-3">
         {smartRecommendations.map((item, index) => (
           <motion.article
@@ -1067,16 +1083,50 @@ function buildHeroNarrative(
   analysis: AiFinancialAnalysis,
   metrics: AiFinancialAnalysisMetrics,
   comparison: AiFinancialAnalysisComparison | null,
+  isCurrentMonth: boolean,
 ) {
   const score = Math.round(analysis.score);
+
+  // CLOSED period: retrospective trend label
   const trend = comparison?.available
     ? comparison.balanceChangeAmount >= 0
-      ? `Vas mejor que ${formatMonthLabel(comparison.previousMonth)}`
-      : `Peor balance que ${formatMonthLabel(comparison.previousMonth)}`
+      ? isCurrentMonth
+        ? `Vas mejor que ${formatMonthLabel(comparison.previousMonth)}`
+        : `Mejor balance que ${formatMonthLabel(comparison.previousMonth)}`
+      : isCurrentMonth
+        ? `Peor balance que ${formatMonthLabel(comparison.previousMonth)}`
+        : `Menor balance que ${formatMonthLabel(comparison.previousMonth)}`
     : metrics.balance >= 0
-      ? "El mes viene en positivo"
-      : "El mes pide atención";
+      ? isCurrentMonth ? "El mes viene en positivo" : "El mes cerró en positivo"
+      : isCurrentMonth ? "El mes pide atención" : "El mes cerró en negativo";
 
+  // CLOSED period: always use retrospective framing
+  if (!isCurrentMonth) {
+    if (score >= 78 && metrics.savingsRate > 0) {
+      return {
+        title: "Un mes sólido.",
+        subtitle: `Terminaste con una tasa de ahorro del ${formatPercent(metrics.savingsRate)}. Los números cierran bien.`,
+        tone: "emerald" as InsightTone,
+        trend,
+      };
+    }
+    if (metrics.balance < 0) {
+      return {
+        title: "El mes cerró en déficit.",
+        subtitle: `Los gastos superaron los ingresos. Un punto de partida para ajustar en el próximo ciclo.`,
+        tone: "rose" as InsightTone,
+        trend,
+      };
+    }
+    return {
+      title: "Esto fue lo más importante del mes.",
+      subtitle: analysis.summary,
+      tone: getScoreTone(score),
+      trend,
+    };
+  }
+
+  // OPEN period: predictive framing (original behavior)
   if (score >= 78 && metrics.savingsRate > 0) {
     return {
       title: "Este es tu mes.",
@@ -1158,6 +1208,38 @@ function buildFallbackRecommendations(metrics: AiFinancialAnalysisMetrics) {
       title: "Poné un techo de movilidad.",
       message: "Si movilidad sigue creciendo, se come margen sin parecer un gran gasto individual.",
       estimatedImpact: mobilitySavings > 0 ? `Reduciendo 15%: ${formatMoney(mobilitySavings, metrics.currency)}.` : "Impacto posible: menor fuga diaria.",
+    },
+  ];
+}
+
+function buildClosedMonthLearnings(metrics: AiFinancialAnalysisMetrics) {
+  const topCategory = metrics.categoryExpensePercentages[0];
+  const hasInvisible = metrics.repeatedSmallExpenses.length > 0;
+  const mobilityHigh = metrics.mobilityRate >= 15;
+
+  return [
+    {
+      title: topCategory
+        ? `${topCategory.name} fue tu categoría principal.`
+        : "Revisá tu distribución de gastos.",
+      message: topCategory
+        ? `Representó el ${formatPercent(topCategory.percentage)} del gasto total del mes. Un buen punto de partida para el próximo.`
+        : "Categorizá tus gastos para identificar dónde fue el dinero.",
+      estimatedImpact: "Aprendizaje para el próximo mes.",
+    },
+    {
+      title: mobilityHigh ? "La movilidad pesó este mes." : "El ritmo de gastos fijos.",
+      message: mobilityHigh
+        ? `Movilidad representó el ${formatPercent(metrics.mobilityRate)} del ingreso. Vale tenerlo en cuenta al planificar el próximo mes.`
+        : `Los gastos fijos representaron el ${formatPercent(metrics.fixedExpenseRate)} del ingreso. Un parámetro clave para presupuestar.`,
+      estimatedImpact: "Referencia para planificar.",
+    },
+    {
+      title: hasInvisible ? "Gastos pequeños que suman." : "Balance del mes registrado.",
+      message: hasInvisible
+        ? "Hubo gastos repetidos de baja fricción. Revisarlos puede liberar margen en el próximo ciclo."
+        : `Terminaste el mes con una tasa de ahorro del ${formatPercent(metrics.savingsRate)}.`,
+      estimatedImpact: "Contexto para el próximo período.",
     },
   ];
 }

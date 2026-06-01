@@ -1,5 +1,7 @@
 "use client";
 
+"use client";
+
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -16,6 +18,7 @@ import {
   getHeroPrimarySignal,
 } from "@/app/(private)/dashboard/utils";
 import type { DashboardSummary } from "@/app/(private)/dashboard/types";
+import type { PeriodStatus } from "@/lib/period-status";
 
 function FormulaPill({
   label,
@@ -55,6 +58,7 @@ export function DashboardHero({
   onPrevMonth,
   onNextMonth,
   isCurrentMonth,
+  periodStatus,
 }: {
   metrics: DashboardSummary["metrics"];
   year: number;
@@ -63,6 +67,7 @@ export function DashboardHero({
   onPrevMonth: () => void;
   onNextMonth: () => void;
   isCurrentMonth: boolean;
+  periodStatus?: PeriodStatus;
 }) {
   const currency = metrics.currency;
   const animated = useCountUp(metrics.realAvailable);
@@ -70,8 +75,8 @@ export function DashboardHero({
   const { rate: fxRate, loaded: fxLoaded } = useFxRate();
 
   const hasData = metrics.income > 0 || metrics.expenses > 0;
-  const headline = getHeroHeadline(metrics);
-  const primarySignal = hasData ? getHeroPrimarySignal(metrics) : null;
+  const headline = getHeroHeadline(metrics, isCurrentMonth);
+  const primarySignal = hasData ? getHeroPrimarySignal(metrics, isCurrentMonth) : null;
   const healthSignals = hasData ? buildHealthSignals(metrics).slice(0, 2) : [];
 
   function scrollToLectura() {
@@ -112,6 +117,18 @@ export function DashboardHero({
                   <ChevronRight className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
+              {periodStatus && periodStatus !== "OPEN" && (
+                <span
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                    periodStatus === "CLOSED"
+                      ? "border-border bg-muted/40 text-muted-foreground"
+                      : "border-sky-300/20 bg-sky-300/[0.08] text-sky-400",
+                  )}
+                >
+                  {periodStatus === "CLOSED" ? "cerrado" : "próximo"}
+                </span>
+              )}
               {metrics.currencyScope.mixedCurrencies && (
                 <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
                   Vista {currency}
@@ -264,17 +281,32 @@ export function DashboardHero({
               {metrics.savingsRate}%
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-muted/40 p-4">
-            <p className="text-[11px] font-semibold uppercase text-muted-foreground">Cierre estimado</p>
-            <p
-              className={cn(
-                "mt-1 text-sm font-semibold tabular-nums",
-                metrics.projection.projectedRealAvailable >= 0 ? "text-foreground" : "text-rose-400",
-              )}
-            >
-              <SensitiveAmount value={formatMoney(metrics.projection.projectedRealAvailable, currency)} />
-            </p>
-          </div>
+          {(!periodStatus || periodStatus === "OPEN") && (
+            <div className="rounded-2xl border border-border bg-muted/40 p-4">
+              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Cierre estimado</p>
+              <p
+                className={cn(
+                  "mt-1 text-sm font-semibold tabular-nums",
+                  metrics.projection.projectedRealAvailable >= 0 ? "text-foreground" : "text-rose-400",
+                )}
+              >
+                <SensitiveAmount value={formatMoney(metrics.projection.projectedRealAvailable, currency)} />
+              </p>
+            </div>
+          )}
+          {periodStatus === "CLOSED" && (
+            <div className="rounded-2xl border border-border bg-muted/40 p-4">
+              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Resultado final</p>
+              <p
+                className={cn(
+                  "mt-1 text-sm font-semibold tabular-nums",
+                  metrics.balance >= 0 ? "text-foreground" : "text-rose-400",
+                )}
+              >
+                <SensitiveAmount value={formatMoney(metrics.balance, currency)} />
+              </p>
+            </div>
+          )}
           {usdBalance && usdBalance.accountCount > 0 ? (
             <div className="col-span-2 rounded-2xl border border-sky-300/16 bg-sky-300/[0.045] p-4 lg:col-span-1">
               <p className="text-[11px] font-semibold uppercase text-muted-foreground">Dólares</p>

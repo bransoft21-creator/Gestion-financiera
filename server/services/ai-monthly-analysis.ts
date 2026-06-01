@@ -9,6 +9,7 @@ import { traceAi, traceUserId } from "@/server/services/ai-trace";
 import { toFiniteNumber } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
 import { buildMonthlySystemPrompt } from "@/lib/ai/prompt-governance";
+import { getPeriodStatus } from "@/lib/period-status";
 import { normalizeMerchant, toDisplayName, toGroupingKey } from "@/lib/merchant/normalize";
 import { filterCurrency, sumByCurrency } from "@/lib/finance/currency-safe";
 
@@ -297,6 +298,7 @@ export async function generateMonthlyFinancialAnalysis({
   const analysis = await requestOpenAiAnalysis(compactInput, {
     userId: userProfileId,
     endpoint: "ai.monthly-analysis",
+    month,
   });
   traceAi("OPENAI_MONTHLY_RESPONSE_OK", { user: traceUserId(userProfileId), month });
 
@@ -829,7 +831,7 @@ function getRepeatedSmallExpenses(transactions: AnalysisTransaction[], totalInco
 
 async function requestOpenAiAnalysis(
   input: ReturnType<typeof buildCompactMonthlyInput>,
-  usage: { userId: string; endpoint: string },
+  usage: { userId: string; endpoint: string; month: string },
 ) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -837,6 +839,8 @@ async function requestOpenAiAnalysis(
     throw new ApiError(503, "El servicio de IA no está configurado.");
   }
   const model = process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL;
+  const { year, monthNumber } = parseMonth(usage.month);
+  const periodStatus = getPeriodStatus(year, monthNumber);
   const prompt = [
     "Analizá este resumen mensual compacto y generá el análisis solicitado.",
     "",
@@ -869,7 +873,7 @@ async function requestOpenAiAnalysis(
         input: [
           {
             role: "system",
-            content: buildMonthlySystemPrompt(),
+            content: buildMonthlySystemPrompt(periodStatus),
           },
           {
             role: "user",

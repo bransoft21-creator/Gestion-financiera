@@ -42,6 +42,7 @@ import {
   sectionReveal,
 } from "./utils";
 import type { DashboardSummary } from "./types";
+import { getPeriodStatus } from "@/lib/period-status";
 
 /* ── Local UI primitives ─────────────────────────────────────────────────── */
 
@@ -97,6 +98,7 @@ export function DashboardClient() {
   const sectionMapa = useSectionCollapse("mapa", false);
 
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+  const periodStatus = getPeriodStatus(year, month);
 
   useEffect(() => {
     if (!summary || !isCurrentMonth) return;
@@ -182,6 +184,7 @@ export function DashboardClient() {
         onPrevMonth={navigatePrev}
         onNextMonth={navigateNext}
         isCurrentMonth={isCurrentMonth}
+        periodStatus={periodStatus}
       />
 
       <GettingStartedCard activation={summary.activation} />
@@ -241,7 +244,7 @@ export function DashboardClient() {
       )}
 
       {/* 2. Financial Copilot */}
-      <FinancialAiAnalysisCard month={selectedMonth} />
+      <FinancialAiAnalysisCard month={selectedMonth} isCurrentMonth={isCurrentMonth} />
 
       {/* 4. Distribución + tendencia — colapsable */}
       <motion.section

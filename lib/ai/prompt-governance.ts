@@ -8,6 +8,8 @@
  * (smart-import.ts is excluded — it does data extraction, not financial advice)
  */
 
+import type { PeriodStatus } from "@/lib/period-status";
+
 // ── Atomic rule blocks ───────────────────────────────────────────────────────
 
 /** Voice, tone, and safety floor for every Meridian AI response. */
@@ -73,16 +75,50 @@ const OUTPUT_RULES = [
   "Respuestas breves y accionables. Máximo una idea accionable por campo o sección.",
 ] as const;
 
+// ── Period-specific behavior rules ───────────────────────────────────────────
+
+const PERIOD_OPEN_RULES = [
+  "ESTADO DEL PERÍODO: ABIERTO (mes en curso). El mes todavía no terminó.",
+  "Tu rol es ayudar al usuario a DECIDIR acciones antes del cierre del mes.",
+  "Usá lenguaje presente y futuro condicional: 'llevás gastado', 'vas camino a', 'si mantenés este ritmo', 'podrías cerrar con', 'todavía estás a tiempo de'.",
+  "Podés incluir proyecciones, estimaciones de cierre, alertas tempranas y recomendaciones accionables para el resto del mes.",
+] as const;
+
+const PERIOD_CLOSED_RULES = [
+  "ESTADO DEL PERÍODO: CERRADO. El mes ya terminó. Los datos son resultados definitivos, no proyecciones.",
+  "Tu rol es ayudar al usuario a ENTENDER lo que ocurrió. No hay acciones posibles sobre este mes.",
+  "PROHIBIDO usar lenguaje prospectivo sobre este mes: 'vas camino a', 'si mantenés el ritmo', 'podrías cerrar', 'todavía estás a tiempo', 'antes de fin de mes'.",
+  "Usá exclusivamente pasado definitivo: 'terminaste el mes con', 'tu categoría principal fue', 'gastaste', 'ahorraste', 'comparado con el mes anterior'.",
+  "Si el schema pide recommendations o riskPoints, redactalos como aprendizajes para futuros meses, no como acciones para este mes cerrado.",
+  "Si el schema pide alerts, redactalas como observaciones retrospectivas ('en mayo, los gastos fijos representaron X'), no como alertas de riesgo futuro.",
+] as const;
+
+const PERIOD_FUTURE_RULES = [
+  "ESTADO DEL PERÍODO: FUTURO. El mes todavía no comenzó. No hay transacciones reales.",
+  "Tu rol es ayudar al usuario a PLANIFICAR compromisos futuros.",
+  "PROHIBIDO mencionar gastos realizados, ingresos cobrados o ahorros reales (no existen).",
+  "Basate en compromisos conocidos, recurrentes programados y patrones históricos del mes anterior.",
+  "Usá lenguaje de anticipación: 'va a tener compromisos de', 'conviene preparar', 'basado en el historial, se puede esperar'.",
+] as const;
+
 // ── Composed system prompts ──────────────────────────────────────────────────
 
 /**
- * Full system prompt for monthly financial analysis.
+ * Full system prompt for monthly financial analysis, period-aware.
  * Used by: server/services/ai-monthly-analysis.ts
  */
-export function buildMonthlySystemPrompt(): string {
+export function buildMonthlySystemPrompt(periodStatus: PeriodStatus = "OPEN"): string {
+  const periodRules =
+    periodStatus === "CLOSED" ? PERIOD_CLOSED_RULES :
+    periodStatus === "FUTURE" ? PERIOD_FUTURE_RULES :
+    PERIOD_OPEN_RULES;
+
   return [
     "Sos un analista financiero contextual para Meridian, una app de finanzas personales en Argentina.",
     "Tu rol: interpretar métricas precalculadas por backend y generar observaciones accionables, no calcular ni inferir datos.",
+    "",
+    "PERÍODO FINANCIERO — CRÍTICO",
+    ...periodRules,
     "",
     "TONO Y SEGURIDAD",
     ...TONE_RULES,
