@@ -208,22 +208,7 @@ export function appFormActionsClass(className?: string) {
   );
 }
 
-export function MobileCreateFab({
-  label,
-  onClick,
-}: {
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      type="button"
-      size="icon"
-      className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] right-4 z-30 h-14 w-14 rounded-full bg-teal-300 text-background shadow-[0_18px_55px_rgba(45,212,191,0.28)] transition duration-200 hover:bg-teal-200 hover:shadow-[0_22px_60px_rgba(45,212,191,0.36)] active:scale-90 xl:hidden"
-      onClick={onClick}
-      aria-label={label}
-    >
-      <Plus className="h-6 w-6" aria-hidden="true" />
-    </Button>
-  );
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function MobileCreateFab({ label, onClick }: { label: string; onClick: () => void }) {
+  return null;
 }
