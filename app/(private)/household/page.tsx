@@ -13,7 +13,7 @@ export default async function HouseholdPage() {
       title="Hogar"
       description="Un espacio compartido para organizar gastos sin convertir la vida en una planilla."
     >
-      <HouseholdClient initialHouseholds={households} />
+      <HouseholdClient initialHouseholds={households} currentUserId={userProfile.id} />
     </V2PageShell>
   );
 }

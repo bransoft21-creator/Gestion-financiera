@@ -32,6 +32,7 @@ import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { ActivityPreview } from "@/components/dashboard/activity-preview";
 import { GettingStartedCard } from "@/components/dashboard/getting-started-card";
 import { ContextualEntryPoints } from "@/components/dashboard/contextual-entry-points";
+import { HouseholdWidget } from "@/components/dashboard/household-widget";
 import { ContextualEducationCard } from "@/components/education/contextual-education-card";
 import { useSectionCollapse } from "@/hooks/use-section-collapse";
 import { getDashboardEducation } from "@/lib/finance/contextual-education";
@@ -187,6 +188,9 @@ export function DashboardClient() {
 
       {/* Cierre de mes anterior — solo mes actual, primeros 10 días */}
       {isCurrentMonth && <MonthlyCloseCard />}
+
+      {/* Hogar — widget no-intrusivo, solo informacional */}
+      {isCurrentMonth && <HouseholdWidget />}
 
       {/* Dinero en tránsito — solo si hay acuerdos activos */}
       {(interpersonalPosition.toReceive > 0 || interpersonalPosition.toPay > 0) && (

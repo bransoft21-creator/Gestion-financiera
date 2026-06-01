@@ -33,7 +33,9 @@ export type HouseholdBalance = {
   summary: string;
   lastSettledAt: string | null;
   settlement: {
+    fromUserId: string;
     fromName: string;
+    toUserId: string;
     toName: string;
     amount: number;
   } | null;
@@ -42,6 +44,7 @@ export type HouseholdBalance = {
     name: string;
     email: string;
     balance: number;
+    isExternal?: boolean;
   }>;
   recentSharedTransactions: Array<{
     id: string;

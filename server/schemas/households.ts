@@ -18,6 +18,7 @@ export const createSettlementSchema = z.object({
   householdId: z.string().min(1),
   amount: z.number().positive("El monto debe ser positivo."),
   notes: z.string().trim().max(200).optional().nullable(),
+  accountId: z.string().min(1).optional().nullable(),
 });
 
 export const listSettlementsSchema = z.object({
