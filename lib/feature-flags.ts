@@ -8,11 +8,18 @@ export function isSmartImportEnabled(email: string): boolean {
   return isAiEnabled(email);
 }
 
+export function isCopilotEnabled(email: string): boolean {
+  if (isDisabled("COPILOT")) return false;
+  const whitelist = parseList(process.env.COPILOT_ALLOWLIST_EMAILS);
+  if (whitelist.length > 0) return whitelist.includes(email.toLowerCase());
+  return isAiEnabled(email);
+}
+
 export function isMaintenanceModeEnabled(): boolean {
   return process.env.MAINTENANCE_MODE === "1";
 }
 
-function isDisabled(flag: "AI" | "SMART_IMPORT") {
+function isDisabled(flag: "AI" | "SMART_IMPORT" | "COPILOT") {
   return process.env[`DISABLE_${flag}`] === "1";
 }
 

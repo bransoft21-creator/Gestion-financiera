@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EMPTY_NAVIGATION_AWARENESS } from "@/lib/navigation-awareness";
 import { getNavigationAwareness } from "@/server/services/navigation-awareness";
+import { isCopilotEnabled } from "@/lib/feature-flags";
 
 export default async function PrivateLayout({
   children,
@@ -30,6 +31,7 @@ export default async function PrivateLayout({
   }
 
   const awareness = await getNavigationAwareness(profile.id).catch(() => EMPTY_NAVIGATION_AWARENESS);
+  const copilotEnabled = isCopilotEnabled(user.email ?? "");
 
   return (
     <AppShell
@@ -37,6 +39,7 @@ export default async function PrivateLayout({
       userEmail={user.email}
       userName={getDisplayName(user.user_metadata)}
       awareness={awareness}
+      copilotEnabled={copilotEnabled}
     >
       {children}
     </AppShell>

@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Bell,
+  BotMessageSquare,
   CircleDollarSign,
   CreditCard,
   FolderTree,
@@ -53,6 +54,15 @@ export const navItems = [
     tier: "core",
     mobile: "primary",
     awarenessTarget: "household",
+  },
+  {
+    href: "/copilot",
+    label: "Copiloto",
+    shortLabel: "Copiloto",
+    icon: BotMessageSquare,
+    tier: "core",
+    mobile: "primary",
+    featured: true,
   },
   {
     href: "/notifications",

@@ -266,6 +266,7 @@ model UserProfile {
   investmentActivities InvestmentTransaction[] @relation("InvestmentTransactionCreatedBy")
   aiFinancialAnalyses  AiFinancialAnalysis[]
   aiUsages             AiUsage[]
+  aiCopilotMessages    AiCopilotMessage[]
   activityItems        ActivityItem[]
   householdSettlements HouseholdSettlement[] @relation("HouseholdSettlementSettledBy")
   householdRecurringPaymentsCreated        HouseholdRecurringPayment[]            @relation("HouseholdRecurringPaymentCreatedBy")
@@ -312,6 +313,7 @@ model Household {
   personContacts         PersonContact[]
   personalAgreements     PersonalAgreement[]
   externalParticipants   HouseholdExternalParticipant[]
+  aiCopilotMessages      AiCopilotMessage[]
 
   @@index([createdById])
 }
@@ -1142,4 +1144,23 @@ model AgreementEvent {
   @@index([agreementId, occurredAt])
   @@index([createdById])
   @@index([transactionId])
+}
+
+model AiCopilotMessage {
+  id          String   @id @default(cuid())
+  userId      String
+  householdId String
+  role        String   // "user" | "assistant"
+  content     String   @db.Text
+  intent      String?
+  contextHash String?
+  inputTokens  Int     @default(0)
+  outputTokens Int     @default(0)
+  createdAt   DateTime @default(now())
+
+  user      UserProfile @relation(fields: [userId], references: [id])
+  household Household   @relation(fields: [householdId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([householdId, createdAt])
 }

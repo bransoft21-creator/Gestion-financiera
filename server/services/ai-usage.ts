@@ -13,6 +13,7 @@ const ENDPOINT_DAILY_LIMITS: Record<string, number> = {
   "ai.monthly-analysis": Number(process.env.AI_MONTHLY_ANALYSIS_DAILY_LIMIT ?? 6),
   "ai.smart-import": Number(process.env.AI_SMART_IMPORT_DAILY_LIMIT ?? 10),
   "ai.smart-import.mapping": Number(process.env.AI_SMART_IMPORT_MAPPING_DAILY_LIMIT ?? 5),
+  "ai.copilot": Number(process.env.AI_COPILOT_DAILY_LIMIT ?? 20),
 };
 
 const MODEL_PRICING_USD_PER_TOKEN: Record<string, { input: number; output: number }> = {

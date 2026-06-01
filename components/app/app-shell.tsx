@@ -20,9 +20,10 @@ type AppShellProps = {
   userName?: string | null;
   userEmail?: string | null;
   awareness?: NavigationAwareness;
+  copilotEnabled?: boolean;
 };
 
-export function AppShell({ children, userId, userName, userEmail, awareness }: AppShellProps) {
+export function AppShell({ children, userId, userName, userEmail, awareness, copilotEnabled }: AppShellProps) {
   return (
     <UserProvider userName={userName ?? null}>
       <PreferencesProvider>
@@ -42,7 +43,7 @@ export function AppShell({ children, userId, userName, userEmail, awareness }: A
             <LogoutButton compact />
           </div>
           <div className="lg:flex">
-            <Sidebar userName={userName} userEmail={userEmail} awareness={awareness} />
+            <Sidebar userName={userName} userEmail={userEmail} awareness={awareness} copilotEnabled={copilotEnabled} />
             <main className="min-w-0 flex-1 overflow-x-hidden">
               <PageTransition>
                 <div className="mx-auto w-full max-w-[1200px] px-4 pb-[calc(112px+env(safe-area-inset-bottom))] pt-5 lg:px-8 lg:py-7">
@@ -51,7 +52,7 @@ export function AppShell({ children, userId, userName, userEmail, awareness }: A
               </PageTransition>
             </main>
           </div>
-          <BottomNav awareness={awareness} />
+          <BottomNav awareness={awareness} copilotEnabled={copilotEnabled} />
           <TutorialSpotlight />
           <Toaster
             className="meridian-toaster"

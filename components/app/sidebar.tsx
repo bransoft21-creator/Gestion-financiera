@@ -13,6 +13,7 @@ type SidebarProps = {
   userName?: string | null;
   userEmail?: string | null;
   awareness?: NavigationAwareness;
+  copilotEnabled?: boolean;
 };
 
 const sectionLabels = {
@@ -21,13 +22,13 @@ const sectionLabels = {
   advanced: "Sistema",
 } as const;
 
-const navSections = (["core", "weekly", "advanced"] as const).map((tier) => ({
-  tier,
-  label: sectionLabels[tier],
-  items: navItems.filter((item) => item.tier === tier),
-}));
-
-export function Sidebar({ userName, userEmail, awareness }: SidebarProps) {
+export function Sidebar({ userName, userEmail, awareness, copilotEnabled }: SidebarProps) {
+  const visibleItems = navItems.filter((item) => item.href !== "/copilot" || copilotEnabled);
+  const navSections = (["core", "weekly", "advanced"] as const).map((tier) => ({
+    tier,
+    label: sectionLabels[tier],
+    items: visibleItems.filter((item) => item.tier === tier),
+  }));
   const pathname = usePathname();
   const displayName = userName ?? "Mi cuenta";
   const accountLabel = userEmail ?? "Hogar principal";

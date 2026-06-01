@@ -10,19 +10,20 @@ import { navItems } from "./nav-items";
 import { LogoutDialog } from "./logout-dialog";
 import type { AwarenessSignal, NavigationAwareness } from "@/lib/navigation-awareness";
 
-const bottomNavItems = navItems.filter((item) => item.mobile === "primary");
 const drawerSections = [
   { tier: "core", label: "También diario" },
   { tier: "weekly", label: "Plan y compromisos" },
   { tier: "advanced", label: "Sistema" },
 ] as const;
 
-export function BottomNav({ awareness }: { awareness?: NavigationAwareness }) {
+export function BottomNav({ awareness, copilotEnabled }: { awareness?: NavigationAwareness; copilotEnabled?: boolean }) {
+  const visibleItems = navItems.filter((item) => item.href !== "/copilot" || copilotEnabled);
+  const bottomNavItems = visibleItems.filter((item) => item.mobile === "primary");
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-  const drawerItems = navItems.filter((item) => item.mobile !== "primary");
+  const drawerItems = visibleItems.filter((item) => item.mobile !== "primary");
   const isMoreActive = drawerItems.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
   const moreHasSignal = drawerItems.some((item) => item.awarenessTarget && awareness?.signals[item.awarenessTarget]);
 
