@@ -457,7 +457,7 @@ function CollapsedCopilotPreview({
   isCurrentMonth: boolean;
 }) {
   const hero = useMemo(() => buildHeroNarrative(analysis, metrics, comparison, isCurrentMonth), [analysis, metrics, comparison, isCurrentMonth]);
-  const insights = useMemo(() => buildImportantInsights(analysis, metrics, comparison), [analysis, metrics, comparison]);
+  const insights = useMemo(() => buildImportantInsights(analysis, metrics, comparison, isCurrentMonth), [analysis, metrics, comparison, isCurrentMonth]);
   const primaryInsight = insights[0];
   const score = clamp(Math.round(analysis.score), 0, 100);
   const scoreStyle = toneStyles[getScoreTone(score)];
@@ -507,7 +507,7 @@ function CopilotExperience({
   comparison: AiFinancialAnalysisComparison | null;
   isCurrentMonth: boolean;
 }) {
-  const insights = useMemo(() => buildImportantInsights(analysis, metrics, comparison), [analysis, metrics, comparison]);
+  const insights = useMemo(() => buildImportantInsights(analysis, metrics, comparison, isCurrentMonth), [analysis, metrics, comparison, isCurrentMonth]);
   const hero = useMemo(() => buildHeroNarrative(analysis, metrics, comparison, isCurrentMonth), [analysis, metrics, comparison, isCurrentMonth]);
   const invisibleExpenses = metrics.repeatedSmallExpenses.slice(0, 5);
 
@@ -520,9 +520,11 @@ function CopilotExperience({
       className="space-y-3"
     >
       <FinancialCopilotHero hero={hero} metrics={metrics} comparison={comparison} />
-      <motion.div variants={itemMotion}>
-        <WeeklyPulseCard />
-      </motion.div>
+      {isCurrentMonth && (
+        <motion.div variants={itemMotion}>
+          <WeeklyPulseCard />
+        </motion.div>
+      )}
       <ImportantInsights insights={insights} />
       <InvisibleExpenses items={invisibleExpenses} income={metrics.income} currency={metrics.currency} />
       {isCurrentMonth && <MonthPrediction metrics={metrics} />}
@@ -971,6 +973,7 @@ function buildImportantInsights(
   analysis: AiFinancialAnalysis,
   metrics: AiFinancialAnalysisMetrics,
   comparison: AiFinancialAnalysisComparison | null,
+  isCurrentMonth: boolean,
 ): NarrativeInsight[] {
   const primaryAlert = [...analysis.alerts].sort((a, b) => severityRank(b.severity) - severityRank(a.severity))[0];
   const bestPositive = analysis.positivePoints[0];
@@ -985,7 +988,9 @@ function buildImportantInsights(
       id: `alert-${primaryAlert.title}`,
       title: primaryAlert.title,
       message: primaryAlert.message,
-      detail: primaryAlert.severity === "high" ? "Prioridad alta porque puede cambiar el cierre del mes." : "Conviene mirarlo antes de que se vuelva hábito.",
+      detail: isCurrentMonth
+        ? primaryAlert.severity === "high" ? "Prioridad alta porque puede cambiar el cierre del mes." : "Conviene mirarlo antes de que se vuelva hábito."
+        : primaryAlert.severity === "high" ? "Fue una señal central del cierre mensual." : "Quedó como aprendizaje del período.",
       tone: primaryAlert.severity === "high" ? "rose" : primaryAlert.severity === "medium" ? "amber" : "sky",
       priority: primaryAlert.severity === "high" ? "Alta" : "Media",
       icon: primaryAlert.severity === "high" ? ShieldAlert : AlertTriangle,
@@ -997,7 +1002,11 @@ function buildImportantInsights(
       id: "mobility",
       title: `Movilidad pesa ${formatPercent(metrics.mobilityRate)} de tus ingresos.`,
       message: `Este mes suma ${formatMoney(metrics.mobilityTotal, metrics.currency)} entre transporte, auto o categorías asociadas.`,
-      detail: comparison?.available ? `Contra el mes anterior: ${formatSignedMoney(comparison.mobilityChangeAmount, metrics.currency)}.` : "Es una de las señales más fáciles de optimizar cuando crece sin sentirse.",
+      detail: comparison?.available
+        ? `Contra el mes anterior: ${formatSignedMoney(comparison.mobilityChangeAmount, metrics.currency)}.`
+        : isCurrentMonth
+          ? "Es una de las señales más fáciles de optimizar cuando crece sin sentirse."
+          : "Sirve como referencia para planificar el próximo período.",
       tone: metrics.mobilityRate >= 18 ? "amber" : "sky",
       priority: metrics.mobilityRate >= 18 ? "Alta" : "Media",
       icon: Car,
@@ -1007,8 +1016,10 @@ function buildImportantInsights(
   if (topCategory) {
     insights.push({
       id: `category-${topCategory.name}`,
-      title: `${topCategory.name} marca el ritmo del mes.`,
-      message: `Representa ${formatPercent(topCategory.percentage)} de tus gastos actuales.`,
+      title: isCurrentMonth ? `${topCategory.name} marca el ritmo del mes.` : `${topCategory.name} marcó el ritmo del mes.`,
+      message: isCurrentMonth
+        ? `Representa ${formatPercent(topCategory.percentage)} de tus gastos actuales.`
+        : `Representó ${formatPercent(topCategory.percentage)} de tus gastos del período.`,
       detail: `${formatMoney(topCategory.total, metrics.currency)} en ${metrics.expensesByCategory.find((category) => category.name === topCategory.name)?.count ?? 0} movimientos.`,
       tone: topCategory.percentage >= 30 ? "amber" : "zinc",
       priority: topCategory.percentage >= 30 ? "Media" : "Suave",
@@ -1057,7 +1068,9 @@ function buildImportantInsights(
       id: `risk-${firstRisk.title}`,
       title: firstRisk.title,
       message: firstRisk.message,
-      detail: "Riesgo contextual para monitorear durante el resto del mes.",
+      detail: isCurrentMonth
+        ? "Riesgo contextual para monitorear durante el resto del mes."
+        : "Riesgo contextual detectado en el cierre del mes.",
       tone: "rose",
       priority: "Alta",
       icon: ShieldAlert,
@@ -1069,7 +1082,9 @@ function buildImportantInsights(
       id: "credit-card",
       title: "La tarjeta está dejando huella.",
       message: `Representa ${formatPercent(metrics.creditCardExpenseRate)} de tus gastos del mes.`,
-      detail: "Cuando este número sube, el gasto suele sentirse más liviano de lo que realmente es.",
+      detail: isCurrentMonth
+        ? "Cuando este número sube, el gasto suele sentirse más liviano de lo que realmente es."
+        : "Ese peso ayuda a explicar cómo se compuso el gasto final.",
       tone: metrics.creditCardExpenseRate >= 45 ? "rose" : "zinc",
       priority: metrics.creditCardExpenseRate >= 45 ? "Alta" : "Suave",
       icon: CreditCard,

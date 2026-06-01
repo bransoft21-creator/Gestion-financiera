@@ -77,7 +77,10 @@ export function DashboardHero({
   const hasData = metrics.income > 0 || metrics.expenses > 0;
   const headline = getHeroHeadline(metrics, isCurrentMonth);
   const primarySignal = hasData ? getHeroPrimarySignal(metrics, isCurrentMonth) : null;
-  const healthSignals = hasData ? buildHealthSignals(metrics).slice(0, 2) : [];
+  const healthSignals = hasData ? buildHealthSignals(metrics, isCurrentMonth).slice(0, 2) : [];
+  const incomeLabel = periodStatus === "CLOSED" ? "Total cobrado" : "Ingresos";
+  const expensesLabel = periodStatus === "CLOSED" ? "Total gastado" : "Gastos";
+  const obligationsLabel = periodStatus === "CLOSED" ? "Compromisos pagados" : "Obligaciones";
 
   function scrollToLectura() {
     document
@@ -160,13 +163,13 @@ export function DashboardHero({
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <FormulaPill label="Ingresos" value={metrics.income} color="#34d399" href="/transactions?type=INCOME" currency={currency} />
+            <FormulaPill label={incomeLabel} value={metrics.income} color="#34d399" href="/transactions?type=INCOME" currency={currency} />
             <span aria-hidden="true">−</span>
-            <FormulaPill label="Gastos" value={metrics.expenses} color="#f87171" href="/transactions?type=EXPENSE" currency={currency} />
+            <FormulaPill label={expensesLabel} value={metrics.expenses} color="#f87171" href="/transactions?type=EXPENSE" currency={currency} />
             <span aria-hidden="true">−</span>
             <FormulaPill label="Reservado" value={metrics.remainingReservedBudget} color="#fbbf24" href="/budgets" currency={currency} />
             <span aria-hidden="true">−</span>
-            <FormulaPill label="Obligaciones" value={metrics.upcomingObligations} color="#60a5fa" href="/recurring" currency={currency} />
+            <FormulaPill label={obligationsLabel} value={metrics.upcomingObligations} color="#60a5fa" href="/recurring" currency={currency} />
           </div>
 
           {metrics.currencyScope.mixedCurrencies && (

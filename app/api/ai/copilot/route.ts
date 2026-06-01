@@ -6,6 +6,8 @@ import { ForbiddenError } from "@/server/api/errors";
 import { isCopilotEnabled } from "@/lib/feature-flags";
 import { traceAi, traceUserId } from "@/server/services/ai-trace";
 import { runCopilotQuery } from "@/server/services/copilot-query";
+import { formatArgentinaDateInput } from "@/lib/dates";
+import { getPeriodStatus } from "@/lib/period-status";
 
 export const runtime = "nodejs";
 
@@ -14,6 +16,10 @@ const querySchema = z.object({
     .string()
     .min(1, "El mensaje no puede estar vacío.")
     .max(500, "El mensaje es demasiado largo."),
+  year: z.number().int().min(2000).max(2100).optional(),
+  month: z.number().int().min(1).max(12).optional(),
+}).refine((value) => (value.year === undefined) === (value.month === undefined), {
+  message: "Year y month deben enviarse juntos.",
 });
 
 export async function POST(request: Request) {
@@ -35,10 +41,18 @@ export async function POST(request: Request) {
     const household = await getPrimaryHousehold(userProfile.id);
     traceAi("COPILOT_WORKSPACE_OK", { user: traceUserId(userProfile.id), household: household.id });
 
+    const [defaultYear, defaultMonth] = formatArgentinaDateInput().split("-").map(Number);
+    const year = body.data.year ?? defaultYear;
+    const month = body.data.month ?? defaultMonth;
+    const periodStatus = getPeriodStatus(year, month);
+
     const result = await runCopilotQuery({
       userProfileId: userProfile.id,
       householdId: household.id,
       message: body.data.message,
+      year,
+      month,
+      periodStatus,
     });
 
     traceAi("COPILOT_POST_OK", { user: traceUserId(userProfile.id), intent: result.intent });

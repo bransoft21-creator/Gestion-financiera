@@ -459,6 +459,7 @@ export async function getDashboardSummary(
       remainingReservedBudget: health.remainingReservedBudget,
       upcomingObligations: health.upcomingObligations,
       realAvailable,
+      isCurrentMonth,
     }),
     insights: buildFinancialInsights({
       income,
@@ -472,6 +473,7 @@ export async function getDashboardSummary(
       realAvailable,
       totalOutstandingDebt: health.totalOutstandingDebt,
       fixedToIncomeRatio,
+      isCurrentMonth,
     }),
     activation: buildNextStepRecommendation({
       onboardingGoals: normalizeOnboardingGoals(profile.onboardingGoals),
@@ -651,6 +653,7 @@ function buildAlerts({
   remainingReservedBudget,
   upcomingObligations,
   realAvailable,
+  isCurrentMonth,
 }: {
   income: number;
   expenses: number;
@@ -661,35 +664,50 @@ function buildAlerts({
   remainingReservedBudget: number;
   upcomingObligations: number;
   realAvailable: number;
+  isCurrentMonth: boolean;
 }) {
   const alerts: string[] = [];
 
   if (transactionCount === 0) {
-    alerts.push("Todavía no hay transacciones registradas este mes.");
+    alerts.push(isCurrentMonth
+      ? "Todavía no hay transacciones registradas este mes."
+      : "No hubo transacciones registradas en este mes.");
   }
 
   if (income > 0 && expenses / income >= 0.8) {
-    alerts.push("Los gastos del mes ya superan el 80% de los ingresos.");
+    alerts.push(isCurrentMonth
+      ? "Los gastos del mes ya superan el 80% de los ingresos."
+      : "Los gastos del mes superaron el 80% de los ingresos.");
   }
 
   if (balance < 0) {
-    alerts.push("El balance mensual está en negativo.");
+    alerts.push(isCurrentMonth
+      ? "El balance mensual está en negativo."
+      : "El balance mensual cerró en negativo.");
   }
 
   if (estimatedSavings > 0) {
-    alerts.push("Hay balance positivo disponible para ahorro o reservas.");
+    alerts.push(isCurrentMonth
+      ? "Hay balance positivo disponible para ahorro o reservas."
+      : "El balance cerró positivo después de gastos registrados.");
   }
 
   if (remainingReservedBudget > 0) {
-    alerts.push("Parte del balance queda reservado para presupuestos pendientes del mes.");
+    alerts.push(isCurrentMonth
+      ? "Parte del balance queda reservado para presupuestos pendientes del mes."
+      : "Parte del resultado quedó asociada a presupuestos no usados del mes.");
   }
 
   if (upcomingObligations > 0) {
-    alerts.push("El disponible real descuenta obligaciones próximas del mes.");
+    alerts.push(isCurrentMonth
+      ? "El disponible real descuenta obligaciones próximas del mes."
+      : "El disponible real contempló obligaciones registradas para ese mes.");
   }
 
   if (realAvailable < 0) {
-    alerts.push("El dinero disponible real queda en negativo al reservar presupuestos y obligaciones.");
+    alerts.push(isCurrentMonth
+      ? "El dinero disponible real queda en negativo al reservar presupuestos y obligaciones."
+      : "El disponible real cerró en negativo al contemplar presupuestos y obligaciones.");
   }
 
   const topCategory = expensesByCategory[0];
@@ -712,6 +730,7 @@ function buildFinancialInsights({
   realAvailable,
   totalOutstandingDebt,
   fixedToIncomeRatio,
+  isCurrentMonth,
 }: {
   income: number;
   expenses: number;
@@ -724,6 +743,7 @@ function buildFinancialInsights({
   realAvailable: number;
   totalOutstandingDebt: number;
   fixedToIncomeRatio: number;
+  isCurrentMonth: boolean;
 }) {
   const insights: Array<{
     title: string;
@@ -737,8 +757,10 @@ function buildFinancialInsights({
 
   if (transactionCount === 0) {
     insights.push({
-      title: "Empezá con el primer movimiento",
-      message: "Registrá ingresos y gastos del mes para que el dashboard pueda darte consejos más precisos.",
+      title: isCurrentMonth ? "Empezá con el primer movimiento" : "Mes sin movimientos registrados",
+      message: isCurrentMonth
+        ? "Registrá ingresos y gastos del mes para que el dashboard pueda darte consejos más precisos."
+        : "No hay ingresos ni gastos cargados para este período, así que la lectura queda limitada.",
       tone: "default",
       actionLabel: "Nueva transacción",
       href: "/transactions?new=1",
@@ -747,16 +769,20 @@ function buildFinancialInsights({
 
   if (realAvailable < 0) {
     insights.push({
-      title: "Cuidá el disponible real",
-      message: "Al descontar presupuestos pendientes y obligaciones próximas, el mes queda por debajo de cero.",
+      title: isCurrentMonth ? "Cuidá el disponible real" : "Disponible real final negativo",
+      message: isCurrentMonth
+        ? "Al descontar presupuestos pendientes y obligaciones próximas, el mes queda por debajo de cero."
+        : "Al descontar presupuestos y obligaciones del período, el mes cerró por debajo de cero.",
       tone: "danger",
       actionLabel: "Ver presupuestos",
       href: "/budgets",
     });
   } else if (realAvailable > 0 && upcomingObligations > 0) {
     insights.push({
-      title: "Tenés margen después de obligaciones",
-      message: "El disponible real ya contempla gastos recurrentes, metas, créditos y presupuestos pendientes.",
+      title: isCurrentMonth ? "Tenés margen después de obligaciones" : "Cierre con margen después de obligaciones",
+      message: isCurrentMonth
+        ? "El disponible real ya contempla gastos recurrentes, metas, créditos y presupuestos pendientes."
+        : "El resultado final quedó positivo incluso contemplando gastos recurrentes, metas, créditos y presupuestos.",
       tone: "positive",
       actionLabel: "Ver metas",
       href: "/goals",
@@ -791,8 +817,10 @@ function buildFinancialInsights({
 
   if (income > 0 && spendingRatio >= 0.8) {
     insights.push({
-      title: "Los gastos están cerca del límite",
-      message: "Conviene revisar compras variables antes de comprometer el cierre del mes.",
+      title: isCurrentMonth ? "Los gastos están cerca del límite" : "Los gastos quedaron cerca del límite",
+      message: isCurrentMonth
+        ? "Conviene revisar compras variables antes de comprometer el cierre del mes."
+        : "El mes terminó con una proporción alta de gasto sobre ingresos.",
       tone: "warning",
       actionLabel: "Ver gastos",
       href: "/transactions?type=EXPENSE",
@@ -809,8 +837,10 @@ function buildFinancialInsights({
     });
   } else if (estimatedSavings > 0) {
     insights.push({
-      title: "Aprovechá el balance positivo",
-      message: "Podés separar una parte del excedente para una meta antes de que se diluya en gastos chicos.",
+      title: isCurrentMonth ? "Aprovechá el balance positivo" : "El balance cerró positivo",
+      message: isCurrentMonth
+        ? "Podés separar una parte del excedente para una meta antes de que se diluya en gastos chicos."
+        : "El período dejó excedente registrado; sirve como referencia para planificar metas futuras.",
       tone: "positive",
       actionLabel: "Crear meta",
       href: "/goals?new=1",
@@ -820,7 +850,9 @@ function buildFinancialInsights({
   if (topCategory && expenses > 0 && topCategory.value / expenses >= 0.4) {
     insights.push({
       title: `${topCategory.name} pesa fuerte este mes`,
-      message: "Una sola categoría concentra gran parte de los gastos. Revisarla puede liberar margen rápido.",
+      message: isCurrentMonth
+        ? "Una sola categoría concentra gran parte de los gastos. Revisarla puede liberar margen rápido."
+        : "Una sola categoría concentró gran parte de los gastos del período.",
       tone: "warning",
       actionLabel: "Analizar categoría",
       href: `/transactions?categoryId=${topCategory.id}`,
@@ -829,8 +861,10 @@ function buildFinancialInsights({
 
   if (remainingReservedBudget > 0) {
     insights.push({
-      title: "Reservas todavía activas",
-      message: "Hay presupuesto pendiente de usar; mantenerlo separado ayuda a no confundirlo con dinero libre.",
+      title: isCurrentMonth ? "Reservas todavía activas" : "Presupuesto no usado",
+      message: isCurrentMonth
+        ? "Hay presupuesto pendiente de usar; mantenerlo separado ayuda a no confundirlo con dinero libre."
+        : "Quedó presupuesto sin usar en el período, una señal útil para ajustar futuros planes.",
       tone: "default",
       actionLabel: "Ver presupuestos",
       href: "/budgets",
@@ -840,7 +874,9 @@ function buildFinancialInsights({
   if (totalOutstandingDebt > 0) {
     insights.push({
       title: "Seguimiento de créditos y cuotas",
-      message: "Revisar pagos mínimos y próximos vencimientos evita que los compromisos formales compitan con tus metas.",
+      message: isCurrentMonth
+        ? "Revisar pagos mínimos y próximos vencimientos evita que los compromisos formales compitan con tus metas."
+        : "Los créditos y cuotas registrados ayudan a explicar cuánto margen real dejó el período.",
       tone: "warning",
       actionLabel: "Ver créditos",
       href: "/debts",
@@ -849,8 +885,10 @@ function buildFinancialInsights({
 
   if (insights.length === 0) {
     insights.push({
-      title: "Mes bajo control",
-      message: "No hay señales urgentes. Seguí registrando movimientos para mantener una lectura clara.",
+      title: isCurrentMonth ? "Mes bajo control" : "Mes sin señales urgentes",
+      message: isCurrentMonth
+        ? "No hay señales urgentes. Seguí registrando movimientos para mantener una lectura clara."
+        : "El período no dejó señales urgentes en los datos registrados.",
       tone: "positive",
       actionLabel: "Ver transacciones",
       href: "/transactions",

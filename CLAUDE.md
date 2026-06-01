@@ -156,6 +156,16 @@ donde:
 
 Esta lógica vive en `server/services/financial-ledger.ts` y `server/services/dashboard.ts`. No recalcular en UI.
 
+### Period Status
+
+Meridian trata el estado del mes como dato de dominio. El tipo vive en `lib/period-status.ts`:
+
+- `OPEN` — mes en curso. La UI y la IA ayudan a decidir con lenguaje presente/futuro condicional.
+- `CLOSED` — mes terminado. La UI y la IA ayudan a entender con lenguaje pasado definitivo, sin proyecciones ni "si mantenés el ritmo".
+- `FUTURE` — mes no iniciado. La UI y la IA ayudan a planificar, sin presentar datos realizados.
+
+Usar `getPeriodStatus(year, month)` o `buildPeriodContext(year, month)` para determinar el estado según timezone Argentina. Cualquier componente, servicio o prompt que muestre datos por mes debe respetar esta semántica: `OPEN = decidir`, `CLOSED = entender`, `FUTURE = planificar`.
+
 Efectos de transacciones en saldo de cuenta:
 - `INCOME`, `ADJUSTMENT` → aumentan cuenta
 - `EXPENSE`, `DEBT_PAYMENT`, `GOAL_CONTRIBUTION`, `INVESTMENT` → reducen cuenta

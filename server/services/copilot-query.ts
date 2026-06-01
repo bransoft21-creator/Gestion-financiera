@@ -6,7 +6,7 @@ import { assertAiQuota, estimateTextTokens, recordAiUsage } from "@/server/servi
 import { traceAi, traceUserId } from "@/server/services/ai-trace";
 import { buildCopilotContext, type CopilotFinancialContext } from "@/server/services/copilot-context";
 import { assertHouseholdAccess } from "@/server/services/households";
-import { argentinaMonthKey } from "@/lib/dates";
+import type { PeriodStatus } from "@/lib/period-status";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-4.1-mini";
@@ -44,10 +44,16 @@ export async function runCopilotQuery({
   userProfileId,
   householdId,
   message,
+  year,
+  month,
+  periodStatus,
 }: {
   userProfileId: string;
   householdId: string;
   message: string;
+  year: number;
+  month: number;
+  periodStatus: PeriodStatus;
 }): Promise<CopilotQueryResult> {
   await assertHouseholdAccess(userProfileId, householdId);
 
@@ -74,8 +80,8 @@ export async function runCopilotQuery({
 
   await assertAiQuota(userProfileId, "ai.copilot");
 
-  const currentMonth = argentinaMonthKey(new Date());
-  const context = await buildCopilotContext(userProfileId, householdId, currentMonth);
+  const selectedMonth = `${year}-${String(month).padStart(2, "0")}`;
+  const context = await buildCopilotContext(userProfileId, householdId, selectedMonth);
   const history = await loadRecentHistory(userProfileId, householdId, HISTORY_TURNS);
 
   traceAi("COPILOT_QUERY_START", { user: traceUserId(userProfileId), intent });
@@ -85,6 +91,7 @@ export async function runCopilotQuery({
     context,
     history,
     userId: userProfileId,
+    periodStatus,
   });
 
   traceAi("COPILOT_QUERY_OK", { user: traceUserId(userProfileId), intent });
@@ -109,11 +116,13 @@ async function callOpenAi({
   context,
   history,
   userId,
+  periodStatus,
 }: {
   message: string;
   context: CopilotFinancialContext;
   history: Array<{ role: string; content: string }>;
   userId: string;
+  periodStatus: PeriodStatus;
 }): Promise<{ answer: CopilotQueryResult; inputTokens: number; outputTokens: number }> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new ApiError(503, "El servicio de IA no está configurado.");
@@ -146,7 +155,7 @@ async function callOpenAi({
       body: JSON.stringify({
         model,
         input: [
-          { role: "system", content: buildCopilotSystemPrompt() },
+          { role: "system", content: buildCopilotSystemPrompt(periodStatus) },
           { role: "user", content: userPrompt },
         ],
         text: {

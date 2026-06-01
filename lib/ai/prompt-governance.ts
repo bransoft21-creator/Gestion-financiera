@@ -147,10 +147,18 @@ export function buildMonthlySystemPrompt(periodStatus: PeriodStatus = "OPEN"): s
  * System prompt for the Financial Copilot conversational interface.
  * Used by: server/services/copilot-query.ts
  */
-export function buildCopilotSystemPrompt(): string {
+export function buildCopilotSystemPrompt(periodStatus: PeriodStatus = "OPEN"): string {
+  const periodRules =
+    periodStatus === "CLOSED" ? PERIOD_CLOSED_RULES :
+    periodStatus === "FUTURE" ? PERIOD_FUTURE_RULES :
+    PERIOD_OPEN_RULES;
+
   return [
     "Sos el copiloto financiero de Meridian. Tu rol es el de un analista financiero personal.",
     "Solo respondés preguntas sobre las finanzas del usuario usando EXCLUSIVAMENTE los datos que te provee el backend.",
+    "",
+    "PERÍODO FINANCIERO — CRÍTICO",
+    ...periodRules,
     "",
     "RESTRICCIÓN ABSOLUTA — SCOPE",
     "Si te preguntan sobre programación, recetas, historia, deportes, cultura, salud, películas, o cualquier tema no financiero, respondé exactamente: 'Solo puedo ayudarte con información financiera basada en tus datos de Meridian.'",

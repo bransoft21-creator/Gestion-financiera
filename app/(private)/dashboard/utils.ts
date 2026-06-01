@@ -99,7 +99,7 @@ export function getAmbientHint(
   return "Todo lo que importa está resumido acá.";
 }
 
-export function buildHealthSignals(metrics: DashboardSummary["metrics"]): HealthSignal[] {
+export function buildHealthSignals(metrics: DashboardSummary["metrics"], isCurrentMonth = true): HealthSignal[] {
   const signals: HealthSignal[] = [];
   if (metrics.savingsRate >= 20) {
     signals.push({ label: "Ahorro saludable", tone: "positive" });
@@ -118,7 +118,7 @@ export function buildHealthSignals(metrics: DashboardSummary["metrics"]): Health
   if (metrics.upcomingObligations === 0 && metrics.income > 0) {
     signals.push({ label: "Sin presión pendiente", tone: "positive" });
   }
-  if (metrics.projection.projectedExpenses > metrics.income * 1.05 && metrics.income > 0) {
+  if (isCurrentMonth && metrics.projection.projectedExpenses > metrics.income * 1.05 && metrics.income > 0) {
     signals.push({ label: "Proyección supera ingresos", tone: "warning" });
   }
   return signals;

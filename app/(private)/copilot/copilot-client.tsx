@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Send, BotMessageSquare, Loader2, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/app/page-header";
+import { argentinaMonthParts } from "@/lib/dates";
 
 type Message = {
   id: string;
@@ -50,10 +51,11 @@ export function CopilotClient() {
     setLoading(true);
 
     try {
+      const { year, month } = argentinaMonthParts(new Date());
       const res = await fetch("/api/ai/copilot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text.trim() }),
+        body: JSON.stringify({ message: text.trim(), year, month }),
       });
 
       const data = await res.json();
