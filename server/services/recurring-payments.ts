@@ -150,16 +150,22 @@ export async function createHouseholdRecurringPayment(
     input.participants &&
     input.participants.length > 0
   ) {
-    const members = await prisma.householdMember.findMany({
-      where: { householdId: input.householdId, status: HouseholdMemberStatus.ACTIVE, deletedAt: null },
-      select: { userProfileId: true },
-    });
+    const [members, externals] = await Promise.all([
+      prisma.householdMember.findMany({
+        where: { householdId: input.householdId, status: HouseholdMemberStatus.ACTIVE, deletedAt: null },
+        select: { userProfileId: true },
+      }),
+      prisma.householdExternalParticipant.findMany({
+        where: { householdId: input.householdId, deletedAt: null },
+        select: { id: true },
+      }),
+    ]);
     const memberIds = new Set(members.map((m) => m.userProfileId));
+    const externalIds = new Set(externals.map((e) => e.id));
 
     for (const p of input.participants) {
-      if (!memberIds.has(p.userId)) {
-        throw new ApiError(400, "Uno de los participantes no pertenece al hogar.");
-      }
+      if (p.userId && !memberIds.has(p.userId)) throw new ApiError(400, "Uno de los participantes no pertenece al hogar.");
+      if (p.externalParticipantId && !externalIds.has(p.externalParticipantId)) throw new ApiError(400, "Uno de los participantes externos no pertenece al hogar.");
     }
 
     if (input.splitMode === "PERCENTAGE") {
@@ -184,7 +190,8 @@ export async function createHouseholdRecurringPayment(
         input.participants && input.participants.length > 0
           ? {
               create: input.participants.map((p) => ({
-                userId: p.userId,
+                userId: p.userId ?? null,
+                externalParticipantId: p.externalParticipantId ?? null,
                 ...(input.splitMode === "PERCENTAGE"
                   ? { percentage: p.value }
                   : { fixedAmount: p.value }),
@@ -242,7 +249,8 @@ export async function updateHouseholdRecurringPayment(
           input.participants && input.participants.length > 0
             ? {
                 create: input.participants.map((p) => ({
-                  userId: p.userId,
+                  userId: p.userId ?? null,
+                  externalParticipantId: p.externalParticipantId ?? null,
                   ...(input.splitMode === "PERCENTAGE"
                     ? { percentage: p.value }
                     : { fixedAmount: p.value }),
@@ -356,16 +364,15 @@ export async function markRecurringPaymentAsPaid(
   }
 
   // Build splitConfig
-  type SplitParticipant = { userId: string; value: number };
   let splitConfig:
-    | { mode: "EQUAL" | "PERCENTAGE" | "CUSTOM_AMOUNT"; participants?: SplitParticipant[] }
-    | null = null;
+    | { mode: "EQUAL" | "PERCENTAGE" | "CUSTOM_AMOUNT"; participants?: Array<{ userId?: string; externalParticipantId?: string; value: number }> }
+    | undefined = undefined;
 
   if (recurringPayment.splitMode === "PERCENTAGE" && recurringPayment.participants.length > 0) {
     splitConfig = {
       mode: "PERCENTAGE",
       participants: recurringPayment.participants.map((p) => ({
-        userId: p.userId,
+        ...(p.userId ? { userId: p.userId } : {}),
         value: Number(p.percentage ?? 0),
       })),
     };
@@ -373,7 +380,7 @@ export async function markRecurringPaymentAsPaid(
     splitConfig = {
       mode: "CUSTOM_AMOUNT",
       participants: recurringPayment.participants.map((p) => ({
-        userId: p.userId,
+        ...(p.userId ? { userId: p.userId } : {}),
         value: Number(p.fixedAmount ?? 0),
       })),
     };

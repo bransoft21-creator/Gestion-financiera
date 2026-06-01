@@ -22,8 +22,11 @@ const optionalPositiveIntSchema = z.preprocess(
 );
 
 const splitParticipantSchema = z.object({
-  userId: z.string().min(1),
+  userId: z.string().min(1).optional(),
+  externalParticipantId: z.string().min(1).optional(),
   value: z.number().min(0),
+}).refine((p) => p.userId || p.externalParticipantId, {
+  message: "Debe especificarse userId o externalParticipantId.",
 });
 
 const splitConfigSchema = z

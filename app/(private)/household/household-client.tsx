@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Check, CheckCircle2, Circle, Clock, Copy, Home, Loader2, Mail, MessageCircle, Plus, Send, Users, WalletCards } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, Circle, Clock, Copy, Home, Loader2, Mail, MessageCircle, Plus, Send, Trash2, UserPlus, Users, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { useHideAmounts } from "@/hooks/use-hide-amounts";
 import { trackProductEvent } from "@/lib/observability/client";
@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PaymentRow } from "@/components/household/payment-row";
+import { OneTimeExpenseForm } from "@/components/household/one-time-expense-form";
 import { SensitiveAmount, SensitiveText } from "@/components/app/sensitive-amount";
 import {
   formatMoney,
@@ -62,8 +63,13 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
   const [payForm, setPayForm] = useState<PayForm>({ paidByUserId: "", accountId: "", finalAmount: "" });
   const [isPaying, setIsPaying] = useState(false);
   const [isAddingRecurring, setIsAddingRecurring] = useState(false);
+  const [isAddingOneTime, setIsAddingOneTime] = useState(false);
   const [newPaymentForm, setNewPaymentForm] = useState({ name: "", estimatedAmount: "", dueDay: "1", splitMode: "EQUAL" as const });
   const [isCreatingRecurring, setIsCreatingRecurring] = useState(false);
+  const [extName, setExtName] = useState("");
+  const [extEmail, setExtEmail] = useState("");
+  const [isAddingExternal, setIsAddingExternal] = useState(false);
+  const [isDeletingExternal, setIsDeletingExternal] = useState<string | null>(null);
 
   const selectedHousehold = useMemo(
     () => households.find((h) => h.id === selectedHouseholdId) ?? households[0],
@@ -234,6 +240,8 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
     const now = new Date();
     const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     const paidByUserId = payForm.paidByUserId || selectedHousehold.members[0]?.userProfileId;
+    const finalAmount = payForm.finalAmount ? Number(payForm.finalAmount) : undefined;
+    const payment = recurringPayments?.payments.find((p) => p.id === paymentId);
     setIsPaying(true);
     try {
       const response = await fetch(`/api/households/recurring-payments/${paymentId}/pay`, {
@@ -244,12 +252,26 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
           monthKey,
           paidByUserId,
           accountId: payForm.accountId,
-          finalAmount: payForm.finalAmount ? Number(payForm.finalAmount) : undefined,
+          finalAmount,
         }),
       });
       const payload = (await response.json()) as { data?: unknown; error?: string };
       if (!response.ok) { toast.error(payload.error ?? "No se pudo marcar como pagado."); return; }
-      toast.success("Pago registrado.");
+
+      const totalPaid = finalAmount ?? payment?.estimatedAmount ?? 0;
+      const memberCount = selectedHousehold.members.filter((m) => m.status === "ACTIVE").length;
+      const userShare = payment?.splitMode === "EQUAL" && memberCount > 1
+        ? totalPaid / memberCount
+        : totalPaid;
+      const excess = Math.round((totalPaid - userShare) * 100) / 100;
+      const fmt = (n: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: payment?.currency ?? "ARS", maximumFractionDigits: 0 }).format(n);
+
+      if (excess > 0) {
+        toast.success(`Pago registrado · tu parte ${fmt(userShare)} · ${fmt(excess)} a recuperar`);
+      } else {
+        toast.success("Pago registrado.");
+      }
+
       trackProductEvent("recurring_payment_paid", {}, "household");
       closePayDialog();
       await Promise.all([
@@ -300,6 +322,46 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
     if (!inviteUrl || !selectedHousehold) return;
     const text = encodeURIComponent(`Te invité a ${selectedHousehold.name} en Meridian. Abrí este link para aceptar: ${inviteUrl}`);
     window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+  }
+
+  async function addExternalParticipant() {
+    if (!selectedHousehold || !extName.trim()) return;
+    setIsAddingExternal(true);
+    try {
+      const response = await fetch("/api/households/external-participants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ householdId: selectedHousehold.id, name: extName.trim(), email: extEmail.trim() || null }),
+      });
+      const payload = (await response.json()) as { data?: { id: string; name: string; email: string | null }; error?: string };
+      if (!response.ok || !payload.data) { toast.error(payload.error ?? "No se pudo agregar el participante."); return; }
+      toast.success(`${payload.data.name} agregado como participante externo.`);
+      setExtName("");
+      setExtEmail("");
+      await reloadHouseholds(selectedHousehold.id);
+    } finally {
+      setIsAddingExternal(false);
+    }
+  }
+
+  async function removeExternalParticipant(participantId: string) {
+    if (!selectedHousehold) return;
+    setIsDeletingExternal(participantId);
+    try {
+      const response = await fetch(
+        `/api/households/external-participants/${participantId}?householdId=${selectedHousehold.id}`,
+        { method: "DELETE" },
+      );
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        toast.error(payload.error ?? "No se pudo eliminar el participante.");
+        return;
+      }
+      toast.success("Participante eliminado.");
+      await reloadHouseholds(selectedHousehold.id);
+    } finally {
+      setIsDeletingExternal(null);
+    }
   }
 
   useEffect(() => {
@@ -527,7 +589,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                           a {balance.settlement.toName}.
                         </p>
                         <p className="mt-1 text-xs leading-5 text-amber-500/70">
-                          Cuando lo compensen fuera de Meridian, dejá constancia para empezar de nuevo.
+                          Cuando lo compensen fuera de Meridian, registralo acá para reiniciar el balance. Para que impacte los movimientos reales de cada uno, cargá el pago manualmente en Movimientos.
                         </p>
                         <Button
                           className="mt-3 w-full border-amber-300/20 bg-amber-300/15 text-amber-50 hover:bg-amber-300/25"
@@ -536,7 +598,7 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                           onClick={() => void settleBalance()}
                         >
                           {isSettling ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                          Marcar como equilibrado
+                          Registrar equilibrio
                         </Button>
                       </div>
                     ) : null}
@@ -584,11 +646,14 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                         <p className="mt-1 text-xs leading-5 text-muted-foreground">
                           Cuando alguien pague algo para el hogar, aparecerá acá.
                         </p>
-                        <Button asChild variant="outline" size="sm" className="mt-4 w-full">
-                          <Link href="/transactions?new=1">
-                            <Plus className="h-4 w-4" />
-                            Agregar gasto compartido
-                          </Link>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-4 w-full"
+                          onClick={() => { setActiveTab("payments"); setIsAddingOneTime(true); }}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Agregar gasto compartido
                         </Button>
                       </div>
                     )}
@@ -714,13 +779,26 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                       </CardDescription>
                     </div>
                     <div className="flex shrink-0 gap-2">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href="/transactions?new=1">
-                          <Plus className="h-4 w-4" />
-                          Gasto puntual
-                        </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (!isAddingOneTime && userAccounts.length === 0) void loadUserAccounts();
+                          setIsAddingOneTime((prev) => !prev);
+                          if (!isAddingOneTime) setIsAddingRecurring(false);
+                        }}
+                      >
+                        <Plus className="h-4 w-4" />
+                        {isAddingOneTime ? "Cancelar" : "Gasto puntual"}
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setIsAddingRecurring((prev) => !prev)}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setIsAddingRecurring((prev) => !prev);
+                          if (!isAddingRecurring) setIsAddingOneTime(false);
+                        }}
+                      >
                         <Plus className="h-4 w-4" />
                         {isAddingRecurring ? "Cancelar" : "Pago fijo"}
                       </Button>
@@ -734,7 +812,30 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                       Usá “Gasto puntual” para supermercado, farmacia o compras sueltas. Usá “Pago fijo” para alquiler, servicios o compromisos que vuelven cada mes.
                     </p>
                   </div>
-                  {/* Add form */}
+                  {/* One-time expense form */}
+                  {isAddingOneTime && selectedHousehold ? (
+                    <OneTimeExpenseForm
+                      household={selectedHousehold}
+                      userAccounts={userAccounts}
+                      onCancel={() => setIsAddingOneTime(false)}
+                      onSuccess={({ userShare, totalAmount }) => {
+                        const fmt = (n: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
+                        const excess = Math.round((totalAmount - userShare) * 100) / 100;
+                        if (excess > 0) {
+                          toast.success(`Gasto registrado · tu parte ${fmt(userShare)} · ${fmt(excess)} a recuperar`);
+                        } else {
+                          toast.success("Gasto registrado.");
+                        }
+                        setIsAddingOneTime(false);
+                        void Promise.all([
+                          loadBalance(selectedHousehold.id),
+                          loadBriefing(selectedHousehold.id),
+                        ]);
+                      }}
+                    />
+                  ) : null}
+
+                  {/* Recurring payment add form */}
                   {isAddingRecurring ? (
                     <div className="space-y-3 rounded-2xl border border-border bg-muted/30 p-4">
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -894,17 +995,20 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                         Agregá los pagos que vuelven todos los meses o cargá un gasto puntual cuando alguien pague algo compartido.
                       </p>
                       <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                        <Button asChild variant="outline" size="sm" className="w-full">
-                          <Link href="/transactions?new=1">
-                            <Plus className="h-4 w-4" />
-                            Gasto puntual
-                          </Link>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => { setIsAddingOneTime(true); setIsAddingRecurring(false); }}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Gasto puntual
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           className="w-full"
-                          onClick={() => setIsAddingRecurring(true)}
+                          onClick={() => { setIsAddingRecurring(true); setIsAddingOneTime(false); }}
                         >
                           <Plus className="h-4 w-4" />
                           Pago fijo
@@ -990,6 +1094,62 @@ export function HouseholdClient({ initialHouseholds }: { initialHouseholds: Hous
                         ))}
                       </div>
                     ) : null}
+                  </div>
+
+                  {/* External participants */}
+                  <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                    <div className="mb-3 flex items-center gap-2">
+                      <UserPlus className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm font-semibold text-foreground">Participantes externos</p>
+                    </div>
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      Personas sin cuenta en Meridian que participan en gastos compartidos.
+                    </p>
+
+                    {selectedHousehold.externalParticipants.length > 0 && (
+                      <div className="mb-3 space-y-2">
+                        {selectedHousehold.externalParticipants.map((ep) => (
+                          <div key={ep.id} className="flex items-center justify-between gap-2 rounded-xl border border-border bg-background/50 px-3 py-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-foreground">{ep.name}</p>
+                              {ep.email && <p className="truncate text-xs text-muted-foreground">{ep.email}</p>}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                              disabled={isDeletingExternal === ep.id}
+                              onClick={() => void removeExternalParticipant(ep.id)}
+                            >
+                              {isDeletingExternal === ep.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Input
+                        placeholder="Nombre *"
+                        value={extName}
+                        onChange={(e) => setExtName(e.target.value)}
+                      />
+                      <Input
+                        type="email"
+                        placeholder="Email (opcional)"
+                        value={extEmail}
+                        onChange={(e) => setExtEmail(e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      className="mt-2 w-full"
+                      variant="secondary"
+                      disabled={isAddingExternal || !extName.trim()}
+                      onClick={() => void addExternalParticipant()}
+                    >
+                      {isAddingExternal ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      Agregar participante
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

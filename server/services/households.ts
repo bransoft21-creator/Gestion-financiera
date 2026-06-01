@@ -82,6 +82,11 @@ export async function listHouseholds(userProfileId: string) {
         orderBy: { createdAt: "desc" },
         select: { id: true, email: true, expiresAt: true, status: true },
       },
+      externalParticipants: {
+        where: { deletedAt: null },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, name: true, email: true },
+      },
     },
   });
 }
@@ -264,66 +269,85 @@ export async function getHouseholdBalance(userProfileId: string, householdId: st
     select: { createdAt: true },
   });
 
-  const household = await prisma.household.findFirst({
-    where: { id: householdId, kind: HouseholdKind.HOUSEHOLD, deletedAt: null },
-    select: {
-      id: true,
-      name: true,
-      avatar: true,
-      members: {
-        where: { status: HouseholdMemberStatus.ACTIVE, deletedAt: null },
-        select: {
-          userProfileId: true,
-          userProfile: { select: { fullName: true, email: true, avatarUrl: true } },
-        },
-      },
-      sharedTransactions: {
-        where: {
-          ...(lastSettlement ? { createdAt: { gte: lastSettlement.createdAt } } : {}),
-          transaction: { deletedAt: null, status: { not: "CANCELED" } },
-        },
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          paidByUserId: true,
-          createdAt: true,
-          transaction: {
-            select: {
-              id: true,
-              amount: true,
-              currency: true,
-              description: true,
-              occurredAt: true,
-            },
-          },
-          paidBy: { select: { fullName: true, email: true } },
-          participants: {
-            where: { status: SharedParticipantStatus.OPEN },
-            select: {
-              userId: true,
-              amount: true,
-              user: { select: { fullName: true, email: true } },
-            },
+  const [household, externalParticipants] = await Promise.all([
+    prisma.household.findFirst({
+      where: { id: householdId, kind: HouseholdKind.HOUSEHOLD, deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+        members: {
+          where: { status: HouseholdMemberStatus.ACTIVE, deletedAt: null },
+          select: {
+            userProfileId: true,
+            userProfile: { select: { fullName: true, email: true, avatarUrl: true } },
           },
         },
+        sharedTransactions: {
+          where: {
+            ...(lastSettlement ? { createdAt: { gte: lastSettlement.createdAt } } : {}),
+            transaction: { deletedAt: null, status: { not: "CANCELED" } },
+          },
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            paidByUserId: true,
+            createdAt: true,
+            transaction: {
+              select: {
+                id: true,
+                amount: true,
+                currency: true,
+                description: true,
+                occurredAt: true,
+              },
+            },
+            paidBy: { select: { fullName: true, email: true } },
+            participants: {
+              where: { status: SharedParticipantStatus.OPEN },
+              select: {
+                userId: true,
+                externalParticipantId: true,
+                amount: true,
+                externalParticipant: { select: { name: true } },
+              },
+            },
+          },
+        },
       },
-    },
-  });
+    }),
+    prisma.householdExternalParticipant.findMany({
+      where: { householdId, deletedAt: null },
+      select: { id: true, name: true, email: true },
+    }),
+  ]);
 
   if (!household) throw new NotFoundError("Household not found");
 
-  const memberBalances = calculateHouseholdMemberBalances({
-    members: household.members.map((member) => ({
+  const allMembers = [
+    ...household.members.map((member) => ({
       userId: member.userProfileId,
       name: member.userProfile.fullName ?? member.userProfile.email,
       email: member.userProfile.email,
       avatarUrl: member.userProfile.avatarUrl,
+      isExternal: false,
     })),
+    ...externalParticipants.map((ep) => ({
+      userId: `ext:${ep.id}`,
+      name: ep.name,
+      email: ep.email ?? "",
+      avatarUrl: null,
+      isExternal: true,
+    })),
+  ];
+
+  const memberBalances = calculateHouseholdMemberBalances({
+    members: allMembers,
     sharedTransactions: household.sharedTransactions.map((shared) => ({
       paidByUserId: shared.paidByUserId,
       amount: Number(shared.transaction.amount),
       participants: shared.participants.map((participant) => ({
-        userId: participant.userId,
+        userId: participant.userId ?? `ext:${participant.externalParticipantId}`,
         amount: Number(participant.amount),
       })),
     })),
@@ -456,16 +480,18 @@ export async function getHouseholdBriefing(userProfileId: string, householdId: s
             color: shared.transaction.category.color,
           }
         : null,
-      participants: shared.participants.map((participant) => ({
-        userId: participant.userId,
-        amount: Number(participant.amount),
-      })),
+      participants: shared.participants
+        .filter((participant) => participant.userId !== null)
+        .map((participant) => ({
+          userId: participant.userId as string,
+          amount: Number(participant.amount),
+        })),
     })),
   });
 }
 
 export function calculateHouseholdMemberBalances(input: {
-  members: Array<{ userId: string; name: string; email: string; avatarUrl?: string | null }>;
+  members: Array<{ userId: string; name: string; email: string; avatarUrl?: string | null; isExternal?: boolean }>;
   sharedTransactions: Array<{
     paidByUserId: string;
     amount: number;
@@ -487,6 +513,7 @@ export function calculateHouseholdMemberBalances(input: {
     name: member.name,
     email: member.email,
     avatarUrl: member.avatarUrl ?? null,
+    isExternal: member.isExternal ?? false,
     balance: roundMoney(balances.get(member.userId) ?? 0),
   }));
 }
@@ -723,6 +750,56 @@ export async function listHouseholdSettlements(userProfileId: string, householdI
       createdAt: true,
       settledBy: { select: { fullName: true, email: true } },
     },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// External Participants
+// ---------------------------------------------------------------------------
+
+export async function listExternalParticipants(userProfileId: string, householdId: string) {
+  await assertCollaborativeHouseholdAccess(userProfileId, householdId);
+
+  return prisma.householdExternalParticipant.findMany({
+    where: { householdId, deletedAt: null },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true, email: true, createdAt: true },
+  });
+}
+
+export async function createExternalParticipant(
+  userProfileId: string,
+  input: { householdId: string; name: string; email?: string | null },
+) {
+  await assertCollaborativeHouseholdAccess(userProfileId, input.householdId);
+
+  return prisma.householdExternalParticipant.create({
+    data: {
+      householdId: input.householdId,
+      name: input.name.trim(),
+      email: input.email?.trim().toLowerCase() ?? null,
+    },
+    select: { id: true, name: true, email: true, createdAt: true },
+  });
+}
+
+export async function deleteExternalParticipant(
+  userProfileId: string,
+  participantId: string,
+  householdId: string,
+) {
+  await assertCollaborativeHouseholdAccess(userProfileId, householdId);
+
+  const participant = await prisma.householdExternalParticipant.findFirst({
+    where: { id: participantId, householdId, deletedAt: null },
+    select: { id: true },
+  });
+
+  if (!participant) throw new NotFoundError("Participante no encontrado.");
+
+  await prisma.householdExternalParticipant.update({
+    where: { id: participantId },
+    data: { deletedAt: new Date() },
   });
 }
 

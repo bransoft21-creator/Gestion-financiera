@@ -1,3 +1,9 @@
+export type ExternalParticipant = {
+  id: string;
+  name: string;
+  email: string | null;
+};
+
 export type Household = {
   id: string;
   name: string;
@@ -20,6 +26,7 @@ export type Household = {
     expiresAt: string | Date;
     status: string;
   }>;
+  externalParticipants: ExternalParticipant[];
 };
 
 export type HouseholdBalance = {
@@ -86,7 +93,7 @@ export type RecurringPayment = {
   dueDay: number;
   splitMode: "EQUAL" | "PERCENTAGE" | "CUSTOM_AMOUNT";
   category: { id: string; name: string; color: string | null } | null;
-  participants: Array<{ userId: string; percentage: number | null; fixedAmount: number | null }>;
+  participants: Array<{ userId: string | null; externalParticipantId?: string | null; percentage: number | null; fixedAmount: number | null }>;
   status: "PENDING" | "PAID" | "OVERDUE";
   occurrence: {
     id: string;

@@ -12,6 +12,10 @@ export function created<T>(data: T) {
   return ok(data, { status: 201 });
 }
 
+export function noContent() {
+  return new Response(null, { status: 204 });
+}
+
 export function handleApiError(error: unknown) {
   if (error instanceof FieldApiError) {
     return NextResponse.json(

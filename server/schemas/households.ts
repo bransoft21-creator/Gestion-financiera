@@ -29,6 +29,26 @@ export const listRecurringPaymentsSchema = z.object({
   monthKey: z.string().regex(/^\d{4}-\d{2}$/).optional(),
 });
 
+const splitParticipantSchema = z.object({
+  userId: z.string().min(1).optional(),
+  externalParticipantId: z.string().min(1).optional(),
+  value: z.number().min(0),
+}).refine((p) => p.userId || p.externalParticipantId, {
+  message: "Debe especificarse userId o externalParticipantId.",
+});
+
+export const createExternalParticipantSchema = z.object({
+  householdId: z.string().min(1),
+  name: z.string().trim().min(1).max(100),
+  email: z.string().trim().email().optional().nullable(),
+});
+
+export const deleteExternalParticipantSchema = z.object({
+  householdId: z.string().min(1),
+});
+
+export type CreateExternalParticipantInput = z.infer<typeof createExternalParticipantSchema>;
+
 export const createRecurringPaymentSchema = z.object({
   householdId: z.string().min(1),
   name: z.string().trim().min(1).max(80),
@@ -37,10 +57,7 @@ export const createRecurringPaymentSchema = z.object({
   currency: z.enum(["ARS", "USD"]).default("ARS"),
   categoryId: z.string().min(1).optional().nullable(),
   splitMode: z.enum(["EQUAL", "PERCENTAGE", "CUSTOM_AMOUNT"]).default("EQUAL"),
-  participants: z.array(z.object({
-    userId: z.string().min(1),
-    value: z.number().min(0),
-  })).optional(),
+  participants: z.array(splitParticipantSchema).optional(),
 });
 
 export const updateRecurringPaymentSchema = createRecurringPaymentSchema
@@ -55,6 +72,20 @@ export const markRecurringPaymentAsPaidSchema = z.object({
   accountId: z.string().min(1),
   finalAmount: z.number().positive().optional(),
 });
+
+export const createSharedExpenseSchema = z.object({
+  householdId: z.string().min(1),
+  description: z.string().trim().min(1).max(200),
+  amount: z.number().positive(),
+  currency: z.enum(["ARS", "USD"]).default("ARS"),
+  categoryId: z.string().min(1).optional().nullable(),
+  occurredAt: z.string().datetime().optional(),
+  accountId: z.string().min(1),
+  splitMode: z.enum(["EQUAL", "PERCENTAGE", "CUSTOM_AMOUNT"]).default("EQUAL"),
+  participants: z.array(splitParticipantSchema).optional(),
+});
+
+export type CreateSharedExpenseInput = z.infer<typeof createSharedExpenseSchema>;
 
 export type CreateHouseholdInput = z.infer<typeof createHouseholdSchema>;
 export type CreateHouseholdInviteInput = z.infer<typeof createHouseholdInviteSchema>;

@@ -311,6 +311,7 @@ model Household {
   recurringPayments      HouseholdRecurringPayment[]
   personContacts         PersonContact[]
   personalAgreements     PersonalAgreement[]
+  externalParticipants   HouseholdExternalParticipant[]
 
   @@index([createdById])
 }
@@ -331,6 +332,21 @@ model HouseholdMember {
 
   @@unique([householdId, userProfileId])
   @@index([userProfileId])
+}
+
+model HouseholdExternalParticipant {
+  id          String    @id @default(cuid())
+  householdId String
+  name        String    @db.VarChar(100)
+  email       String?
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime?
+
+  household               Household                              @relation(fields: [householdId], references: [id])
+  sharedParticipations    SharedTransactionParticipant[]
+  recurringParticipations HouseholdRecurringPaymentParticipant[]
+
+  @@index([householdId])
 }
 
 model HouseholdInvite {
@@ -438,6 +454,8 @@ model Transaction {
   installmentNumber         Int?
   totalInstallments         Int?
   isRecurring               Boolean           @default(false)
+  isHouseholdPayment        Boolean           @default(false)
+  userShareAmount           Decimal?          @db.Decimal(18, 2)
   occurredAt                DateTime
   createdAt                 DateTime          @default(now())
   updatedAt                 DateTime          @updatedAt
@@ -485,18 +503,21 @@ model SharedTransaction {
 }
 
 model SharedTransactionParticipant {
-  id                  String                  @id @default(cuid())
-  sharedTransactionId String
-  userId              String
-  amount              Decimal                 @db.Decimal(18, 2)
-  percentage          Decimal?                @db.Decimal(5,2)
-  status              SharedParticipantStatus @default(OPEN)
+  id                    String                  @id @default(cuid())
+  sharedTransactionId   String
+  userId                String?
+  externalParticipantId String?
+  amount                Decimal                 @db.Decimal(18, 2)
+  percentage            Decimal?                @db.Decimal(5,2)
+  status                SharedParticipantStatus @default(OPEN)
 
-  sharedTransaction SharedTransaction @relation(fields: [sharedTransactionId], references: [id])
-  user              UserProfile       @relation(fields: [userId], references: [id])
+  sharedTransaction   SharedTransaction             @relation(fields: [sharedTransactionId], references: [id])
+  user                UserProfile?                  @relation(fields: [userId], references: [id])
+  externalParticipant HouseholdExternalParticipant? @relation(fields: [externalParticipantId], references: [id])
 
   @@unique([sharedTransactionId, userId])
   @@index([userId, status])
+  @@index([externalParticipantId])
 }
 
 model Budget {
@@ -954,16 +975,21 @@ model HouseholdRecurringPayment {
 }
 
 model HouseholdRecurringPaymentParticipant {
-  recurringPaymentId String
-  userId             String
-  percentage         Decimal? @db.Decimal(5, 2)
-  fixedAmount        Decimal? @db.Decimal(18, 2)
+  id                    String   @id @default(cuid())
+  recurringPaymentId    String
+  userId                String?
+  externalParticipantId String?
+  percentage            Decimal? @db.Decimal(5, 2)
+  fixedAmount           Decimal? @db.Decimal(18, 2)
 
-  recurringPayment HouseholdRecurringPayment @relation(fields: [recurringPaymentId], references: [id])
-  user             UserProfile               @relation("HouseholdRecurringPaymentParticipations", fields: [userId], references: [id])
+  recurringPayment    HouseholdRecurringPayment         @relation(fields: [recurringPaymentId], references: [id])
+  user                UserProfile?                      @relation("HouseholdRecurringPaymentParticipations", fields: [userId], references: [id])
+  externalParticipant HouseholdExternalParticipant?     @relation(fields: [externalParticipantId], references: [id])
 
-  @@id([recurringPaymentId, userId])
+  @@unique([recurringPaymentId, userId])
+  @@unique([recurringPaymentId, externalParticipantId])
   @@index([userId])
+  @@index([externalParticipantId])
 }
 
 model HouseholdRecurringPaymentOccurrence {

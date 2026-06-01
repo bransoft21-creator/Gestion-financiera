@@ -474,7 +474,9 @@ function getExpensesByType(transactions: DashboardTransaction[]) {
   return transactions.reduce(
     (acc, tx) => {
       if (tx.type !== TransactionType.EXPENSE && tx.type !== TransactionType.CARD_PAYMENT) return acc;
-      const amount = toFiniteNumber(tx.amount);
+      const amount = tx.isHouseholdPayment && tx.userShareAmount !== null
+        ? toFiniteNumber(tx.userShareAmount)
+        : toFiniteNumber(tx.amount);
       if (tx.type === TransactionType.CARD_PAYMENT) {
         acc.fixed += amount; // CC bill payments are fixed obligations
         return acc;
@@ -512,9 +514,13 @@ function getExpenseTotalsByCategoryId(transactions: DashboardTransaction[]) {
       return totals;
     }
 
+    const amount = transaction.isHouseholdPayment && transaction.userShareAmount !== null
+      ? toFiniteNumber(transaction.userShareAmount)
+      : toFiniteNumber(transaction.amount);
+
     totals.set(
       transaction.category.id,
-      (totals.get(transaction.category.id) ?? 0) + toFiniteNumber(transaction.amount),
+      (totals.get(transaction.category.id) ?? 0) + amount,
     );
 
     return totals;
@@ -527,7 +533,13 @@ function sumTransactionsByType(transactions: DashboardTransaction[], type: Trans
       transaction.type === type ||
       // CARD_PAYMENT counts as EXPENSE: it's the actual cash outflow when paying the CC bill
       (type === TransactionType.EXPENSE && transaction.type === TransactionType.CARD_PAYMENT);
-    return matches ? total + toFiniteNumber(transaction.amount) : total;
+    if (!matches) return total;
+    const amount = type === TransactionType.EXPENSE &&
+      transaction.isHouseholdPayment &&
+      transaction.userShareAmount !== null
+        ? toFiniteNumber(transaction.userShareAmount)
+        : toFiniteNumber(transaction.amount);
+    return total + amount;
   }, 0);
 }
 
@@ -546,7 +558,10 @@ function getExpensesByCategory(transactions: DashboardTransaction[]) {
     const isCardPayment = transaction.type === TransactionType.CARD_PAYMENT;
     const key = isCardPayment ? CARD_PAYMENT_CATEGORY_KEY : (transaction.category?.id ?? "uncategorized");
     const existing = totals.get(key);
-    const nextValue = (existing?.value ?? 0) + toFiniteNumber(transaction.amount);
+    const txAmount = !isCardPayment && transaction.isHouseholdPayment && transaction.userShareAmount !== null
+      ? toFiniteNumber(transaction.userShareAmount)
+      : toFiniteNumber(transaction.amount);
+    const nextValue = (existing?.value ?? 0) + txAmount;
 
     totals.set(key, {
       id: key,
@@ -581,7 +596,9 @@ function getExpenseCategoryDetails(transactions: DashboardTransaction[]) {
 
     const isCardPayment = transaction.type === TransactionType.CARD_PAYMENT;
     const key = isCardPayment ? CARD_PAYMENT_CATEGORY_KEY : (transaction.category?.id ?? "uncategorized");
-    const amount = toFiniteNumber(transaction.amount);
+    const amount = !isCardPayment && transaction.isHouseholdPayment && transaction.userShareAmount !== null
+      ? toFiniteNumber(transaction.userShareAmount)
+      : toFiniteNumber(transaction.amount);
     const existing = details.get(key);
 
     details.set(key, {
