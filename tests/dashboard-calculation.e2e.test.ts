@@ -4,6 +4,7 @@ import { TransactionStatus, TransactionType } from "@prisma/client";
 import {
   computeFinancialHealth,
   computeTransactionBalanceDeltas,
+  toFiniteNumber,
 } from "../server/services/financial-ledger";
 
 describe("dashboard calculation e2e", () => {
@@ -75,6 +76,58 @@ describe("dashboard calculation e2e", () => {
         { accountId: "savings", delta: 25_000 },
       ],
     );
+  });
+
+  it("realAvailable uses account balances for current/future months, P&L for past months", () => {
+    // Regression test for P0 bug: at the start of a new month (e.g. June 1st) with
+    // no transactions yet, income=0 and expenses=0. The old formula gave:
+    //   realAvailable = (0 - 0) - reservedBudget - obligations = -(obligations)
+    // Fix: for current/future months use SUM(Account.currentBalance) as the base.
+    // For past months use the P&L (income - expenses) — the correct retrospective view.
+
+    const accounts = [
+      { currentBalance: 450_000 },
+      { currentBalance: 120_000 },
+      { currentBalance: -30_000 }, // credit card with debt
+    ];
+    const totalPrimaryBalance = accounts.reduce(
+      (sum, a) => sum + toFiniteNumber(a.currentBalance),
+      0,
+    ); // = 540_000
+
+    // Scenario A: current/future month with no transactions (the P0 bug)
+    const healthNoTx = computeFinancialHealth({
+      income: 0,
+      expenses: 0,
+      budgets: [{ plannedAmount: 50_000, spentAmount: 0 }],
+      recurringExpenses: [{ amount: 40_000 }],
+      goals: [{ requiredMonthlyAmount: 20_000 }],
+      debts: [{ minimumPayment: 15_000, outstandingAmount: 100_000 }],
+      totalOutstandingDebt: 100_000,
+    });
+    // Old (broken): realAvailable = (0-0) - 50_000 - 75_000 = -125_000
+    assert.equal(healthNoTx.realAvailable, -125_000, "P&L formula is wrong for current month with no transactions");
+    // Correct for current/future months:
+    const currentMonthReal = totalPrimaryBalance - healthNoTx.remainingReservedBudget - healthNoTx.upcomingObligations;
+    assert.equal(currentMonthReal, 415_000, "account-balance formula correct for current month");
+
+    // Scenario B: past month with real transactions recorded
+    const healthPastTx = computeFinancialHealth({
+      income: 300_000,
+      expenses: 120_000,
+      budgets: [{ plannedAmount: 50_000, spentAmount: 0 }],
+      recurringExpenses: [{ amount: 40_000 }],
+      goals: [{ requiredMonthlyAmount: 20_000 }],
+      debts: [{ minimumPayment: 15_000, outstandingAmount: 100_000 }],
+      totalOutstandingDebt: 100_000,
+    });
+    // For past months: P&L is the correct retrospective view
+    // realAvailable = (300k - 120k) - 50k - 75k = 55_000
+    assert.equal(healthPastTx.realAvailable, 55_000, "P&L formula is correct for past months with transactions");
+    // Using today's account balance for a past month would be wrong:
+    const wrongPastMonthReal = totalPrimaryBalance - healthPastTx.remainingReservedBudget - healthPastTx.upcomingObligations;
+    assert.equal(wrongPastMonthReal, 415_000, "account-balance formula gives wrong value for past months");
+    assert.notEqual(wrongPastMonthReal, healthPastTx.realAvailable);
   });
 
   it("keeps dashboard reservation at zero when a budget is exceeded", () => {

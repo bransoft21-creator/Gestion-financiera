@@ -340,6 +340,20 @@ export async function getDashboardSummary(
     interpersonalToPay: interpersonalPosition.toPay,
   });
 
+  // realAvailable source of truth depends on the period being viewed:
+  // - Current/future month: use actual account balances. income/expenses are 0 or partial
+  //   at the start of a new month, so P&L would show negative even though money exists.
+  // - Past months: use the historical P&L (income - expenses), which is the correct
+  //   retrospective view. Using today's account balance for a closed month would mix
+  //   present-day money with a past period's obligations.
+  const totalPrimaryBalance = primaryAccounts.reduce(
+    (sum, a) => sum + toFiniteNumber(a.currentBalance),
+    0,
+  );
+  const realAvailable = isCurrentOrFutureMonth
+    ? totalPrimaryBalance - health.remainingReservedBudget - health.upcomingObligations
+    : health.realAvailable;
+
   const [, , argDay] = argDateStr.split("-").map(Number);
   const isCurrentMonth = argYear === year && argMonth === month;
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -392,6 +406,7 @@ export async function getDashboardSummary(
     },
     metrics: {
       ...health,
+      realAvailable,
       currency: primaryCurrency,
       currencyScope: {
         primaryCurrency,
@@ -411,7 +426,9 @@ export async function getDashboardSummary(
         daysRemaining,
         projectedExpenses,
         projectedBalance,
-        projectedRealAvailable: Math.round(projectedBalance - health.upcomingObligations),
+        projectedRealAvailable: isCurrentOrFutureMonth
+          ? Math.round(totalPrimaryBalance - dailyEstimated - health.upcomingObligations)
+          : Math.round(projectedBalance - health.upcomingObligations),
         confidence: projectionConfidence,
         confidenceNote: projectionNote,
         hasEarlyLargeFixed: isCurrentMonth && nonDailySpent > 0 && dayOfMonth <= 7,
@@ -439,7 +456,7 @@ export async function getDashboardSummary(
       expensesByCategory,
       remainingReservedBudget: health.remainingReservedBudget,
       upcomingObligations: health.upcomingObligations,
-      realAvailable: health.realAvailable,
+      realAvailable,
     }),
     insights: buildFinancialInsights({
       income,
@@ -450,7 +467,7 @@ export async function getDashboardSummary(
       expensesByCategory,
       remainingReservedBudget: health.remainingReservedBudget,
       upcomingObligations: health.upcomingObligations,
-      realAvailable: health.realAvailable,
+      realAvailable,
       totalOutstandingDebt: health.totalOutstandingDebt,
       fixedToIncomeRatio,
     }),
