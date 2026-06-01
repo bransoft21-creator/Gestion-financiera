@@ -124,3 +124,10 @@ export function argentinaDayMonthYear(date: Date): { day: number; month: number;
     day: Number(parts.find((p) => p.type === "day")?.value),
   };
 }
+
+// Returns the day of week (0=Sunday, 6=Saturday) in Argentina local time.
+// Argentina is UTC-3 with no DST, so the offset is fixed.
+export function argentinaDayOfWeek(date: Date): number {
+  const localDate = new Date(date.getTime() - ARGENTINA_UTC_OFFSET_HOURS * 3_600_000);
+  return localDate.getUTCDay();
+}

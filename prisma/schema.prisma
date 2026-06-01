@@ -784,6 +784,10 @@ model MonthlySnapshot {
   debtOutstandingAmount     Decimal      @default(0) @db.Decimal(18, 2)
   upcomingObligationsAmount Decimal      @default(0) @db.Decimal(18, 2)
   availableAmount           Decimal      @default(0) @db.Decimal(18, 2)
+  // Sum of Account.currentBalance at capture time (primary currency, active accounts).
+  // Reflects the real money including carry-over from prior months.
+  // availableAmount is P&L-based; accountBalanceAmount is the actual balance.
+  accountBalanceAmount      Decimal?     @db.Decimal(18, 2)
   createdAt                 DateTime     @default(now())
   updatedAt                 DateTime     @updatedAt
   deletedAt                 DateTime?

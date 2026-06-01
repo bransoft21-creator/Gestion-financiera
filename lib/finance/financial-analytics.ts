@@ -4,6 +4,7 @@
  */
 
 import type { Prisma } from "@prisma/client";
+import { argentinaDayOfWeek } from "@/lib/dates";
 import { filterCurrency, sumByCurrency } from "@/lib/finance/currency-safe";
 
 export type TxForAnalysis = Prisma.TransactionGetPayload<{
@@ -87,7 +88,7 @@ export function computeWeeklyMetrics(txs: TxForAnalysis[], primaryCurrency = "AR
   const savingsRate = totalIncome > 0 ? Math.max(0, balance / totalIncome) * 100 : 0;
 
   const weekendExpenses = expenses
-    .filter((t) => WEEKEND_DAYS.has(new Date(t.occurredAt).getDay()))
+    .filter((t) => WEEKEND_DAYS.has(argentinaDayOfWeek(new Date(t.occurredAt))))
     .reduce((s, t) => s + Number(t.amount), 0);
   const weekendPct = totalExpenses > 0 ? (weekendExpenses / totalExpenses) * 100 : 0;
 

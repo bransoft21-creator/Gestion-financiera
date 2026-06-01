@@ -1,4 +1,5 @@
 import { DebtStatus, TransactionStatus } from "@prisma/client";
+import { argentinaMonthRangeUtc } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { assertHouseholdAccess } from "./households";
 // buildCompactInputForMonth is not exported — we replicate the lightweight queries needed
@@ -224,8 +225,7 @@ type RawTx = {
 };
 
 async function fetchMonthSummary(householdId: string, year: number, monthNumber: number): Promise<RawTx[]> {
-  const start = new Date(Date.UTC(year, monthNumber - 1, 1));
-  const end = new Date(Date.UTC(year, monthNumber, 1));
+  const { start, end } = argentinaMonthRangeUtc(year, monthNumber);
 
   const rows = await prisma.transaction.findMany({
     where: {
@@ -306,8 +306,7 @@ async function fetchDebts(householdId: string) {
 }
 
 async function fetchBudgets(householdId: string, year: number, month: number) {
-  const start = new Date(Date.UTC(year, month - 1, 1));
-  const end = new Date(Date.UTC(year, month, 1));
+  const { start, end } = argentinaMonthRangeUtc(year, month);
 
   const budgets = await prisma.budget.findMany({
     where: { householdId, year, month, deletedAt: null },

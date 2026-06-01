@@ -165,32 +165,32 @@ export async function captureMonthlySnapshot(
       totalOutstandingDebt: liabilitySummary.liabilities,
     });
 
+    // Real account balance at capture time. Reflects carry-over from prior months.
+    // health.realAvailable is P&L-based (income − expenses − obligations) and cannot
+    // reconstruct the actual money in the accounts after the fact. accountBalanceAmount
+    // fills that gap by storing the actual sum of account balances when the snapshot runs.
+    const accountBalanceAmount = currencyAccounts.reduce(
+      (sum, a) => sum + toFiniteNumber(a.currentBalance),
+      0,
+    );
+
+    const snapshotData = {
+      incomeAmount: health.income,
+      expenseAmount: health.expenses,
+      reservedAmount: health.remainingReservedBudget,
+      goalAllocatedAmount: health.requiredGoalContributions,
+      debtOutstandingAmount: health.totalOutstandingDebt,
+      upcomingObligationsAmount: health.upcomingObligations,
+      availableAmount: health.realAvailable,
+      accountBalanceAmount,
+    };
+
     snapshots.push(await prisma.monthlySnapshot.upsert({
       where: {
         householdId_currency_year_month: { householdId, currency, year, month },
       },
-      create: {
-        householdId,
-        currency,
-        year,
-        month,
-        incomeAmount: health.income,
-        expenseAmount: health.expenses,
-        reservedAmount: health.remainingReservedBudget,
-        goalAllocatedAmount: health.requiredGoalContributions,
-        debtOutstandingAmount: health.totalOutstandingDebt,
-        upcomingObligationsAmount: health.upcomingObligations,
-        availableAmount: health.realAvailable,
-      },
-      update: {
-        incomeAmount: health.income,
-        expenseAmount: health.expenses,
-        reservedAmount: health.remainingReservedBudget,
-        goalAllocatedAmount: health.requiredGoalContributions,
-        debtOutstandingAmount: health.totalOutstandingDebt,
-        upcomingObligationsAmount: health.upcomingObligations,
-        availableAmount: health.realAvailable,
-      },
+      create: { householdId, currency, year, month, ...snapshotData },
+      update: snapshotData,
     }));
   }
 
@@ -220,6 +220,7 @@ export async function listMonthlySnapshots(
       debtOutstandingAmount: true,
       upcomingObligationsAmount: true,
       availableAmount: true,
+      accountBalanceAmount: true,
     },
   });
 
@@ -242,5 +243,6 @@ export async function listMonthlySnapshots(
     debtOutstandingAmount: toFiniteNumber(r.debtOutstandingAmount),
     upcomingObligationsAmount: toFiniteNumber(r.upcomingObligationsAmount),
     availableAmount: toFiniteNumber(r.availableAmount),
+    accountBalanceAmount: r.accountBalanceAmount != null ? toFiniteNumber(r.accountBalanceAmount) : null,
   }));
 }
