@@ -132,7 +132,7 @@ export function BottomNav({ awareness, copilotEnabled }: { awareness?: Navigatio
           WebkitBackdropFilter: "blur(16px)",
         }}
       >
-        <div className="grid grid-cols-4 px-1.5 pb-[max(env(safe-area-inset-bottom),6px)] pt-1">
+        <div className="grid grid-cols-5 px-1.5 pb-[max(env(safe-area-inset-bottom),6px)] pt-1">
           {bottomNavItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;

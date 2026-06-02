@@ -307,19 +307,17 @@ export function DashboardHero({
             </div>
           )}
           {usdBalance && usdBalance.accountCount > 0 ? (
-            <div className="col-span-2 rounded-2xl border border-sky-300/16 bg-sky-300/[0.045] p-4 lg:col-span-1">
+            <div className="rounded-2xl border border-sky-300/16 bg-sky-300/[0.045] p-3">
               <p className="text-[11px] font-semibold uppercase text-muted-foreground">Dólares</p>
               <p className="mt-1 text-sm font-semibold tabular-nums text-sky-400">
                 <SensitiveAmount value={formatMoney(usdBalance.amount, "USD")} />
               </p>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">
-                {usdBalance.accountCount} cuenta{usdBalance.accountCount !== 1 ? "s" : ""} en USD
+              <p className="mt-0.5 text-[10px] text-muted-foreground/70">
+                {usdBalance.accountCount} cta{usdBalance.accountCount !== 1 ? "s" : ""} en USD
+                {fxLoaded ? (
+                  <> · ≈ <SensitiveAmount value={formatMoney(fxEstimate(usdBalance.amount, "USD", "ARS", fxRate) ?? 0)} /></>
+                ) : null}
               </p>
-              {fxLoaded && (
-                <p className="mt-1.5 text-[10px] text-muted-foreground/70">
-                  ≈ <SensitiveAmount value={formatMoney(fxEstimate(usdBalance.amount, "USD", "ARS", fxRate) ?? 0)} /> estimado
-                </p>
-              )}
             </div>
           ) : null}
 

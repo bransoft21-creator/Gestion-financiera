@@ -42,6 +42,7 @@ export const navItems = [
     shortLabel: "Import",
     icon: ScanLine,
     tier: "core",
+    mobile: "primary",
     awarenessTarget: "smart-import",
     featured: true,
   },
@@ -51,7 +52,6 @@ export const navItems = [
     shortLabel: "Perspectiva",
     icon: BotMessageSquare,
     tier: "core",
-    mobile: "primary",
     featured: true,
   },
   {
@@ -60,6 +60,7 @@ export const navItems = [
     shortLabel: "Hogar",
     icon: Home,
     tier: "core",
+    mobile: "primary",
     awarenessTarget: "household",
   },
   {
