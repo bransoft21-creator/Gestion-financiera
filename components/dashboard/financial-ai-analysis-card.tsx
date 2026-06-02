@@ -584,7 +584,7 @@ function InvisibleExpenses({
   const total = items.reduce((sum, item) => sum + item.total, 0);
 
   return (
-    <motion.section variants={itemMotion} className="rounded-2xl border border-border bg-muted/40 p-3.5 sm:p-4">
+    <motion.section variants={itemMotion} className="border-t border-border pt-4">
       <div className="mb-2.5 flex items-center justify-between gap-3">
         <SectionHeader eyebrow="Revelador" title="Gastos invisibles" />
         {items.length > 0 && (
@@ -691,7 +691,7 @@ function MonthComparison({ comparison, currency }: { comparison: AiFinancialAnal
   const categoryStories = buildCategoryStories(comparison, currency);
 
   return (
-    <motion.section variants={itemMotion} className="rounded-2xl border border-border bg-muted/40 p-3.5 sm:p-4">
+    <motion.section variants={itemMotion} className="border-t border-border pt-4">
       <SectionHeader eyebrow="Cambio" title="Contra el mes pasado" />
       {!comparison.available ? (
         <EmptyMicroState icon={CalendarDays} title="Todavía no hay una base anterior" message="Cuando exista un mes previo comparable, esta sección se vuelve narrativa." />

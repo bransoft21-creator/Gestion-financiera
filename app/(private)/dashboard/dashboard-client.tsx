@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useDashboardSummary } from "@/hooks/use-dashboard-summary";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   ArrowDownLeft,
   ArrowUpRight,
-  ChevronDown,
   ChevronRight,
   HandCoins,
   ReceiptText,
@@ -34,55 +33,13 @@ import { GettingStartedCard } from "@/components/dashboard/getting-started-card"
 import { ContextualEntryPoints } from "@/components/dashboard/contextual-entry-points";
 import { HouseholdWidget } from "@/components/dashboard/household-widget";
 import { ContextualEducationCard } from "@/components/education/contextual-education-card";
-import { useSectionCollapse } from "@/hooks/use-section-collapse";
 import { getDashboardEducation } from "@/lib/finance/contextual-education";
-import { trackProductEvent } from "@/lib/observability/client";
 import {
   formatMoney,
   sectionReveal,
 } from "./utils";
 import type { DashboardSummary } from "./types";
 import { getPeriodStatus } from "@/lib/period-status";
-
-/* ── Local UI primitives ─────────────────────────────────────────────────── */
-
-function SectionCollapseButton({
-  title,
-  summary,
-  expanded,
-  onToggle,
-}: {
-  title: string;
-  summary?: ReactNode;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div className="mb-3 flex items-center justify-between">
-      <div className="flex min-w-0 items-center gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {title}
-        </span>
-        {!expanded && summary ? (
-          <span className="truncate text-[11px] text-muted-foreground">— {summary}</span>
-        ) : null}
-      </div>
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted/30 text-muted-foreground transition hover:bg-muted/70 hover:text-muted-foreground"
-        aria-label={expanded ? `Colapsar ${title}` : `Expandir ${title}`}
-        aria-expanded={expanded}
-      >
-        <ChevronDown
-          className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? "" : "-rotate-90"}`}
-          aria-hidden="true"
-        />
-      </button>
-    </div>
-  );
-}
-
 
 /* ── Main component ──────────────────────────────────────────────────────── */
 
@@ -94,8 +51,6 @@ export function DashboardClient() {
   const error = queryError ? queryError.message : null;
   const [selectedExpenseCategoryPreference, setSelectedExpenseCategoryPreference] = useState<string | null>(null);
   const shouldReduceMotion = useReducedMotion();
-  const sectionDistribucion = useSectionCollapse("distribucion", false);
-  const sectionMapa = useSectionCollapse("mapa", false);
 
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
   const periodStatus = getPeriodStatus(year, month);
@@ -245,108 +200,46 @@ export function DashboardClient() {
       {/* 2. Financial Copilot */}
       <FinancialAiAnalysisCard month={selectedMonth} isCurrentMonth={isCurrentMonth} />
 
-      {/* 4. Distribución + tendencia — colapsable */}
-      <motion.section
-        variants={shouldReduceMotion ? undefined : sectionReveal}
-        initial={shouldReduceMotion ? false : "hidden"}
-        animate={shouldReduceMotion ? false : "visible"}
-        transition={{ delay: 0.08 }}
-        className="mx-auto mb-5 w-full sm:mb-8"
-      >
-        <SectionCollapseButton
-          title="Distribución"
-          summary={
-            <SensitiveText text={`${metrics.fixedToIncomeRatio}% en fijos · ${formatMoney(metrics.expenses, metrics.currency)} gastados`} />
-          }
-          expanded={sectionDistribucion.expanded}
-          onToggle={() => {
-            if (!sectionDistribucion.expanded) trackProductEvent("dashboard_section_expanded", { section: "distribucion" }, "dashboard");
-            sectionDistribucion.toggle();
-          }}
-        />
-        {sectionDistribucion.expanded && (
-          <div className="space-y-5">
-            <ContextualEducationCard
-              item={dashboardEducation}
-              surface="dashboard"
-              compact
-            />
-            <div className="grid gap-5 lg:grid-cols-2">
-              <ExpenseTypeBreakdown
-                expensesByType={metrics.expensesByType}
-                total={metrics.expenses}
-                income={metrics.income}
-                fixedToIncomeRatio={metrics.fixedToIncomeRatio}
-                year={year}
-                month={month}
-                currency={metrics.currency}
-              />
-              <MonthProjection metrics={metrics} />
-            </div>
-          </div>
-        )}
-      </motion.section>
-
-      {/* 5. Mapa de consumo + señales — colapsable */}
-      <motion.section
-        variants={shouldReduceMotion ? undefined : sectionReveal}
-        initial={shouldReduceMotion ? false : "hidden"}
-        animate={shouldReduceMotion ? false : "visible"}
-        transition={{ delay: 0.14 }}
-        className="mx-auto mb-5 w-full sm:mb-8"
-      >
-        <SectionCollapseButton
-          title="Mapa de consumo"
-          summary={`${expensesByCategory.length} categorías`}
-          expanded={sectionMapa.expanded}
-          onToggle={() => {
-            if (!sectionMapa.expanded) trackProductEvent("dashboard_section_expanded", { section: "mapa" }, "dashboard");
-            sectionMapa.toggle();
-          }}
-        />
-        {sectionMapa.expanded && (
-          <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-            <ExpenseCategoryExplorer
-              expensesByCategory={expensesByCategory}
-              selectedExpenseCategory={selectedExpenseCategory}
-              selectedExpenseCategoryId={selectedExpenseCategoryId}
-              totalExpenses={metrics.expenses}
-              currency={metrics.currency}
-              onSelectCategory={handleExpenseCategorySelect}
-            />
-            <div className="flex flex-col gap-4">
-              <MonthlySignals insights={insights} alerts={alerts} />
-              <div className="grid grid-cols-2 gap-3">
-                <Link href="/goals" className="block min-w-0">
-                  <PremiumCard interactive className="p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Ahorro est.</p>
-                    <p className="mt-2 text-lg font-bold tabular-nums text-emerald-400">
-                      <SensitiveAmount value={formatMoney(metrics.estimatedSavings, metrics.currency)} />
-                    </p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">este mes →</p>
-                  </PremiumCard>
-                </Link>
-                <Link href="/debts" className="block min-w-0">
-                  <PremiumCard interactive className="p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Pasivo formal</p>
-                    <p className="mt-2 text-lg font-bold tabular-nums text-muted-foreground">
-                      <SensitiveAmount value={formatMoney(metrics.totalOutstandingDebt, metrics.currency)} />
-                    </p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">ver créditos →</p>
-                  </PremiumCard>
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
-      </motion.section>
-
-      {/* 6. Movimientos recientes */}
+      {/* 3. Distribución y consumo */}
       <motion.div
         variants={shouldReduceMotion ? undefined : sectionReveal}
         initial={shouldReduceMotion ? false : "hidden"}
         animate={shouldReduceMotion ? false : "visible"}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.08 }}
+        className="mb-5 space-y-5 sm:mb-8"
+      >
+        <ContextualEducationCard item={dashboardEducation} surface="dashboard" compact />
+        <div className="grid gap-5 lg:grid-cols-2">
+          <ExpenseTypeBreakdown
+            expensesByType={metrics.expensesByType}
+            total={metrics.expenses}
+            income={metrics.income}
+            fixedToIncomeRatio={metrics.fixedToIncomeRatio}
+            year={year}
+            month={month}
+            currency={metrics.currency}
+          />
+          <MonthProjection metrics={metrics} />
+        </div>
+        <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+          <ExpenseCategoryExplorer
+            expensesByCategory={expensesByCategory}
+            selectedExpenseCategory={selectedExpenseCategory}
+            selectedExpenseCategoryId={selectedExpenseCategoryId}
+            totalExpenses={metrics.expenses}
+            currency={metrics.currency}
+            onSelectCategory={handleExpenseCategorySelect}
+          />
+          <MonthlySignals insights={insights} alerts={alerts} />
+        </div>
+      </motion.div>
+
+      {/* 4. Movimientos recientes */}
+      <motion.div
+        variants={shouldReduceMotion ? undefined : sectionReveal}
+        initial={shouldReduceMotion ? false : "hidden"}
+        animate={shouldReduceMotion ? false : "visible"}
+        transition={{ delay: 0.14 }}
       >
         <PremiumCard>
           <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-5 sm:px-6 sm:pt-6">
