@@ -40,7 +40,7 @@ export function Sidebar({ userName, userEmail, awareness, copilotEnabled }: Side
         <Image src="/icons/Meridian.png" alt="Meridian" width={40} height={40} className="shrink-0 select-none" />
         <div>
           <p className="text-[14px] font-semibold leading-snug tracking-tight text-foreground">Meridian</p>
-          <p className="text-[12px] leading-snug text-muted-foreground">Perspectiva diaria</p>
+          <div className="mt-1.5 h-[2px] w-7 rounded-full bg-primary/50" aria-hidden="true" />
         </div>
       </div>
 
@@ -64,7 +64,7 @@ export function Sidebar({ userName, userEmail, awareness, copilotEnabled }: Side
                     "mb-[3px] flex h-[40px] items-center gap-2.5 rounded-2xl border border-transparent px-3 text-[13px] font-medium transition-all duration-150",
                     item.featured && !isActive && "bg-primary/[0.06] text-foreground hover:bg-primary/[0.1]",
                     isActive
-                      ? "border-border bg-muted/60 text-primary shadow-[0_10px_30px_rgba(45,212,191,0.07)]"
+                      ? "border-border bg-muted/60 text-primary shadow-[inset_3px_0_0_rgba(45,212,191,0.65),0_10px_30px_rgba(45,212,191,0.07)]"
                       : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
                   )}
                 >

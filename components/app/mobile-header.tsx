@@ -48,6 +48,7 @@ export function MobileHeader({ userName }: MobileHeaderProps) {
             <span className="block truncate text-[17px] font-semibold leading-snug tracking-tight text-foreground">
               Meridian
             </span>
+            <div className="my-1 h-[1.5px] w-5 rounded-full bg-primary/45" aria-hidden="true" />
             <span className="block truncate text-[13px] font-medium leading-snug text-muted-foreground">
               {sectionLabel}
             </span>

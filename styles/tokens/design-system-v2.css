@@ -1,4 +1,6 @@
 :root {
+    --meridian: 176 66% 56%; /* Brand signature color — teal */
+
     --v2-bg: 224 34% 5%;
     --v2-bg-soft: 224 28% 7%;
     --v2-surface: 224 24% 10%;
@@ -11,7 +13,7 @@
     --v2-text-muted: 218 13% 58%;
     --v2-text-subtle: 220 10% 42%;
 
-    --v2-brand: 176 66% 56%;
+    --v2-brand: 176 66% 56%; /* alias of --meridian */
     --v2-brand-2: 42 96% 68%;
     --v2-brand-3: 263 80% 68%;
     --v2-positive: 151 72% 58%;
