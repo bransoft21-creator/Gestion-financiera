@@ -89,11 +89,8 @@ export function DashboardHero({
   }
 
   return (
-    <PremiumCard data-tutorial="dashboard-hero" variant="raised" className="relative mb-5 overflow-hidden p-5 sm:mb-7 sm:p-6">
-      <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(45,212,191,.18)_0%,transparent_68%)]" />
-      <div className="pointer-events-none absolute bottom-[-8rem] left-[-6rem] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,.12)_0%,transparent_68%)]" />
-
-      <div className="relative grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
+    <PremiumCard data-tutorial="dashboard-hero" variant="raised" className="mb-5 overflow-hidden p-5 sm:mb-7 sm:p-6">
+      <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
         <div className="min-w-0">
           {/* Month navigation */}
           <div className="mb-3 flex items-center justify-between gap-2">

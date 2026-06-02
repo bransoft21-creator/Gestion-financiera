@@ -25,7 +25,6 @@ import {
   Wallet,
   Zap,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SensitiveAmount, SensitiveText } from "@/components/app/sensitive-amount";
 import { captureClientError, trackProductEvent } from "@/lib/observability/client";
@@ -169,49 +168,42 @@ const itemMotion: Variants = {
 
 const toneStyles: Record<InsightTone, {
   card: string;
-  glow: string;
   icon: string;
   badge: string;
   text: string;
 }> = {
   emerald: {
     card: "border-emerald-400/20 bg-emerald-400/[0.07]",
-    glow: "shadow-[0_18px_60px_rgba(52,211,153,0.08)]",
     icon: "bg-emerald-400/12 text-emerald-400",
     badge: "border-emerald-300/20 bg-emerald-300/10 text-emerald-400",
     text: "text-emerald-400",
   },
   amber: {
     card: "border-amber-300/20 bg-amber-300/[0.08]",
-    glow: "shadow-[0_18px_60px_rgba(251,191,36,0.08)]",
     icon: "bg-amber-300/12 text-amber-500",
     badge: "border-amber-300/20 bg-amber-300/10 text-amber-500",
     text: "text-amber-500",
   },
   rose: {
     card: "border-rose-300/20 bg-rose-400/[0.08]",
-    glow: "shadow-[0_18px_60px_rgba(251,113,133,0.08)]",
     icon: "bg-rose-300/12 text-destructive",
     badge: "border-rose-300/20 bg-rose-300/10 text-destructive",
     text: "text-destructive",
   },
   sky: {
     card: "border-sky-300/20 bg-sky-400/[0.08]",
-    glow: "shadow-[0_18px_60px_rgba(56,189,248,0.08)]",
     icon: "bg-sky-300/12 text-sky-400",
     badge: "border-sky-300/20 bg-sky-300/10 text-sky-400",
     text: "text-sky-400",
   },
   violet: {
     card: "border-teal-300/20 bg-teal-300/[0.08]",
-    glow: "shadow-[0_18px_60px_rgba(45,212,191,0.08)]",
     icon: "bg-teal-300/12 text-primary",
     badge: "border-teal-300/20 bg-teal-300/10 text-primary",
     text: "text-primary",
   },
   zinc: {
     card: "border-border bg-muted/40",
-    glow: "shadow-[0_18px_60px_rgba(255,255,255,0.03)]",
     icon: "bg-muted text-foreground",
     badge: "border-border bg-muted text-muted-foreground",
     text: "text-foreground",
@@ -361,7 +353,7 @@ export function FinancialAiAnalysisCard({ month, isCurrentMonth = true }: { mont
   const scoreLabel = analysis ? getScoreLabel(clamp(Math.round(analysis.score), 0, 100)) : null;
 
   return (
-    <section data-tutorial="financial-copilot" className="mb-6 overflow-hidden rounded-[20px] border border-border bg-card [background-image:radial-gradient(ellipse_80%_60%_at_0%_0%,rgba(45,212,191,0.12),transparent_55%),radial-gradient(ellipse_50%_40%_at_100%_100%,rgba(251,191,36,0.07),transparent_50%),radial-gradient(rgba(45,212,191,0.04)_1px,transparent_1px)] [background-size:auto,auto,18px_18px] shadow-[0_4px_32px_rgba(0,0,0,0.14),0_0_0_1px_rgba(45,212,191,0.06)] sm:mb-8">
+    <section data-tutorial="financial-copilot" className="mb-6 overflow-hidden rounded-[20px] border border-border bg-card [background-image:radial-gradient(ellipse_80%_60%_at_0%_0%,rgba(45,212,191,0.08),transparent_55%),radial-gradient(ellipse_50%_40%_at_100%_100%,rgba(251,191,36,0.05),transparent_50%)] shadow-[0_4px_32px_rgba(0,0,0,0.14),0_0_0_1px_rgba(45,212,191,0.06)] sm:mb-8">
       <div className="px-4 py-3 sm:px-5 sm:py-4">
         <div className="mb-3 flex items-center gap-3">
           <button
@@ -471,7 +463,7 @@ function CollapsedCopilotPreview({
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.28, ease: easeOut }}
       onClick={onOpen}
-      className="w-full rounded-[18px] border border-border/60 bg-muted/20 p-4 text-left transition hover:bg-muted/30"
+      className="w-full rounded-2xl border border-border/60 bg-muted/20 p-4 text-left transition hover:bg-muted/30"
     >
       <div className="grid grid-cols-[1fr_auto] items-start gap-4">
         <div className="min-w-0">
@@ -546,12 +538,12 @@ function FinancialCopilotHero({
   const trendIsPositive = comparison?.available ? comparison.balanceChangeAmount >= 0 : metrics.balance >= 0;
 
   return (
-    <motion.div variants={itemMotion} className="overflow-hidden rounded-[18px] border border-border bg-[radial-gradient(circle_at_15%_0%,rgba(45,212,191,0.10),transparent_50%)] bg-card/50 p-4">
+    <motion.div variants={itemMotion} className="overflow-hidden rounded-2xl border border-border bg-[radial-gradient(circle_at_15%_0%,rgba(45,212,191,0.08),transparent_50%)] bg-card/50 p-4">
       {metrics.currencyScope.mixedCurrencies && (
         <div className="mb-2">
-          <Badge className="border-border bg-muted text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
             {metrics.currencyScope.ignoredCurrencies.join(", ")} separado
-          </Badge>
+          </span>
         </div>
       )}
       <h2 className="max-w-2xl text-balance text-xl font-semibold leading-tight text-foreground sm:text-2xl">
@@ -589,13 +581,12 @@ function InsightCard({ insight, featured }: { insight: NarrativeInsight; feature
     <motion.article
       whileHover={{ y: -2, scale: 1.005 }}
       transition={{ duration: 0.2 }}
-      className={`min-w-0 rounded-[18px] border p-3 ${styles.card} ${styles.glow} ${featured ? "lg:col-span-2" : ""}`}
+      className={`min-w-0 rounded-2xl border p-3 ${styles.card} ${featured ? "lg:col-span-2" : ""}`}
     >
-      <div className="mb-2 flex items-start justify-between gap-2">
+      <div className="mb-2">
         <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${styles.icon}`}>
           <Icon className="h-3.5 w-3.5" aria-hidden="true" />
         </div>
-        <Badge className={`${styles.badge} shrink-0 text-[10px]`}>{insight.priority}</Badge>
       </div>
       <h3 className={`text-balance text-sm font-semibold leading-tight ${styles.text}`}>
         <SensitiveText text={insight.title} />
@@ -624,7 +615,7 @@ function InvisibleExpenses({
   const total = items.reduce((sum, item) => sum + item.total, 0);
 
   return (
-    <motion.section variants={itemMotion} className="rounded-[20px] border border-border bg-muted/40 p-3.5 sm:p-4">
+    <motion.section variants={itemMotion} className="rounded-2xl border border-border bg-muted/40 p-3.5 sm:p-4">
       <div className="mb-2.5 flex items-center justify-between gap-3">
         <SectionHeader eyebrow="Revelador" title="Gastos invisibles" icon={Eye} />
         {items.length > 0 && (
@@ -686,7 +677,7 @@ function InvisibleExpenseRow({
           initial={{ width: 0 }}
           animate={{ width: `${width}%` }}
           transition={{ duration: 0.7, ease: easeOut }}
-          className="h-full rounded-full bg-gradient-to-r from-teal-300 via-sky-300 to-amber-200"
+          className="h-full rounded-full bg-primary/50"
         />
       </div>
     </motion.div>
@@ -702,7 +693,7 @@ function MonthPrediction({ metrics }: { metrics: AiFinancialAnalysisMetrics }) {
   const marginLabel = approximateMoney(projectedSavings, metrics.currency);
 
   return (
-    <motion.section variants={itemMotion} className={`rounded-[20px] border p-4 ${styles.card}`}>
+    <motion.section variants={itemMotion} className={`rounded-2xl border p-4 ${styles.card}`}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <SectionHeader eyebrow="Estimación" title="Si el ritmo se mantiene parecido" icon={Zap} />
@@ -731,7 +722,7 @@ function MonthComparison({ comparison, currency }: { comparison: AiFinancialAnal
   const categoryStories = buildCategoryStories(comparison, currency);
 
   return (
-    <motion.section variants={itemMotion} className="rounded-[20px] border border-border bg-muted/40 p-3.5 sm:p-4">
+    <motion.section variants={itemMotion} className="rounded-2xl border border-border bg-muted/40 p-3.5 sm:p-4">
       <SectionHeader eyebrow="Cambio" title="Contra el mes pasado" icon={CalendarDays} />
       {!comparison.available ? (
         <EmptyMicroState icon={CalendarDays} title="Todavía no hay una base anterior" message="Cuando exista un mes previo comparable, esta sección se vuelve narrativa." />
@@ -805,7 +796,7 @@ function ActionPlan({
           <motion.article
             key={`${item.title}-${index}`}
             whileHover={{ y: -2 }}
-            className="rounded-[18px] border border-border bg-card/45 p-3"
+            className="rounded-2xl border border-border bg-card/45 p-3"
           >
             <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-muted/50 text-foreground">
               {index === 0 ? <Target className="h-4 w-4" aria-hidden="true" /> : index === 1 ? <ShieldCheck className="h-4 w-4" aria-hidden="true" /> : <Wallet className="h-4 w-4" aria-hidden="true" />}
@@ -842,7 +833,7 @@ function CopilotEmptyState({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      className="overflow-hidden rounded-[24px] border border-border bg-card/45 p-4 sm:p-5"
+      className="overflow-hidden rounded-2xl border border-border bg-card/45 p-4 sm:p-5"
     >
       <div className="max-w-2xl">
         <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-muted/50 text-primary">
@@ -875,7 +866,7 @@ function PremiumLoading() {
       exit={{ opacity: 0 }}
       className="space-y-4"
     >
-      <div className="relative overflow-hidden rounded-[24px] border border-border bg-card/45 p-5">
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card/45 p-5">
         <div className="mb-8 flex items-center gap-3">
           <div className="h-11 w-11 animate-pulse rounded-2xl bg-muted" />
           <div className="space-y-2">
@@ -891,7 +882,7 @@ function PremiumLoading() {
       </div>
       <div className="grid gap-3 lg:grid-cols-3">
         {[0, 1, 2].map((item) => (
-          <div key={item} className="h-44 animate-pulse rounded-[22px] border border-border bg-muted/40" />
+          <div key={item} className="h-44 animate-pulse rounded-2xl border border-border bg-muted/40" />
         ))}
       </div>
     </motion.div>

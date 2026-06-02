@@ -42,8 +42,16 @@ export const navItems = [
     shortLabel: "Import",
     icon: ScanLine,
     tier: "core",
-    mobile: "primary",
     awarenessTarget: "smart-import",
+    featured: true,
+  },
+  {
+    href: "/copilot",
+    label: "Copiloto",
+    shortLabel: "Copiloto",
+    icon: BotMessageSquare,
+    tier: "core",
+    mobile: "primary",
     featured: true,
   },
   {
@@ -54,14 +62,6 @@ export const navItems = [
     tier: "core",
     mobile: "primary",
     awarenessTarget: "household",
-  },
-  {
-    href: "/copilot",
-    label: "Copiloto",
-    shortLabel: "Copiloto",
-    icon: BotMessageSquare,
-    tier: "core",
-    featured: true,
   },
   {
     href: "/notifications",
