@@ -96,7 +96,7 @@ export function CopilotClient() {
     <div className="flex h-[calc(100dvh-120px)] flex-col lg:h-[calc(100dvh-68px)]">
       <div className="px-4 pt-4 lg:px-6 lg:pt-6">
         <PageHeader
-          title="Copiloto Financiero"
+          title="Perspectiva"
           description="Hacé preguntas sobre tus finanzas. Respondo usando únicamente tus datos de Meridian."
         />
       </div>

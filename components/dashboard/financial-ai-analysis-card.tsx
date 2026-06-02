@@ -133,7 +133,6 @@ type ApiResponse = {
 };
 
 type InsightTone = "emerald" | "amber" | "rose" | "sky" | "violet" | "zinc";
-type InsightPriority = "Alta" | "Media" | "Suave";
 type IconType = typeof Sparkles;
 
 type NarrativeInsight = {
@@ -142,7 +141,6 @@ type NarrativeInsight = {
   message: string;
   detail: string;
   tone: InsightTone;
-  priority: InsightPriority;
   icon: IconType;
 };
 
@@ -948,7 +946,6 @@ function buildImportantInsights(
         ? primaryAlert.severity === "high" ? "Prioridad alta porque puede cambiar el cierre del mes." : "Conviene mirarlo antes de que se vuelva hábito."
         : primaryAlert.severity === "high" ? "Fue una señal central del cierre mensual." : "Quedó como aprendizaje del período.",
       tone: primaryAlert.severity === "high" ? "rose" : primaryAlert.severity === "medium" ? "amber" : "sky",
-      priority: primaryAlert.severity === "high" ? "Alta" : "Media",
       icon: primaryAlert.severity === "high" ? ShieldAlert : AlertTriangle,
     });
   }
@@ -964,7 +961,6 @@ function buildImportantInsights(
           ? "Es una de las señales más fáciles de optimizar cuando crece sin sentirse."
           : "Sirve como referencia para planificar el próximo período.",
       tone: metrics.mobilityRate >= 18 ? "amber" : "sky",
-      priority: metrics.mobilityRate >= 18 ? "Alta" : "Media",
       icon: Car,
     });
   }
@@ -978,7 +974,6 @@ function buildImportantInsights(
         : `Representó ${formatPercent(topCategory.percentage)} de tus gastos del período.`,
       detail: `${formatMoney(topCategory.total, metrics.currency)} en ${metrics.expensesByCategory.find((category) => category.name === topCategory.name)?.count ?? 0} movimientos.`,
       tone: topCategory.percentage >= 30 ? "amber" : "zinc",
-      priority: topCategory.percentage >= 30 ? "Media" : "Suave",
       icon: CircleDollarSign,
     });
   }
@@ -990,7 +985,6 @@ function buildImportantInsights(
       message: `${comparison.expenseChangeAmount <= 0 ? "Bajaste" : "Subiste"} ${formatMoney(Math.abs(comparison.expenseChangeAmount), metrics.currency)} en gastos mensuales.`,
       detail: `La tasa de ahorro cambió ${formatSignedPercentagePoints(comparison.savingsRateChange)}.`,
       tone: comparison.expenseChangeAmount <= 0 ? "emerald" : "amber",
-      priority: Math.abs(comparison.expenseChangeAmount) > metrics.income * 0.08 ? "Alta" : "Media",
       icon: comparison.expenseChangeAmount <= 0 ? TrendingDown : TrendingUp,
     });
   }
@@ -1002,7 +996,6 @@ function buildImportantInsights(
       message: firstRecommendation.message,
       detail: firstRecommendation.estimatedImpact,
       tone: "violet",
-      priority: "Media",
       icon: Target,
     });
   }
@@ -1014,7 +1007,6 @@ function buildImportantInsights(
       message: bestPositive.message,
       detail: "Señal positiva detectada por tu lectura mensual.",
       tone: "emerald",
-      priority: "Suave",
       icon: BadgeCheck,
     });
   }
@@ -1028,7 +1020,6 @@ function buildImportantInsights(
         ? "Riesgo contextual para monitorear durante el resto del mes."
         : "Riesgo contextual detectado en el cierre del mes.",
       tone: "rose",
-      priority: "Alta",
       icon: ShieldAlert,
     });
   }
@@ -1042,7 +1033,6 @@ function buildImportantInsights(
         ? "Cuando este número sube, el gasto suele sentirse más liviano de lo que realmente es."
         : "Ese peso ayuda a explicar cómo se compuso el gasto final.",
       tone: metrics.creditCardExpenseRate >= 45 ? "rose" : "zinc",
-      priority: metrics.creditCardExpenseRate >= 45 ? "Alta" : "Suave",
       icon: CreditCard,
     });
   }

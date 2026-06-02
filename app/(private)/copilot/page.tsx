@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isCopilotEnabled } from "@/lib/feature-flags";
 import { CopilotClient } from "./copilot-client";
 
-export const metadata = { title: "Copiloto Financiero — Meridian" };
+export const metadata = { title: "Perspectiva — Meridian" };
 
 export default async function CopilotPage() {
   const supabase = await createSupabaseServerClient();
