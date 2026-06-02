@@ -7,30 +7,22 @@ import {
   PremiumCard,
   PremiumCardContent,
 } from "@/components/ui-v2/premium-card";
+import { semanticTones } from "@/lib/design/semantic-tones";
+import type { SemanticTone } from "@/lib/design/semantic-tones";
 import type { DashboardSummary } from "@/app/(private)/dashboard/types";
 
-const insightToneConfig = {
-  default: {
-    shell: "border-sky-500/20 bg-sky-500/10",
-    icon: "bg-sky-500/15 text-sky-400",
-    label: "text-sky-400",
-  },
-  positive: {
-    shell: "border-emerald-500/20 bg-emerald-500/10",
-    icon: "bg-emerald-500/15 text-emerald-400",
-    label: "text-emerald-400",
-  },
-  warning: {
-    shell: "border-amber-500/20 bg-amber-500/10",
-    icon: "bg-amber-500/15 text-amber-400",
-    label: "text-amber-400",
-  },
-  danger: {
-    shell: "border-rose-500/20 bg-rose-500/10",
-    icon: "bg-rose-500/15 text-rose-400",
-    label: "text-rose-400",
-  },
+type SignalTone = "default" | "positive" | "warning" | "danger";
+
+const SIGNAL_TONE_MAP: Record<SignalTone, SemanticTone> = {
+  default: "info",
+  positive: "positive",
+  warning: "warning",
+  danger: "danger",
 };
+
+function signalTone(tone: SignalTone) {
+  return semanticTones[SIGNAL_TONE_MAP[tone]];
+}
 
 export function MonthlySignals({
   insights,
@@ -55,7 +47,7 @@ export function MonthlySignals({
 
   if (!signal) return null;
 
-  const primaryTone = insightToneConfig[signal.tone];
+  const primaryTone = signalTone(signal.tone);
 
   return (
     <PremiumCard className="flex h-full flex-col">
@@ -89,14 +81,14 @@ export function MonthlySignals({
         {secondary.length > 0 && (
           <div className="space-y-1">
             {secondary.slice(0, 2).map((insight) => {
-              const tone = insightToneConfig[insight.tone];
+              const tone = signalTone(insight.tone);
               return (
                 <Link
                   key={`${insight.title}-${insight.href}`}
                   href={insight.href}
                   className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
                 >
-                  <Sparkles className={`h-3 w-3 shrink-0 ${tone.label}`} aria-hidden="true" />
+                  <Sparkles className={`h-3 w-3 shrink-0 ${tone.text}`} aria-hidden="true" />
                   <span className="truncate">{insight.title}</span>
                 </Link>
               );

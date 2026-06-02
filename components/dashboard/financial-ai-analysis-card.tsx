@@ -13,7 +13,6 @@ import {
   ChevronDown,
   CircleDollarSign,
   CreditCard,
-  Eye,
   Loader2,
   Repeat,
   ShieldAlert,
@@ -23,11 +22,12 @@ import {
   TrendingDown,
   TrendingUp,
   Wallet,
-  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SensitiveAmount, SensitiveText } from "@/components/app/sensitive-amount";
 import { captureClientError, trackProductEvent } from "@/lib/observability/client";
+import { semanticTones } from "@/lib/design/semantic-tones";
+import type { SemanticTone } from "@/lib/design/semantic-tones";
 import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse-card";
 
 type AiFinancialAnalysis = {
@@ -166,49 +166,18 @@ const itemMotion: Variants = {
   },
 };
 
-const toneStyles: Record<InsightTone, {
-  card: string;
-  icon: string;
-  badge: string;
-  text: string;
-}> = {
-  emerald: {
-    card: "border-emerald-400/20 bg-emerald-400/[0.07]",
-    icon: "bg-emerald-400/12 text-emerald-400",
-    badge: "border-emerald-300/20 bg-emerald-300/10 text-emerald-400",
-    text: "text-emerald-400",
-  },
-  amber: {
-    card: "border-amber-300/20 bg-amber-300/[0.08]",
-    icon: "bg-amber-300/12 text-amber-500",
-    badge: "border-amber-300/20 bg-amber-300/10 text-amber-500",
-    text: "text-amber-500",
-  },
-  rose: {
-    card: "border-rose-300/20 bg-rose-400/[0.08]",
-    icon: "bg-rose-300/12 text-destructive",
-    badge: "border-rose-300/20 bg-rose-300/10 text-destructive",
-    text: "text-destructive",
-  },
-  sky: {
-    card: "border-sky-300/20 bg-sky-400/[0.08]",
-    icon: "bg-sky-300/12 text-sky-400",
-    badge: "border-sky-300/20 bg-sky-300/10 text-sky-400",
-    text: "text-sky-400",
-  },
-  violet: {
-    card: "border-teal-300/20 bg-teal-300/[0.08]",
-    icon: "bg-teal-300/12 text-primary",
-    badge: "border-teal-300/20 bg-teal-300/10 text-primary",
-    text: "text-primary",
-  },
-  zinc: {
-    card: "border-border bg-muted/40",
-    icon: "bg-muted text-foreground",
-    badge: "border-border bg-muted text-muted-foreground",
-    text: "text-foreground",
-  },
+const INSIGHT_TONE_TO_SEMANTIC: Record<InsightTone, SemanticTone> = {
+  emerald: "positive",
+  amber:   "warning",
+  rose:    "danger",
+  sky:     "info",
+  violet:  "brand",
+  zinc:    "neutral",
 };
+
+function toneStyle(tone: InsightTone) {
+  return semanticTones[INSIGHT_TONE_TO_SEMANTIC[tone]];
+}
 
 export function FinancialAiAnalysisCard({ month, isCurrentMonth = true }: { month: string; isCurrentMonth?: boolean }) {
   const [analysis, setAnalysis] = useState<AiFinancialAnalysis | null>(null);
@@ -452,7 +421,7 @@ function CollapsedCopilotPreview({
   const insights = useMemo(() => buildImportantInsights(analysis, metrics, comparison, isCurrentMonth), [analysis, metrics, comparison, isCurrentMonth]);
   const primaryInsight = insights[0];
   const score = clamp(Math.round(analysis.score), 0, 100);
-  const scoreStyle = toneStyles[getScoreTone(score)];
+  const scoreStyle = toneStyle(getScoreTone(score));
   const scoreLabel = getScoreLabel(score);
 
   return (
@@ -471,7 +440,7 @@ function CollapsedCopilotPreview({
           <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-muted-foreground">{hero.subtitle}</p>
           {primaryInsight && (
             <div className="mt-3 flex min-w-0 items-center gap-2 rounded-lg bg-muted/30 px-2.5 py-2">
-              <primaryInsight.icon className={`h-3.5 w-3.5 shrink-0 ${toneStyles[primaryInsight.tone].text}`} aria-hidden="true" />
+              <primaryInsight.icon className={`h-3.5 w-3.5 shrink-0 ${toneStyle(primaryInsight.tone).text}`} aria-hidden="true" />
               <p className="min-w-0 truncate text-xs text-muted-foreground">
                 <SensitiveText text={primaryInsight.title} />
               </p>
@@ -563,7 +532,7 @@ function FinancialCopilotHero({
 function ImportantInsights({ insights }: { insights: NarrativeInsight[] }) {
   return (
     <motion.section variants={itemMotion} className="space-y-2">
-      <SectionHeader eyebrow="Hoy importa" title="Insights importantes" icon={Sparkles} />
+      <SectionHeader eyebrow="Hoy importa" title="Insights importantes" />
       <div className="grid gap-2 lg:grid-cols-3">
         {insights.map((insight, index) => (
           <InsightCard key={insight.id} insight={insight} featured={index === 0} />
@@ -574,7 +543,7 @@ function ImportantInsights({ insights }: { insights: NarrativeInsight[] }) {
 }
 
 function InsightCard({ insight, featured }: { insight: NarrativeInsight; featured?: boolean }) {
-  const styles = toneStyles[insight.tone];
+  const styles = toneStyle(insight.tone);
   const Icon = insight.icon;
 
   return (
@@ -617,7 +586,7 @@ function InvisibleExpenses({
   return (
     <motion.section variants={itemMotion} className="rounded-2xl border border-border bg-muted/40 p-3.5 sm:p-4">
       <div className="mb-2.5 flex items-center justify-between gap-3">
-        <SectionHeader eyebrow="Revelador" title="Gastos invisibles" icon={Eye} />
+        <SectionHeader eyebrow="Revelador" title="Gastos invisibles" />
         {items.length > 0 && (
           <div className="shrink-0 text-right">
             <p className="text-base font-semibold tabular-nums text-foreground">
@@ -688,7 +657,7 @@ function MonthPrediction({ metrics }: { metrics: AiFinancialAnalysisMetrics }) {
   const projectedSavings = metrics.income - metrics.projectedMonthEndExpense;
   const spendingRatio = percentage(metrics.projectedMonthEndExpense, metrics.income);
   const tone = projectedSavings >= 0 ? "emerald" : "rose";
-  const styles = toneStyles[tone];
+  const styles = toneStyle(tone);
   const estimateLabel = approximateMoney(metrics.projectedMonthEndExpense, metrics.currency);
   const marginLabel = approximateMoney(projectedSavings, metrics.currency);
 
@@ -696,7 +665,7 @@ function MonthPrediction({ metrics }: { metrics: AiFinancialAnalysisMetrics }) {
     <motion.section variants={itemMotion} className={`rounded-2xl border p-4 ${styles.card}`}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <SectionHeader eyebrow="Estimación" title="Si el ritmo se mantiene parecido" icon={Zap} />
+          <SectionHeader eyebrow="Estimación" title="Si el ritmo se mantiene parecido" />
           <p className="mt-3 text-sm leading-6 text-muted-foreground">
             Basado en tu ritmo de gasto actual, podrías cerrar cerca de{" "}
             <span className="font-semibold tabular-nums text-foreground">
@@ -723,7 +692,7 @@ function MonthComparison({ comparison, currency }: { comparison: AiFinancialAnal
 
   return (
     <motion.section variants={itemMotion} className="rounded-2xl border border-border bg-muted/40 p-3.5 sm:p-4">
-      <SectionHeader eyebrow="Cambio" title="Contra el mes pasado" icon={CalendarDays} />
+      <SectionHeader eyebrow="Cambio" title="Contra el mes pasado" />
       {!comparison.available ? (
         <EmptyMicroState icon={CalendarDays} title="Todavía no hay una base anterior" message="Cuando exista un mes previo comparable, esta sección se vuelve narrativa." />
       ) : (
@@ -789,7 +758,6 @@ function ActionPlan({
       <SectionHeader
         eyebrow={isCurrentMonth ? "Próximo paso" : "Para el próximo mes"}
         title={isCurrentMonth ? "Recomendaciones accionables" : "Aprendizajes del mes"}
-        icon={Target}
       />
       <div className="grid gap-2 lg:grid-cols-3">
         {smartRecommendations.map((item, index) => (
@@ -889,20 +857,17 @@ function PremiumLoading() {
   );
 }
 
-function SectionHeader({ eyebrow, title, icon: Icon }: { eyebrow: string; title: string; icon: IconType }) {
+function SectionHeader({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
     <div className="min-w-0">
-      <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        <Icon className="h-3 w-3" aria-hidden="true" />
-        <span>{eyebrow}</span>
-      </div>
+      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{eyebrow}</p>
       <h2 className="text-balance text-base font-semibold leading-tight text-foreground">{title}</h2>
     </div>
   );
 }
 
 function SignalPill({ icon: Icon, label, tone }: { icon: IconType; label: string; tone: InsightTone }) {
-  const styles = toneStyles[tone];
+  const styles = toneStyle(tone);
 
   return (
     <span className={`inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${styles.badge}`}>
@@ -913,7 +878,7 @@ function SignalPill({ icon: Icon, label, tone }: { icon: IconType; label: string
 }
 
 function PredictionChip({ label, value, tone }: { label: string; value: string; tone: InsightTone }) {
-  const styles = toneStyles[tone];
+  const styles = toneStyle(tone);
 
   return (
     <div className={`min-w-0 rounded-xl border p-2.5 ${styles.card}`}>

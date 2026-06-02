@@ -5,15 +5,17 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { captureClientError } from "@/lib/observability/client";
+import { semanticTones } from "@/lib/design/semantic-tones";
+import type { SemanticTone } from "@/lib/design/semantic-tones";
 import { MonthlyCloseSheet } from "./monthly-close-sheet";
 import type { MonthlyCloseData } from "@/app/api/monthly-close/route";
 
-/* ── Tone dot ──────────────────────────────────────────────────────────────── */
+type CloseTone = "positive" | "neutral" | "warning";
 
-const TONE_DOT: Record<string, string> = {
-  positive: "bg-teal-400",
-  neutral: "bg-muted-foreground/60",
-  warning: "bg-amber-400",
+const CLOSE_TONE_MAP: Record<CloseTone, SemanticTone> = {
+  positive: "positive",
+  neutral: "neutral",
+  warning: "warning",
 };
 
 /* ── Preview line ──────────────────────────────────────────────────────────── */
@@ -130,7 +132,7 @@ export function MonthlyCloseCard() {
 
   if (!close) return null;
 
-  const dotClass = TONE_DOT[close.overallTone] ?? "bg-muted-foreground/60";
+  const dotClass = semanticTones[CLOSE_TONE_MAP[close.overallTone as CloseTone] ?? "neutral"].dot;
   const previewText = buildPreviewText(close);
 
   return (

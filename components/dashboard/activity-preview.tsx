@@ -9,7 +9,17 @@ import {
   PremiumCardContent,
 } from "@/components/ui-v2/premium-card";
 import { cn } from "@/lib/utils";
+import { semanticTones } from "@/lib/design/semantic-tones";
+import type { SemanticTone } from "@/lib/design/semantic-tones";
 import type { ActivityPreviewItem } from "@/app/(private)/dashboard/types";
+
+type ActivityTone = "positive" | "warning" | "neutral";
+
+const ACTIVITY_TONE_MAP: Record<ActivityTone, SemanticTone> = {
+  positive: "positive",
+  warning: "warning",
+  neutral: "neutral",
+};
 
 export function ActivityPreview() {
   const [items, setItems] = useState<ActivityPreviewItem[]>([]);
@@ -72,9 +82,7 @@ export function ActivityPreview() {
               <span
                 className={cn(
                   "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg",
-                  item.tone === "positive" && "bg-teal-400/10 text-teal-300",
-                  item.tone === "warning" && "bg-amber-400/10 text-amber-300",
-                  item.tone === "neutral" && "bg-muted/50 text-muted-foreground",
+                  semanticTones[ACTIVITY_TONE_MAP[(item.tone as ActivityTone) ?? "neutral"]].icon,
                 )}
               >
                 <Bell className="h-3 w-3" aria-hidden="true" />
