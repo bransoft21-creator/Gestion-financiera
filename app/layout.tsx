@@ -24,6 +24,7 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Meridian",
     locale: "es_AR",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Meridian — Tu dinero, con perspectiva." }],
   },
 
   twitter: {

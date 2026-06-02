@@ -1,11 +1,14 @@
 import { ImageResponse } from "next/og";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-export const runtime = "edge";
 export const alt = "Meridian — Tu dinero, con perspectiva.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default function OpengraphImage() {
+  const icon = readFileSync(join(process.cwd(), "public/icons/icon-512.png")).toString("base64");
+
   return new ImageResponse(
     (
       <div
@@ -46,32 +49,17 @@ export default function OpengraphImage() {
           }}
         />
 
-        {/* Meridian mark */}
-        <svg width="160" height="160" viewBox="0 0 36 36" fill="none">
-          {/* Glow halo */}
-          <circle cx="18" cy="18" r="6" fill="#14B8A6" opacity="0.18" />
-          {/* Top line */}
-          <path
-            d="M7 13 L29 13"
-            stroke="rgba(255,255,255,0.22)"
-            strokeWidth="1"
-            strokeLinecap="round"
-          />
-          {/* Bottom line */}
-          <path
-            d="M7 23 L29 23"
-            stroke="rgba(255,255,255,0.22)"
-            strokeWidth="1"
-            strokeLinecap="round"
-          />
-          {/* Teal node */}
-          <circle cx="18" cy="18" r="2.5" fill="#14B8A6" />
-        </svg>
+        {/* App icon */}
+        <img
+          alt="Meridian"
+          src={`data:image/png;base64,${icon}`}
+          style={{ width: 144, height: 144, objectFit: "contain" }}
+        />
 
         {/* Wordmark */}
         <div
           style={{
-            marginTop: 20,
+            marginTop: 24,
             fontSize: 72,
             fontWeight: 700,
             color: "#FFFFFF",
