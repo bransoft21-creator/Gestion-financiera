@@ -90,7 +90,6 @@ export type TransactionsClientProps = {
   categories: CategoryOption[];
   sharedHouseholds: SharedHouseholdOption[];
   defaultCurrency?: CurrencyCode;
-  copilotEnabled?: boolean;
 };
 
 export type Filters = {

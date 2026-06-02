@@ -8,7 +8,6 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
-  BotMessageSquare,
   CreditCard,
   Loader2,
   Plus,
@@ -141,7 +140,6 @@ export function TransactionsClient({
   categories,
   sharedHouseholds,
   defaultCurrency = "ARS",
-  copilotEnabled = false,
 }: TransactionsClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -241,12 +239,6 @@ export function TransactionsClient({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [feedTotals, setFeedTotals] = useState<FeedSummary | null>(null);
 
-  // AI explain state
-  const [aiExplain, setAiExplain] = useState<{ loading: boolean; text: string | null; error: string | null }>({
-    loading: false,
-    text: null,
-    error: null,
-  });
 
   const filteredCategories = useMemo(() => {
     return categories.filter((category) => isCategoryAllowedForType(category.type, watchedType));
@@ -424,7 +416,6 @@ export function TransactionsClient({
   function navigatePeriod(newYear: number, newMonth: number) {
     setYear(newYear);
     setMonth(newMonth);
-    setAiExplain({ loading: false, text: null, error: null });
     // Clear manual date overrides when navigating months
     const nextFilters = { ...filtersRef.current, from: "", to: "" };
     setFilters(nextFilters);
@@ -803,30 +794,6 @@ export function TransactionsClient({
       URL.revokeObjectURL(url);
     } catch {
       toast.error("Error de red al exportar.");
-    }
-  }
-
-  async function loadAiExplain() {
-    if (aiExplain.loading) return;
-    setAiExplain({ loading: true, text: null, error: null });
-    try {
-      const response = await fetch("/api/ai/copilot", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: "Resumí los movimientos de este período: qué entró, qué salió, qué categorías predominaron y si hay algo relevante a destacar.",
-          year,
-          month,
-        }),
-      });
-      const payload = (await response.json()) as { data?: { response?: string }; error?: string };
-      if (!response.ok || !payload.data?.response) {
-        setAiExplain({ loading: false, text: null, error: payload.error ?? "No se pudo obtener el análisis." });
-        return;
-      }
-      setAiExplain({ loading: false, text: payload.data.response, error: null });
-    } catch {
-      setAiExplain({ loading: false, text: null, error: "Error de red. Intentá de nuevo." });
     }
   }
 
@@ -1351,57 +1318,6 @@ export function TransactionsClient({
           onPrev={goToPrevMonth}
           onNext={goToNextMonth}
         />
-
-        {/* AI explain section */}
-        {copilotEnabled && (
-          <div className="rounded-[1.25rem] border border-border/50 bg-card/60 p-3.5 sm:p-4">
-            {aiExplain.text ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-primary">
-                    <BotMessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
-                    Análisis del período
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAiExplain({ loading: false, text: null, error: null })}
-                    className="text-[10px] text-muted-foreground hover:text-foreground"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-                <p className="text-xs leading-5 text-muted-foreground">{aiExplain.text}</p>
-              </div>
-            ) : aiExplain.error ? (
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-destructive">{aiExplain.error}</p>
-                <button
-                  type="button"
-                  onClick={() => void loadAiExplain()}
-                  className="shrink-0 text-xs text-primary hover:underline"
-                >
-                  Reintentar
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void loadAiExplain()}
-                disabled={aiExplain.loading}
-                className="flex w-full items-center gap-2.5 text-left"
-              >
-                {aiExplain.loading ? (
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden="true" />
-                ) : (
-                  <BotMessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                )}
-                <span className="text-xs text-muted-foreground">
-                  {aiExplain.loading ? "Analizando movimientos..." : "Explicar este período con IA"}
-                </span>
-              </button>
-            )}
-          </div>
-        )}
 
         <TransactionFilters
           search={search}

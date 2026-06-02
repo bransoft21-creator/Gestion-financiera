@@ -1,13 +1,11 @@
 import { V2PageShell } from "@/components/layout/v2-page-shell";
 import { getCurrentUser } from "@/server/auth/current-user";
-import { isCopilotEnabled } from "@/lib/feature-flags";
 import { getTransactionWorkspace } from "@/server/services/workspace";
 import { TransactionsClient } from "./transactions-client";
 
 export default async function TransactionsPage() {
   const { userProfile } = await getCurrentUser();
   const workspace = await getTransactionWorkspace(userProfile.id);
-  const copilotEnabled = isCopilotEnabled(userProfile.email);
 
   return (
     <V2PageShell
@@ -21,7 +19,6 @@ export default async function TransactionsPage() {
         categories={workspace.categories}
         sharedHouseholds={workspace.sharedHouseholds}
         defaultCurrency={userProfile.currency as "ARS" | "USD"}
-        copilotEnabled={copilotEnabled}
       />
     </V2PageShell>
   );
