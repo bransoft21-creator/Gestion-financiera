@@ -117,7 +117,6 @@ export function DashboardClient() {
   }
 
   function navigateNext() {
-    if (isCurrentMonth) return;
     if (month === 12) { setYear((y) => y + 1); setMonth(1); }
     else setMonth((m) => m + 1);
   }

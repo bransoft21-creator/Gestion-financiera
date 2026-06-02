@@ -113,8 +113,7 @@ export function DashboardHero({
                 <button
                   type="button"
                   onClick={onNextMonth}
-                  disabled={isCurrentMonth}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground disabled:opacity-30"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
                   aria-label="Mes siguiente"
                 >
                   <ChevronRight className="h-4 w-4" aria-hidden="true" />
