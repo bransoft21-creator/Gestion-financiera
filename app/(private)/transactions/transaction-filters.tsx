@@ -5,19 +5,28 @@ import { ActionButton } from "@/components/ui-v2/action-button";
 import { PremiumCard, PremiumCardContent, PremiumCardHeader } from "@/components/ui-v2/premium-card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { compactSelectClass, transactionTypeLabels, transactionTypes } from "./constants";
+import { compactSelectClass, expenseTypeLabels, paymentMethodLabels, transactionTypeLabels, transactionTypes } from "./constants";
 import { Field } from "./field";
-import type { CategoryOption, Filters } from "./types";
+import type { AccountOption, CategoryOption, ExpenseType, Filters, PaymentMethod } from "./types";
+
+const QUICK_TYPES = [
+  { value: "", label: "Todos" },
+  { value: "INCOME", label: "Ingresos" },
+  { value: "EXPENSE", label: "Gastos" },
+  { value: "TRANSFER", label: "Transferencias" },
+] as const;
 
 export function TransactionFilters({
   search,
   filters,
   categories,
+  accounts,
   activeFilterCount,
   isFiltersOpen,
   isLoading,
   onSearchChange,
   onFiltersChange,
+  onQuickTypeChange,
   onToggleFilters,
   onSubmit,
   onClearFilters,
@@ -27,11 +36,13 @@ export function TransactionFilters({
   search: string;
   filters: Filters;
   categories: CategoryOption[];
+  accounts: AccountOption[];
   activeFilterCount: number;
   isFiltersOpen: boolean;
   isLoading: boolean;
   onSearchChange: (value: string) => void;
   onFiltersChange: (filters: Filters) => void;
+  onQuickTypeChange: (type: string) => void;
   onToggleFilters: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   onClearFilters: () => void;
@@ -44,6 +55,25 @@ export function TransactionFilters({
         "bg-muted/[0.06] p-3.5 sm:p-4",
         isFiltersOpen && "border-b border-border/60",
       )}>
+        {/* Quick type chips */}
+        <div className="mb-2.5 flex min-w-0 gap-1.5 overflow-x-auto pb-0.5">
+          {QUICK_TYPES.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onQuickTypeChange(value)}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-1 text-[11px] font-semibold transition",
+                filters.type === value
+                  ? "border-primary/40 bg-primary/15 text-primary"
+                  : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div className="grid min-w-0 gap-2 sm:flex sm:items-center">
           <div className="relative min-w-0 sm:flex-1">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
@@ -84,9 +114,10 @@ export function TransactionFilters({
           </div>
         </div>
       </PremiumCardHeader>
+
       {isFiltersOpen ? (
         <PremiumCardContent className="px-3.5 pb-3.5 pt-3 sm:px-4 sm:pb-4">
-          <form className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-5" onSubmit={onSubmit}>
+          <form className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6" onSubmit={onSubmit}>
             <Field label="Tipo">
               <select
                 className={compactSelectClass}
@@ -97,6 +128,21 @@ export function TransactionFilters({
                 {transactionTypes.map((type) => (
                   <option key={type} value={type}>
                     {transactionTypeLabels[type]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Cuenta">
+              <select
+                className={compactSelectClass}
+                value={filters.accountId}
+                onChange={(event) => onFiltersChange({ ...filters, accountId: event.target.value })}
+              >
+                <option value="">Todas</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name} · {account.currency}
                   </option>
                 ))}
               </select>
@@ -117,6 +163,32 @@ export function TransactionFilters({
               </select>
             </Field>
 
+            <Field label="Tipo de gasto">
+              <select
+                className={compactSelectClass}
+                value={filters.expenseType}
+                onChange={(event) => onFiltersChange({ ...filters, expenseType: event.target.value })}
+              >
+                <option value="">Todos</option>
+                {(Object.keys(expenseTypeLabels) as ExpenseType[]).map((et) => (
+                  <option key={et} value={et}>{expenseTypeLabels[et]}</option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Método de pago">
+              <select
+                className={compactSelectClass}
+                value={filters.paymentMethod}
+                onChange={(event) => onFiltersChange({ ...filters, paymentMethod: event.target.value })}
+              >
+                <option value="">Todos</option>
+                {(Object.keys(paymentMethodLabels) as PaymentMethod[]).map((pm) => (
+                  <option key={pm} value={pm}>{paymentMethodLabels[pm]}</option>
+                ))}
+              </select>
+            </Field>
+
             <Field label="Desde">
               <Input
                 className="h-9 text-base md:text-xs"
@@ -133,6 +205,7 @@ export function TransactionFilters({
                 onChange={(event) => onFiltersChange({ ...filters, to: event.target.value })}
               />
             </Field>
+
             <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-1">
               <ActionButton size="sm" className="flex-1" disabled={isLoading}>
                 {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}

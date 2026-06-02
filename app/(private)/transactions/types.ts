@@ -90,17 +90,22 @@ export type TransactionsClientProps = {
   categories: CategoryOption[];
   sharedHouseholds: SharedHouseholdOption[];
   defaultCurrency?: CurrencyCode;
+  copilotEnabled?: boolean;
 };
 
 export type Filters = {
   type: string;
+  accountId: string;
   categoryId: string;
+  expenseType: string;
+  paymentMethod: string;
   from: string;
   to: string;
 };
 
+export type CurrencyTotals = { income: number; expenses: number };
+
 export type FeedSummary = {
-  income: number;
-  expenses: number;
+  byCurrency: Partial<Record<CurrencyCode, CurrencyTotals>>;
   count: number;
 };

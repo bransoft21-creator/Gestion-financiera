@@ -195,6 +195,8 @@ export async function listTransactions(
     categoryId: input.categoryId,
     type: input.type,
     status: input.status ?? { not: TransactionStatus.CANCELED },
+    expenseType: input.expenseType,
+    paymentMethod: input.paymentMethod,
     deletedAt: null,
     occurredAt: {
       gte: input.from,
@@ -210,6 +212,9 @@ export async function listTransactions(
       : {}),
   };
 
+  const INCOME_TYPES = new Set(["INCOME", "PERSONAL_LOAN_RETURN"]);
+  const EXPENSE_TYPES = new Set(["EXPENSE", "DEBT_PAYMENT", "GOAL_CONTRIBUTION", "INVESTMENT"]);
+
   const [items, groupedTotals] = await Promise.all([
     prisma.transaction.findMany({
       where,
@@ -222,7 +227,7 @@ export async function listTransactions(
     input.cursor
       ? Promise.resolve(null)
       : prisma.transaction.groupBy({
-          by: ["type"],
+          by: ["type", "currency"],
           where,
           _sum: { amount: true },
           _count: { id: true },
@@ -232,16 +237,20 @@ export async function listTransactions(
   const hasMore = items.length > input.limit;
   const data = hasMore ? items.slice(0, input.limit) : items;
 
-  let totals: { income: number; expenses: number; count: number } | null = null;
+  type CurrencyTotals = { income: number; expenses: number };
+  let totals: { byCurrency: Record<string, CurrencyTotals>; count: number } | null = null;
   if (groupedTotals) {
-    let income = 0, expenses = 0, count = 0;
+    let count = 0;
+    const byCurrency: Record<string, CurrencyTotals> = {};
     for (const row of groupedTotals) {
       count += row._count.id;
       const amount = Number(row._sum.amount ?? 0);
-      if (row.type === "INCOME") income += amount;
-      else if (row.type !== "TRANSFER" && row.type !== "CARD_PAYMENT") expenses += amount;
+      const cur = row.currency as string;
+      if (!byCurrency[cur]) byCurrency[cur] = { income: 0, expenses: 0 };
+      if (INCOME_TYPES.has(row.type)) byCurrency[cur].income += amount;
+      else if (EXPENSE_TYPES.has(row.type)) byCurrency[cur].expenses += amount;
     }
-    totals = { income, expenses, count };
+    totals = { byCurrency, count };
   }
 
   return {

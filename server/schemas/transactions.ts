@@ -169,6 +169,8 @@ export const listTransactionsSchema = z
     categoryId: z.string().min(1).optional(),
     type: z.enum(transactionTypeValues).optional(),
     status: z.enum(transactionStatusValues).optional(),
+    expenseType: z.enum(expenseTypeValues).optional(),
+    paymentMethod: z.enum(paymentMethodValues).optional(),
     from: filterDateSchema.optional(),
     to: filterDateSchema.optional(),
     search: z.string().trim().max(100).optional(),

@@ -5,9 +5,10 @@ import { useInvalidateAfterTransaction } from "@/hooks/use-transactions";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
+  BotMessageSquare,
   CreditCard,
   Loader2,
   Plus,
@@ -27,6 +28,7 @@ import { formatArgentinaDateInput } from "@/lib/dates";
 import { onIntegerKeyDown, onMoneyKeyDown } from "@/lib/input-utils";
 import { moneySchema } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { getPeriodStatus } from "@/lib/period-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +43,7 @@ import {
 } from "./constants";
 import { DeleteTransactionDialog } from "./delete-transaction-dialog";
 import { Field } from "./field";
+import { PeriodSelector } from "./period-selector";
 import { SplitEditor } from "./split-editor";
 import { TransactionFilters } from "./transaction-filters";
 import { TransactionList } from "./transaction-list";
@@ -117,14 +120,57 @@ const formSchema = z.object({
   }
 });
 
-export function TransactionsClient({ householdId, accounts, categories, sharedHouseholds, defaultCurrency = "ARS" }: TransactionsClientProps) {
+function getPeriodDateRange(year: number, month: number) {
+  const lastDay = new Date(year, month, 0).getDate();
+  return {
+    from: `${year}-${String(month).padStart(2, "0")}-01`,
+    to: `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`,
+  };
+}
+
+function parsePeriodParam(param: string | null): { year: number; month: number } | null {
+  if (!param) return null;
+  const [y, m] = param.split("-").map(Number);
+  if (!y || !m || m < 1 || m > 12) return null;
+  return { year: y, month: m };
+}
+
+export function TransactionsClient({
+  householdId,
+  accounts,
+  categories,
+  sharedHouseholds,
+  defaultCurrency = "ARS",
+  copilotEnabled = false,
+}: TransactionsClientProps) {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const defaultAccount = getPreferredArsBankAccount(accounts);
+
+  // Period state — initialized from URL ?period=YYYY-MM or current Argentina month
+  const now = new Date();
+  const argentinaDateStr = formatArgentinaDateInput();
+  const [argCurrentYear, argCurrentMonth] = argentinaDateStr.split("-").map(Number);
+  const initialPeriod = parsePeriodParam(searchParams.get("period")) ?? { year: argCurrentYear, month: argCurrentMonth };
+
+  const [year, setYear] = useState(initialPeriod.year);
+  const [month, setMonth] = useState(initialPeriod.month);
+  const yearRef = useRef(year);
+  const monthRef = useRef(month);
+  yearRef.current = year;
+  monthRef.current = month;
+
+  const periodStatus = getPeriodStatus(year, month);
+
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<Filters>({
     type: searchParams.get("type") ?? "",
+    accountId: searchParams.get("accountId") ?? "",
     categoryId: searchParams.get("categoryId") ?? "",
+    expenseType: searchParams.get("expenseType") ?? "",
+    paymentMethod: searchParams.get("paymentMethod") ?? "",
     from: searchParams.get("from") ?? "",
     to: searchParams.get("to") ?? "",
   });
@@ -193,7 +239,14 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [feedTotals, setFeedTotals] = useState<{ income: number; expenses: number; count: number } | null>(null);
+  const [feedTotals, setFeedTotals] = useState<FeedSummary | null>(null);
+
+  // AI explain state
+  const [aiExplain, setAiExplain] = useState<{ loading: boolean; text: string | null; error: string | null }>({
+    loading: false,
+    text: null,
+    error: null,
+  });
 
   const filteredCategories = useMemo(() => {
     return categories.filter((category) => isCategoryAllowedForType(category.type, watchedType));
@@ -257,29 +310,33 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   });
 
   const groupedTransactions = useMemo(() => {
-    return groupTransactionsByDate(transactions);
-  }, [transactions]);
+    return groupTransactionsByDate(transactions, { periodStatus, periodYear: year, periodMonth: month });
+  }, [transactions, periodStatus, year, month]);
 
-  const feedSummary: FeedSummary = feedTotals ?? { income: 0, expenses: 0, count: 0 };
-  const totalAmount = feedTotals ? feedTotals.income - feedTotals.expenses : 0;
-  const activeFilterCount = [filters.type, filters.categoryId, filters.from, filters.to].filter(Boolean).length;
+  const feedSummary: FeedSummary = feedTotals ?? { byCurrency: {}, count: 0 };
+  const activeFilterCount = [
+    filters.type,
+    filters.accountId,
+    filters.categoryId,
+    filters.expenseType,
+    filters.paymentMethod,
+    filters.from || filters.to,
+  ].filter(Boolean).length;
 
   useEffect(() => {
-    void loadTransactions(filters, "");
+    void loadTransactions(filters, "", {}, year, month);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      void loadTransactions(filtersRef.current, search);
+      void loadTransactions(filtersRef.current, search, {}, yearRef.current, monthRef.current);
     }, 350);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
   useEffect(() => {
-    // Only process ?new=1 once on mount to prevent unexpected form resets
-    // when searchParams change due to navigation or URL updates.
     if (searchParams.get("new") === "1") {
       resetForm();
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -292,9 +349,14 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
     nextFilters = filters,
     nextSearch = search,
     options: { append?: boolean; cursor?: string | null } = {},
+    overrideYear?: number,
+    overrideMonth?: number,
   ) {
     const { append = false, cursor = null } = options;
     const requestSeq = ++loadRequestSeqRef.current;
+    const activeYear = overrideYear ?? yearRef.current;
+    const activeMonth = overrideMonth ?? monthRef.current;
+    const periodRange = getPeriodDateRange(activeYear, activeMonth);
 
     if (append) {
       setIsLoadingMore(true);
@@ -309,9 +371,13 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
       const params = new URLSearchParams({ householdId, limit: "50" });
 
       if (nextFilters.type) params.set("type", nextFilters.type);
+      if (nextFilters.accountId) params.set("accountId", nextFilters.accountId);
       if (nextFilters.categoryId) params.set("categoryId", nextFilters.categoryId);
-      if (nextFilters.from) params.set("from", nextFilters.from);
-      if (nextFilters.to) params.set("to", nextFilters.to);
+      if (nextFilters.expenseType) params.set("expenseType", nextFilters.expenseType);
+      if (nextFilters.paymentMethod) params.set("paymentMethod", nextFilters.paymentMethod);
+      // Manual dates override period; otherwise use period range
+      params.set("from", nextFilters.from || periodRange.from);
+      params.set("to", nextFilters.to || periodRange.to);
       if (nextSearch.trim()) params.set("search", nextSearch.trim());
       if (cursor) params.set("cursor", cursor);
 
@@ -321,7 +387,7 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
           data: TransactionItem[];
           hasMore: boolean;
           nextCursor: string | null;
-          totals: { income: number; expenses: number; count: number } | null;
+          totals: { byCurrency: Record<string, { income: number; expenses: number }>; count: number } | null;
         };
         error?: string;
       };
@@ -338,7 +404,10 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
         setHasMore(payload.data.hasMore);
         setNextCursor(payload.data.nextCursor);
         if (!append && payload.data.totals) {
-          setFeedTotals(payload.data.totals);
+          setFeedTotals({
+            byCurrency: payload.data.totals.byCurrency as FeedSummary["byCurrency"],
+            count: payload.data.totals.count,
+          });
         }
       }
     } catch {
@@ -352,9 +421,41 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
     }
   }
 
+  function navigatePeriod(newYear: number, newMonth: number) {
+    setYear(newYear);
+    setMonth(newMonth);
+    setAiExplain({ loading: false, text: null, error: null });
+    // Clear manual date overrides when navigating months
+    const nextFilters = { ...filtersRef.current, from: "", to: "" };
+    setFilters(nextFilters);
+    void loadTransactions(nextFilters, search, {}, newYear, newMonth);
+    // Sync URL
+    const params = new URLSearchParams();
+    params.set("period", `${newYear}-${String(newMonth).padStart(2, "0")}`);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  function goToPrevMonth() {
+    const newMonth = month === 1 ? 12 : month - 1;
+    const newYear = month === 1 ? year - 1 : year;
+    navigatePeriod(newYear, newMonth);
+  }
+
+  function goToNextMonth() {
+    const newMonth = month === 12 ? 1 : month + 1;
+    const newYear = month === 12 ? year + 1 : year;
+    navigatePeriod(newYear, newMonth);
+  }
+
   async function handleFilterSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await loadTransactions(filters, search);
+  }
+
+  function applyQuickType(type: string) {
+    const nextFilters = { ...filtersRef.current, type };
+    setFilters(nextFilters);
+    void loadTransactions(nextFilters, search);
   }
 
   async function onTransactionSubmit(data: Record<string, unknown>) {
@@ -460,7 +561,6 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
           currency: data.currency as CurrencyCode,
           accountId: data.accountId as string,
         });
-        // Keep panel open to show the proposal step
       } else {
         setIsFormOpen(false);
       }
@@ -677,11 +777,15 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
   }
 
   async function exportCsv() {
+    const periodRange = getPeriodDateRange(year, month);
     const params = new URLSearchParams({ householdId });
     if (filters.type) params.set("type", filters.type);
+    if (filters.accountId) params.set("accountId", filters.accountId);
     if (filters.categoryId) params.set("categoryId", filters.categoryId);
-    if (filters.from) params.set("from", filters.from);
-    if (filters.to) params.set("to", filters.to);
+    if (filters.expenseType) params.set("expenseType", filters.expenseType);
+    if (filters.paymentMethod) params.set("paymentMethod", filters.paymentMethod);
+    params.set("from", filters.from || periodRange.from);
+    params.set("to", filters.to || periodRange.to);
     if (search.trim()) params.set("search", search.trim());
 
     try {
@@ -694,11 +798,35 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `transacciones-${new Date().toISOString().slice(0, 10)}.csv`;
+      anchor.download = `transacciones-${year}-${String(month).padStart(2, "0")}.csv`;
       anchor.click();
       URL.revokeObjectURL(url);
     } catch {
       toast.error("Error de red al exportar.");
+    }
+  }
+
+  async function loadAiExplain() {
+    if (aiExplain.loading) return;
+    setAiExplain({ loading: true, text: null, error: null });
+    try {
+      const response = await fetch("/api/ai/copilot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "Resumí los movimientos de este período: qué entró, qué salió, qué categorías predominaron y si hay algo relevante a destacar.",
+          year,
+          month,
+        }),
+      });
+      const payload = (await response.json()) as { data?: { response?: string }; error?: string };
+      if (!response.ok || !payload.data?.response) {
+        setAiExplain({ loading: false, text: null, error: payload.error ?? "No se pudo obtener el análisis." });
+        return;
+      }
+      setAiExplain({ loading: false, text: payload.data.response, error: null });
+    } catch {
+      setAiExplain({ loading: false, text: null, error: "Error de red. Intentá de nuevo." });
     }
   }
 
@@ -1215,19 +1343,81 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
       </AppFormPanel>
 
       <div className="min-w-0 space-y-5 sm:space-y-6">
+        {/* Period selector */}
+        <PeriodSelector
+          year={year}
+          month={month}
+          status={periodStatus}
+          onPrev={goToPrevMonth}
+          onNext={goToNextMonth}
+        />
+
+        {/* AI explain section */}
+        {copilotEnabled && (
+          <div className="rounded-[1.25rem] border border-border/50 bg-card/60 p-3.5 sm:p-4">
+            {aiExplain.text ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                    <BotMessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
+                    Análisis del período
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAiExplain({ loading: false, text: null, error: null })}
+                    className="text-[10px] text-muted-foreground hover:text-foreground"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+                <p className="text-xs leading-5 text-muted-foreground">{aiExplain.text}</p>
+              </div>
+            ) : aiExplain.error ? (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-destructive">{aiExplain.error}</p>
+                <button
+                  type="button"
+                  onClick={() => void loadAiExplain()}
+                  className="shrink-0 text-xs text-primary hover:underline"
+                >
+                  Reintentar
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void loadAiExplain()}
+                disabled={aiExplain.loading}
+                className="flex w-full items-center gap-2.5 text-left"
+              >
+                {aiExplain.loading ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-hidden="true" />
+                ) : (
+                  <BotMessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {aiExplain.loading ? "Analizando movimientos..." : "Explicar este período con IA"}
+                </span>
+              </button>
+            )}
+          </div>
+        )}
+
         <TransactionFilters
           search={search}
           filters={filters}
           categories={categories}
+          accounts={accounts}
           activeFilterCount={activeFilterCount}
           isFiltersOpen={isFiltersOpen}
           isLoading={isLoading}
           onSearchChange={setSearch}
           onFiltersChange={setFilters}
+          onQuickTypeChange={applyQuickType}
           onToggleFilters={() => setIsFiltersOpen((current) => !current)}
           onSubmit={handleFilterSubmit}
           onClearFilters={() => {
-            const nextFilters = { type: "", categoryId: "", from: "", to: "" };
+            const nextFilters: Filters = { type: "", accountId: "", categoryId: "", expenseType: "", paymentMethod: "", from: "", to: "" };
             setFilters(nextFilters);
             void loadTransactions(nextFilters, search, { append: false });
           }}
@@ -1242,7 +1432,6 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
           transactions={transactions}
           isLoading={isLoading}
           search={search}
-          totalAmount={totalAmount}
           feedSummary={feedSummary}
           activeFilterCount={activeFilterCount}
           groupedTransactions={groupedTransactions}
@@ -1250,6 +1439,9 @@ export function TransactionsClient({ householdId, accounts, categories, sharedHo
           deletingTransactionId={deletingTransactionId}
           hasMore={hasMore}
           isLoadingMore={isLoadingMore}
+          periodStatus={periodStatus}
+          periodYear={year}
+          periodMonth={month}
           onCollapseAll={collapseAllGroups}
           onExpandAll={expandAllGroups}
           onToggleGroup={toggleGroup}

@@ -23,8 +23,10 @@ import {
   PremiumCardHeader,
   PremiumCardTitle,
 } from "@/components/ui-v2/premium-card";
+import { cn } from "@/lib/utils";
+import type { PeriodStatus } from "@/lib/period-status";
 import { transactionTypeLabels } from "./constants";
-import type { FeedSummary, TransactionItem, TransactionType } from "./types";
+import type { CurrencyCode, FeedSummary, TransactionItem, TransactionType } from "./types";
 import {
   formatDate,
   formatMoney,
@@ -34,6 +36,19 @@ import {
   getTransactionTone,
   groupTransactionsByDate,
 } from "./utils";
+
+const CURRENCY_ORDER: CurrencyCode[] = ["ARS", "USD"];
+
+const PERIOD_LABELS: Record<PeriodStatus, string> = {
+  OPEN: "en curso",
+  CLOSED: "cerrado",
+  FUTURE: "próximo",
+};
+
+const MONTH_NAMES_SHORT = [
+  "ene", "feb", "mar", "abr", "may", "jun",
+  "jul", "ago", "sep", "oct", "nov", "dic",
+] as const;
 
 const transactionIcons = {
   INCOME: ArrowUpCircle,
@@ -52,7 +67,6 @@ export function TransactionList({
   transactions,
   isLoading,
   search,
-  totalAmount,
   feedSummary,
   activeFilterCount,
   groupedTransactions,
@@ -60,6 +74,9 @@ export function TransactionList({
   deletingTransactionId,
   hasMore,
   isLoadingMore,
+  periodStatus,
+  periodYear,
+  periodMonth,
   onCollapseAll,
   onExpandAll,
   onToggleGroup,
@@ -72,7 +89,6 @@ export function TransactionList({
   transactions: TransactionItem[];
   isLoading: boolean;
   search: string;
-  totalAmount: number;
   feedSummary: FeedSummary;
   activeFilterCount: number;
   groupedTransactions: ReturnType<typeof groupTransactionsByDate>;
@@ -80,6 +96,9 @@ export function TransactionList({
   deletingTransactionId: string | null;
   hasMore: boolean;
   isLoadingMore: boolean;
+  periodStatus?: PeriodStatus;
+  periodYear?: number;
+  periodMonth?: number;
   onCollapseAll: () => void;
   onExpandAll: () => void;
   onToggleGroup: (label: string) => void;
@@ -89,6 +108,12 @@ export function TransactionList({
   onExportCsv: () => void;
   onNew: () => void;
 }) {
+  const currenciesWithData = CURRENCY_ORDER.filter((cur) => feedSummary.byCurrency[cur]);
+  const hasMultiCurrency = currenciesWithData.length > 1;
+  const periodLabel = periodStatus && periodYear && periodMonth
+    ? `${MONTH_NAMES_SHORT[periodMonth - 1]} ${periodYear} · ${PERIOD_LABELS[periodStatus]}`
+    : null;
+
   return (
     <div className="space-y-5 sm:space-y-6">
       <PremiumCard data-tutorial="transactions-feed" className="overflow-hidden rounded-[1.35rem] border-border/70 bg-card/90 shadow-none backdrop-blur-none">
@@ -97,11 +122,10 @@ export function TransactionList({
             <div className="min-w-0">
               <PremiumCardTitle>Movimientos</PremiumCardTitle>
               <PremiumCardDescription>
-                {transactions.length} movimiento{transactions.length !== 1 ? "s" : ""} ·{" "}
-                <SensitiveAmount
-                  value={`${totalAmount >= 0 ? "+" : ""}${formatMoneyBalance(totalAmount)}`}
-                  className={totalAmount >= 0 ? "text-emerald-400" : "text-rose-400"}
-                />
+                {transactions.length} movimiento{transactions.length !== 1 ? "s" : ""}
+                {periodLabel && (
+                  <span className="ml-1.5 text-muted-foreground/60">· {periodLabel}</span>
+                )}
               </PremiumCardDescription>
             </div>
             <div className="flex w-full shrink-0 items-center justify-end gap-1.5 sm:w-auto">
@@ -128,23 +152,41 @@ export function TransactionList({
               </Button>
             </div>
           </div>
+
           {feedSummary.count > 0 && (
-            <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-1 border-t border-border/50 pt-3">
+            <div className="mt-3 space-y-2 border-t border-border/50 pt-3">
               {activeFilterCount > 0 && (
-                <span className="col-span-3 text-[11px] font-semibold text-amber-500">{activeFilterCount} filtros activos</span>
+                <span className="block text-[11px] font-semibold text-amber-500">{activeFilterCount} filtros activos</span>
               )}
-              <span className="min-w-0 text-[11px] text-muted-foreground">
-                <span className="block">Entró</span>
-                <SensitiveAmount value={formatMoneyBalance(feedSummary.income)} className="block truncate font-semibold text-emerald-400" />
-              </span>
-              <span className="min-w-0 text-[11px] text-muted-foreground">
-                <span className="block">Salió</span>
-                <SensitiveAmount value={formatMoneyBalance(feedSummary.expenses)} className="block truncate font-semibold text-rose-400" />
-              </span>
-              <span className="min-w-0 text-[11px] text-muted-foreground">
-                <span className="block">Total</span>
-                <span className="block truncate font-semibold text-foreground tabular-nums">{feedSummary.count}</span>
-              </span>
+              {currenciesWithData.map((cur) => {
+                const t = feedSummary.byCurrency[cur]!;
+                const balance = t.income - t.expenses;
+                return (
+                  <div key={cur} className="grid grid-cols-3 gap-x-3">
+                    {hasMultiCurrency && (
+                      <span className="col-span-3 mb-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{cur}</span>
+                    )}
+                    <span className="min-w-0 text-[11px] text-muted-foreground">
+                      <span className="block">Entró</span>
+                      <SensitiveAmount value={formatMoneyBalance(t.income, cur)} className="block truncate font-semibold text-emerald-400" />
+                    </span>
+                    <span className="min-w-0 text-[11px] text-muted-foreground">
+                      <span className="block">Salió</span>
+                      <SensitiveAmount value={formatMoneyBalance(t.expenses, cur)} className="block truncate font-semibold text-rose-400" />
+                    </span>
+                    <span className="min-w-0 text-[11px] text-muted-foreground">
+                      <span className="block">Balance</span>
+                      <SensitiveAmount
+                        value={`${balance >= 0 ? "+" : ""}${formatMoneyBalance(balance, cur)}`}
+                        className={cn("block truncate font-semibold tabular-nums", balance >= 0 ? "text-emerald-400" : "text-rose-400")}
+                      />
+                    </span>
+                  </div>
+                );
+              })}
+              <p className="text-[10px] text-muted-foreground/50">
+                Transferencias y pagos de tarjeta no se incluyen en los totales.
+              </p>
             </div>
           )}
         </PremiumCardHeader>
@@ -230,7 +272,6 @@ function TransactionsEmptyState({ search, onNew }: { search: string; onNew: () =
     </div>
   );
 }
-
 
 function TransactionGroup({
   group,

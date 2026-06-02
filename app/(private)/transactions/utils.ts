@@ -1,3 +1,4 @@
+import type { PeriodStatus } from "@/lib/period-status";
 import type {
   AccountOption,
   CategoryType,
@@ -7,6 +8,12 @@ import type {
   TransactionType,
 } from "./types";
 import { supportedFormTransactionTypes } from "./constants";
+
+export interface DateGroupContext {
+  periodStatus?: PeriodStatus;
+  periodYear?: number;
+  periodMonth?: number;
+}
 
 export function getPreferredArsBankAccount(accounts: AccountOption[]) {
   return (
@@ -52,11 +59,11 @@ export function optionalPayloadValue(value: unknown, shouldClearWithNull: boolea
   return value === "" || value == null ? (shouldClearWithNull ? null : undefined) : value;
 }
 
-export function groupTransactionsByDate(transactions: TransactionItem[]) {
+export function groupTransactionsByDate(transactions: TransactionItem[], context?: DateGroupContext) {
   const groups = new Map<string, TransactionItem[]>();
 
   transactions.forEach((transaction) => {
-    const label = getDateGroupLabel(transaction.occurredAt);
+    const label = getDateGroupLabel(transaction.occurredAt, context ?? {});
     groups.set(label, [...(groups.get(label) ?? []), transaction]);
   });
 
@@ -67,24 +74,32 @@ export function groupTransactionsByDate(transactions: TransactionItem[]) {
 }
 
 export function buildFeedSummary(transactions: TransactionItem[]): FeedSummary {
-  return transactions.reduce(
-    (summary, transaction) => {
-      const amount = Number(transaction.amount);
-      if (!Number.isFinite(amount)) return summary;
+  const byCurrency: FeedSummary["byCurrency"] = {};
+  let count = 0;
 
-      if (transaction.type === "INCOME" || transaction.type === "PERSONAL_LOAN_RETURN") {
-        summary.income += amount;
-      } else if (transaction.type !== "TRANSFER" && transaction.type !== "PERSONAL_LOAN_GIVEN") {
-        summary.expenses += amount;
-      }
-      summary.count += 1;
-      return summary;
-    },
-    { income: 0, expenses: 0, count: 0 },
-  );
+  for (const transaction of transactions) {
+    const amount = Number(transaction.amount);
+    if (!Number.isFinite(amount)) continue;
+    const cur = transaction.currency;
+    if (!byCurrency[cur]) byCurrency[cur] = { income: 0, expenses: 0 };
+
+    if (transaction.type === "INCOME" || transaction.type === "PERSONAL_LOAN_RETURN") {
+      byCurrency[cur]!.income += amount;
+    } else if (
+      transaction.type === "EXPENSE" ||
+      transaction.type === "DEBT_PAYMENT" ||
+      transaction.type === "GOAL_CONTRIBUTION" ||
+      transaction.type === "INVESTMENT"
+    ) {
+      byCurrency[cur]!.expenses += amount;
+    }
+    count += 1;
+  }
+
+  return { byCurrency, count };
 }
 
-export function getDateGroupLabel(value: string) {
+export function getDateGroupLabel(value: string, context: DateGroupContext = {}): string {
   const [y, m, d] = value.slice(0, 10).split("-").map(Number);
   const date = Date.UTC(y, m - 1, d);
   const now = new Date();
@@ -92,10 +107,41 @@ export function getDateGroupLabel(value: string) {
   const yesterday = today - 86_400_000;
   const weekStart = today - (((now.getDay() + 6) % 7) * 86_400_000);
 
+  const { periodStatus, periodYear, periodMonth } = context;
+
+  // CLOSED period: group all dates within the period by week-of-month
+  if (periodStatus === "CLOSED" && periodYear && periodMonth) {
+    if (y === periodYear && m === periodMonth) {
+      return weekOfMonthLabel(d, y, m);
+    }
+    return monthYearLabel(date);
+  }
+
+  // OPEN or no period: relative labels anchored to today
   if (date === today) return "Hoy";
   if (date === yesterday) return "Ayer";
   if (date >= weekStart && date < yesterday) return "Esta semana";
 
+  // Earlier dates within the current period month: week-of-month
+  if (periodStatus === "OPEN" && periodYear && periodMonth && y === periodYear && m === periodMonth) {
+    return weekOfMonthLabel(d, y, m);
+  }
+
+  return monthYearLabel(date);
+}
+
+function weekOfMonthLabel(day: number, year: number, month: number): string {
+  const weekNum = Math.ceil(day / 7);
+  const weekStart = (weekNum - 1) * 7 + 1;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const weekEnd = Math.min(weekNum * 7, daysInMonth);
+  const monthName = new Intl.DateTimeFormat("es-AR", { month: "short", timeZone: "UTC" }).format(
+    new Date(Date.UTC(year, month - 1, 1)),
+  );
+  return `Semana ${weekNum} · ${weekStart}–${weekEnd} ${monthName}`;
+}
+
+function monthYearLabel(date: number): string {
   return new Intl.DateTimeFormat("es-AR", {
     month: "long",
     year: "numeric",
@@ -179,11 +225,11 @@ export function formatMoney(value: string | number, currency: CurrencyCode) {
   }).format(Number(value));
 }
 
-export function formatMoneyBalance(value: number) {
+export function formatMoneyBalance(value: number, currency: CurrencyCode = "ARS") {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
-    currency: "ARS",
-    maximumFractionDigits: 0,
+    currency,
+    maximumFractionDigits: currency === "ARS" ? 0 : 2,
   }).format(value);
 }
 
