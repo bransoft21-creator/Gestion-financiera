@@ -47,8 +47,8 @@ export const navItems = [
   },
   {
     href: "/copilot",
-    label: "Copiloto",
-    shortLabel: "Copiloto",
+    label: "Perspectiva",
+    shortLabel: "Perspectiva",
     icon: BotMessageSquare,
     tier: "core",
     mobile: "primary",
@@ -60,7 +60,6 @@ export const navItems = [
     shortLabel: "Hogar",
     icon: Home,
     tier: "core",
-    mobile: "primary",
     awarenessTarget: "household",
   },
   {
