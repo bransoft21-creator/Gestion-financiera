@@ -386,13 +386,23 @@ function TransactionCard({
               <Badge className="h-5 shrink-0 border-border bg-secondary px-2 text-[11px] text-muted-foreground line-through">Cancelada</Badge>
             )}
             {transaction.sharedTransaction ? (
-              <span
-                className="inline-flex h-5 shrink-0 cursor-default items-center gap-1 rounded-full border border-teal-500/20 bg-teal-500/10 px-2 text-[11px] text-teal-500"
-                title={`Total del gasto: ${formatMoney(Number(transaction.amount), transaction.currency)} · ${transaction.sharedTransaction.household.name}`}
-              >
-                <Home className="h-3 w-3" aria-hidden="true" />
-                {`Tu parte de ${formatMoney(Number(transaction.amount), transaction.currency)}`}
-              </span>
+              transaction.isHouseholdPayment && transaction.userShareAmount != null ? (
+                <span
+                  className="inline-flex h-5 shrink-0 cursor-default items-center gap-1 rounded-full border border-amber-400/20 bg-amber-400/10 px-2 text-[11px] text-amber-400"
+                  title={`Tu parte: ${formatMoney(Number(transaction.userShareAmount), transaction.currency)} · Total: ${formatMoney(Number(transaction.amount), transaction.currency)} · Pendiente de conciliar en Hogar`}
+                >
+                  <Home className="h-3 w-3" aria-hidden="true" />
+                  Pendiente · {formatMoney(Number(transaction.userShareAmount), transaction.currency)}
+                </span>
+              ) : (
+                <span
+                  className="inline-flex h-5 shrink-0 cursor-default items-center gap-1 rounded-full border border-teal-500/20 bg-teal-500/10 px-2 text-[11px] text-teal-500"
+                  title={transaction.sharedTransaction.household.name}
+                >
+                  <Home className="h-3 w-3" aria-hidden="true" />
+                  Compartido
+                </span>
+              )
             ) : null}
           </div>
         </div>

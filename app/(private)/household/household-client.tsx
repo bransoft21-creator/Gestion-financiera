@@ -209,6 +209,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
           householdId: selectedHousehold.id,
           amount: balance.settlement.amount,
           accountId,
+          creditorUserId: balance.settlement.toUserId,
         }),
       });
       const payload = (await response.json()) as { data?: HouseholdSettlement & { transactionId: string | null }; error?: string };
