@@ -211,7 +211,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
       }
       setSettlementAccountId("");
       trackProductEvent("settlement_created", {}, "household");
-      await Promise.all([loadBalance(selectedHousehold.id), loadSettlements(selectedHousehold.id)]);
+      await Promise.all([loadBalance(selectedHousehold.id), loadSettlements(selectedHousehold.id), loadBriefing(selectedHousehold.id)]);
     } finally {
       setIsSettling(false);
     }
@@ -268,10 +268,16 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
       if (!response.ok) { toast.error(payload.error ?? "No se pudo marcar como pagado."); return; }
 
       const totalPaid = finalAmount ?? payment?.estimatedAmount ?? 0;
-      const memberCount = selectedHousehold.members.filter((m) => m.status === "ACTIVE").length;
-      const userShare = payment?.splitMode === "EQUAL" && memberCount > 1
-        ? totalPaid / memberCount
-        : totalPaid;
+      const actorParticipant = payment?.participants.find((p) => p.userId === paidByUserId);
+      let userShare = totalPaid;
+      if (payment?.splitMode === "EQUAL") {
+        const memberCount = selectedHousehold.members.filter((m) => m.status === "ACTIVE").length + (selectedHousehold.externalParticipants?.length ?? 0);
+        if (memberCount > 1) userShare = totalPaid / memberCount;
+      } else if (payment?.splitMode === "PERCENTAGE" && actorParticipant?.percentage != null) {
+        userShare = totalPaid * (actorParticipant.percentage / 100);
+      } else if (payment?.splitMode === "CUSTOM_AMOUNT" && actorParticipant?.fixedAmount != null) {
+        userShare = actorParticipant.fixedAmount;
+      }
       const excess = Math.round((totalPaid - userShare) * 100) / 100;
       const fmt = (n: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: payment?.currency ?? "ARS", maximumFractionDigits: 0 }).format(n);
 
@@ -862,6 +868,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                     <OneTimeExpenseForm
                       household={selectedHousehold}
                       userAccounts={userAccounts}
+                      currentUserId={currentUserId}
                       onCancel={() => setIsAddingOneTime(false)}
                       onSuccess={({ userShare, totalAmount }) => {
                         const fmt = (n: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
@@ -872,9 +879,11 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                           toast.success("Gasto registrado.");
                         }
                         setIsAddingOneTime(false);
+                        setActiveTab("overview");
                         void Promise.all([
                           loadBalance(selectedHousehold.id),
                           loadBriefing(selectedHousehold.id),
+                          loadSettlements(selectedHousehold.id),
                         ]);
                       }}
                     />

@@ -10,6 +10,7 @@ import type { ExternalParticipant, Household, UserAccount } from "@/app/(private
 type Props = {
   household: Household;
   userAccounts: UserAccount[];
+  currentUserId: string;
   onSuccess: (result: { transactionId: string; userShare: number; totalAmount: number }) => void;
   onCancel: () => void;
 };
@@ -18,7 +19,7 @@ type Participant =
   | { kind: "member"; id: string; name: string }
   | { kind: "external"; id: string; name: string };
 
-export function OneTimeExpenseForm({ household, userAccounts, onSuccess, onCancel }: Props) {
+export function OneTimeExpenseForm({ household, userAccounts, currentUserId, onSuccess, onCancel }: Props) {
   const activeMembers = household.members.filter((m) => m.status === "ACTIVE");
   const externals: ExternalParticipant[] = household.externalParticipants ?? [];
 
@@ -49,6 +50,12 @@ export function OneTimeExpenseForm({ household, userAccounts, onSuccess, onCance
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const totalAmount = Number(form.amount) || 0;
+
+  const splitSum = allParticipants.reduce((acc, p) => acc + (Number(customSplits[p.id]) || 0), 0);
+  const splitValid =
+    form.splitMode === "EQUAL" ||
+    (form.splitMode === "PERCENTAGE" && Math.abs(splitSum - 100) <= 0.5) ||
+    (form.splitMode === "CUSTOM_AMOUNT" && totalAmount > 0 && Math.abs(splitSum - totalAmount) <= 0.5);
 
   function updateSplit(id: string, value: string) {
     setCustomSplits((prev) => ({ ...prev, [id]: value }));
@@ -91,6 +98,11 @@ export function OneTimeExpenseForm({ household, userAccounts, onSuccess, onCance
       let userShare = totalAmount;
       if (form.splitMode === "EQUAL" && allParticipants.length > 1) {
         userShare = totalAmount / allParticipants.length;
+      } else if (form.splitMode === "PERCENTAGE") {
+        const myPct = Number(customSplits[currentUserId] ?? 0);
+        userShare = totalAmount * (myPct / 100);
+      } else if (form.splitMode === "CUSTOM_AMOUNT") {
+        userShare = Number(customSplits[currentUserId] ?? totalAmount);
       }
 
       onSuccess({
@@ -103,7 +115,7 @@ export function OneTimeExpenseForm({ household, userAccounts, onSuccess, onCance
     }
   }
 
-  const canSubmit = form.description.trim().length > 0 && totalAmount > 0 && form.accountId;
+  const canSubmit = form.description.trim().length > 0 && totalAmount > 0 && form.accountId && splitValid;
 
   return (
     <div className="space-y-3 rounded-2xl border border-border bg-muted/30 p-4">
@@ -189,6 +201,13 @@ export function OneTimeExpenseForm({ household, userAccounts, onSuccess, onCance
               </div>
             ))}
           </div>
+          {splitSum > 0 && (
+            <p className={`text-xs ${splitValid ? "text-emerald-400" : "text-rose-400"}`}>
+              {form.splitMode === "PERCENTAGE"
+                ? `Total: ${splitSum.toFixed(1)}% ${splitValid ? "✓" : `— faltan ${(100 - splitSum).toFixed(1)}%`}`
+                : `Total: ${new Intl.NumberFormat("es-AR", { style: "currency", currency: form.currency, maximumFractionDigits: 0 }).format(splitSum)} ${splitValid ? "✓" : `de ${new Intl.NumberFormat("es-AR", { style: "currency", currency: form.currency, maximumFractionDigits: 0 }).format(totalAmount)}`}`}
+            </p>
+          )}
         </div>
       )}
 
