@@ -54,6 +54,7 @@ import type {
   FeedSummary,
   Filters,
   PaymentMethod,
+  SplitMode,
   TransactionItem,
   TransactionType,
   TransactionsClientProps,
@@ -295,6 +296,7 @@ export function TransactionsClient({
     setSplitMode,
     setSplitValues,
     resetSplits,
+    loadFromSharedTransaction,
   } = useTransactionSplits({
     selectedHousehold,
     sharedHouseholdId: watchedSharedHouseholdId,
@@ -667,6 +669,11 @@ export function TransactionsClient({
       isRecurring: transaction.isRecurring,
       sharedHouseholdId: transaction.sharedTransaction?.householdId ?? "",
     });
+
+    if (transaction.sharedTransaction) {
+      const mode = (transaction.sharedTransaction.splitMode as SplitMode) ?? "EQUAL";
+      loadFromSharedTransaction(mode, transaction.sharedTransaction.participants);
+    }
   }
 
   function resetForm() {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SharedHouseholdOption, SplitMode } from "./types";
 
 export function useTransactionSplits({
@@ -14,6 +14,7 @@ export function useTransactionSplits({
 }) {
   const [splitMode, setSplitMode] = useState<SplitMode>("EQUAL");
   const [splitValues, setSplitValues] = useState<Record<string, string>>({});
+  const overrideValuesRef = useRef<Record<string, string> | null>(null);
 
   const splitTotal = useMemo(
     () => Object.values(splitValues).reduce((sum, v) => sum + (parseFloat(v) || 0), 0),
@@ -28,6 +29,14 @@ export function useTransactionSplits({
 
   useEffect(() => {
     if (!selectedHousehold?.members.length || !sharedHouseholdId) return;
+
+    // When loading an existing transaction for editing, use the stored values.
+    if (overrideValuesRef.current !== null) {
+      setSplitValues(overrideValuesRef.current);
+      overrideValuesRef.current = null;
+      return;
+    }
+
     const members = selectedHousehold.members;
     const values: Record<string, string> = {};
     if (splitMode === "PERCENTAGE") {
@@ -47,6 +56,25 @@ export function useTransactionSplits({
   function resetSplits() {
     setSplitMode("EQUAL");
     setSplitValues({});
+    overrideValuesRef.current = null;
+  }
+
+  function loadFromSharedTransaction(
+    mode: SplitMode,
+    participants: Array<{ userId: string | null; percentage: string | null; amount: string }>,
+  ) {
+    const values: Record<string, string> = {};
+    if (mode === "PERCENTAGE") {
+      for (const p of participants) {
+        if (p.userId) values[p.userId] = p.percentage ?? "0";
+      }
+    } else if (mode === "CUSTOM_AMOUNT") {
+      for (const p of participants) {
+        if (p.userId) values[p.userId] = p.amount;
+      }
+    }
+    overrideValuesRef.current = values;
+    setSplitMode(mode);
   }
 
   return {
@@ -57,5 +85,6 @@ export function useTransactionSplits({
     setSplitMode,
     setSplitValues,
     resetSplits,
+    loadFromSharedTransaction,
   };
 }
