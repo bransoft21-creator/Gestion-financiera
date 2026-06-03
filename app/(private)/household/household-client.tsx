@@ -72,6 +72,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
   const [isAddingExternal, setIsAddingExternal] = useState(false);
   const [isDeletingExternal, setIsDeletingExternal] = useState<string | null>(null);
   const [settlementAccountId, setSettlementAccountId] = useState<string>("");
+  const [creditorAccountId, setCreditorAccountId] = useState<string>("");
 
   const selectedHousehold = useMemo(
     () => households.find((h) => h.id === selectedHouseholdId) ?? households[0],
@@ -202,19 +203,28 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
     try {
       const isDebtor = balance.settlement.fromUserId === currentUserId;
       const accountId = isDebtor && settlementAccountId ? settlementAccountId : null;
+      const creditorAccId = !isDebtor && creditorAccountId ? creditorAccountId : null;
       const response = await fetch("/api/households/settlements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ householdId: selectedHousehold.id, amount: balance.settlement.amount, accountId }),
+        body: JSON.stringify({
+          householdId: selectedHousehold.id,
+          amount: balance.settlement.amount,
+          accountId,
+          creditorAccountId: creditorAccId,
+        }),
       });
       const payload = (await response.json()) as { data?: HouseholdSettlement & { transactionId: string | null }; error?: string };
       if (!response.ok || !payload.data) { toast.error(payload.error ?? "No se pudo registrar el equilibrio."); return; }
-      if (payload.data.transactionId) {
+      if (creditorAccId) {
+        toast.success("Hogar equilibrado · Reintegro registrado como ajuste en tu cuenta.");
+      } else if (payload.data.transactionId) {
         toast.success("Hogar equilibrado · Gasto registrado en Movimientos.");
       } else {
         toast.success("Hogar equilibrado.");
       }
       setSettlementAccountId("");
+      setCreditorAccountId("");
       trackProductEvent("settlement_created", {}, "household");
       await Promise.all([loadBalance(selectedHousehold.id), loadSettlements(selectedHousehold.id), loadBriefing(selectedHousehold.id)]);
     } finally {
@@ -627,16 +637,32 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                         <p className="mt-1 text-xs leading-5 text-amber-500/70">
                           Cuando lo compensen fuera de Meridian, registralo acá para reiniciar el balance.
                         </p>
-                        {balance.settlement.fromUserId === currentUserId && userAccounts.length > 0 && (
+                        {balance.settlement.fromUserId === currentUserId && personalAccounts.length > 0 && (
                           <div className="mt-3">
-                            <p className="mb-1.5 text-xs font-medium text-amber-400">¿Desde qué cuenta pagás? (opcional)</p>
+                            <p className="mb-1.5 text-xs font-medium text-amber-400">¿Desde qué cuenta transferís? (opcional)</p>
                             <select
                               className="flex h-9 w-full rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-1.5 text-sm text-amber-100 focus:outline-none"
                               value={settlementAccountId}
                               onChange={(e) => setSettlementAccountId(e.target.value)}
                             >
                               <option value="">Sin registrar en Movimientos</option>
-                              {userAccounts.map((acc) => (
+                              {personalAccounts.map((acc) => (
+                                <option key={acc.id} value={acc.id}>{acc.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        {balance.settlement.toUserId === currentUserId && personalAccounts.length > 0 && (
+                          <div className="mt-3">
+                            <p className="mb-1.5 text-xs font-medium text-amber-400">¿En qué cuenta recibís el reintegro? (opcional)</p>
+                            <p className="mb-1.5 text-[11px] text-amber-500/60">Se registra como ajuste, no como ingreso, para no inflar tus métricas.</p>
+                            <select
+                              className="flex h-9 w-full rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-1.5 text-sm text-amber-100 focus:outline-none"
+                              value={creditorAccountId}
+                              onChange={(e) => setCreditorAccountId(e.target.value)}
+                            >
+                              <option value="">Sin registrar en Movimientos</option>
+                              {personalAccounts.map((acc) => (
                                 <option key={acc.id} value={acc.id}>{acc.name}</option>
                               ))}
                             </select>

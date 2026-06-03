@@ -34,8 +34,9 @@ export async function POST(request: NextRequest) {
       notes: input.notes,
     });
 
-    // If the caller provided an account, create an EXPENSE so the payment
-    // shows up in their personal Movimientos.
+    // If the debtor provided their account: create EXPENSE (money leaves their account).
+    // If the creditor provided their account: create ADJUSTMENT so the received transfer
+    // doesn't inflate income metrics — it's a reimbursement, not earned income.
     let transactionId: string | null = null;
     if (input.accountId) {
       const account = await prisma.account.findFirst({
@@ -58,6 +59,28 @@ export async function POST(request: NextRequest) {
         occurredAt: new Date(),
       });
       transactionId = tx.id;
+    }
+
+    if (input.creditorAccountId) {
+      const account = await prisma.account.findFirst({
+        where: { id: input.creditorAccountId, deletedAt: null },
+        select: { householdId: true, currency: true },
+      });
+      if (!account) throw new NotFoundError("Cuenta del acreedor no encontrada.");
+
+      await createTransaction(userProfile.id, {
+        householdId: account.householdId,
+        accountId: input.creditorAccountId,
+        type: "ADJUSTMENT",
+        status: "CONFIRMED",
+        currency: account.currency,
+        amount: input.amount,
+        description: "Reintegro de hogar",
+        origin: "MANUAL",
+        isInstallment: false,
+        isRecurring: false,
+        occurredAt: new Date(),
+      });
     }
 
     return created({ ...settlement, transactionId });
