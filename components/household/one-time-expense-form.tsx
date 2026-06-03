@@ -145,7 +145,7 @@ export function OneTimeExpenseForm({ household, userAccounts, onSuccess, onCance
           >
             {userAccounts.map((acc) => (
               <option key={acc.id} value={acc.id}>
-                {acc.name}
+                {acc.name}{acc.householdName ? ` — ${acc.householdName}` : ""}
               </option>
             ))}
           </select>
