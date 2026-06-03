@@ -209,15 +209,14 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
           householdId: selectedHousehold.id,
           amount: balance.settlement.amount,
           accountId,
-          creditorUserId: balance.settlement.toUserId,
         }),
       });
       const payload = (await response.json()) as { data?: HouseholdSettlement & { transactionId: string | null }; error?: string };
       if (!response.ok || !payload.data) { toast.error(payload.error ?? "No se pudo registrar el equilibrio."); return; }
       if (payload.data.transactionId) {
-        toast.success("Hogar equilibrado · Pago registrado en Movimientos.");
+        toast.success("Hogar equilibrado · Gasto registrado en Movimientos.");
       } else {
-        toast.success("Hogar equilibrado · Reintegros ajustados en Movimientos.");
+        toast.success("Hogar equilibrado.");
       }
       setSettlementAccountId("");
       trackProductEvent("settlement_created", {}, "household");
@@ -646,11 +645,6 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                               ))}
                             </select>
                           </div>
-                        )}
-                        {balance.settlement.toUserId === currentUserId && (
-                          <p className="mt-2 text-[11px] leading-4 text-amber-500/60">
-                            Al equilibrar, Meridian ajustará automáticamente tus gastos compartidos en Movimientos para reflejar solo tu parte real.
-                          </p>
                         )}
                         <Button
                           className="mt-3 w-full border-amber-300/20 bg-amber-300/15 text-amber-50 hover:bg-amber-300/25"

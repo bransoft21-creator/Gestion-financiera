@@ -386,10 +386,13 @@ function TransactionCard({
               <Badge className="h-5 shrink-0 border-border bg-secondary px-2 text-[11px] text-muted-foreground line-through">Cancelada</Badge>
             )}
             {transaction.sharedTransaction ? (
-              <Badge className="h-5 shrink-0 border-teal-500/20 bg-teal-500/10 px-2 text-[11px] text-teal-500">
-                <Home className="mr-1 h-3 w-3" aria-hidden="true" />
-                {transaction.sharedTransaction.household.name}
-              </Badge>
+              <span
+                className="inline-flex h-5 shrink-0 cursor-default items-center gap-1 rounded-full border border-teal-500/20 bg-teal-500/10 px-2 text-[11px] text-teal-500"
+                title={`Total del gasto: ${formatMoney(Number(transaction.amount), transaction.currency)} · ${transaction.sharedTransaction.household.name}`}
+              >
+                <Home className="h-3 w-3" aria-hidden="true" />
+                {`Tu parte de ${formatMoney(Number(transaction.amount), transaction.currency)}`}
+              </span>
             ) : null}
           </div>
         </div>

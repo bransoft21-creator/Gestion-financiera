@@ -174,17 +174,22 @@ export function getTransactionTone(type: TransactionType) {
 }
 
 export function getSignedAmount(transaction: TransactionItem) {
-  const amount = Number(transaction.amount);
-  if (!Number.isFinite(amount)) return 0;
+  const raw = transaction.isHouseholdPayment && transaction.userShareAmount != null
+    ? Number(transaction.userShareAmount)
+    : Number(transaction.amount);
+  const amount = Number.isFinite(raw) ? raw : 0;
   if (transaction.type === "INCOME" || transaction.type === "PERSONAL_LOAN_RETURN") return amount;
   if (transaction.type === "TRANSFER" || transaction.type === "CARD_PAYMENT" || transaction.type === "PERSONAL_LOAN_GIVEN") return 0;
   return -amount;
 }
 
 export function getDisplayAmount(transaction: TransactionItem) {
+  if (transaction.isHouseholdPayment && transaction.userShareAmount != null) {
+    const share = Number(transaction.userShareAmount);
+    return Number.isFinite(share) ? share : 0;
+  }
   const amount = Number(transaction.amount);
-  if (!Number.isFinite(amount)) return 0;
-  return amount;
+  return Number.isFinite(amount) ? amount : 0;
 }
 
 export function isCategoryAllowedForType(categoryType: CategoryType, transactionType: TransactionType) {

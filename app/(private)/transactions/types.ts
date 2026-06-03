@@ -38,6 +38,8 @@ export type TransactionItem = {
   status: TransactionStatus;
   currency: CurrencyCode;
   amount: string;
+  userShareAmount: string | null;
+  isHouseholdPayment: boolean;
   description: string | null;
   notes: string | null;
   expenseType: ExpenseType | null;
@@ -63,11 +65,18 @@ export type TransactionItem = {
   sharedTransaction: {
     id: string;
     householdId: string;
+    splitMode: string;
     household: {
       id: string;
       name: string;
       avatar: string | null;
     };
+    participants: Array<{
+      userId: string | null;
+      amount: string;
+      percentage: string | null;
+      status: string;
+    }>;
   } | null;
 };
 
