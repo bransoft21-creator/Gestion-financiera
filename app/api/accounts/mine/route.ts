@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         isArchived: false,
         deletedAt: null,
       },
-      orderBy: [{ type: "asc" }, { name: "asc" }],
+      orderBy: [{ type: "asc" }, { name: "asc" }, { currentBalance: "desc" }],
       select: {
         id: true,
         householdId: true,
@@ -47,8 +47,17 @@ export async function GET(request: NextRequest) {
 
     const householdMap = new Map(memberships.map((m) => [m.householdId, m.household]));
 
+    // Deduplicate by name+currency keeping the account with the highest balance.
+    const seen = new Set<string>();
+    const deduped = accounts.filter((a) => {
+      const key = `${a.name}__${a.currency}__${a.householdId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
     return ok(
-      accounts.map((a) => ({
+      deduped.map((a) => ({
         ...a,
         currentBalance: Number(a.currentBalance),
         householdName: householdMap.get(a.householdId)?.name,
