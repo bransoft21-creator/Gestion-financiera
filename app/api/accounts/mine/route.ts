@@ -1,19 +1,24 @@
+import { NextRequest } from "next/server";
 import { handleApiError, ok } from "@/server/api/http";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const { userProfile } = await getCurrentUser();
+    const onlyPersonal = request.nextUrl.searchParams.get("onlyPersonal") === "1";
 
     const memberships = await prisma.householdMember.findMany({
       where: {
         userProfileId: userProfile.id,
         status: "ACTIVE",
         deletedAt: null,
-        household: { deletedAt: null },
+        household: {
+          deletedAt: null,
+          ...(onlyPersonal ? { kind: "PERSONAL" } : {}),
+        },
       },
       select: {
         householdId: true,

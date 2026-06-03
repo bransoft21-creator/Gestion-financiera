@@ -241,7 +241,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
   }
 
   async function loadUserAccounts() {
-    const response = await fetch("/api/accounts/mine");
+    const response = await fetch("/api/accounts/mine?onlyPersonal=1");
     const payload = (await response.json()) as { data?: UserAccount[]; error?: string };
     if (response.ok && payload.data) setUserAccounts(payload.data);
   }
