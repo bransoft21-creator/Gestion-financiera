@@ -704,9 +704,11 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                               )}
                             </div>
                             <p className={`mt-1.5 text-base font-bold ${member.balance >= 0 ? "text-emerald-200" : "text-amber-200"}`}>
-                              <SensitiveAmount value={formatMoney(Math.abs(member.balance), "ARS")} />
+                              <SensitiveAmount value={`${member.balance >= 0 ? "+" : "-"}${formatMoney(Math.abs(member.balance), "ARS")}`} />
                             </p>
-                            <p className="text-xs text-muted-foreground">{member.balance >= 0 ? "aportó más al hogar" : "queda por compensar"}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {member.balance > 0 ? "saldo a favor · le deben" : member.balance < 0 ? "saldo a pagar · debe" : "al día"}
+                            </p>
                           </div>
                         ))}
                       </div>
@@ -757,14 +759,26 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                       <div className="space-y-1.5">
                         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Últimos gastos compartidos</p>
                         {balance.recentSharedTransactions.slice(0, 3).map((tx) => (
-                          <div key={tx.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-muted/30 p-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-foreground">{tx.description ?? "Gasto compartido"}</p>
-                              <p className="truncate text-xs text-muted-foreground">Pagó {tx.paidByName}</p>
+                          <div key={tx.id} className="rounded-2xl border border-border bg-muted/30 p-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-foreground">{tx.description ?? "Gasto compartido"}</p>
+                                <p className="truncate text-xs text-muted-foreground">Pagó {tx.paidByName} · total <SensitiveAmount value={formatMoney(tx.amount, tx.currency)} /></p>
+                              </div>
                             </div>
-                            <p className="shrink-0 text-sm font-bold text-foreground">
-                              <SensitiveAmount value={formatMoney(tx.amount, tx.currency)} />
-                            </p>
+                            {tx.participants.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                                {tx.participants.map((p) => {
+                                  const memberName = balance.members.find((m) => m.userId === p.userId)?.name ?? p.name ?? p.userId;
+                                  const isMe = p.userId === currentUserId;
+                                  return (
+                                    <span key={p.userId} className={`text-xs ${isMe ? "font-semibold text-primary" : "text-muted-foreground"}`}>
+                                      {isMe ? "Vos" : memberName}: <SensitiveAmount value={formatMoney(p.amount, tx.currency)} />
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         ))}
                         <Button asChild variant="ghost" size="sm" className="w-full text-muted-foreground">

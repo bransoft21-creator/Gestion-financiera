@@ -372,8 +372,14 @@ export async function getHouseholdBalance(userProfileId: string, householdId: st
       amount: Number(shared.transaction.amount),
       currency: shared.transaction.currency,
       occurredAt: shared.transaction.occurredAt,
+      paidByUserId: shared.paidByUserId,
       paidByName: shared.paidBy.fullName ?? shared.paidBy.email,
       participantCount: shared.participants.length,
+      participants: shared.participants.map((p) => ({
+        userId: p.userId ?? `ext:${p.externalParticipantId}`,
+        name: p.externalParticipant?.name ?? null,
+        amount: Number(p.amount),
+      })),
     })),
   };
 }

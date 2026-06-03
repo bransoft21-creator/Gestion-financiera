@@ -52,8 +52,10 @@ export type HouseholdBalance = {
     amount: number;
     currency: "ARS" | "USD";
     occurredAt: string;
+    paidByUserId: string;
     paidByName: string;
     participantCount: number;
+    participants: Array<{ userId: string; name: string | null; amount: number }>;
   }>;
 };
 
