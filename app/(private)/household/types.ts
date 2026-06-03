@@ -120,6 +120,7 @@ export type UserAccount = {
   id: string;
   householdId: string;
   householdName: string | undefined;
+  householdKind: string | undefined;
   name: string;
   type: string;
   currency: "ARS" | "USD";

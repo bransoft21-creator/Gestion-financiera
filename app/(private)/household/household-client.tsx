@@ -78,6 +78,11 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
     [households, selectedHouseholdId],
   );
 
+  const personalAccounts = useMemo(
+    () => userAccounts.filter((a) => a.householdKind === "PERSONAL"),
+    [userAccounts],
+  );
+
   const currentMonthLabel = useMemo(
     () =>
       new Intl.DateTimeFormat("es-AR", {
@@ -867,7 +872,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                   {isAddingOneTime && selectedHousehold ? (
                     <OneTimeExpenseForm
                       household={selectedHousehold}
-                      userAccounts={userAccounts}
+                      userAccounts={personalAccounts.length > 0 ? personalAccounts : userAccounts}
                       currentUserId={currentUserId}
                       onCancel={() => setIsAddingOneTime(false)}
                       onSuccess={({ userShare, totalAmount }) => {

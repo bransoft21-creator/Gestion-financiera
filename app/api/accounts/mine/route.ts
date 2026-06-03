@@ -47,6 +47,7 @@ export async function GET() {
         ...a,
         currentBalance: Number(a.currentBalance),
         householdName: householdMap.get(a.householdId)?.name,
+        householdKind: householdMap.get(a.householdId)?.kind,
       })),
     );
   } catch (error) {
