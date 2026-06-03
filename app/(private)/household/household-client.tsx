@@ -71,6 +71,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
   const [extEmail, setExtEmail] = useState("");
   const [isAddingExternal, setIsAddingExternal] = useState(false);
   const [isDeletingExternal, setIsDeletingExternal] = useState<string | null>(null);
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
   const [settlementAccountId, setSettlementAccountId] = useState<string>("");
 
   const selectedHousehold = useMemo(
@@ -385,6 +386,23 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
     }
   }
 
+  async function removeMember(memberId: string) {
+    if (!selectedHousehold || !window.confirm("¿Seguro que querés quitar a este integrante del hogar?")) return;
+    setRemovingMemberId(memberId);
+    try {
+      const response = await fetch(`/api/households/members/${memberId}`, { method: "DELETE" });
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        toast.error(payload.error ?? "No se pudo quitar al integrante.");
+        return;
+      }
+      toast.success("Integrante quitado del hogar.");
+      await reloadHouseholds(selectedHousehold.id);
+    } finally {
+      setRemovingMemberId(null);
+    }
+  }
+
   async function removeExternalParticipant(participantId: string) {
     if (!selectedHousehold) return;
     setIsDeletingExternal(participantId);
@@ -598,6 +616,21 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                           <CardDescription>Desde el último equilibrio, {formatDate(balance.lastSettledAt)}</CardDescription>
                         ) : null}
                       </div>
+                      {balance?.settlement && balance.settlement.toUserId === currentUserId ? (
+                        <div className="flex flex-col items-end">
+                          <span className="text-xs text-muted-foreground">A recuperar</span>
+                          <span className="text-sm font-bold text-teal-400">
+                            <SensitiveAmount value={formatMoney(balance.settlement.amount, "ARS")} />
+                          </span>
+                        </div>
+                      ) : balance?.settlement && balance.settlement.fromUserId === currentUserId ? (
+                        <div className="flex flex-col items-end">
+                          <span className="text-xs text-muted-foreground">Debés</span>
+                          <span className="text-sm font-bold text-amber-400">
+                            <SensitiveAmount value={formatMoney(balance.settlement.amount, "ARS")} />
+                          </span>
+                        </div>
+                      ) : null}
                       {/* Overdue payments alert chip */}
                       {recurringPayments && recurringPayments.overdueCount > 0 ? (
                         <button
@@ -1142,12 +1175,23 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-teal-300/15 text-sm font-bold text-primary">
                           {(member.userProfile.fullName ?? member.userProfile.email).charAt(0).toUpperCase()}
                         </span>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold text-foreground">
                             {member.userProfile.fullName ?? member.userProfile.email}
                           </p>
-                          <p className="truncate text-xs text-muted-foreground">{member.userProfile.email}</p>
+                          <p className="truncate text-xs text-muted-foreground">{member.role === "OWNER" ? "Creador" : "Miembro"}</p>
                         </div>
+                        {member.userProfileId !== currentUserId && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                            disabled={removingMemberId === member.id}
+                            onClick={() => void removeMember(member.id)}
+                          >
+                            {removingMemberId === member.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>
