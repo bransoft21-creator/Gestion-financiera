@@ -157,7 +157,7 @@ export function OneTimeExpenseForm({ household, userAccounts, currentUserId, onS
           >
             {userAccounts.map((acc) => (
               <option key={acc.id} value={acc.id}>
-                {acc.name}{acc.householdName ? ` — ${acc.householdName}` : ""}
+                {acc.name} · {new Intl.NumberFormat("es-AR", { style: "currency", currency: acc.currency, maximumFractionDigits: 0 }).format(acc.currentBalance)}
               </option>
             ))}
           </select>

@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
         deletedAt: null,
         household: {
           deletedAt: null,
-          ...(onlyPersonal ? { kind: "PERSONAL" } : {}),
+          ...(onlyPersonal ? { kind: "PERSONAL", createdById: userProfile.id } : {}),
         },
       },
       select: {
