@@ -877,7 +877,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                   {isAddingOneTime && selectedHousehold ? (
                     <OneTimeExpenseForm
                       household={selectedHousehold}
-                      userAccounts={personalAccounts.length > 0 ? personalAccounts : userAccounts}
+                      userAccounts={userAccounts}
                       currentUserId={currentUserId}
                       onCancel={() => setIsAddingOneTime(false)}
                       onSuccess={({ userShare, totalAmount }) => {
