@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { invalidateFinancialData } from "@/lib/invalidate";
 import { HelpCircle, Repeat, ShoppingCart, Zap } from "lucide-react";
@@ -46,6 +46,15 @@ export function ExpenseTypeBreakdown({
   const queryClient = useQueryClient();
   const [openGroup, setOpenGroup] = useState<DrilldownGroup | null>(null);
   const didReclassify = useRef(false);
+
+  // Invalidate on unmount (e.g. user navigates to data-quality without closing the sheet).
+  useEffect(() => {
+    return () => {
+      if (didReclassify.current) {
+        invalidateFinancialData(queryClient, "transactionChanged");
+      }
+    };
+  }, [queryClient]);
 
   function handleClose() {
     if (didReclassify.current) {

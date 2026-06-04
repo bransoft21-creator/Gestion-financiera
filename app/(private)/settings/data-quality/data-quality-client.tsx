@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateFinancialData } from "@/lib/invalidate";
 import {
   Archive,
   ArrowRight,
@@ -136,6 +138,7 @@ export function DataQualityClient({
   initialMerchants,
   categories,
 }: Props) {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>("uncategorized");
   const [signals, setSignals] = useState(initialSignals);
   const [merchantRows] = useState(initialMerchants);
@@ -182,6 +185,7 @@ export function DataQualityClient({
       setUncatRows((rows) => rows.filter((row) => row.id !== transactionId));
       setUncatSelected((s) => { const ns = new Set(s); ns.delete(transactionId); return ns; });
       setSignals((s) => ({ ...s, uncategorizedCount: Math.max(0, s.uncategorizedCount - 1) }));
+      invalidateFinancialData(queryClient, "transactionChanged");
       toast.success("Categoría asignada");
     } catch {
       toast.error("No se pudo guardar. Intentá de nuevo.");
@@ -206,6 +210,7 @@ export function DataQualityClient({
       setSignals((s) => ({ ...s, uncategorizedCount: Math.max(0, s.uncategorizedCount - count) }));
       setUncatSelected(new Set());
       setBulkCategoryId("");
+      invalidateFinancialData(queryClient, "transactionChanged");
       toast.success(`${count} movimiento${count !== 1 ? "s" : ""} categorizados`);
     } catch {
       toast.error("No se pudo aplicar. Intentá de nuevo.");
@@ -228,6 +233,7 @@ export function DataQualityClient({
       const count = (json.data?.updated ?? 0);
       setFreqRows((rows) => rows.filter((row) => row.key !== key));
       setSignals((s) => ({ ...s, uncategorizedCount: Math.max(0, s.uncategorizedCount - count), frequentGroupCount: Math.max(0, s.frequentGroupCount - 1) }));
+      invalidateFinancialData(queryClient, "transactionChanged");
       toast.success(`${count} movimiento${count !== 1 ? "s" : ""} categorizados`);
     } catch {
       toast.error("No se pudo aplicar. Intentá de nuevo.");
