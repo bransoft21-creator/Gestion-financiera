@@ -123,9 +123,9 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
       actionLabel = "Ver gastos";
       actionKind = "expenses";
     } else if (settlementAmount > 0) {
-      statusLabel = "Falta equilibrar";
+      statusLabel = "Saldo por coordinar";
       statusTone = "text-amber-300";
-      actionLabel = "Liquidar";
+      actionLabel = "Coordinar";
       actionKind = "settlement";
     } else if (projectedCost > 0) {
       statusLabel = "Al día";
@@ -267,9 +267,9 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
       const payload = (await response.json()) as { data?: HouseholdSettlement & { transactionId: string | null }; error?: string };
       if (!response.ok || !payload.data) { toast.error(payload.error ?? "No se pudo registrar el equilibrio."); return; }
       if (payload.data.transactionId) {
-        toast.success("Hogar equilibrado · Gasto registrado en Movimientos.");
+        toast.success("Balance del hogar actualizado · Movimiento registrado.");
       } else {
-        toast.success("Hogar equilibrado.");
+        toast.success("Balance del hogar actualizado.");
       }
       setSettlementAccountId("");
       trackProductEvent("settlement_created", {}, "household");
@@ -344,7 +344,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
       const fmt = (n: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: payment?.currency ?? "ARS", maximumFractionDigits: 0 }).format(n);
 
       if (excess > 0) {
-        toast.success(`Pago registrado · tu parte ${fmt(userShare)} · ${fmt(excess)} a recuperar`);
+        toast.success(`Pago registrado · tu parte ${fmt(userShare)} · ${fmt(excess)} queda en el balance del hogar`);
       } else {
         toast.success("Pago registrado.");
       }
@@ -623,7 +623,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                   </div>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     {financialSummary.topPayerName
-                      ? `${financialSummary.topPayerName} cubrió más gastos compartidos este mes.`
+                      ? "Hay movimientos compartidos registrados este mes."
                       : financialSummary.projectedCost > 0
                       ? "Costo pagado más compromisos pendientes del mes."
                       : "Todavía no hay gastos ni compromisos registrados este mes."}
@@ -663,7 +663,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                   </p>
                 </div>
                 <div className="rounded-xl border border-border bg-background/35 p-3">
-                  <p className="text-xs text-muted-foreground">A equilibrar</p>
+                  <p className="text-xs text-muted-foreground">Por coordinar</p>
                   <p className={`mt-1 text-base font-bold ${financialSummary.settlementAmount > 0 ? "text-amber-200" : "text-emerald-200"}`}>
                     <SensitiveAmount value={formatMoney(financialSummary.settlementAmount, financialSummary.currency)} />
                   </p>
@@ -736,14 +736,14 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                       </div>
                       {balance?.settlement && balance.settlement.toUserId === currentUserId ? (
                         <div className="flex flex-col items-end">
-                          <span className="text-xs text-muted-foreground">A recuperar</span>
+                          <span className="text-xs text-muted-foreground">Saldo a favor</span>
                           <span className="text-sm font-bold text-teal-400">
                             <SensitiveAmount value={formatMoney(balance.settlement.amount, "ARS")} />
                           </span>
                         </div>
                       ) : balance?.settlement && balance.settlement.fromUserId === currentUserId ? (
                         <div className="flex flex-col items-end">
-                          <span className="text-xs text-muted-foreground">Debés</span>
+                          <span className="text-xs text-muted-foreground">Saldo pendiente</span>
                           <span className="text-sm font-bold text-amber-400">
                             <SensitiveAmount value={formatMoney(balance.settlement.amount, "ARS")} />
                           </span>
@@ -776,12 +776,11 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                     {balance?.settlement ? (
                       <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4">
                         <p className="text-sm font-semibold text-amber-500">
-                          {balance.settlement.fromName} le debe{" "}
-                          <SensitiveAmount value={formatMoney(balance.settlement.amount, "ARS")} />{" "}
-                          a {balance.settlement.toName}.
+                          Saldo del hogar por coordinar:{" "}
+                          <SensitiveAmount value={formatMoney(balance.settlement.amount, "ARS")} />.
                         </p>
                         <p className="mt-1 text-xs leading-5 text-amber-500/70">
-                          Cuando lo compensen fuera de Meridian, registralo acá para reiniciar el balance.
+                          Meridian sugiere una compensación entre {balance.settlement.fromName} y {balance.settlement.toName}. Cuando la resuelvan, registrala acá para reiniciar el balance.
                         </p>
                         {balance.settlement.fromUserId === currentUserId && personalAccounts.length > 0 && (
                           <div className="mt-3">
@@ -805,7 +804,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                           onClick={() => void settleBalance()}
                         >
                           {isSettling ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                          Registrar equilibrio
+                          Registrar coordinación
                         </Button>
                       </div>
                     ) : null}
@@ -825,7 +824,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                               <SensitiveAmount value={`${member.balance >= 0 ? "+" : "-"}${formatMoney(Math.abs(member.balance), "ARS")}`} />
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {member.balance > 0 ? "saldo a favor · le deben" : member.balance < 0 ? "saldo a pagar · debe" : "al día"}
+                              {member.balance > 0 ? "saldo a favor en el balance" : member.balance < 0 ? "saldo pendiente de coordinar" : "balanceado"}
                             </p>
                           </div>
                         ))}
@@ -1078,7 +1077,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                         const fmt = (n: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
                         const excess = Math.round((totalAmount - userShare) * 100) / 100;
                         if (excess > 0) {
-                          toast.success(`Gasto registrado · tu parte ${fmt(userShare)} · ${fmt(excess)} a recuperar`);
+                          toast.success(`Gasto registrado · tu parte ${fmt(userShare)} · ${fmt(excess)} queda en el balance del hogar`);
                         } else {
                           toast.success("Gasto registrado.");
                         }

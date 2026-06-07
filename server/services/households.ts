@@ -553,10 +553,7 @@ export function buildHouseholdSummary(
   if (!members.length) return "El hogar está listo para empezar.";
   if (!settlement) return "El hogar viene estable.";
 
-  const creditor = [...members].sort((a, b) => b.balance - a.balance)[0];
-  const lead = creditor?.balance > 0 ? `${creditor.name} cubrió más gastos este mes.` : "El hogar viene estable.";
-
-  return `${lead} ${settlement.fromName} debe ${formatArs(settlement.amount)}.`;
+  return `Hay ${formatArs(settlement.amount)} del hogar por coordinar.`;
 }
 
 export type HouseholdBriefingStatus = "STABLE" | "NEEDS_BALANCE" | "LOW_ACTIVITY" | "HIGH_SPEND";
@@ -659,7 +656,7 @@ function getBriefingTone(status: HouseholdBriefingStatus) {
 
 function getBriefingTitle(status: HouseholdBriefingStatus) {
   if (status === "STABLE") return "Estable";
-  if (status === "NEEDS_BALANCE") return "Pendiente por equilibrar";
+  if (status === "NEEDS_BALANCE") return "Saldo por coordinar";
   if (status === "HIGH_SPEND") return "Gasto alto";
   return "Poca actividad";
 }
@@ -671,13 +668,9 @@ function getBriefingSummary(
   if (status === "STABLE") return "El hogar viene estable este mes.";
   if (status === "LOW_ACTIVITY") return "Todavía no hay suficientes movimientos compartidos.";
   if (status === "HIGH_SPEND") {
-    return input.topPayerName
-      ? `${input.topPayerName} cubrió más gastos compartidos. Conviene revisar el ritmo del mes.`
-      : "El gasto compartido viene más alto que lo habitual.";
+    return "El gasto compartido viene más alto que lo habitual. Conviene revisar el ritmo del mes.";
   }
-  return input.topPayerName
-    ? `${input.topPayerName} cubrió más gastos compartidos. Hay un saldo pendiente por equilibrar.`
-    : "Hay un saldo pendiente por equilibrar.";
+  return "Hay un saldo del hogar pendiente por coordinar.";
 }
 
 function calculateTopPayer(

@@ -81,8 +81,8 @@ describe("household shared finance", () => {
       amount: 12000,
     });
     const summary = buildHouseholdSummary(balances, settlement);
-    assert.match(summary, /Ana cubrió más gastos este mes\./);
-    assert.match(summary, /Beto debe/);
+    assert.match(summary, /Hay \$\s*12\.000 del hogar por coordinar/u);
+    assert.doesNotMatch(summary, /debe|le deben|cubrió más/i);
   });
 
   it("returns a calm stable message when balances are even", () => {
@@ -164,7 +164,8 @@ describe("household shared finance", () => {
     assert.equal(briefing.metrics.topPayer?.name, "Ana");
     assert.equal(briefing.metrics.pendingAmount, 20000);
     assert.equal(briefing.topCategories[0].name, "Supermercado");
-    assert.match(briefing.summary, /Ana cubrió más gastos compartidos/);
+    assert.equal(briefing.summary, "Hay un saldo del hogar pendiente por coordinar.");
+    assert.doesNotMatch(briefing.summary, /debe|le deben|cubrió más/i);
   });
 
   it("balance after settlement only counts post-cutoff transactions", () => {

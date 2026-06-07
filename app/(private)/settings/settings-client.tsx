@@ -70,7 +70,7 @@ const faqs = [
   },
   {
     q: "¿Cómo funciona el hogar compartido?",
-    a: "Podés crear un hogar e invitar a personas de tu confianza. Registran gastos compartidos y Meridian calcula automáticamente quién puso de más y cómo equilibrar el balance.",
+    a: "Podés crear un hogar e invitar a personas de tu confianza. Registran gastos compartidos y Meridian calcula el balance del grupo para coordinar compensaciones sin exponerlo como reclamo personal.",
   },
   {
     q: "¿Qué es Smart Import?",

@@ -112,8 +112,7 @@ export function HouseholdWidget() {
                   <>
                     <span className="text-muted-foreground text-xs">·</span>
                     <span className="text-xs text-amber-500">
-                      {snap.settlementFrom} debe{" "}
-                      <SensitiveAmount value={formatArs(snap.settlementAmount)} />
+                      Saldo por coordinar: <SensitiveAmount value={formatArs(snap.settlementAmount)} />
                     </span>
                   </>
                 )}

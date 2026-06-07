@@ -22,8 +22,8 @@ export function getBriefingSummary(briefing: HouseholdBriefing, hidden: boolean)
   if (briefing.status === "STABLE") return "El hogar viene estable este mes.";
   if (briefing.status === "LOW_ACTIVITY") return "Todavía no hay suficientes movimientos compartidos.";
   if (briefing.status === "HIGH_SPEND") return "El gasto compartido viene más alto que lo habitual.";
-  if (!briefing.settlement) return "Hay un saldo pendiente por equilibrar.";
-  return `${briefing.settlement.fromName} tiene un saldo pendiente con ${briefing.settlement.toName}.`;
+  if (!briefing.settlement) return "Hay un saldo del hogar pendiente por coordinar.";
+  return "Hay un saldo del hogar pendiente por coordinar.";
 }
 
 export function getBriefingBadgeClass(status: HouseholdBriefingStatus) {
