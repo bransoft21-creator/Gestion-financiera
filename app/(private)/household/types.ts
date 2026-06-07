@@ -115,6 +115,10 @@ export type RecurringPaymentsSummary = {
   pendingCount: number;
   overdueCount: number;
   totalCount: number;
+  totalEstimatedAmount: number;
+  paidAmount: number;
+  pendingAmount: number;
+  overdueAmount: number;
   summary: string;
 };
 
@@ -129,7 +133,7 @@ export type UserAccount = {
   currentBalance: number;
 };
 
-export type HouseholdTab = "overview" | "payments" | "team";
+export type HouseholdTab = "overview" | "expenses" | "participants";
 
 export type PayForm = {
   paidByUserId: string;

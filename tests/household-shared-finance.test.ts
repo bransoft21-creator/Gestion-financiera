@@ -217,6 +217,60 @@ describe("household shared finance", () => {
     assert.equal(settlementAfterZero, null);
   });
 
+  it("keeps monthly cost visible while settlement balance uses post-cutoff activity", () => {
+    const briefing = calculateHouseholdBriefing({
+      household: { id: "home", name: "Casa" },
+      period: { month: 5, year: 2026, from: new Date("2026-05-01"), to: new Date("2026-06-01") },
+      members: [
+        { userId: "user-1", name: "Ana", email: "ana@example.com" },
+        { userId: "user-2", name: "Beto", email: "beto@example.com" },
+      ],
+      sharedTransactions: [
+        {
+          id: "pre-settlement",
+          paidByUserId: "user-1",
+          paidByName: "Ana",
+          amount: 24000,
+          currency: CurrencyCode.ARS,
+          description: "Super",
+          occurredAt: new Date("2026-05-05"),
+          category: null,
+          participants: [
+            { userId: "user-1", amount: 12000 },
+            { userId: "user-2", amount: 12000 },
+          ],
+        },
+        {
+          id: "post-settlement",
+          paidByUserId: "user-1",
+          paidByName: "Ana",
+          amount: 10000,
+          currency: CurrencyCode.ARS,
+          description: "Limpieza",
+          occurredAt: new Date("2026-05-20"),
+          category: null,
+          participants: [
+            { userId: "user-1", amount: 5000 },
+            { userId: "user-2", amount: 5000 },
+          ],
+        },
+      ],
+      balanceTransactions: [
+        {
+          paidByUserId: "user-1",
+          amount: 10000,
+          participants: [
+            { userId: "user-1", amount: 5000 },
+            { userId: "user-2", amount: 5000 },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(briefing.metrics.totalSharedAmount, 34000);
+    assert.equal(briefing.metrics.pendingAmount, 5000);
+  });
+
   it("calculates balance correctly for a 60/40 percentage split", () => {
     const balances = calculateHouseholdMemberBalances({
       members: [

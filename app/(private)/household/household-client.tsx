@@ -96,6 +96,57 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
 
   const hideAmounts = useHideAmounts();
 
+  const financialSummary = useMemo(() => {
+    const currency = briefing?.metrics.currency ?? "ARS";
+    const paidAmount = briefing?.metrics.totalSharedAmount ?? recurringPayments?.paidAmount ?? 0;
+    const pendingPaymentsAmount = (recurringPayments?.pendingAmount ?? 0) + (recurringPayments?.overdueAmount ?? 0);
+    const projectedCost = paidAmount + pendingPaymentsAmount;
+    const settlementAmount = balance?.settlement?.amount ?? briefing?.metrics.pendingAmount ?? 0;
+    const overdueCount = recurringPayments?.overdueCount ?? 0;
+    const pendingCount = recurringPayments?.pendingCount ?? 0;
+    const transactionCount = briefing?.metrics.transactionCount ?? balance?.recentSharedTransactions.length ?? 0;
+    const topPayerName = briefing?.metrics.topPayer?.name ?? null;
+
+    let statusLabel = "Sin actividad";
+    let statusTone = "text-muted-foreground";
+    let actionLabel = "Registrar gasto";
+    let actionKind: "addExpense" | "expenses" | "settlement" = "addExpense";
+
+    if (overdueCount > 0) {
+      statusLabel = `${overdueCount} pago${overdueCount > 1 ? "s" : ""} vencido${overdueCount > 1 ? "s" : ""}`;
+      statusTone = "text-amber-300";
+      actionLabel = "Ver gastos";
+      actionKind = "expenses";
+    } else if (pendingCount > 0) {
+      statusLabel = `${pendingCount} pago${pendingCount > 1 ? "s" : ""} pendiente${pendingCount > 1 ? "s" : ""}`;
+      statusTone = "text-foreground";
+      actionLabel = "Ver gastos";
+      actionKind = "expenses";
+    } else if (settlementAmount > 0) {
+      statusLabel = "Falta equilibrar";
+      statusTone = "text-amber-300";
+      actionLabel = "Liquidar";
+      actionKind = "settlement";
+    } else if (projectedCost > 0) {
+      statusLabel = "Al día";
+      statusTone = "text-emerald-300";
+    }
+
+    return {
+      currency,
+      paidAmount,
+      pendingPaymentsAmount,
+      projectedCost,
+      settlementAmount,
+      transactionCount,
+      topPayerName,
+      statusLabel,
+      statusTone,
+      actionLabel,
+      actionKind,
+    };
+  }, [balance, briefing, recurringPayments]);
+
   function switchHousehold(id: string) {
     setSelectedHouseholdId(id);
     setActiveTab("overview");
@@ -557,9 +608,76 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
               </div>
             </div>
 
+            {/* Persistent financial summary */}
+            <div className="rounded-2xl border border-border bg-muted/20 p-4">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Hogar este mes</p>
+                  <div className="mt-1 flex flex-wrap items-end gap-x-3 gap-y-1">
+                    <p className="text-3xl font-bold tracking-normal text-foreground">
+                      <SensitiveAmount value={formatMoney(financialSummary.projectedCost, financialSummary.currency)} />
+                    </p>
+                    <p className={`pb-1 text-sm font-semibold ${financialSummary.statusTone}`}>
+                      {financialSummary.statusLabel}
+                    </p>
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {financialSummary.topPayerName
+                      ? `${financialSummary.topPayerName} cubrió más gastos compartidos este mes.`
+                      : financialSummary.projectedCost > 0
+                      ? "Costo pagado más compromisos pendientes del mes."
+                      : "Todavía no hay gastos ni compromisos registrados este mes."}
+                  </p>
+                </div>
+                <Button
+                  className="shrink-0"
+                  variant={financialSummary.actionKind === "settlement" ? "outline" : "default"}
+                  onClick={() => {
+                    if (financialSummary.actionKind === "settlement") {
+                      setActiveTab("overview");
+                      return;
+                    }
+                    setActiveTab("expenses");
+                    if (financialSummary.actionKind === "expenses") return;
+                    setIsAddingOneTime(true);
+                    setIsAddingRecurring(false);
+                    if (userAccounts.length === 0) void loadUserAccounts();
+                  }}
+                >
+                  {financialSummary.actionKind === "settlement" ? <CheckCircle2 className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                  {financialSummary.actionLabel}
+                </Button>
+              </div>
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-xl border border-border bg-background/35 p-3">
+                  <p className="text-xs text-muted-foreground">Pagado</p>
+                  <p className="mt-1 text-base font-bold text-foreground">
+                    <SensitiveAmount value={formatMoney(financialSummary.paidAmount, financialSummary.currency)} />
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-background/35 p-3">
+                  <p className="text-xs text-muted-foreground">Por pagar</p>
+                  <p className="mt-1 text-base font-bold text-foreground">
+                    <SensitiveAmount value={formatMoney(financialSummary.pendingPaymentsAmount, financialSummary.currency)} />
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-background/35 p-3">
+                  <p className="text-xs text-muted-foreground">A equilibrar</p>
+                  <p className={`mt-1 text-base font-bold ${financialSummary.settlementAmount > 0 ? "text-amber-200" : "text-emerald-200"}`}>
+                    <SensitiveAmount value={formatMoney(financialSummary.settlementAmount, financialSummary.currency)} />
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-background/35 p-3">
+                  <p className="text-xs text-muted-foreground">Movimientos</p>
+                  <p className="mt-1 text-base font-bold text-foreground">{financialSummary.transactionCount}</p>
+                </div>
+              </div>
+            </div>
+
             {/* Tab bar */}
             <div className="flex gap-1 rounded-2xl border border-border bg-muted/30 p-1">
-              {(["overview", "payments", "team"] as const).map((tab) => (
+              {(["overview", "expenses", "participants"] as const).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -571,9 +689,9 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                   }`}
                 >
                   {tab === "overview" && <WalletCards className="h-3.5 w-3.5" />}
-                  {tab === "payments" && <CheckCircle2 className="h-3.5 w-3.5" />}
-                  {tab === "team" && <Users className="h-3.5 w-3.5" />}
-                  <span>{tab === "overview" ? "Resumen" : tab === "payments" ? "Pagos" : "Equipo"}</span>
+                  {tab === "expenses" && <CheckCircle2 className="h-3.5 w-3.5" />}
+                  {tab === "participants" && <Users className="h-3.5 w-3.5" />}
+                  <span>{tab === "overview" ? "Resumen" : tab === "expenses" ? "Gastos" : "Participantes"}</span>
                 </button>
               ))}
             </div>
@@ -635,7 +753,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                       {recurringPayments && recurringPayments.overdueCount > 0 ? (
                         <button
                           type="button"
-                          onClick={() => setActiveTab("payments")}
+                          onClick={() => setActiveTab("expenses")}
                           className="flex items-center gap-1.5 rounded-xl border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-xs font-medium text-amber-200 transition hover:bg-amber-300/20"
                         >
                           <Clock className="h-3 w-3" />
@@ -644,7 +762,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                       ) : recurringPayments && recurringPayments.pendingCount > 0 ? (
                         <button
                           type="button"
-                          onClick={() => setActiveTab("payments")}
+                          onClick={() => setActiveTab("expenses")}
                           className="flex items-center gap-1.5 rounded-xl border border-border bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground transition hover:text-foreground"
                         >
                           <Circle className="h-3 w-3" />
@@ -746,7 +864,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                           variant="outline"
                           size="sm"
                           className="mt-4 w-full"
-                          onClick={() => { setActiveTab("payments"); setIsAddingOneTime(true); }}
+                          onClick={() => { setActiveTab("expenses"); setIsAddingOneTime(true); }}
                         >
                           <Plus className="h-4 w-4" />
                           Agregar gasto compartido
@@ -875,13 +993,13 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
               </div>
             )}
 
-            {/* ── PAYMENTS TAB ── */}
-            {activeTab === "payments" && (
+            {/* ── EXPENSES TAB ── */}
+            {activeTab === "expenses" && (
               <Card>
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                  <CardTitle>Compromisos del hogar</CardTitle>
+                      <CardTitle>Gastos del hogar</CardTitle>
                       <CardDescription className="capitalize">
                         {currentMonthLabel} · fijos, servicios y compras compartidas
                       </CardDescription>
@@ -914,6 +1032,35 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {recurringPayments && recurringPayments.totalCount > 0 ? (
+                    <div className="grid gap-2 sm:grid-cols-4">
+                      <div className="rounded-xl border border-border bg-muted/25 p-3">
+                        <p className="text-xs text-muted-foreground">Fijos estimados</p>
+                        <p className="mt-1 text-sm font-bold text-foreground">
+                          <SensitiveAmount value={formatMoney(recurringPayments.totalEstimatedAmount, financialSummary.currency)} />
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-border bg-muted/25 p-3">
+                        <p className="text-xs text-muted-foreground">Pagados</p>
+                        <p className="mt-1 text-sm font-bold text-emerald-200">
+                          <SensitiveAmount value={formatMoney(recurringPayments.paidAmount, financialSummary.currency)} />
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-border bg-muted/25 p-3">
+                        <p className="text-xs text-muted-foreground">Pendientes</p>
+                        <p className="mt-1 text-sm font-bold text-foreground">
+                          <SensitiveAmount value={formatMoney(recurringPayments.pendingAmount, financialSummary.currency)} />
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-border bg-muted/25 p-3">
+                        <p className="text-xs text-muted-foreground">Vencidos</p>
+                        <p className={`mt-1 text-sm font-bold ${recurringPayments.overdueAmount > 0 ? "text-amber-200" : "text-foreground"}`}>
+                          <SensitiveAmount value={formatMoney(recurringPayments.overdueAmount, financialSummary.currency)} />
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="rounded-2xl border border-teal-300/15 bg-teal-300/10 p-3">
                     <p className="text-sm font-semibold text-teal-50">Los pagos del hogar no tienen que ser todos fijos.</p>
                     <p className="mt-1 text-xs leading-5 text-primary/70">
@@ -1171,11 +1318,11 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
               </Card>
             )}
 
-            {/* ── TEAM TAB ── */}
-            {activeTab === "team" && (
+            {/* ── PARTICIPANTS TAB ── */}
+            {activeTab === "participants" && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Miembros</CardTitle>
+                  <CardTitle>Participantes</CardTitle>
                   <CardDescription>
                     {selectedHousehold.members.length} {selectedHousehold.members.length === 1 ? "persona" : "personas"}
                     {selectedHousehold.invites.length > 0 ? ` · ${selectedHousehold.invites.length} invitación${selectedHousehold.invites.length > 1 ? "es" : ""} pendiente${selectedHousehold.invites.length > 1 ? "s" : ""}` : ""}

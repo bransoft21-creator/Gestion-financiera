@@ -31,6 +31,10 @@ export function computeRecurringPaymentStatus(
   return "PENDING";
 }
 
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
 function buildSummary(paidCount: number, overdueCount: number, totalCount: number): string {
   if (totalCount === 0) return "";
   if (paidCount === totalCount) return "Los pagos del hogar están al día.";
@@ -86,20 +90,38 @@ export async function listHouseholdRecurringPayments(
   let paidCount = 0;
   let pendingCount = 0;
   let overdueCount = 0;
+  let totalEstimatedAmount = 0;
+  let paidAmount = 0;
+  let pendingAmount = 0;
+  let overdueAmount = 0;
 
   const enriched = payments.map((payment) => {
     const occurrence = payment.occurrences[0] ?? null;
     const isPaid = occurrence?.status === "PAID";
     const status = computeRecurringPaymentStatus(payment.dueDay, resolvedMonthKey, isPaid, now);
+    const estimatedAmount = Number(payment.estimatedAmount);
+    const finalAmount = occurrence?.finalAmount;
+    const resolvedAmount = finalAmount !== null && finalAmount !== undefined
+      ? Number(finalAmount)
+      : estimatedAmount;
 
-    if (status === "PAID") paidCount++;
-    else if (status === "OVERDUE") overdueCount++;
-    else pendingCount++;
+    totalEstimatedAmount += estimatedAmount;
+
+    if (status === "PAID") {
+      paidCount++;
+      paidAmount += resolvedAmount;
+    } else if (status === "OVERDUE") {
+      overdueCount++;
+      overdueAmount += estimatedAmount;
+    } else {
+      pendingCount++;
+      pendingAmount += estimatedAmount;
+    }
 
     return {
       id: payment.id,
       name: payment.name,
-      estimatedAmount: Number(payment.estimatedAmount),
+      estimatedAmount,
       currency: payment.currency,
       dueDay: payment.dueDay,
       splitMode: payment.splitMode,
@@ -131,6 +153,10 @@ export async function listHouseholdRecurringPayments(
     pendingCount,
     overdueCount,
     totalCount,
+    totalEstimatedAmount: roundMoney(totalEstimatedAmount),
+    paidAmount: roundMoney(paidAmount),
+    pendingAmount: roundMoney(pendingAmount),
+    overdueAmount: roundMoney(overdueAmount),
     summary,
   };
 }

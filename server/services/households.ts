@@ -417,17 +417,17 @@ export async function getHouseholdBriefing(userProfileId: string, householdId: s
       },
       sharedTransactions: {
         where: {
-          ...(lastSettlement ? { createdAt: { gte: lastSettlement.createdAt } } : {}),
           transaction: {
             deletedAt: null,
             status: { not: "CANCELED" },
-            occurredAt: { gte: effectiveStart, lt: nextMonthStart },
+            occurredAt: { gte: monthStart, lt: nextMonthStart },
           },
         },
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
           paidByUserId: true,
+          createdAt: true,
           transaction: {
             select: {
               id: true,
@@ -453,6 +453,31 @@ export async function getHouseholdBriefing(userProfileId: string, householdId: s
 
   if (!household) throw new NotFoundError("Household not found");
 
+  const monthlyTransactions = household.sharedTransactions.map((shared) => ({
+    id: shared.id,
+    createdAt: shared.createdAt,
+    paidByUserId: shared.paidByUserId,
+    paidByName: shared.paidBy.fullName ?? shared.paidBy.email,
+    amount: Number(shared.transaction.amount),
+    currency: shared.transaction.currency,
+    description: shared.transaction.description,
+    occurredAt: shared.transaction.occurredAt,
+    category: shared.transaction.category
+      ? {
+          id: shared.transaction.category.id,
+          name: shared.transaction.category.name,
+          color: shared.transaction.category.color,
+        }
+      : null,
+    participants: shared.participants
+      .filter((participant) => participant.userId !== null)
+      .map((participant) => ({
+        userId: participant.userId as string,
+        amount: Number(participant.amount),
+      })),
+  }));
+  const balanceTransactions = monthlyTransactions.filter((transaction) => transaction.createdAt >= effectiveStart);
+
   return calculateHouseholdBriefing({
     household: {
       id: household.id,
@@ -471,28 +496,8 @@ export async function getHouseholdBriefing(userProfileId: string, householdId: s
       email: member.userProfile.email,
       avatarUrl: member.userProfile.avatarUrl,
     })),
-    sharedTransactions: household.sharedTransactions.map((shared) => ({
-      id: shared.id,
-      paidByUserId: shared.paidByUserId,
-      paidByName: shared.paidBy.fullName ?? shared.paidBy.email,
-      amount: Number(shared.transaction.amount),
-      currency: shared.transaction.currency,
-      description: shared.transaction.description,
-      occurredAt: shared.transaction.occurredAt,
-      category: shared.transaction.category
-        ? {
-            id: shared.transaction.category.id,
-            name: shared.transaction.category.name,
-            color: shared.transaction.category.color,
-          }
-        : null,
-      participants: shared.participants
-        .filter((participant) => participant.userId !== null)
-        .map((participant) => ({
-          userId: participant.userId as string,
-          amount: Number(participant.amount),
-        })),
-    })),
+    sharedTransactions: monthlyTransactions,
+    balanceTransactions,
   });
 }
 
@@ -571,10 +576,15 @@ export function calculateHouseholdBriefing(input: {
     category: { id: string; name: string; color?: string | null } | null;
     participants: Array<{ userId: string; amount: number }>;
   }>;
+  balanceTransactions?: Array<{
+    paidByUserId: string;
+    amount: number;
+    participants: Array<{ userId: string; amount: number }>;
+  }>;
 }) {
   const memberBalances = calculateHouseholdMemberBalances({
     members: input.members,
-    sharedTransactions: input.sharedTransactions,
+    sharedTransactions: input.balanceTransactions ?? input.sharedTransactions,
   });
   const settlement = calculateHouseholdSettlement(memberBalances);
   const transactionCount = input.sharedTransactions.length;
@@ -860,4 +870,3 @@ function formatArs(amount: number) {
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
 }
-
