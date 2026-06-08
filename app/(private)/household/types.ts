@@ -133,7 +133,7 @@ export type UserAccount = {
   currentBalance: number;
 };
 
-export type HouseholdTab = "overview" | "expenses" | "participants";
+export type HouseholdTab = "overview" | "expenses" | "movements" | "participants";
 
 export type PayForm = {
   paidByUserId: string;

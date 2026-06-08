@@ -269,7 +269,7 @@ export async function getHouseholdBalance(userProfileId: string, householdId: st
     select: { createdAt: true },
   });
 
-  const [household, externalParticipants] = await Promise.all([
+  const [household, externalParticipants, householdMovements] = await Promise.all([
     prisma.household.findFirst({
       where: { id: householdId, kind: HouseholdKind.HOUSEHOLD, deletedAt: null },
       select: {
@@ -320,6 +320,38 @@ export async function getHouseholdBalance(userProfileId: string, householdId: st
       where: { householdId, deletedAt: null },
       select: { id: true, name: true, email: true },
     }),
+    prisma.sharedTransaction.findMany({
+      where: {
+        householdId,
+        transaction: { deletedAt: null, status: { not: "CANCELED" } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      select: {
+        id: true,
+        paidByUserId: true,
+        createdAt: true,
+        transaction: {
+          select: {
+            id: true,
+            amount: true,
+            currency: true,
+            description: true,
+            occurredAt: true,
+          },
+        },
+        paidBy: { select: { fullName: true, email: true } },
+        participants: {
+          where: { status: SharedParticipantStatus.OPEN },
+          select: {
+            userId: true,
+            externalParticipantId: true,
+            amount: true,
+            externalParticipant: { select: { name: true } },
+          },
+        },
+      },
+    }),
   ]);
 
   if (!household) throw new NotFoundError("Household not found");
@@ -365,7 +397,7 @@ export async function getHouseholdBalance(userProfileId: string, householdId: st
     settlement,
     lastSettledAt: lastSettlement?.createdAt ?? null,
     summary: buildHouseholdSummary(memberBalances, settlement),
-    recentSharedTransactions: household.sharedTransactions.map((shared) => ({
+    recentSharedTransactions: householdMovements.map((shared) => ({
       id: shared.id,
       transactionId: shared.transaction.id,
       description: shared.transaction.description,

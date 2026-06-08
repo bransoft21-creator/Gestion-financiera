@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { ArrowRight, Check, CheckCircle2, Circle, Clock, Copy, Home, Loader2, Mail, MessageCircle, Plus, Send, Trash2, UserPlus, Users, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { useHideAmounts } from "@/hooks/use-hide-amounts";
@@ -676,13 +675,13 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
             </div>
 
             {/* Tab bar */}
-            <div className="flex gap-1 rounded-2xl border border-border bg-muted/30 p-1">
-              {(["overview", "expenses", "participants"] as const).map((tab) => (
+            <div className="flex gap-1 overflow-x-auto rounded-2xl border border-border bg-muted/30 p-1">
+              {(["overview", "expenses", "movements", "participants"] as const).map((tab) => (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => setActiveTab(tab)}
-                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                  className={`flex min-w-[112px] flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition ${
                     activeTab === tab
                       ? "bg-muted text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground"
@@ -690,8 +689,9 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                 >
                   {tab === "overview" && <WalletCards className="h-3.5 w-3.5" />}
                   {tab === "expenses" && <CheckCircle2 className="h-3.5 w-3.5" />}
+                  {tab === "movements" && <ArrowRight className="h-3.5 w-3.5" />}
                   {tab === "participants" && <Users className="h-3.5 w-3.5" />}
-                  <span>{tab === "overview" ? "Resumen" : tab === "expenses" ? "Gastos" : "Participantes"}</span>
+                  <span>{tab === "overview" ? "Resumen" : tab === "expenses" ? "Gastos" : tab === "movements" ? "Movimientos" : "Participantes"}</span>
                 </button>
               ))}
             </div>
@@ -880,7 +880,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                             <div className="flex items-center justify-between gap-3">
                               <div className="min-w-0">
                                 <p className="truncate text-sm font-semibold text-foreground">{tx.description ?? "Gasto compartido"}</p>
-                                <p className="truncate text-xs text-muted-foreground">Pagó {tx.paidByName} · total <SensitiveAmount value={formatMoney(tx.amount, tx.currency)} /></p>
+                                <p className="truncate text-xs text-muted-foreground">Registrado por {tx.paidByName} · total <SensitiveAmount value={formatMoney(tx.amount, tx.currency)} /></p>
                               </div>
                             </div>
                             {tx.participants.length > 0 && (
@@ -898,11 +898,15 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                             )}
                           </div>
                         ))}
-                        <Button asChild variant="ghost" size="sm" className="w-full text-muted-foreground">
-                          <Link href="/transactions">
-                            Ver todos los movimientos
-                            <ArrowRight className="h-3.5 w-3.5" />
-                          </Link>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-muted-foreground"
+                          onClick={() => setActiveTab("movements")}
+                        >
+                          Ver movimientos del hogar
+                          <ArrowRight className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ) : null}
@@ -1311,6 +1315,74 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
                           Pago fijo
                         </Button>
                       </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── MOVEMENTS TAB ── */}
+            {activeTab === "movements" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Movimientos del hogar</CardTitle>
+                  <CardDescription>
+                    Solo gastos compartidos de {selectedHousehold.name}. No mezcla tus movimientos personales.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {isLoadingBalance ? (
+                    <div className="flex justify-center py-6">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : balance && balance.recentSharedTransactions.length > 0 ? (
+                    <div className="space-y-2">
+                      {balance.recentSharedTransactions.map((tx) => (
+                        <div key={tx.id} className="rounded-2xl border border-border bg-muted/30 p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-foreground">{tx.description ?? "Gasto compartido"}</p>
+                              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                                {formatDate(tx.occurredAt)} · registrado por {tx.paidByName}
+                              </p>
+                            </div>
+                            <p className="shrink-0 text-sm font-bold text-foreground">
+                              <SensitiveAmount value={formatMoney(tx.amount, tx.currency)} />
+                            </p>
+                          </div>
+
+                          {tx.participants.length > 0 ? (
+                            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-border pt-2">
+                              {tx.participants.map((participant) => {
+                                const memberName = balance.members.find((m) => m.userId === participant.userId)?.name ?? participant.name ?? participant.userId;
+                                const isMe = participant.userId === currentUserId;
+                                return (
+                                  <span key={participant.userId} className={`text-xs ${isMe ? "font-semibold text-primary" : "text-muted-foreground"}`}>
+                                    {isMe ? "Vos" : memberName}: <SensitiveAmount value={formatMoney(participant.amount, tx.currency)} />
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-border bg-muted/15 p-5 text-center">
+                      <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-muted/50 text-lg">💸</div>
+                      <p className="text-sm font-semibold text-foreground">Todavía no hay movimientos del hogar</p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                        Cuando registren gastos compartidos, van a aparecer acá separados de tus movimientos personales.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-4 w-full"
+                        onClick={() => { setActiveTab("expenses"); setIsAddingOneTime(true); }}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Agregar gasto compartido
+                      </Button>
                     </div>
                   )}
                 </CardContent>
