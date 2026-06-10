@@ -16,8 +16,12 @@ const drawerSections = [
   { tier: "advanced", label: "Sistema" },
 ] as const;
 
-export function BottomNav({ awareness, copilotEnabled }: { awareness?: NavigationAwareness; copilotEnabled?: boolean }) {
-  const visibleItems = navItems.filter((item) => item.href !== "/copilot" || copilotEnabled);
+export function BottomNav({ awareness, copilotEnabled, hasSharedHousehold }: { awareness?: NavigationAwareness; copilotEnabled?: boolean; hasSharedHousehold?: boolean }) {
+  const visibleItems = navItems.filter((item) => {
+    if (item.href === "/copilot" && !copilotEnabled) return false;
+    if (item.href === "/household" && !hasSharedHousehold) return false;
+    return true;
+  });
   const bottomNavItems = visibleItems.filter((item) => item.mobile === "primary");
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);

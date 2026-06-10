@@ -8,22 +8,21 @@ import { NotificationsButton } from "./notifications-button";
 import { PrivacyToggle } from "./privacy-toggle";
 
 const SECTION_LABELS: Record<string, string> = {
-  "/dashboard": "Tu panorama del día",
+  "/dashboard": "Tu balance del mes",
   "/transactions": "Movimientos",
-  "/smart-import": "Importar",
+  "/smart-import": "Importar extracto",
+  "/copilot": "Copilot",
   "/household": "Hogar compartido",
-  "/activity": "Actividad",
+  "/notifications": "Actividad",
   "/budgets": "Plan del mes",
+  "/commitments": "Compromisos del mes",
   "/recurring": "Gastos recurrentes",
   "/debts": "Créditos y cuotas",
-  "/agreements": "Dinero en tránsito",
-  "/categories": "Categorías",
+  "/agreements": "Préstamos personales",
   "/accounts": "Cuentas",
   "/goals": "Metas",
-  "/data-quality": "Calidad de datos",
-  "/reports": "Reportes",
-  "/profile": "Tu perfil",
-  "/settings": "Configuración",
+  "/reports": "Histórico",
+  "/settings": "Ajustes",
 };
 
 type MobileHeaderProps = {
@@ -42,14 +41,13 @@ export function MobileHeader({ userName }: MobileHeaderProps) {
   return (
     <header className="sticky top-0 z-30 shrink-0 border-b border-border bg-background px-5 lg:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <div className="flex h-[72px] items-center justify-between">
-        <Link href="/dashboard" className="flex min-w-0 items-center gap-3.5">
-          <Image src="/icons/Meridian.png" alt="Meridian" width={50} height={50} className="shrink-0 select-none" />
+        <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
+          <Image src="/icons/Meridian.png" alt="Meridian" width={44} height={44} className="shrink-0 select-none" />
           <span className="min-w-0">
-            <span className="block truncate text-[17px] font-semibold leading-snug tracking-tight text-foreground">
+            <span className="block truncate text-[16px] font-semibold leading-none tracking-tight text-foreground">
               Meridian
             </span>
-            <div className="my-1 h-[1.5px] w-5 rounded-full bg-primary/45" aria-hidden="true" />
-            <span className="block truncate text-[13px] font-medium leading-snug text-muted-foreground">
+            <span className="mt-1 block truncate text-[11px] font-medium leading-none text-muted-foreground">
               {sectionLabel}
             </span>
           </span>

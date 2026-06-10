@@ -209,6 +209,12 @@ export function computeAccountSummary(accounts: AccountSummaryInput[]) {
   };
 }
 
+// DEDUPLICATION INVARIANT — credit card debt appears in two places:
+// 1. Account.currentBalance (negative for CC accounts) — the real-time running total.
+// 2. Debt.outstandingAmount with type=CREDIT_CARD — synced by syncLegacyCreditCards().
+// Both represent the same liability. The Math.min() below deduplicates them so net worth
+// is not double-counted. Manual creation of Debt.CREDIT_CARD is blocked in createDebt()
+// to ensure only one system-generated Debt record per CC account ever exists.
 export function computeRealLiabilitySummary(
   accounts: AccountSummaryInput[],
   debts: DebtLiabilityInput[],

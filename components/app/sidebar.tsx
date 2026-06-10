@@ -14,6 +14,7 @@ type SidebarProps = {
   userEmail?: string | null;
   awareness?: NavigationAwareness;
   copilotEnabled?: boolean;
+  hasSharedHousehold?: boolean;
 };
 
 const sectionLabels = {
@@ -22,8 +23,12 @@ const sectionLabels = {
   advanced: "Sistema",
 } as const;
 
-export function Sidebar({ userName, userEmail, awareness, copilotEnabled }: SidebarProps) {
-  const visibleItems = navItems.filter((item) => item.href !== "/copilot" || copilotEnabled);
+export function Sidebar({ userName, userEmail, awareness, copilotEnabled, hasSharedHousehold }: SidebarProps) {
+  const visibleItems = navItems.filter((item) => {
+    if (item.href === "/copilot" && !copilotEnabled) return false;
+    if (item.href === "/household" && !hasSharedHousehold) return false;
+    return true;
+  });
   const navSections = (["core", "weekly", "advanced"] as const).map((tier) => ({
     tier,
     label: sectionLabels[tier],
@@ -34,13 +39,13 @@ export function Sidebar({ userName, userEmail, awareness, copilotEnabled }: Side
   const accountLabel = userEmail ?? "Hogar principal";
 
   return (
-    <aside data-tutorial="nav-desktop" className="hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-background/95 shadow-[1px_0_34px_rgba(0,0,0,0.34)] backdrop-blur-xl lg:sticky lg:top-0 lg:flex">
+    <aside data-tutorial="nav-desktop" className="hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-background/95 shadow-[1px_0_12px_rgba(0,0,0,0.18)] backdrop-blur-xl lg:sticky lg:top-0 lg:flex">
       {/* Logo */}
       <div className="flex h-[68px] shrink-0 items-center gap-3 border-b border-border px-5">
-        <Image src="/icons/Meridian.png" alt="Meridian" width={40} height={40} className="shrink-0 select-none" />
-        <div>
-          <p className="text-[14px] font-semibold leading-snug tracking-tight text-foreground">Meridian</p>
-          <div className="mt-1.5 h-[2px] w-7 rounded-full bg-primary/50" aria-hidden="true" />
+        <Image src="/icons/Meridian.png" alt="Meridian" width={36} height={36} className="shrink-0 select-none" />
+        <div className="min-w-0">
+          <p className="text-[15px] font-semibold leading-none tracking-tight text-foreground">Meridian</p>
+          <p className="mt-1 text-[10px] font-medium uppercase tracking-widest text-primary/60">Financial OS</p>
         </div>
       </div>
 

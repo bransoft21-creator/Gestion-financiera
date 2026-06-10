@@ -147,7 +147,9 @@ const debtStatusLabels: Record<DebtStatus, string> = {
 };
 
 const debtTypes = Object.keys(debtTypeLabels) as DebtType[];
-const creatableDebtTypes = debtTypes.filter((t) => t !== "PERSONAL");
+// CREDIT_CARD debts are managed automatically via syncLegacyCreditCards() from CC Accounts.
+// PERSONAL is legacy (existing records still display but can't be created).
+const creatableDebtTypes = debtTypes.filter((t) => t !== "PERSONAL" && t !== "CREDIT_CARD");
 const debtStatuses = Object.keys(debtStatusLabels) as DebtStatus[];
 
 const formSchema = z.object({
@@ -554,14 +556,13 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
                   <select
                     className={selectClass}
                     value={form.type}
-                    onChange={(e) => {
-                      const newType = e.target.value as DebtType;
-                      updateForm("type", newType);
-                      if (newType !== "CREDIT_CARD") updateForm("accountId", "");
-                    }}
+                    onChange={(e) => updateForm("type", e.target.value as DebtType)}
                   >
                     {form.type === "PERSONAL" && (
                       <option value="PERSONAL" disabled>{debtTypeLabels["PERSONAL"]} (legacy)</option>
+                    )}
+                    {form.type === "CREDIT_CARD" && (
+                      <option value="CREDIT_CARD" disabled>{debtTypeLabels["CREDIT_CARD"]} (automático)</option>
                     )}
                     {creatableDebtTypes.map((type) => <option key={type} value={type}>{debtTypeLabels[type]}</option>)}
                   </select>
@@ -572,26 +573,6 @@ export function DebtsClient({ householdId, accounts, defaultCurrency = "ARS" }: 
                   </select>
                 </Field>
               </div>
-
-              {form.type === "CREDIT_CARD" && (
-                <Field label="Cuenta de tarjeta vinculada" error={errors.accountId}>
-                  <select
-                    className={selectClass}
-                    value={form.accountId}
-                    onChange={(e) => updateForm("accountId", e.target.value)}
-                  >
-                    <option value="">Sin vincular</option>
-                    {accounts
-                      .filter((a) => a.type === "CREDIT_CARD")
-                      .map((a) => (
-                        <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
-                      ))}
-                  </select>
-                  <p className="text-[11px] text-muted-foreground">
-                    Si vinculás una cuenta, los gastos en esa TDC suman automáticamente al saldo pendiente.
-                  </p>
-                </Field>
-              )}
 
               <Field label="Moneda" error={errors.currency}>
                 <select className={selectClass} value={form.currency} onChange={(e) => updateForm("currency", e.target.value as CurrencyCode)}>

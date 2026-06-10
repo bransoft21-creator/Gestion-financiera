@@ -1,5 +1,5 @@
 import { AccountType, CardStatementStatus, DebtStatus, DebtType, HouseholdKind, HouseholdMemberStatus, Prisma, TransactionStatus, TransactionType } from "@prisma/client";
-import { nextArgentinaDayStart } from "@/lib/dates";
+import { argentinaMonthKey, nextArgentinaDayStart } from "@/lib/dates";
 import { prisma } from "../../lib/prisma";
 import { ApiError, FieldApiError, ForbiddenError, NotFoundError } from "../api/errors";
 import type {
@@ -158,6 +158,26 @@ export async function createTransaction(
         await tx.transaction.update({
           where: { id: transaction.id },
           data: { isHouseholdPayment: true, userShareAmount: userShare },
+        });
+      }
+
+      // When the user marks a transaction as recurring and it has a category,
+      // auto-create a RecurringExpenseOccurrence so the recurring expense is
+      // excluded from upcomingObligations in the dashboard. This prevents the
+      // double-counting bug where a manually-entered payment still shows as an
+      // upcoming obligation because no occurrence record was created.
+      if (
+        transaction.type === TransactionType.EXPENSE &&
+        transaction.status === TransactionStatus.CONFIRMED &&
+        input.isRecurring &&
+        transaction.categoryId
+      ) {
+        await autoLinkRecurringOccurrence(tx, {
+          householdId: transaction.householdId,
+          categoryId: transaction.categoryId,
+          transactionId: transaction.id,
+          amount: toFiniteNumber(transaction.amount),
+          occurredAt: transaction.occurredAt,
         });
       }
 
@@ -448,6 +468,57 @@ export async function updateTransaction(
     }
 
     return updated;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Recurring expense auto-link
+// ---------------------------------------------------------------------------
+
+// When a user manually creates an EXPENSE with isRecurring=true and a category,
+// find the matching active RecurringExpense and mark it as paid for the month.
+// Matching criteria: same household + category + nextDueDate in the same month.
+// Only links the first unmatched RecurringExpense found (prevents double-linking).
+async function autoLinkRecurringOccurrence(
+  tx: Prisma.TransactionClient,
+  input: {
+    householdId: string;
+    categoryId: string;
+    transactionId: string;
+    amount: number;
+    occurredAt: Date;
+  },
+): Promise<void> {
+  const monthKey = argentinaMonthKey(input.occurredAt);
+  const [year, month] = monthKey.split("-").map(Number);
+  const monthStart = new Date(Date.UTC(year, month - 1, 1));
+  const monthEnd = new Date(Date.UTC(year, month, 1));
+
+  const match = await tx.recurringExpense.findFirst({
+    where: {
+      householdId: input.householdId,
+      categoryId: input.categoryId,
+      isActive: true,
+      deletedAt: null,
+      nextDueDate: { gte: monthStart, lt: monthEnd },
+      occurrences: { none: { monthKey, status: "PAID" } },
+    },
+    select: { id: true, amount: true },
+  });
+
+  if (!match) return;
+
+  await tx.recurringExpenseOccurrence.upsert({
+    where: { recurringExpenseId_monthKey: { recurringExpenseId: match.id, monthKey } },
+    update: { status: "PAID", paidAt: new Date(), transactionId: input.transactionId, finalAmount: input.amount },
+    create: {
+      recurringExpenseId: match.id,
+      monthKey,
+      status: "PAID",
+      paidAt: new Date(),
+      transactionId: input.transactionId,
+      finalAmount: input.amount,
+    },
   });
 }
 

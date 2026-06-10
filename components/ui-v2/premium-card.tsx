@@ -32,7 +32,7 @@ export function PremiumCard({
 }
 
 export function PremiumCardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("space-y-1.5 p-5 sm:p-6", className)} {...props} />;
+  return <div className={cn("space-y-1.5 p-4 sm:p-5", className)} {...props} />;
 }
 
 export function PremiumCardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
@@ -44,5 +44,5 @@ export function PremiumCardDescription({ className, ...props }: React.HTMLAttrib
 }
 
 export function PremiumCardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-5 pt-0 sm:p-6 sm:pt-0", className)} {...props} />;
+  return <div className={cn("p-4 pt-0 sm:p-5 sm:pt-0", className)} {...props} />;
 }

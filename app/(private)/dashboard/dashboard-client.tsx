@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useDashboardSummary } from "@/hooks/use-dashboard-summary";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
@@ -30,6 +31,8 @@ import { ExpenseCategoryExplorer } from "@/components/dashboard/expense-category
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { ActivityPreview } from "@/components/dashboard/activity-preview";
 import { GettingStartedCard } from "@/components/dashboard/getting-started-card";
+import { GoalsWidget } from "@/components/dashboard/goals-widget";
+import { NetWorthWidget } from "@/components/dashboard/net-worth-widget";
 import { ContextualEntryPoints } from "@/components/dashboard/contextual-entry-points";
 import { HouseholdWidget } from "@/components/dashboard/household-widget";
 import { ContextualEducationCard } from "@/components/education/contextual-education-card";
@@ -41,10 +44,18 @@ import {
 import type { DashboardSummary } from "./types";
 import { getPeriodStatus } from "@/lib/period-status";
 
+const ReportsClient = dynamic(
+  () => import("@/app/(private)/reports/reports-client").then((m) => ({ default: m.ReportsClient })),
+  { ssr: false },
+);
+
+type DashboardTab = "month" | "history";
+
 /* ── Main component ──────────────────────────────────────────────────────── */
 
-export function DashboardClient() {
+export function DashboardClient({ householdId }: { householdId: string }) {
   const now = new Date();
+  const [activeTab, setActiveTab] = useState<DashboardTab>("month");
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
   const { data: summary = null, isLoading, error: queryError } = useDashboardSummary(year, month);
@@ -128,7 +139,32 @@ export function DashboardClient() {
   const dashboardEducation = getDashboardEducation(metrics);
 
   return (
-    <div className="fade-in">
+    <div className="space-y-5">
+      {/* Tab switcher */}
+      <div className="flex gap-1 rounded-2xl border border-border bg-muted/40 p-1">
+        {([
+          { id: "month", label: "Este mes" },
+          { id: "history", label: "Histórico" },
+        ] as const).map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 rounded-xl px-3 py-1.5 text-[13px] font-semibold transition-all duration-150 ${
+              activeTab === tab.id
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "history" ? (
+        <ReportsClient householdId={householdId} />
+      ) : (
+      <div className="fade-in">
       {/* 1. Hero */}
       <DashboardHero
         metrics={metrics}
@@ -145,6 +181,12 @@ export function DashboardClient() {
 
       {/* Cierre de mes anterior — solo mes actual, primeros 10 días */}
       {isCurrentMonth && <MonthlyCloseCard />}
+
+      {/* Metas activas con asignación mensual */}
+      {isCurrentMonth && <GoalsWidget householdId={householdId} />}
+
+      {/* Patrimonio neto — snapshot de cuentas y pasivos */}
+      {isCurrentMonth && <NetWorthWidget householdId={householdId} />}
 
       {/* Hogar — widget no-intrusivo, solo informacional */}
       {isCurrentMonth && <HouseholdWidget />}
@@ -261,6 +303,8 @@ export function DashboardClient() {
 
       <ContextualEntryPoints entryPoints={summary.awareness.entryPoints} />
       <ActivityPreview />
+    </div>
+      )}
     </div>
   );
 }

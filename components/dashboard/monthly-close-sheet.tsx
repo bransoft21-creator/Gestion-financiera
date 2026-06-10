@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { X, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, X, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -175,6 +176,24 @@ function MonthlyAiSection({ monthKey }: { monthKey: string }) {
   );
 }
 
+/* ── Ritual step ───────────────────────────────────────────────────────────── */
+
+function RitualStep({ href, label, description }: { href: string; label: string; description: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-3 rounded-xl border border-border bg-muted/20 px-3 py-2.5 transition hover:bg-muted/40"
+    >
+      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-border" aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-medium text-foreground">{label}</p>
+        <p className="text-[11px] text-muted-foreground">{description}</p>
+      </div>
+      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" aria-hidden="true" />
+    </Link>
+  );
+}
+
 /* ── Portal helpers ────────────────────────────────────────────────────────── */
 
 function useClientMounted() {
@@ -336,12 +355,36 @@ export function MonthlyCloseSheet({ isOpen, onClose, close }: MonthlyCloseSheetP
 
           {/* Contexto IA (lazy) */}
           <MonthlyAiSection monthKey={close.monthKey} />
+
+          {/* Próximos pasos — ritual de cierre */}
+          <div>
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Para el mes que empieza
+            </p>
+            <div className="space-y-2">
+              <RitualStep
+                href="/budgets"
+                label="Revisá tu presupuesto"
+                description="Ajustá lo planificado para el nuevo mes"
+              />
+              <RitualStep
+                href="/commitments"
+                label="Confirmá tus compromisos"
+                description="Recurrentes y deudas con vencimiento"
+              />
+              <RitualStep
+                href="/goals"
+                label="Actualizá tus metas"
+                description="¿Contribuiste a alguna meta este mes?"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
         <div className="shrink-0 border-t border-border px-5 py-4">
           <Button variant="default" className="w-full" onClick={handleDismiss}>
-            Entendido
+            Listo, al próximo mes
           </Button>
         </div>
       </div>

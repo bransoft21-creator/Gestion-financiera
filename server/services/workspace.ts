@@ -238,6 +238,11 @@ export async function getDebtWorkspace(userProfileId: string) {
   return { household, accounts };
 }
 
+export async function getCommitmentsWorkspace(userProfileId: string) {
+  const household = await getPrimaryHousehold(userProfileId);
+  return { household };
+}
+
 export async function getReportsWorkspace(userProfileId: string) {
   const household = await getPrimaryHousehold(userProfileId);
   return { household };

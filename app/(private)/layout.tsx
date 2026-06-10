@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app/app-shell";
 import { safeUserId } from "@/lib/observability/user";
 import { prisma } from "@/lib/prisma";
+import { HouseholdKind, HouseholdMemberStatus } from "@prisma/client";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EMPTY_NAVIGATION_AWARENESS } from "@/lib/navigation-awareness";
 import { getNavigationAwareness } from "@/server/services/navigation-awareness";
@@ -30,8 +31,20 @@ export default async function PrivateLayout({
     redirect("/onboarding");
   }
 
-  const awareness = await getNavigationAwareness(profile.id).catch(() => EMPTY_NAVIGATION_AWARENESS);
+  const [awareness, sharedHouseholdCount] = await Promise.all([
+    getNavigationAwareness(profile.id).catch(() => EMPTY_NAVIGATION_AWARENESS),
+    prisma.household.count({
+      where: {
+        kind: HouseholdKind.HOUSEHOLD,
+        deletedAt: null,
+        members: {
+          some: { userProfileId: profile.id, status: HouseholdMemberStatus.ACTIVE, deletedAt: null },
+        },
+      },
+    }),
+  ]);
   const copilotEnabled = isCopilotEnabled(user.email ?? "");
+  const hasSharedHousehold = sharedHouseholdCount > 0;
 
   return (
     <AppShell
@@ -40,6 +53,7 @@ export default async function PrivateLayout({
       userName={getDisplayName(user.user_metadata)}
       awareness={awareness}
       copilotEnabled={copilotEnabled}
+      hasSharedHousehold={hasSharedHousehold}
     >
       {children}
     </AppShell>

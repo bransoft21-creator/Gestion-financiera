@@ -5,18 +5,8 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { captureClientError } from "@/lib/observability/client";
-import { semanticTones } from "@/lib/design/semantic-tones";
-import type { SemanticTone } from "@/lib/design/semantic-tones";
 import { MonthlyCloseSheet } from "./monthly-close-sheet";
 import type { MonthlyCloseData } from "@/app/api/monthly-close/route";
-
-type CloseTone = "positive" | "neutral" | "warning";
-
-const CLOSE_TONE_MAP: Record<CloseTone, SemanticTone> = {
-  positive: "positive",
-  neutral: "neutral",
-  warning: "warning",
-};
 
 /* ── Preview line ──────────────────────────────────────────────────────────── */
 
@@ -132,7 +122,7 @@ export function MonthlyCloseCard() {
 
   if (!close) return null;
 
-  const dotClass = semanticTones[CLOSE_TONE_MAP[close.overallTone as CloseTone] ?? "neutral"].dot;
+  const isPositive = close.overallTone !== "warning";
   const previewText = buildPreviewText(close);
 
   return (
@@ -141,33 +131,53 @@ export function MonthlyCloseCard() {
         type="button"
         onClick={() => setSheetOpen(true)}
         className={cn(
-          "mb-3 w-full rounded-2xl border border-border bg-muted/15 px-5 py-4 text-left",
-          "transition-colors hover:bg-muted/25 active:bg-muted/30",
+          "mb-4 w-full rounded-2xl border text-left transition-all",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          isPositive
+            ? "border-emerald-500/15 bg-emerald-500/[0.04] hover:bg-emerald-500/[0.07]"
+            : "border-amber-400/15 bg-amber-400/[0.04] hover:bg-amber-400/[0.07]",
         )}
         aria-label={`Ver cierre de ${close.monthLabel}`}
       >
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <div
+            className={cn(
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+              isPositive ? "bg-emerald-500/10" : "bg-amber-400/10",
+            )}
+          >
             <span
-              className={cn("h-2 w-2 shrink-0 rounded-full", dotClass)}
+              className={cn(
+                "h-2.5 w-2.5 rounded-full",
+                isPositive ? "bg-emerald-400" : "bg-amber-400",
+              )}
               aria-hidden="true"
             />
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground shrink-0">
-              Cierre de mes
-            </span>
-            <span className="text-[10px] text-muted-foreground/70 truncate capitalize">
-              · {close.monthLabel}
-            </span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline gap-2">
+              <p className="text-[13px] font-semibold text-foreground">
+                Cierre de {close.monthLabel}
+              </p>
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                  isPositive
+                    ? "bg-emerald-500/10 text-emerald-500"
+                    : "bg-amber-400/10 text-amber-500",
+                )}
+              >
+                {isPositive ? "positivo" : "revisar"}
+              </span>
+            </div>
+            <p className="mt-0.5 line-clamp-1 text-[12px] text-muted-foreground">
+              {previewText}
+            </p>
           </div>
           <span className="shrink-0 text-[11px] font-medium text-muted-foreground">
-            ver →
+            Ritual →
           </span>
         </div>
-
-        <p className="mt-1.5 text-sm leading-snug text-muted-foreground line-clamp-1 pl-4">
-          {previewText}
-        </p>
       </button>
 
       {sheetOpen && close && (

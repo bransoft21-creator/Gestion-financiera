@@ -11,6 +11,7 @@ import {
   CreditCard,
   Loader2,
   Plus,
+  ScanLine,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -1378,13 +1379,31 @@ export function TransactionsClient({
           }}
         />
       </div>
-      <MobileCreateFab
-        label="Nuevo movimiento"
-        onClick={() => {
-          resetForm();
-          setIsFormOpen(true);
-        }}
-      />
+      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+72px)] right-4 z-[100] flex flex-col items-end gap-2 lg:hidden">
+        <Link
+          href="/smart-import"
+          className="flex h-10 items-center gap-2 rounded-full border border-border bg-background/95 px-4 text-[13px] font-medium text-muted-foreground shadow-lg backdrop-blur-sm transition hover:text-foreground"
+        >
+          <ScanLine className="h-4 w-4" />
+          Importar extracto
+        </Link>
+        <MobileCreateFab
+          label="Nuevo movimiento"
+          onClick={() => {
+            resetForm();
+            setIsFormOpen(true);
+          }}
+        />
+      </div>
+      <div className="hidden lg:block">
+        <MobileCreateFab
+          label="Nuevo movimiento"
+          onClick={() => {
+            resetForm();
+            setIsFormOpen(true);
+          }}
+        />
+      </div>
     </div>
   );
 }

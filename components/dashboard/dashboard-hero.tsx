@@ -80,18 +80,11 @@ export function DashboardHero({
   const healthSignals = hasData ? buildHealthSignals(metrics, isCurrentMonth).slice(0, 2) : [];
   const incomeLabel = periodStatus === "CLOSED" ? "Total cobrado" : "Ingresos";
   const expensesLabel = periodStatus === "CLOSED" ? "Total gastado" : "Gastos";
-  const obligationsLabel = periodStatus === "CLOSED" ? "Compromisos pagados" : "Obligaciones";
-
-  function scrollToLectura() {
-    document
-      .querySelector('[data-tutorial="financial-copilot"]')
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  const obligationsLabel = periodStatus === "CLOSED" ? "Compromisos pagados" : "Compromisos";
 
   return (
     <PremiumCard data-tutorial="dashboard-hero" variant="raised" className="mb-5 overflow-hidden p-5 sm:mb-7 sm:p-6">
-      <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
-        <div className="min-w-0">
+      <div className="min-w-0">
           {/* Month navigation */}
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -165,7 +158,13 @@ export function DashboardHero({
             <span aria-hidden="true">−</span>
             <FormulaPill label="Reservado" value={metrics.remainingReservedBudget} color="#fbbf24" href="/budgets" currency={currency} />
             <span aria-hidden="true">−</span>
-            <FormulaPill label={obligationsLabel} value={metrics.upcomingObligations} color="#60a5fa" href="/recurring" currency={currency} />
+            <FormulaPill label={obligationsLabel} value={metrics.upcomingObligations - metrics.requiredGoalContributions} color="#60a5fa" href="/commitments" currency={currency} />
+            {metrics.requiredGoalContributions > 0 && (
+              <>
+                <span aria-hidden="true">−</span>
+                <FormulaPill label="Metas" value={metrics.requiredGoalContributions} color="#a78bfa" href="/goals" currency={currency} />
+              </>
+            )}
           </div>
 
           {metrics.currencyScope.mixedCurrencies && (
@@ -206,29 +205,43 @@ export function DashboardHero({
             </div>
           )}
 
-          {healthSignals.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {healthSignals.map((signal) => (
-                <span
-                  key={signal.label}
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-medium",
-                    signal.tone === "positive"
-                      ? "border-emerald-500/12 bg-emerald-500/[0.07] text-emerald-500"
-                      : "border-amber-500/12 bg-amber-500/[0.07] text-amber-500",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "h-1 w-1 shrink-0 rounded-full",
-                      signal.tone === "positive" ? "bg-emerald-500" : "bg-amber-500",
-                    )}
-                  />
-                  {signal.label}
-                </span>
-              ))}
-            </div>
-          )}
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {/* Savings rate badge */}
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-medium",
+                metrics.savingsRate >= 0
+                  ? "border-sky-500/12 bg-sky-500/[0.06] text-sky-500"
+                  : "border-rose-500/12 bg-rose-500/[0.07] text-rose-400",
+              )}
+            >
+              <span className={cn("h-1 w-1 shrink-0 rounded-full", metrics.savingsRate >= 0 ? "bg-sky-500" : "bg-rose-400")} />
+              Ahorro {metrics.savingsRate}%
+            </span>
+            {/* USD balance badge */}
+            {usdBalance && usdBalance.accountCount > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-sky-300/20 bg-sky-300/[0.06] px-2.5 py-0.5 text-[10px] font-medium text-sky-400">
+                <span className="h-1 w-1 shrink-0 rounded-full bg-sky-400" />
+                <SensitiveAmount value={formatMoney(usdBalance.amount, "USD")} />
+                {fxLoaded ? <> · ≈ <SensitiveAmount value={formatMoney(fxEstimate(usdBalance.amount, "USD", "ARS", fxRate) ?? 0)} /></> : null}
+              </span>
+            )}
+            {/* Health signals */}
+            {healthSignals.map((signal) => (
+              <span
+                key={signal.label}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-medium",
+                  signal.tone === "positive"
+                    ? "border-emerald-500/12 bg-emerald-500/[0.07] text-emerald-500"
+                    : "border-amber-500/12 bg-amber-500/[0.07] text-amber-500",
+                )}
+              >
+                <span className={cn("h-1 w-1 shrink-0 rounded-full", signal.tone === "positive" ? "bg-emerald-500" : "bg-amber-500")} />
+                {signal.label}
+              </span>
+            ))}
+          </div>
 
           {primarySignal && (
             <div className="mt-3 flex items-start gap-2.5">
@@ -257,71 +270,6 @@ export function DashboardHero({
             </div>
           )}
 
-          {hasData && (
-            <button
-              type="button"
-              onClick={scrollToLectura}
-              className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition hover:text-foreground"
-            >
-              Revisar detalle →
-            </button>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 sm:min-w-[210px] lg:grid-cols-1">
-          <div className="rounded-2xl border border-border bg-muted/40 p-4">
-            <p className="text-[11px] font-semibold uppercase text-muted-foreground">Tasa de ahorro</p>
-            <p
-              className={cn(
-                "mt-1 text-2xl font-semibold tabular-nums",
-                metrics.savingsRate >= 0 ? "text-emerald-400" : "text-rose-400",
-              )}
-            >
-              {metrics.savingsRate}%
-            </p>
-          </div>
-          {(!periodStatus || periodStatus === "OPEN") && (
-            <div className="rounded-2xl border border-border bg-muted/40 p-4">
-              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Cierre estimado</p>
-              <p
-                className={cn(
-                  "mt-1 text-sm font-semibold tabular-nums",
-                  metrics.projection.projectedRealAvailable >= 0 ? "text-foreground" : "text-rose-400",
-                )}
-              >
-                <SensitiveAmount value={formatMoney(metrics.projection.projectedRealAvailable, currency)} />
-              </p>
-            </div>
-          )}
-          {periodStatus === "CLOSED" && (
-            <div className="rounded-2xl border border-border bg-muted/40 p-4">
-              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Resultado final</p>
-              <p
-                className={cn(
-                  "mt-1 text-sm font-semibold tabular-nums",
-                  metrics.balance >= 0 ? "text-foreground" : "text-rose-400",
-                )}
-              >
-                <SensitiveAmount value={formatMoney(metrics.balance, currency)} />
-              </p>
-            </div>
-          )}
-          {usdBalance && usdBalance.accountCount > 0 ? (
-            <div className="rounded-2xl border border-sky-300/16 bg-sky-300/[0.045] p-3">
-              <p className="text-[11px] font-semibold uppercase text-muted-foreground">Dólares</p>
-              <p className="mt-1 text-sm font-semibold tabular-nums text-sky-400">
-                <SensitiveAmount value={formatMoney(usdBalance.amount, "USD")} />
-              </p>
-              <p className="mt-0.5 text-[10px] text-muted-foreground/70">
-                {usdBalance.accountCount} cta{usdBalance.accountCount !== 1 ? "s" : ""} en USD
-                {fxLoaded ? (
-                  <> · ≈ <SensitiveAmount value={formatMoney(fxEstimate(usdBalance.amount, "USD", "ARS", fxRate) ?? 0)} /></>
-                ) : null}
-              </p>
-            </div>
-          ) : null}
-
-        </div>
       </div>
     </PremiumCard>
   );

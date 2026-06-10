@@ -120,7 +120,6 @@ export function NotificationsButton({
     <div className={embedded ? "w-full" : "relative"}>
       {!embedded ? (
         <Button
-          asChild
           variant={compact ? "ghost" : "secondary"}
           size={compact ? "icon" : "sm"}
           className={cn(
@@ -131,26 +130,25 @@ export function NotificationsButton({
           )}
           aria-label={unreadCount > 0 ? `${unreadCount} avisos sin leer` : "Notificaciones"}
           title="Notificaciones"
+          onClick={() => setOpen((prev) => !prev)}
         >
-          <Link href="/notifications" onClick={() => setOpen(false)}>
-            {hasPriorityUnread ? (
-              <BellRing className="h-4 w-4 text-amber-400" aria-hidden="true" />
-            ) : (
-              <Bell className="h-4 w-4" aria-hidden="true" />
-            )}
-            {compact ? null : "Avisos"}
-            {unreadCount > 0 ? (
-              <span
-                className={cn(
-                  "rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold leading-none text-black",
-                  compact && "absolute -right-0.5 -top-0.5 min-w-4 px-1",
-                  !compact && "ml-[-4px]",
-                )}
-              >
-                {unreadCount > 9 ? "9+" : unreadCount}
-              </span>
-            ) : null}
-          </Link>
+          {hasPriorityUnread ? (
+            <BellRing className="h-4 w-4 text-amber-400" aria-hidden="true" />
+          ) : (
+            <Bell className="h-4 w-4" aria-hidden="true" />
+          )}
+          {compact ? null : "Avisos"}
+          {unreadCount > 0 ? (
+            <span
+              className={cn(
+                "rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold leading-none text-black",
+                compact && "absolute -right-0.5 -top-0.5 min-w-4 px-1",
+                !compact && "ml-[-4px]",
+              )}
+            >
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          ) : null}
         </Button>
       ) : null}
 

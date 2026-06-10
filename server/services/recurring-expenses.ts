@@ -8,8 +8,8 @@ import type {
   PayRecurringExpenseInput,
   UpdateRecurringExpenseInput,
 } from "../schemas/recurring-expenses";
+import { applyBalanceDeltas, computeTransactionBalanceDeltas } from "./financial-ledger";
 import { assertHouseholdAccess } from "./households";
-import { createTransaction } from "./transactions";
 
 const recurringInclude = {
   account: { select: { id: true, name: true } },
@@ -190,34 +190,50 @@ export async function payRecurringExpense(
   }
 
   const finalAmount = input.finalAmount ?? Number(item.amount);
-
-  const transaction = await createTransaction(userProfileId, {
-    householdId: input.householdId,
-    accountId: input.accountId,
-    type: TransactionType.EXPENSE,
-    status: TransactionStatus.CONFIRMED,
-    currency: item.currency,
-    amount: finalAmount,
-    description: item.name,
-    categoryId: item.categoryId ?? undefined,
-    occurredAt: new Date(input.occurredAt),
-    isRecurring: true,
-    isInstallment: false,
-    origin: TransactionOrigin.MANUAL,
-  });
-
   const nextDueDate = computeNextDueDate(new Date(item.nextDueDate), item.frequency);
+  const occurredAt = new Date(input.occurredAt);
 
-  await prisma.$transaction(async (tx) => {
+  // All writes in a single transaction: create Transaction + Occurrence + advance date.
+  // This prevents orphaned transactions if any step fails.
+  const transactionId = await prisma.$transaction(async (tx) => {
+    const txRecord = await tx.transaction.create({
+      data: {
+        householdId: input.householdId,
+        createdById: userProfileId,
+        accountId: input.accountId,
+        type: TransactionType.EXPENSE,
+        status: TransactionStatus.CONFIRMED,
+        currency: item.currency,
+        amount: finalAmount,
+        description: item.name,
+        categoryId: item.categoryId ?? null,
+        occurredAt,
+        isRecurring: true,
+        isInstallment: false,
+        origin: TransactionOrigin.MANUAL,
+      },
+      select: { id: true },
+    });
+
+    await applyBalanceDeltas(
+      tx,
+      computeTransactionBalanceDeltas({
+        type: TransactionType.EXPENSE,
+        status: TransactionStatus.CONFIRMED,
+        accountId: input.accountId,
+        amount: finalAmount,
+      }),
+    );
+
     await tx.recurringExpenseOccurrence.upsert({
       where: { recurringExpenseId_monthKey: { recurringExpenseId: id, monthKey } },
-      update: { status: "PAID", paidAt: new Date(), transactionId: transaction.id, finalAmount },
+      update: { status: "PAID", paidAt: new Date(), transactionId: txRecord.id, finalAmount },
       create: {
         recurringExpenseId: id,
         monthKey,
         status: "PAID",
         paidAt: new Date(),
-        transactionId: transaction.id,
+        transactionId: txRecord.id,
         finalAmount,
       },
     });
@@ -226,9 +242,11 @@ export async function payRecurringExpense(
       where: { id },
       data: { nextDueDate, lastGeneratedAt: new Date() },
     });
+
+    return txRecord.id;
   });
 
-  return { transactionId: transaction.id, nextDueDate: nextDueDate.toISOString() };
+  return { transactionId, nextDueDate: nextDueDate.toISOString() };
 }
 
 function computeNextDueDate(current: Date, frequency: RecurrenceFrequency): Date {

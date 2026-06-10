@@ -6,6 +6,11 @@ import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/app/page-header";
 import { argentinaMonthParts } from "@/lib/dates";
 
+const MONTH_NAMES_ES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
 type Message = {
   id: string;
   role: "user" | "assistant";
@@ -25,19 +30,29 @@ const SUGGESTED_QUESTIONS = [
   "¿Qué compromisos tengo este mes?",
 ];
 
-export function CopilotClient() {
+export function CopilotClient({ initialMonth }: { initialMonth?: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const autoSentRef = useRef(false);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  async function sendMessage(text: string) {
+  useEffect(() => {
+    if (!initialMonth || autoSentRef.current) return;
+    autoSentRef.current = true;
+    const [yearStr, monthStr] = initialMonth.split("-");
+    const monthName = MONTH_NAMES_ES[(parseInt(monthStr ?? "1", 10) - 1)] ?? "";
+    void sendMessage(`Dame un resumen de mis finanzas de ${monthName} ${yearStr}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialMonth]);
+
+  async function sendMessage(text: string, overrideMonth?: string) {
     if (!text.trim() || loading) return;
     setError(null);
 
@@ -51,7 +66,15 @@ export function CopilotClient() {
     setLoading(true);
 
     try {
-      const { year, month } = argentinaMonthParts(new Date());
+      let year: number;
+      let month: number;
+      if (overrideMonth ?? initialMonth) {
+        const [y, m] = (overrideMonth ?? initialMonth ?? "").split("-").map(Number);
+        year = y ?? new Date().getFullYear();
+        month = m ?? new Date().getMonth() + 1;
+      } else {
+        ({ year, month } = argentinaMonthParts(new Date()));
+      }
       const res = await fetch("/api/ai/copilot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

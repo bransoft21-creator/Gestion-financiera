@@ -1,6 +1,6 @@
-import { DebtStatus, Prisma } from "@prisma/client";
+import { DebtStatus, DebtType, Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
-import { NotFoundError } from "../api/errors";
+import { ApiError, NotFoundError } from "../api/errors";
 import type { CreateDebtInput, ListDebtsInput, UpdateDebtInput } from "../schemas/debts";
 import { traceFinancialSource } from "./financial-debug";
 import { assertHouseholdAccess } from "./households";
@@ -72,6 +72,14 @@ export async function listDebts(userProfileId: string, input: ListDebtsInput) {
 
 export async function createDebt(userProfileId: string, input: CreateDebtInput) {
   await assertHouseholdAccess(userProfileId, input.householdId);
+
+  // Debt.CREDIT_CARD records are managed automatically by syncLegacyCreditCards().
+  // Manual creation would duplicate the liability already tracked via Account.currentBalance,
+  // breaking the deduplication in computeRealLiabilitySummary(). Use a CC Account instead.
+  if (input.type === DebtType.CREDIT_CARD) {
+    throw new ApiError(400, "Las deudas de tarjeta de crédito se gestionan automáticamente. Usá una cuenta de tipo Tarjeta de crédito.");
+  }
+
   const debtState = normalizeDebtState(undefined, input.outstandingAmount);
 
   const debt = await prisma.debt.create({

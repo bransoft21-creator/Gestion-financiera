@@ -6,7 +6,11 @@ import { CopilotClient } from "./copilot-client";
 
 export const metadata = { title: "Perspectiva — Meridian" };
 
-export default async function CopilotPage() {
+export default async function CopilotPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -21,5 +25,8 @@ export default async function CopilotPage() {
     redirect("/dashboard");
   }
 
-  return <CopilotClient />;
+  const { month } = await searchParams;
+  const initialMonth = /^\d{4}-\d{2}$/.test(month ?? "") ? month : undefined;
+
+  return <CopilotClient initialMonth={initialMonth} />;
 }
