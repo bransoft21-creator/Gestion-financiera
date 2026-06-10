@@ -116,7 +116,10 @@ export function CopilotClient({ initialMonth }: { initialMonth?: string }) {
   const isEmpty = messages.length === 0;
 
   return (
-    <div className="flex h-[calc(100dvh-160px)] flex-col lg:h-[calc(100dvh-68px)]">
+    <div
+      className="flex flex-col lg:!h-[calc(100dvh-68px)]"
+      style={{ height: "calc(100dvh - 204px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))" }}
+    >
       <div className="px-4 pt-4 lg:px-6 lg:pt-6">
         <PageHeader
           title="Perspectiva"
@@ -127,7 +130,7 @@ export function CopilotClient({ initialMonth }: { initialMonth?: string }) {
       {/* Chat area */}
       <div className="flex-1 overflow-y-auto px-4 pb-2 lg:px-6">
         {isEmpty ? (
-          <div className="flex h-full flex-col justify-center">
+          <div className="flex min-h-full flex-col justify-center">
             <EmptyState onSelect={sendMessage} />
           </div>
         ) : (
