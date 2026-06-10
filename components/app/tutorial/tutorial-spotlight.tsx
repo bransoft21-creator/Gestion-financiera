@@ -216,7 +216,7 @@ export function TutorialSpotlight() {
   if (state.navigating) {
     return (
       <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/74">
-        <Loader2 className="h-8 w-8 animate-spin text-teal-400" aria-label="Cargando sección..." />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label="Cargando sección..." />
       </div>
     );
   }
@@ -296,7 +296,7 @@ export function TutorialSpotlight() {
                 height={spotRect.h + 3}
                 rx={SPOTLIGHT_R + 2}
                 fill="none"
-                stroke="rgba(45,212,191,0.55)"
+                stroke="hsl(var(--primary) / 0.55)"
                 strokeWidth="1.5"
                 style={{
                   transition: shouldReduce
@@ -331,7 +331,7 @@ export function TutorialSpotlight() {
               {/* Header row */}
               <div className="flex items-start justify-between gap-3 px-5 pt-5">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-teal-400">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
                     Paso {state.step + 1} de {total}
                   </p>
                   <h3 className="mt-1.5 text-[15px] font-semibold leading-snug text-foreground">
@@ -390,7 +390,7 @@ export function TutorialSpotlight() {
                     className={cn(
                       "flex h-8 items-center justify-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition",
                       isLast
-                        ? "bg-primary text-primary-foreground shadow-[0_8px_24px_rgba(45,212,191,0.28)] hover:opacity-90"
+                        ? "bg-primary text-primary-foreground [box-shadow:0_8px_24px_hsl(var(--primary)/0.28)] hover:opacity-90"
                         : "border border-border bg-muted/60 text-foreground hover:bg-muted",
                     )}
                     aria-label={isLast ? (currentStep.ctaLabel ?? "Finalizar tutorial") : "Siguiente paso"}

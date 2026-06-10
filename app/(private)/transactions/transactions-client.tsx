@@ -1382,7 +1382,7 @@ export function TransactionsClient({
       <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+72px)] right-4 z-[100] flex flex-col items-end gap-2 lg:hidden">
         <Link
           href="/smart-import"
-          className="flex h-10 items-center gap-2 rounded-full border border-border bg-background/95 px-4 text-[13px] font-medium text-muted-foreground shadow-lg backdrop-blur-sm transition hover:text-foreground"
+          className="flex h-10 items-center gap-2 rounded-full border border-primary/30 bg-background/95 px-4 text-[13px] font-medium text-primary/70 shadow-lg backdrop-blur-sm transition hover:border-primary/60 hover:text-primary"
         >
           <ScanLine className="h-4 w-4" />
           Importar extracto

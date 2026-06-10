@@ -7,25 +7,25 @@ export const TUTORIAL_STEPS: TutorialStepDef[] = [
     route: "/dashboard",
     title: "Bienvenido a Meridian",
     description:
-      "Te mostramos los elementos clave en menos de un minuto. Podés saltar en cualquier momento.",
+      "Tu Financial OS personal y familiar. En menos de un minuto te mostramos lo que necesitás para empezar. Podés saltar en cualquier momento.",
   },
   {
     id: "dashboard-hero",
     route: "/dashboard",
     targets: ["[data-tutorial='dashboard-hero']"],
     highlightPadding: 8,
-    title: "Disponible real del mes",
+    title: "Tu disponible real",
     description:
-      "Esta tarjeta resume tu salud financiera: ingresos, gastos y cuánto dinero respirás este mes.",
+      "No es el saldo del banco — es lo que realmente podés gastar: ingresos menos gastos, lo que reservaste para presupuestos y tus obligaciones del mes.",
   },
   {
     id: "financial-copilot",
     route: "/dashboard",
     targets: ["[data-tutorial='financial-copilot']"],
     highlightPadding: 8,
-    title: "Copiloto financiero con IA",
+    title: "Análisis IA del mes",
     description:
-      "Análisis automático de tu situación mensual — puntos fuertes, alertas y recomendaciones personalizadas.",
+      "Un análisis automático de tu situación: qué va bien, qué preocupa y qué podés mejorar. Se actualiza con cada movimiento que registrás.",
   },
   {
     id: "privacy",
@@ -37,16 +37,16 @@ export const TUTORIAL_STEPS: TutorialStepDef[] = [
     highlightPadding: 10,
     title: "Modo privado",
     description:
-      "Un toque oculta todos los montos de la pantalla. Útil cuando estás en público o compartís pantalla.",
+      "Un toque oculta todos los montos de la pantalla. Útil cuando estás en público o compartís pantalla con alguien.",
   },
   {
     id: "transactions",
     route: "/transactions",
     targets: ["[data-tutorial='transactions-feed']"],
     highlightPadding: 8,
-    title: "Feed de movimientos",
+    title: "Tus movimientos",
     description:
-      "Todos tus ingresos y gastos en un solo lugar. Filtrá, buscá y exportá con un click.",
+      "Todos los ingresos y gastos en un solo lugar. En la barra de acciones encontrás 'Importar' para cargar extractos bancarios directamente.",
   },
   {
     id: "smart-import",
@@ -55,16 +55,16 @@ export const TUTORIAL_STEPS: TutorialStepDef[] = [
     highlightPadding: 12,
     title: "Smart Import",
     description:
-      "Arrastrá un resumen bancario o PDF y la IA extrae y categoriza tus movimientos automáticamente.",
+      "Arrastrá un extracto bancario (PDF o imagen) y la IA lee, categoriza y propone los movimientos. Vos revisás y confirmás antes de que entren.",
   },
   {
-    id: "notifications",
-    route: "/notifications",
-    targets: ["[data-tutorial='activity-center']"],
-    highlightPadding: 8,
-    title: "Centro de actividad",
+    id: "copilot",
+    route: "/copilot",
+    targets: ["[data-tutorial='copilot-start']"],
+    highlightPadding: 12,
+    title: "Perspectiva — tu copiloto",
     description:
-      "Señales, insights y alertas generadas por el sistema sobre tus finanzas en tiempo real.",
+      "Hacé preguntas sobre tus finanzas en lenguaje natural. Solo responde con tus datos reales de Meridian, sin estimaciones ni datos de terceros.",
   },
   {
     id: "profile",
@@ -73,14 +73,14 @@ export const TUTORIAL_STEPS: TutorialStepDef[] = [
     highlightPadding: 8,
     title: "Tu perfil",
     description:
-      "Gestioná tu cuenta, preferencias y seguridad. También podés repetir este tour desde acá.",
+      "Gestioná tu cuenta, preferencias y privacidad. También podés repetir este recorrido desde acá cuando quieras.",
   },
   {
     id: "done",
     type: "overlay",
-    title: "¡Ya sos un experto!",
+    title: "Ya tenés todo para empezar",
     description:
-      "Ahora conocés las herramientas principales. Explorá a tu ritmo y repetí este tour desde tu perfil cuando quieras.",
+      "Cargá tus primeros movimientos, importá un extracto bancario, o preguntale a Perspectiva sobre tus finanzas. Meridian va creciendo con tu uso.",
     ctaLabel: "Ir al dashboard",
     ctaRoute: "/dashboard",
   },

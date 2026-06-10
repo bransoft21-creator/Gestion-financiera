@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronDown, CreditCard, Filter, Loader2, Plus, Search } from "lucide-react";
+import { ChevronDown, CreditCard, Filter, Loader2, Plus, ScanLine, Search } from "lucide-react";
+import Link from "next/link";
 import { ActionButton } from "@/components/ui-v2/action-button";
 import { PremiumCard, PremiumCardContent, PremiumCardHeader } from "@/components/ui-v2/premium-card";
 import { Input } from "@/components/ui/input";
@@ -100,6 +101,12 @@ export function TransactionFilters({
               <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span className="min-w-0 truncate">{activeFilterCount > 0 ? `${activeFilterCount}` : "Filtros"}</span>
               <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition ${isFiltersOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+            </ActionButton>
+            <ActionButton asChild variant="quiet" size="sm" className="hidden min-w-0 px-2 sm:flex sm:px-3">
+              <Link href="/smart-import">
+                <ScanLine className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 truncate">Importar</span>
+              </Link>
             </ActionButton>
             <ActionButton type="button" size="sm" className="min-w-0 px-2 sm:px-3" onClick={onNew}>
               <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />

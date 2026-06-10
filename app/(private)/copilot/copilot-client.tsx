@@ -185,7 +185,7 @@ function EmptyState({ onSelect }: { onSelect: (q: string) => void }) {
       <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
         Preguntas sugeridas
       </p>
-      <div className="grid gap-2">
+      <div data-tutorial="copilot-start" className="grid gap-2">
         {SUGGESTED_QUESTIONS.map((q) => (
           <button
             key={q}

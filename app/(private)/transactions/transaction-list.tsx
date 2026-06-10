@@ -10,8 +10,10 @@ import {
   Loader2,
   Plus,
   ReceiptText,
+  ScanLine,
   Trash2,
 } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -264,10 +266,18 @@ function TransactionsEmptyState({ search, onNew }: { search: string; onNew: () =
           : "Registrá el primer movimiento o usá Smart Import para que el feed empiece a mostrar ritmo, categorías y cuentas."}
       </p>
       {!search ? (
-        <Button type="button" className="mt-5 inline-flex" onClick={onNew}>
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Agregar primera transacción
-        </Button>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <Button asChild variant="outline" className="inline-flex">
+            <Link href="/smart-import">
+              <ScanLine className="h-4 w-4" aria-hidden="true" />
+              Importar extracto
+            </Link>
+          </Button>
+          <Button type="button" className="inline-flex" onClick={onNew}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Nuevo movimiento
+          </Button>
+        </div>
       ) : null}
     </div>
   );
