@@ -37,7 +37,6 @@ export const navItems = [
     shortLabel: "Copilot",
     icon: BotMessageSquare,
     tier: "core",
-    mobile: "primary",
     featured: true,
   },
   {
@@ -93,6 +92,7 @@ export const navItems = [
     shortLabel: "Import",
     icon: FileUp,
     tier: "advanced",
+    mobile: "primary",
   },
   {
     href: "/settings",
