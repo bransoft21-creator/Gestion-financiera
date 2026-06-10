@@ -11,7 +11,7 @@ import {
   Clock,
   Lightbulb,
   RefreshCw,
-  Sparkles,
+  Brain,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -77,7 +77,7 @@ const SOURCE_LABEL: Partial<Record<string, string>> = {
 };
 
 const TYPE_ICON: Record<ActivityType, typeof Bell> = {
-  INSIGHT:  Sparkles,
+  INSIGHT:  Brain,
   SIGNAL:   BrainCircuit,
   REMINDER: Bell,
   SYSTEM:   CheckCircle2,

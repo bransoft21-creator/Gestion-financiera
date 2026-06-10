@@ -11,7 +11,7 @@ import {
   ReceiptText,
   RefreshCw,
   ScanLine,
-  Sparkles,
+  Brain,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -50,7 +50,7 @@ export function GettingStartedCard({ activation }: { activation: NextStepRecomme
   if (!activation.shouldShow || dismissed || activation.actions.length === 0) return null;
 
   const [primaryAction, ...secondaryActions] = activation.actions;
-  const PrimaryIcon = actionIcons[primaryAction.id] ?? Sparkles;
+  const PrimaryIcon = actionIcons[primaryAction.id] ?? Brain;
 
   function dismiss() {
     window.localStorage.setItem(DISMISS_KEY, "1");
@@ -113,7 +113,7 @@ export function GettingStartedCard({ activation }: { activation: NextStepRecomme
 
           <div className="grid min-w-0 gap-2">
             {secondaryActions.map((action, index) => {
-              const Icon = actionIcons[action.id] ?? Sparkles;
+              const Icon = actionIcons[action.id] ?? Brain;
               return (
                 <Link
                   key={action.id}

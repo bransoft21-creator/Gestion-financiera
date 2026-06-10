@@ -1,6 +1,20 @@
 import type { Metadata, Viewport } from "next";
+import { DM_Mono, Geist } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/app/providers";
+
+const geistUI = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+  display: "swap",
+});
+
+const financialMono = DM_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-financial",
+  display: "swap",
+});
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -8,7 +22,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0F766E",
+  themeColor: "#0E9080",
 };
 
 export const metadata: Metadata = {
@@ -46,7 +60,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning className={`${geistUI.variable} ${financialMono.variable}`}>
       <body>
         <Providers>{children}</Providers>
       </body>

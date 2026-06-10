@@ -153,7 +153,7 @@ export function BottomNav({ awareness, copilotEnabled, hasSharedHousehold }: { a
                 )}
               >
                 {isActive && (
-                  <span className="absolute inset-x-2 top-0 h-[2px] rounded-b-full bg-teal-400/70 transition-all duration-200" />
+                  <span className="absolute inset-x-2 top-0 h-[2px] rounded-b-full bg-primary/70 transition-all duration-200" />
                 )}
                 <span className="relative">
                   <Icon className="h-6 w-6" aria-hidden="true" />
@@ -178,7 +178,7 @@ export function BottomNav({ awareness, copilotEnabled, hasSharedHousehold }: { a
             )}
           >
             {(isMoreActive || moreOpen) && (
-              <span className="absolute inset-x-2 top-0 h-[2px] rounded-b-full bg-teal-400/70 transition-all duration-200" />
+              <span className="absolute inset-x-2 top-0 h-[2px] rounded-b-full bg-primary/70 transition-all duration-200" />
             )}
             <span className="relative">
               <Menu className="h-6 w-6" aria-hidden="true" />

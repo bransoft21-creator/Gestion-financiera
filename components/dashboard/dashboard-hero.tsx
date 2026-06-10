@@ -36,7 +36,7 @@ function FormulaPill({
   return (
     <Link
       href={href}
-      className="flex min-w-0 items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2.5 py-1 transition hover:bg-muted/70"
+      className="flex min-w-0 items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1.5 transition hover:bg-muted/70"
       aria-label={label}
     >
       <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
@@ -77,7 +77,7 @@ export function DashboardHero({
   const hasData = metrics.income > 0 || metrics.expenses > 0;
   const headline = getHeroHeadline(metrics, isCurrentMonth);
   const primarySignal = hasData ? getHeroPrimarySignal(metrics, isCurrentMonth) : null;
-  const healthSignals = hasData ? buildHealthSignals(metrics, isCurrentMonth).slice(0, 2) : [];
+  const healthSignals = hasData ? buildHealthSignals(metrics, isCurrentMonth).slice(0, 1) : [];
   const incomeLabel = periodStatus === "CLOSED" ? "Total cobrado" : "Ingresos";
   const expensesLabel = periodStatus === "CLOSED" ? "Total gastado" : "Gastos";
   const obligationsLabel = periodStatus === "CLOSED" ? "Compromisos pagados" : "Compromisos";
@@ -127,25 +127,34 @@ export function DashboardHero({
                 </span>
               )}
             </div>
-            <Link
-              href="/transactions?new=1"
-              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-teal-500/25 bg-teal-500/[0.08] px-4 text-[13px] font-semibold text-teal-400 backdrop-blur-sm transition-all duration-200 hover:border-teal-500/40 hover:bg-teal-500/[0.14] hover:shadow-[0_0_14px_rgba(45,212,191,0.18)] active:scale-95"
-              aria-label="Nueva transacción"
-            >
-              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="hidden sm:inline">Nueva transacción</span>
-              <span className="sm:hidden">Nueva</span>
-            </Link>
+            {periodStatus !== "CLOSED" && (
+              <Link
+                href="/transactions?new=1"
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-primary/25 bg-primary/[0.08] px-4 text-[13px] font-semibold text-primary backdrop-blur-sm transition-all duration-200 hover:border-primary/40 hover:bg-primary/[0.14] hover:shadow-[0_0_14px_var(--glow-primary)] active:scale-95"
+                aria-label="Nueva transacción"
+              >
+                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="hidden sm:inline">Nueva transacción</span>
+                <span className="sm:hidden">Nueva</span>
+              </Link>
+            )}
           </div>
 
-          <h2 className="text-balance text-2xl font-semibold leading-tight text-foreground sm:text-3xl">
+          <h2 className={cn(
+            "text-balance text-2xl leading-tight sm:text-3xl",
+            periodStatus === "CLOSED"
+              ? "font-medium text-foreground/70"
+              : "font-semibold text-foreground",
+          )}>
             {headline}
           </h2>
 
           <p
             className={cn(
-              "mt-5 text-[38px] font-semibold leading-none tracking-tight tabular-nums sm:text-[44px]",
-              isPositive ? "text-emerald-400" : "text-rose-400",
+              "mt-5 text-[52px] font-medium leading-none tracking-tight tabular-nums sm:text-[62px]",
+              periodStatus === "CLOSED"
+                ? isPositive ? "text-emerald-400/70" : "text-rose-400/70"
+                : isPositive ? "text-emerald-400" : "text-rose-400",
             )}
           >
             <SensitiveAmount value={formatMoney(animated, currency)} />
@@ -153,15 +162,15 @@ export function DashboardHero({
 
           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <FormulaPill label={incomeLabel} value={metrics.income} color="#34d399" href="/transactions?type=INCOME" currency={currency} />
-            <span aria-hidden="true">−</span>
+            <span aria-hidden="true" className="font-medium text-muted-foreground/60">−</span>
             <FormulaPill label={expensesLabel} value={metrics.expenses} color="#f87171" href="/transactions?type=EXPENSE" currency={currency} />
-            <span aria-hidden="true">−</span>
+            <span aria-hidden="true" className="font-medium text-muted-foreground/60">−</span>
             <FormulaPill label="Reservado" value={metrics.remainingReservedBudget} color="#fbbf24" href="/budgets" currency={currency} />
-            <span aria-hidden="true">−</span>
+            <span aria-hidden="true" className="font-medium text-muted-foreground/60">−</span>
             <FormulaPill label={obligationsLabel} value={metrics.upcomingObligations - metrics.requiredGoalContributions} color="#60a5fa" href="/commitments" currency={currency} />
             {metrics.requiredGoalContributions > 0 && (
               <>
-                <span aria-hidden="true">−</span>
+                <span aria-hidden="true" className="font-medium text-muted-foreground/60">−</span>
                 <FormulaPill label="Metas" value={metrics.requiredGoalContributions} color="#a78bfa" href="/goals" currency={currency} />
               </>
             )}
@@ -206,7 +215,7 @@ export function DashboardHero({
           )}
 
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {/* Savings rate badge */}
+            {/* Savings rate badge — always visible */}
             <span
               className={cn(
                 "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-medium",
@@ -218,29 +227,29 @@ export function DashboardHero({
               <span className={cn("h-1 w-1 shrink-0 rounded-full", metrics.savingsRate >= 0 ? "bg-sky-500" : "bg-rose-400")} />
               Ahorro {metrics.savingsRate}%
             </span>
-            {/* USD balance badge */}
-            {usdBalance && usdBalance.accountCount > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-sky-300/20 bg-sky-300/[0.06] px-2.5 py-0.5 text-[10px] font-medium text-sky-400">
-                <span className="h-1 w-1 shrink-0 rounded-full bg-sky-400" />
-                <SensitiveAmount value={formatMoney(usdBalance.amount, "USD")} />
-                {fxLoaded ? <> · ≈ <SensitiveAmount value={formatMoney(fxEstimate(usdBalance.amount, "USD", "ARS", fxRate) ?? 0)} /></> : null}
-              </span>
-            )}
-            {/* Health signals */}
-            {healthSignals.map((signal) => (
-              <span
-                key={signal.label}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-medium",
-                  signal.tone === "positive"
-                    ? "border-emerald-500/12 bg-emerald-500/[0.07] text-emerald-500"
-                    : "border-amber-500/12 bg-amber-500/[0.07] text-amber-500",
+            {/* Top health signal — takes priority over USD badge */}
+            {healthSignals.length > 0
+              ? healthSignals.map((signal) => (
+                  <span
+                    key={signal.label}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-medium",
+                      signal.tone === "positive"
+                        ? "border-emerald-500/12 bg-emerald-500/[0.07] text-emerald-500"
+                        : "border-amber-500/12 bg-amber-500/[0.07] text-amber-500",
+                    )}
+                  >
+                    <span className={cn("h-1 w-1 shrink-0 rounded-full", signal.tone === "positive" ? "bg-emerald-500" : "bg-amber-500")} />
+                    {signal.label}
+                  </span>
+                ))
+              : usdBalance && usdBalance.accountCount > 0 && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-sky-300/20 bg-sky-300/[0.06] px-2.5 py-0.5 text-[10px] font-medium text-sky-400">
+                    <span className="h-1 w-1 shrink-0 rounded-full bg-sky-400" />
+                    <SensitiveAmount value={formatMoney(usdBalance.amount, "USD")} />
+                    {fxLoaded ? <> · ≈ <SensitiveAmount value={formatMoney(fxEstimate(usdBalance.amount, "USD", "ARS", fxRate) ?? 0)} /></> : null}
+                  </span>
                 )}
-              >
-                <span className={cn("h-1 w-1 shrink-0 rounded-full", signal.tone === "positive" ? "bg-emerald-500" : "bg-amber-500")} />
-                {signal.label}
-              </span>
-            ))}
           </div>
 
           {primarySignal && (

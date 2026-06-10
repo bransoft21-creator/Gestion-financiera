@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { ChevronLeft, ExternalLink, ReceiptText, Sparkles } from "lucide-react";
+import { ChevronLeft, ExternalLink, ReceiptText, Brain } from "lucide-react";
 import { EmptyState } from "@/components/app/empty-state";
 import { ChartErrorBoundary } from "@/components/app/chart-error-boundary";
 import { SensitiveAmount } from "@/components/app/sensitive-amount";
@@ -192,7 +192,7 @@ export function ExpenseCategoryExplorer({
           <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <div className="mb-2 inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
-                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                <Brain className="h-3.5 w-3.5" aria-hidden="true" />
                 Mapa de consumo
               </div>
               <PremiumCardTitle>Por dónde va el dinero</PremiumCardTitle>

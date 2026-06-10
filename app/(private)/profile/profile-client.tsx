@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, LogOut, Mail, RotateCcw, Settings, Sparkles, User } from "lucide-react";
+import { BookOpen, LogOut, Mail, RotateCcw, Settings, Brain, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { ActionButton } from "@/components/ui-v2/action-button";
@@ -82,7 +82,7 @@ export function ProfileClient({
                   </Badge>
                   {isAiEnabled && (
                     <Badge className="border-teal-300/20 bg-teal-300/10 text-teal-200">
-                      <Sparkles className="mr-1 h-3 w-3" aria-hidden="true" />
+                      <Brain className="mr-1 h-3 w-3" aria-hidden="true" />
                       Beta IA
                     </Badge>
                   )}
@@ -98,7 +98,7 @@ export function ProfileClient({
             <PremiumCardContent className="p-5">
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-teal-300/20 bg-teal-300/10 text-teal-200">
-                  <Sparkles className="h-5 w-5" aria-hidden="true" />
+                  <Brain className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-primary">Funciones IA activas</p>
@@ -124,7 +124,7 @@ export function ProfileClient({
             <PremiumCardContent className="p-5">
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/30 text-muted-foreground">
-                  <Sparkles className="h-5 w-5" aria-hidden="true" />
+                  <Brain className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground">Funciones IA no disponibles</p>

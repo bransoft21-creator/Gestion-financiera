@@ -13,7 +13,7 @@ import {
   Pencil,
   Plus,
   ShieldAlert,
-  Sparkles,
+  Brain,
   Target,
   Trash2,
   TrendingUp,
@@ -560,7 +560,7 @@ function GoalsBriefing({
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-2xl">
                   <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-semibold text-muted-foreground">
-                    <Sparkles className="h-3.5 w-3.5 text-emerald-200" aria-hidden="true" />
+                    <Brain className="h-3.5 w-3.5 text-emerald-200" aria-hidden="true" />
                     Momentum financiero
                   </div>
                   <h2 className="text-balance text-2xl font-semibold leading-tight text-foreground sm:text-3xl">

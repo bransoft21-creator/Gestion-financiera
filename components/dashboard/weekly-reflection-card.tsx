@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { captureClientError, trackProductEvent } from "@/lib/observability/client";
@@ -119,7 +119,7 @@ export function WeeklyReflectionCard() {
       {/* Header */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 shrink-0 text-teal-400" aria-hidden="true" />
+          <Brain className="h-3.5 w-3.5 shrink-0 text-teal-400" aria-hidden="true" />
           <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
             Tu semana
           </span>

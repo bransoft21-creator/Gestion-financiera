@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { ArrowRight, X, Sparkles } from "lucide-react";
+import { ArrowRight, X, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -148,7 +148,7 @@ function MonthlyAiSection({ monthKey }: { monthKey: string }) {
   return (
     <div className="pt-1">
       <div className="mb-3 flex items-center gap-1.5">
-        <Sparkles className="h-3 w-3 shrink-0 text-teal-400" aria-hidden="true" />
+        <Brain className="h-3 w-3 shrink-0 text-teal-400" aria-hidden="true" />
         <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
           Contexto
         </span>

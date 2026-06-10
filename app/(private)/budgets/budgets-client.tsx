@@ -20,7 +20,7 @@ import {
   Pencil,
   Plus,
   ShieldAlert,
-  Sparkles,
+  Brain,
   Target,
   Trash2,
   WalletCards,
@@ -391,7 +391,7 @@ export function BudgetsClient({ householdId, categories, defaultCurrency = "ARS"
                   </PremiumCardDescription>
                 </div>
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-muted/50 text-foreground shadow-[0_18px_45px_rgba(0,0,0,0.22)]">
-                  <Sparkles className="h-5 w-5" aria-hidden="true" />
+                  <Brain className="h-5 w-5" aria-hidden="true" />
                 </div>
               </div>
             </PremiumCardHeader>
@@ -596,7 +596,7 @@ function PlanBriefing({
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-2xl">
                   <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-semibold text-muted-foreground">
-                    <Sparkles className="h-3.5 w-3.5 text-teal-200" aria-hidden="true" />
+                    <Brain className="h-3.5 w-3.5 text-teal-200" aria-hidden="true" />
                     Plan inteligente
                   </div>
                   <h2 className="text-balance text-2xl font-semibold leading-tight text-foreground sm:text-3xl">
@@ -709,7 +709,7 @@ function SuggestedPlanPanel({
     <div className="space-y-4">
       <div className="rounded-3xl border border-teal-300/20 bg-teal-300/10 p-4">
         <div className="flex items-start gap-3">
-          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+          <Brain className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
           <div>
             <p className="text-sm font-semibold text-foreground">Meridian preparó una distribución inicial</p>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">

@@ -12,7 +12,7 @@ import {
   Loader2,
   Scan,
   ShieldCheck,
-  Sparkles,
+  Brain,
   X,
 } from "lucide-react";
 import Image from "next/image";
@@ -386,7 +386,7 @@ function FilePreviewState({
       </motion.div>
 
       <ActionButton className="w-full" onClick={onAnalyze}>
-        <Sparkles className="h-4 w-4" />
+        <Brain className="h-4 w-4" />
         Preparar preview
         <ArrowRight className="h-4 w-4" />
       </ActionButton>
@@ -427,7 +427,7 @@ function ProcessingView({ isSlow, onCancel }: { isSlow: boolean; onCancel: () =>
             animate={shouldReduceMotion ? {} : { rotate: 360 }}
             transition={{ duration: 3.5, repeat: Infinity, ease: "linear" }}
           >
-            <Sparkles className="h-12 w-12 text-teal-300" />
+            <Brain className="h-12 w-12 text-teal-300" />
           </motion.div>
         </motion.div>
       </div>

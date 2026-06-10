@@ -10,14 +10,12 @@ import {
   Brain,
   CalendarDays,
   Car,
-  ChevronDown,
   CircleDollarSign,
   CreditCard,
   Loader2,
   Repeat,
   ShieldAlert,
   ShieldCheck,
-  Sparkles,
   Target,
   TrendingDown,
   TrendingUp,
@@ -133,7 +131,7 @@ type ApiResponse = {
 };
 
 type InsightTone = "emerald" | "amber" | "rose" | "sky" | "violet" | "zinc";
-type IconType = typeof Sparkles;
+type IconType = typeof Brain;
 
 type NarrativeInsight = {
   id: string;
@@ -339,7 +337,7 @@ export function FinancialAiAnalysisCard({ month, isCurrentMonth = true }: { mont
             >
               {isLoading
                 ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-                : <Sparkles className="h-3 w-3" aria-hidden="true" />
+                : <Brain className="h-3 w-3" aria-hidden="true" />
               }
               Actualizar
             </button>
@@ -444,7 +442,7 @@ function CollapsedCopilotPreview({
         href={`/copilot?month=${month}`}
         className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-muted/30 py-2.5 text-[13px] font-semibold text-muted-foreground transition hover:bg-muted/50 hover:text-foreground"
       >
-        <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+        <Brain className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
         Ver análisis completo en Copilot
       </a>
     </motion.div>
@@ -799,7 +797,7 @@ function CopilotEmptyState({
     >
       <div className="max-w-2xl">
         <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-muted/50 text-primary">
-          {isForbidden ? <ShieldAlert className="h-4 w-4" aria-hidden="true" /> : error ? <AlertTriangle className="h-4 w-4" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
+          {isForbidden ? <ShieldAlert className="h-4 w-4" aria-hidden="true" /> : error ? <AlertTriangle className="h-4 w-4" aria-hidden="true" /> : <Brain className="h-4 w-4" aria-hidden="true" />}
         </div>
         <h2 className="text-balance text-xl font-semibold leading-tight text-foreground">
           {isForbidden ? "La IA todavía no está habilitada." : error ? "No pudimos traer tu lectura." : "Descubramos qué importa hoy."}
@@ -811,7 +809,7 @@ function CopilotEmptyState({
         </p>
         {!isForbidden && (
           <Button onClick={onAnalyze} disabled={isLoading} className="mt-4 h-10 rounded-2xl bg-foreground text-background hover:opacity-90">
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Brain className="h-4 w-4" aria-hidden="true" />}
             Analizar mi mes
           </Button>
         )}

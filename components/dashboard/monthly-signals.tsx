@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Lightbulb, Sparkles } from "lucide-react";
+import { AlertTriangle, Lightbulb, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   PremiumCard,
@@ -88,7 +88,7 @@ export function MonthlySignals({
                   href={insight.href}
                   className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground"
                 >
-                  <Sparkles className={`h-3 w-3 shrink-0 ${tone.text}`} aria-hidden="true" />
+                  <Brain className={`h-3 w-3 shrink-0 ${tone.text}`} aria-hidden="true" />
                   <span className="truncate">{insight.title}</span>
                 </Link>
               );
