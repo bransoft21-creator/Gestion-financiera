@@ -39,6 +39,7 @@ type NotificationsButtonProps = {
   className?: string;
   panelClassName?: string;
   embedded?: boolean;
+  navigateTo?: string;
 };
 
 const DEFAULT_SUMMARY: ActivitySummary = { unreadCount: 0, pendingCount: 0 };
@@ -48,6 +49,7 @@ export function NotificationsButton({
   className,
   panelClassName,
   embedded = false,
+  navigateTo,
 }: NotificationsButtonProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -114,6 +116,30 @@ export function NotificationsButton({
     if (item.source === "monthly-close") {
       trackProductEvent("monthly_close_notification_opened", { tone: item.tone }, "dashboard");
     }
+  }
+
+  if (navigateTo) {
+    return (
+      <Link
+        href={navigateTo}
+        className={cn(
+          "relative flex h-9 w-9 items-center justify-center rounded-full border-0 bg-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+          className,
+        )}
+        aria-label={unreadCount > 0 ? `${unreadCount} avisos sin leer` : "Centro de actividad"}
+      >
+        {hasPriorityUnread ? (
+          <BellRing className="h-4 w-4 text-amber-400" aria-hidden="true" />
+        ) : (
+          <Bell className="h-4 w-4" aria-hidden="true" />
+        )}
+        {unreadCount > 0 ? (
+          <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-amber-400 px-1 py-0.5 text-[10px] font-bold leading-none text-black">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        ) : null}
+      </Link>
+    );
   }
 
   return (

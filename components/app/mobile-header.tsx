@@ -57,7 +57,7 @@ export function MobileHeader({ userName }: MobileHeaderProps) {
             <PrivacyToggle compact />
           </span>
           <span data-tutorial="notifications-mobile">
-            <NotificationsButton compact panelClassName="fixed left-3 right-3 w-auto top-[calc(env(safe-area-inset-top)+4.5rem+8px)] z-[200]" />
+            <NotificationsButton compact navigateTo="/notifications" />
           </span>
           <LogoutButton compact />
         </div>

@@ -127,7 +127,9 @@ export function CopilotClient({ initialMonth }: { initialMonth?: string }) {
       {/* Chat area */}
       <div className="flex-1 overflow-y-auto px-4 pb-2 lg:px-6">
         {isEmpty ? (
-          <EmptyState onSelect={sendMessage} />
+          <div className="flex h-full flex-col justify-center">
+            <EmptyState onSelect={sendMessage} />
+          </div>
         ) : (
           <div className="mx-auto max-w-2xl space-y-4 pb-4">
             {messages.map((msg) =>
@@ -169,7 +171,7 @@ export function CopilotClient({ initialMonth }: { initialMonth?: string }) {
 
 function EmptyState({ onSelect }: { onSelect: (q: string) => void }) {
   return (
-    <div className="mx-auto max-w-2xl py-6">
+    <div className="mx-auto max-w-2xl py-4">
       <div className="mb-6 flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10">
           <BotMessageSquare className="h-5 w-5 text-primary" />
