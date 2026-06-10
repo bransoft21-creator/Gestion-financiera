@@ -301,8 +301,12 @@ export function DashboardClient({ householdId }: { householdId: string }) {
         </PremiumCard>
       </motion.div>
 
-      <ContextualEntryPoints entryPoints={summary.awareness.entryPoints} />
-      <ActivityPreview />
+      <div className="mt-5">
+        <ContextualEntryPoints entryPoints={summary.awareness.entryPoints} />
+      </div>
+      <div className="mt-5">
+        <ActivityPreview />
+      </div>
     </div>
       )}
     </div>

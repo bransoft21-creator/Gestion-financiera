@@ -147,6 +147,7 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
   }, [balance, briefing, recurringPayments]);
 
   function switchHousehold(id: string) {
+    const isSame = id === selectedHouseholdId;
     setSelectedHouseholdId(id);
     setActiveTab("overview");
     setBalance(null);
@@ -160,6 +161,13 @@ export function HouseholdClient({ initialHouseholds, currentUserId }: { initialH
     setShowPaidPayments(false);
     setShowAllActivePayments(false);
     setIsAddingRecurring(false);
+    // Si el ID no cambia, el useEffect no se dispara — recargar manualmente
+    if (isSame) {
+      void loadBalance(id);
+      void loadBriefing(id);
+      void loadSettlements(id);
+      void loadRecurringPayments(id);
+    }
   }
 
   async function reloadHouseholds(nextSelectedId?: string) {

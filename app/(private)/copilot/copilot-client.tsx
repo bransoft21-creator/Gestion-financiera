@@ -116,7 +116,7 @@ export function CopilotClient({ initialMonth }: { initialMonth?: string }) {
   const isEmpty = messages.length === 0;
 
   return (
-    <div className="flex h-[calc(100dvh-120px)] flex-col lg:h-[calc(100dvh-68px)]">
+    <div className="flex h-[calc(100dvh-160px)] flex-col lg:h-[calc(100dvh-68px)]">
       <div className="px-4 pt-4 lg:px-6 lg:pt-6">
         <PageHeader
           title="Perspectiva"

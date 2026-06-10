@@ -3,12 +3,13 @@ import {
   BotMessageSquare,
   CircleDollarSign,
   CalendarCheck2,
+  FileUp,
   Gauge,
   HandCoins,
   Home,
   Landmark,
   Settings,
-  Sparkles,
+  Target,
   TrendingUp,
 } from "lucide-react";
 import type { AwarenessTarget } from "@/lib/navigation-awareness";
@@ -83,7 +84,14 @@ export const navItems = [
     href: "/goals",
     label: "Metas",
     shortLabel: "Metas",
-    icon: Sparkles,
+    icon: Target,
+    tier: "advanced",
+  },
+  {
+    href: "/smart-import",
+    label: "Smart Import",
+    shortLabel: "Import",
+    icon: FileUp,
     tier: "advanced",
   },
   {
