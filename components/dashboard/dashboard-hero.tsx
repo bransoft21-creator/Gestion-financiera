@@ -36,12 +36,12 @@ function FormulaPill({
   return (
     <Link
       href={href}
-      className="flex min-w-0 items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1.5 transition hover:bg-muted/70"
+      className="flex min-w-0 items-center gap-1 rounded-full border border-border bg-muted/40 px-2.5 py-1 transition hover:bg-muted/70"
       aria-label={label}
     >
-      <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
+      <span className="shrink-0 text-[10px] text-muted-foreground">{label}</span>
       <span
-        className="max-w-[8rem] truncate text-[13px] font-semibold tabular-nums"
+        className="max-w-[7rem] truncate text-xs font-semibold tabular-nums"
         style={{ color }}
       >
         <SensitiveAmount value={formatMoney(value, currency)} />
@@ -151,7 +151,7 @@ export function DashboardHero({
 
           <p
             className={cn(
-              "mt-5 text-[52px] font-medium leading-none tracking-tight tabular-nums sm:text-[62px]",
+              "mt-4 text-[38px] font-medium leading-none tracking-tight tabular-nums sm:text-[54px]",
               periodStatus === "CLOSED"
                 ? isPositive ? "text-emerald-400/70" : "text-rose-400/70"
                 : isPositive ? "text-emerald-400" : "text-rose-400",
@@ -160,7 +160,7 @@ export function DashboardHero({
             <SensitiveAmount value={formatMoney(animated, currency)} />
           </p>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             <FormulaPill label={incomeLabel} value={metrics.income} color="#34d399" href="/transactions?type=INCOME" currency={currency} />
             <span aria-hidden="true" className="font-medium text-muted-foreground/60">−</span>
             <FormulaPill label={expensesLabel} value={metrics.expenses} color="#f87171" href="/transactions?type=EXPENSE" currency={currency} />
