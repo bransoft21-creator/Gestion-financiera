@@ -8,6 +8,7 @@ import {
   HandCoins,
   Home,
   Landmark,
+  LineChart,
   ScanLine,
   Settings,
   Target,
@@ -88,6 +89,13 @@ export const navItems = [
     icon: CreditCard,
     tier: "weekly",
     awarenessTarget: "debts",
+  },
+  {
+    href: "/reports",
+    label: "Reportes",
+    shortLabel: "Reportes",
+    icon: LineChart,
+    tier: "advanced",
   },
   {
     href: "/accounts",
