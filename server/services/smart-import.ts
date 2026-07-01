@@ -1596,6 +1596,7 @@ function buildCandidate(
     paymentMethod,
     workspace.accounts,
     currency,
+    sourceType,
   );
   const { possibleDuplicate, duplicateInfo } = detectDuplicate(
     tx.amount,
@@ -1719,18 +1720,22 @@ function mapAccount(
   paymentMethod: PaymentMethod | null,
   accounts: WorkspaceAccount[],
   currency: CurrencyCode,
+  sourceType?: string,
 ): { accountId: string | null; accountName: string | null } {
   const pool = accounts.filter((a) => a.currency === currency || currency === CurrencyCode.ARS);
 
-  const targetType =
-    accountTypeMap[suggestedType] ??
-    (paymentMethod === PaymentMethod.CREDIT
-      ? AccountType.CREDIT_CARD
-      : paymentMethod === PaymentMethod.DEBIT
-        ? AccountType.BANK
-        : paymentMethod === PaymentMethod.CASH
-          ? AccountType.CASH
-          : null);
+  // Every line in a CC statement belongs to the CC account, regardless of
+  // what the AI infers per-transaction (e.g. taxes get misclassified as BANK).
+  const targetType = sourceType === "CARD_SUMMARY"
+    ? AccountType.CREDIT_CARD
+    : accountTypeMap[suggestedType] ??
+      (paymentMethod === PaymentMethod.CREDIT
+        ? AccountType.CREDIT_CARD
+        : paymentMethod === PaymentMethod.DEBIT
+          ? AccountType.BANK
+          : paymentMethod === PaymentMethod.CASH
+            ? AccountType.CASH
+            : null);
 
   const byType = targetType ? pool.find((a) => a.type === targetType) : null;
   const byCurrency = pool.find((a) => a.currency === currency);

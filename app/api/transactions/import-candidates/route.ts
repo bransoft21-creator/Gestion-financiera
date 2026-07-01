@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/server/auth/current-user";
 import { createTransaction } from "@/server/services/transactions";
 import {
   applyImportedCardStatementSummary,
+  consolidateBatchStatementPeriod,
   linkImportedCardTransactionToStatement,
 } from "@/server/services/credit-cards";
 import { importCandidatesSchema } from "@/server/schemas/smart-import";
@@ -95,11 +96,15 @@ export async function POST(request: NextRequest) {
       ),
     );
 
-    if (body.statementSummary && cardSummaryAccountIds.length === 1 && created.length > 0) {
+    // Use the first CC account found in the batch (with Fix A all CARD_SUMMARY
+    // candidates map to the same CC account, but we guard for edge cases).
+    const cardSummaryAccountId = cardSummaryAccountIds[0] ?? null;
+
+    if (body.statementSummary && cardSummaryAccountId && created.length > 0) {
       try {
-        await applyImportedCardStatementSummary(userProfile.id, {
+        const statementResult = await applyImportedCardStatementSummary(userProfile.id, {
           householdId: body.householdId,
-          accountId: cardSummaryAccountIds[0],
+          accountId: cardSummaryAccountId,
           statementTotal: body.statementSummary.statementTotal ?? undefined,
           totalConsumptions: body.statementSummary.totalConsumptions ?? undefined,
           minimumPayment: body.statementSummary.minimumPayment ?? undefined,
@@ -108,6 +113,26 @@ export async function POST(request: NextRequest) {
           periodYear: body.statementSummary.periodYear ?? undefined,
           periodMonth: body.statementSummary.periodMonth ?? undefined,
         });
+
+        // Move all StatementTransactions for this batch to the declared billing
+        // period. Bank cycles span parts of two calendar months, so individual
+        // transactions may have been linked to the wrong period statement.
+        if (statementResult) {
+          try {
+            await consolidateBatchStatementPeriod(userProfile.id, {
+              householdId: body.householdId,
+              accountId: cardSummaryAccountId,
+              transactionIds: created.map((tx) => tx.id),
+              periodYear: statementResult.periodYear,
+              periodMonth: statementResult.periodMonth,
+            });
+          } catch (err) {
+            errors.push({
+              index: -2,
+              message: err instanceof Error ? err.message : "No se pudo consolidar el período del resumen.",
+            });
+          }
+        }
       } catch (err) {
         errors.push({
           index: -1,

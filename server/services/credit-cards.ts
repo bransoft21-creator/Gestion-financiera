@@ -575,7 +575,50 @@ export async function applyImportedCardStatementSummary(
       minimumPayment: input.minimumPayment,
       importedAt: new Date(),
     },
+    select: { id: true, periodYear: true, periodMonth: true },
+  });
+}
+
+export async function consolidateBatchStatementPeriod(
+  userProfileId: string,
+  input: {
+    householdId: string;
+    accountId: string;
+    transactionIds: string[];
+    periodYear: number;
+    periodMonth: number;
+  },
+) {
+  await assertHouseholdAccess(userProfileId, input.householdId);
+
+  const card = await prisma.creditCard.findUnique({
+    where: { accountId: input.accountId },
     select: { id: true },
+  });
+  if (!card) return;
+
+  const targetStatement = await prisma.cardStatement.findUnique({
+    where: {
+      creditCardId_periodYear_periodMonth: {
+        creditCardId: card.id,
+        periodYear: input.periodYear,
+        periodMonth: input.periodMonth,
+      },
+    },
+    select: { id: true },
+  });
+  if (!targetStatement) return;
+
+  await prisma.statementTransaction.updateMany({
+    where: {
+      transactionId: { in: input.transactionIds },
+      deletedAt: null,
+      NOT: { statementId: targetStatement.id },
+    },
+    data: {
+      statementId: targetStatement.id,
+      creditCardId: card.id,
+    },
   });
 }
 
