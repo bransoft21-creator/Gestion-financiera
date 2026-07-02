@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal, useGoalContribution } from "@/hooks/use-goals";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -149,6 +149,8 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS", av
   const [quickContribAccountId, setQuickContribAccountId] = useState<string>("");
   const [quickContribAmount, setQuickContribAmount] = useState<string>("");
   const [quickContribErrors, setQuickContribErrors] = useState<{ accountId?: string; amount?: string }>({});
+  const [celebrationData, setCelebrationData] = useState<{ goalId: string; delta: number } | null>(null);
+  const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const summary = useMemo(() => buildGoalSummary(goals), [goals]);
 
@@ -248,16 +250,20 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS", av
 
     setQuickContribErrors({});
     try {
+      const delta = parsedAmount.data;
       await contribMutation.mutateAsync({
         householdId,
         accountId: quickContribAccountId,
         goalId: goal.id,
-        amount: parsedAmount.data,
+        amount: delta,
         currency: goal.currency,
         goalName: goal.name,
         occurredAt: formatArgentinaDateInput(),
       });
       cancelContribution();
+      setCelebrationData({ goalId: goal.id, delta });
+      if (celebrationTimerRef.current) clearTimeout(celebrationTimerRef.current);
+      celebrationTimerRef.current = setTimeout(() => setCelebrationData(null), 3000);
     } catch {
       // toast shown by hook
     }
@@ -493,6 +499,8 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS", av
                         isDeleting={deletingGoalId === goal.id}
                         isContributing={contributingGoalId === goal.id}
                         isContribOpen={quickContribGoalId === goal.id}
+                        isCelebrating={celebrationData?.goalId === goal.id}
+                        celebrationDelta={celebrationData?.goalId === goal.id ? celebrationData.delta : null}
                         quickContribAccountId={quickContribAccountId}
                         quickContribAmount={quickContribAmount}
                         quickContribErrors={quickContribErrors}
@@ -683,6 +691,8 @@ function GoalCard({
   isDeleting,
   isContributing,
   isContribOpen,
+  isCelebrating,
+  celebrationDelta,
   quickContribAccountId,
   quickContribAmount,
   quickContribErrors,
@@ -699,6 +709,8 @@ function GoalCard({
   isDeleting: boolean;
   isContributing: boolean;
   isContribOpen: boolean;
+  isCelebrating: boolean;
+  celebrationDelta: number | null;
   quickContribAccountId: string;
   quickContribAmount: string;
   quickContribErrors: { accountId?: string; amount?: string };
@@ -711,17 +723,21 @@ function GoalCard({
   onContribConfirm: () => void;
 }) {
   const actualPct = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
-  const displayPct = Math.min(actualPct, 100);
   const remaining = Math.max(goal.targetAmount - goal.currentAmount, 0);
   const impactsDashboard = goal.status === "ACTIVE" && goal.requiredMonthlyAmount != null;
   const canContribute = goal.status === "ACTIVE" && goal.currentAmount < goal.targetAmount && accounts.length > 0;
   const shouldReduceMotion = useReducedMotion();
+  const projection = getProjectionText(goal);
 
   return (
     <motion.article
       layout
       {...(shouldReduceMotion ? { initial: false } : cardMotion)}
-      className="rounded-[1.75rem] border border-border bg-muted/25 p-4 transition duration-200 hover:border-border hover:bg-muted/40 sm:p-5"
+      className={`rounded-[1.75rem] border p-4 transition-colors duration-500 sm:p-5 ${
+        isCelebrating
+          ? "border-emerald-400/30 bg-emerald-300/5 shadow-[0_0_32px_rgba(52,211,153,0.08)]"
+          : "border-border bg-muted/25 hover:border-border hover:bg-muted/40"
+      }`}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -752,15 +768,32 @@ function GoalCard({
             </div>
           </div>
         </div>
-        <CircularProgress value={displayPct} size={72} strokeWidth={6} />
+        <div className="relative shrink-0">
+          <CircularProgress value={Math.min(actualPct, 100)} size={56} strokeWidth={5} />
+          <AnimatePresence>
+            {isCelebrating && celebrationDelta != null && (
+              <motion.div
+                initial={{ opacity: 0, y: 6, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.9 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="absolute -right-2 -top-2 whitespace-nowrap rounded-full border border-emerald-400/30 bg-emerald-400/15 px-2 py-0.5 text-[10px] font-bold text-emerald-400"
+              >
+                +{formatMoney(celebrationDelta, goal.currency)}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <GoalMetric label="Actual" value={formatMoney(goal.currentAmount, goal.currency)} />
-        <GoalMetric label="Falta" value={formatMoney(remaining, goal.currency)} />
-        <GoalMetric label="Progreso" value={`${actualPct.toFixed(0)}%`} />
-        <GoalMetric label="Estado" value={statusLabels[goal.status]} />
-      </div>
+      <GoalProgressBar current={goal.currentAmount} target={goal.targetAmount} isCelebrating={isCelebrating} />
+
+      {(remaining > 0 || projection) ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {remaining > 0 ? `Falta ${formatMoney(remaining, goal.currency)}` : "¡Meta alcanzada!"}
+          {projection ? ` · ${projection}` : null}
+        </p>
+      ) : null}
 
       {goal.notes ? <p className="mt-4 rounded-2xl border border-border bg-muted/40 p-3 text-sm leading-6 text-muted-foreground">{goal.notes}</p> : null}
 
@@ -854,13 +887,82 @@ function GoalCard({
   );
 }
 
-function GoalMetric({ label, value }: { label: string; value: string }) {
+function GoalProgressBar({
+  current,
+  target,
+  isCelebrating,
+}: {
+  current: number;
+  target: number;
+  isCelebrating: boolean;
+}) {
+  const pct = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+  const [rendered, setRendered] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setRendered(true), 80);
+    return () => clearTimeout(t);
+  }, []);
+
+  const color =
+    pct >= 100 ? "#a78bfa"
+    : pct >= 60 ? "#34d399"
+    : pct >= 30 ? "#60a5fa"
+    : "#fcd34d";
+
   return (
-    <div className="min-w-0 rounded-2xl border border-border bg-muted/40 p-3">
-      <p className="text-[10px] font-medium uppercase text-muted-foreground">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold tabular-nums text-foreground">{value}</p>
+    <div className="mt-4 space-y-1">
+      <div className="relative h-3 w-full overflow-hidden rounded-full bg-muted/50">
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: rendered ? `${pct}%` : "0%",
+            background: `linear-gradient(90deg, ${color}60, ${color})`,
+            boxShadow: isCelebrating ? `0 0 18px ${color}80` : `0 0 6px ${color}40`,
+            transition: "width 1.1s cubic-bezier(.22,1,.36,1), box-shadow 0.5s ease",
+          }}
+        />
+        {([25, 50, 75] as const).map((m) => (
+          <div
+            key={m}
+            className="pointer-events-none absolute top-0 h-full w-px"
+            style={{
+              left: `${m}%`,
+              background: pct >= m ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.10)",
+            }}
+          />
+        ))}
+      </div>
+      <div className="relative h-3.5">
+        {([25, 50, 75] as const).map((m) => (
+          <span
+            key={m}
+            className="absolute -translate-x-1/2 text-[9px] font-medium transition-colors duration-500"
+            style={{
+              left: `${m}%`,
+              color: pct >= m ? `${color}cc` : "rgba(150,150,150,0.45)",
+            }}
+          >
+            {m}%
+          </span>
+        ))}
+      </div>
     </div>
   );
+}
+
+function getProjectionText(goal: GoalItem): string | null {
+  if (goal.status !== "ACTIVE") return null;
+  const remaining = goal.targetAmount - goal.currentAmount;
+  if (remaining <= 0) return null;
+  if (!goal.requiredMonthlyAmount || goal.requiredMonthlyAmount <= 0) return null;
+  const months = Math.ceil(remaining / goal.requiredMonthlyAmount);
+  if (months <= 1) return "llegás el próximo mes";
+  if (months <= 12) return `llegás en ${months} meses`;
+  const years = Math.floor(months / 12);
+  const rem = months % 12;
+  if (rem === 0) return `llegás en ${years} año${years > 1 ? "s" : ""}`;
+  return `llegás en ${years} año${years > 1 ? "s" : ""} y ${rem} mes${rem > 1 ? "es" : ""}`;
 }
 
 function GoalSkeletonList() {
