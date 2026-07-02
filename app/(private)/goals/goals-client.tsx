@@ -219,8 +219,12 @@ export function GoalsClient({ householdId, accounts, defaultCurrency = "ARS", av
   }
 
   function openContribution(goal: GoalItem) {
+    const matchingAccount =
+      accounts.find((a) => a.currency === goal.currency && a.type === "BANK") ??
+      accounts.find((a) => a.currency === goal.currency) ??
+      null;
     setQuickContribGoalId(goal.id);
-    setQuickContribAccountId(defaultAccount?.id ?? "");
+    setQuickContribAccountId(matchingAccount?.id ?? "");
     setQuickContribAmount(goal.requiredMonthlyAmount != null ? String(goal.requiredMonthlyAmount) : "");
     setQuickContribErrors({});
   }
@@ -843,17 +847,20 @@ function GoalCard({
             <p className="text-xs font-semibold uppercase text-emerald-400">Registrar aporte</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Cuenta</label>
+                <label className="text-xs font-medium text-muted-foreground">Cuenta ({goal.currency})</label>
                 <select
                   className="v2-focus-ring h-10 w-full rounded-2xl border border-border bg-card/70 px-3 text-base md:text-sm text-foreground outline-none"
                   value={quickContribAccountId}
                   onChange={(event) => onContribAccountChange(event.target.value)}
                 >
-                  {accounts.map((account) => (
+                  {accounts.filter((a) => a.currency === goal.currency).map((account) => (
                     <option key={account.id} value={account.id}>
                       {account.name}
                     </option>
                   ))}
+                  {accounts.filter((a) => a.currency === goal.currency).length === 0 && (
+                    <option value="" disabled>Sin cuentas en {goal.currency}</option>
+                  )}
                 </select>
                 {quickContribErrors.accountId ? <p className="text-xs text-rose-200">{quickContribErrors.accountId}</p> : null}
               </div>
