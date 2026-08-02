@@ -550,7 +550,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
             className="fixed inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => { setDeleteOpen(false); setDeleteInput(""); }}
           />
-          <div className="relative z-10 w-full max-w-md rounded-t-[28px] border border-border bg-card/98 p-6 shadow-2xl sm:rounded-[28px]">
+          <div className="relative z-10 w-full max-w-md rounded-t-[28px] border border-border bg-card/98 p-6 shadow-2xl sm:rounded-[28px] max-h-[90dvh] overflow-y-auto">
             <div className="mb-5 flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-rose-500/20 bg-rose-500/10 text-rose-400">
                 <TriangleAlert className="h-5 w-5" aria-hidden="true" />
