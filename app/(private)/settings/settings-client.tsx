@@ -107,6 +107,14 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
   const [isExporting, setIsExporting] = useState(false);
   const [prefs, setPrefs] = useState<Preferences>(initialPrefs);
 
+  // Bloquea scroll del body mientras el modal de borrado está abierto
+  useEffect(() => {
+    if (!deleteOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [deleteOpen]);
+
   // Sync fxInput once localStorage rate is loaded
   useEffect(() => {
     if (!fxLoaded) return;
