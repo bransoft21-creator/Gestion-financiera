@@ -6,7 +6,7 @@ export async function deleteHouseholdFinancialData(
 ) {
   await prisma.$transaction([
     // User-scoped data (no householdId FK)
-    prisma.aiCopilotMessage.deleteMany({ where: { householdId } }),
+    // Note: aiCopilotMessage omitted — table not yet migrated to production
     prisma.aiUsage.deleteMany({ where: { userId: userProfileId } }),
     prisma.aiFinancialAnalysis.deleteMany({ where: { userId: userProfileId } }),
     prisma.activityItem.deleteMany({ where: { userId: userProfileId } }),
