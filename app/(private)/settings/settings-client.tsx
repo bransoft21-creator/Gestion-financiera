@@ -545,44 +545,48 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
 
       {/* ── Dialog: Borrar datos ── */}
       {deleteOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             className="fixed inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => { setDeleteOpen(false); setDeleteInput(""); }}
           />
-          <div className="relative z-10 w-full max-w-md rounded-t-[28px] border border-border bg-card/98 p-6 shadow-2xl sm:rounded-[28px] max-h-[90dvh] overflow-y-auto">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-rose-500/20 bg-rose-500/10 text-rose-400">
-                <TriangleAlert className="h-5 w-5" aria-hidden="true" />
+          <div className="relative z-10 flex w-full max-w-md flex-col rounded-[28px] border border-border bg-card/98 shadow-2xl max-h-[90dvh]">
+            {/* contenido scrollable */}
+            <div className="flex-1 overflow-y-auto p-6 pb-4">
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-rose-500/20 bg-rose-500/10 text-rose-400">
+                  <TriangleAlert className="h-5 w-5" aria-hidden="true" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-foreground">Borrar toda la información</h2>
+                  <p className="text-xs text-muted-foreground">Esta acción es irreversible</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-base font-bold text-foreground">Borrar toda la información</h2>
-                <p className="text-xs text-muted-foreground">Esta acción es irreversible</p>
+              <div className="mb-5 rounded-2xl border border-rose-500/15 bg-rose-500/[0.06] p-4">
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Se eliminarán permanentemente todas las cuentas, transacciones, presupuestos, metas, deudas, recurrentes y análisis IA.{" "}
+                  <strong className="text-rose-300">No se puede deshacer.</strong>
+                </p>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                  Tu cuenta de acceso (email y contraseña) queda intacta.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Escribí <span className="font-bold text-rose-300">ELIMINAR</span> para confirmar
+                </label>
+                <input
+                  type="text"
+                  value={deleteInput}
+                  onChange={(e) => setDeleteInput(e.target.value)}
+                  placeholder="ELIMINAR"
+                  className="w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-foreground placeholder-zinc-600 outline-none focus:border-rose-500/40 focus:ring-1 focus:ring-rose-500/20"
+                  autoComplete="off"
+                />
               </div>
             </div>
-            <div className="mb-5 rounded-2xl border border-rose-500/15 bg-rose-500/[0.06] p-4">
-              <p className="text-xs leading-5 text-muted-foreground">
-                Se eliminarán permanentemente todas las cuentas, transacciones, presupuestos, metas, deudas, recurrentes y análisis IA.{" "}
-                <strong className="text-rose-300">No se puede deshacer.</strong>
-              </p>
-              <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                Tu cuenta de acceso (email y contraseña) queda intacta.
-              </p>
-            </div>
-            <div className="mb-4 space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Escribí <span className="font-bold text-rose-300">ELIMINAR</span> para confirmar
-              </label>
-              <input
-                type="text"
-                value={deleteInput}
-                onChange={(e) => setDeleteInput(e.target.value)}
-                placeholder="ELIMINAR"
-                className="w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-foreground placeholder-zinc-600 outline-none focus:border-rose-500/40 focus:ring-1 focus:ring-rose-500/20"
-                autoComplete="off"
-              />
-            </div>
-            <div className="flex gap-3">
+            {/* botones siempre visibles */}
+            <div className="shrink-0 flex gap-3 px-6 pb-6 pt-2">
               <ActionButton
                 type="button"
                 variant="glass"
