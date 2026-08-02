@@ -565,15 +565,15 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
 
       {/* ── Dialog: Borrar datos ── */}
       {deleteOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-[140]">
           <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => { setDeleteOpen(false); setDeleteInput(""); }}
           />
-          <div className="flex min-h-full items-end justify-center sm:items-center sm:p-4">
+          <div className="absolute inset-x-0 bottom-0 flex justify-center sm:inset-0 sm:items-center sm:p-4">
             <div
               ref={modalCardRef}
-              className="relative z-10 w-full max-w-md rounded-t-[28px] border border-border bg-card/98 p-6 shadow-2xl transition-transform duration-200 ease-out sm:rounded-[28px]"
+              className="relative w-full max-w-md rounded-t-[28px] border border-border bg-card/98 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl transition-transform duration-200 ease-out sm:rounded-[28px] sm:pb-6"
             >
               <div className="mb-5 flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-rose-500/20 bg-rose-500/10 text-rose-400">
