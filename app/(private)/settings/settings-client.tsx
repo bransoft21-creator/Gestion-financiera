@@ -570,20 +570,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                   Tu cuenta de acceso (email y contraseña) queda intacta.
                 </p>
               </div>
-              <div className="mb-4 space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Escribí <span className="font-bold text-rose-300">ELIMINAR</span> para confirmar
-                </label>
-                <input
-                  type="text"
-                  value={deleteInput}
-                  onChange={(e) => setDeleteInput(e.target.value)}
-                  placeholder="ELIMINAR"
-                  className="w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-foreground placeholder-zinc-600 outline-none focus:border-rose-500/40 focus:ring-1 focus:ring-rose-500/20"
-                  autoComplete="off"
-                />
-              </div>
-              <div className="flex gap-3">
+              <div className="mb-5 flex gap-3">
                 <ActionButton
                   type="button"
                   variant="glass"
@@ -601,6 +588,19 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                 >
                   {isDeleting ? "Borrando…" : "Confirmar borrado"}
                 </ActionButton>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Escribí <span className="font-bold text-rose-300">ELIMINAR</span> para confirmar
+                </label>
+                <input
+                  type="text"
+                  value={deleteInput}
+                  onChange={(e) => setDeleteInput(e.target.value)}
+                  placeholder="ELIMINAR"
+                  className="w-full rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-foreground placeholder-zinc-600 outline-none focus:border-rose-500/40 focus:ring-1 focus:ring-rose-500/20"
+                  autoComplete="off"
+                />
               </div>
             </div>
           </div>
