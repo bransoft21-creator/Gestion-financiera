@@ -107,14 +107,6 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
   const [isExporting, setIsExporting] = useState(false);
   const [prefs, setPrefs] = useState<Preferences>(initialPrefs);
 
-  // Bloquea scroll del body mientras el modal de borrado está abierto
-  useEffect(() => {
-    if (!deleteOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, [deleteOpen]);
-
   // Sync fxInput once localStorage rate is loaded
   useEffect(() => {
     if (!fxLoaded) return;
@@ -553,14 +545,13 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
 
       {/* ── Dialog: Borrar datos ── */}
       {deleteOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto">
           <div
             className="fixed inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => { setDeleteOpen(false); setDeleteInput(""); }}
           />
-          <div className="relative z-10 flex w-full max-w-md flex-col rounded-[28px] border border-border bg-card/98 shadow-2xl max-h-[90dvh]">
-            {/* contenido scrollable */}
-            <div className="flex-1 overflow-y-auto p-6 pb-4">
+          <div className="flex min-h-full items-end justify-center sm:items-center sm:p-4">
+            <div className="relative z-10 w-full max-w-md rounded-t-[28px] border border-border bg-card/98 p-6 shadow-2xl sm:rounded-[28px]">
               <div className="mb-5 flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-rose-500/20 bg-rose-500/10 text-rose-400">
                   <TriangleAlert className="h-5 w-5" aria-hidden="true" />
@@ -579,7 +570,7 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                   Tu cuenta de acceso (email y contraseña) queda intacta.
                 </p>
               </div>
-              <div className="space-y-2">
+              <div className="mb-4 space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Escribí <span className="font-bold text-rose-300">ELIMINAR</span> para confirmar
                 </label>
@@ -592,26 +583,25 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                   autoComplete="off"
                 />
               </div>
-            </div>
-            {/* botones siempre visibles */}
-            <div className="shrink-0 flex gap-3 px-6 pb-6 pt-2">
-              <ActionButton
-                type="button"
-                variant="glass"
-                className="flex-1"
-                onClick={() => { setDeleteOpen(false); setDeleteInput(""); }}
-              >
-                Cancelar
-              </ActionButton>
-              <ActionButton
-                type="button"
-                variant="danger"
-                className="flex-1"
-                disabled={deleteInput !== "ELIMINAR" || isDeleting}
-                onClick={() => void handleDeleteData()}
-              >
-                {isDeleting ? "Borrando…" : "Confirmar borrado"}
-              </ActionButton>
+              <div className="flex gap-3">
+                <ActionButton
+                  type="button"
+                  variant="glass"
+                  className="flex-1"
+                  onClick={() => { setDeleteOpen(false); setDeleteInput(""); }}
+                >
+                  Cancelar
+                </ActionButton>
+                <ActionButton
+                  type="button"
+                  variant="danger"
+                  className="flex-1"
+                  disabled={deleteInput !== "ELIMINAR" || isDeleting}
+                  onClick={() => void handleDeleteData()}
+                >
+                  {isDeleting ? "Borrando…" : "Confirmar borrado"}
+                </ActionButton>
+              </div>
             </div>
           </div>
         </div>
