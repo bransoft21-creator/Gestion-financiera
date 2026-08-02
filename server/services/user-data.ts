@@ -29,9 +29,25 @@ export async function deleteHouseholdFinancialData(
     await tx.cardStatement.deleteMany({ where: { householdId } });
     await tx.creditCard.deleteMany({ where: { householdId } });
 
-    // Shared transactions
-    await tx.sharedTransactionParticipant.deleteMany({ where: { sharedTransaction: { householdId } } });
-    await tx.sharedTransaction.deleteMany({ where: { householdId } });
+    // Shared transactions — incluye las de otros hogares que referencian transacciones personales
+    await tx.sharedTransactionParticipant.deleteMany({
+      where: {
+        sharedTransaction: {
+          OR: [
+            { householdId },
+            { transaction: { householdId } },
+          ],
+        },
+      },
+    });
+    await tx.sharedTransaction.deleteMany({
+      where: {
+        OR: [
+          { householdId },
+          { transaction: { householdId } },
+        ],
+      },
+    });
 
     // Transactions
     await tx.transaction.deleteMany({ where: { householdId } });
