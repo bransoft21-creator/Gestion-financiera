@@ -106,22 +106,32 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
   const [isDeleting, setIsDeleting] = useState(false);
   const modalCardRef = useRef<HTMLDivElement>(null);
 
-  // Empuja el modal sobre el teclado en iOS (visualViewport API)
   useEffect(() => {
     if (!deleteOpen) return;
     const vv = window.visualViewport;
     if (!vv) return;
     const adjust = () => {
-      if (!modalCardRef.current) return;
-      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      modalCardRef.current.style.transform = offset > 0 ? `translateY(-${offset}px)` : "";
+      const el = modalCardRef.current;
+      if (!el) return;
+      const keyboard = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      if (keyboard > 0) {
+        el.style.bottom = `${keyboard}px`;
+        el.style.maxHeight = `${vv.height - 8}px`;
+        el.style.overflowY = "auto";
+      } else {
+        el.style.bottom = "";
+        el.style.maxHeight = "";
+        el.style.overflowY = "";
+      }
     };
     vv.addEventListener("resize", adjust);
     vv.addEventListener("scroll", adjust);
+    adjust();
     return () => {
       vv.removeEventListener("resize", adjust);
       vv.removeEventListener("scroll", adjust);
-      if (modalCardRef.current) modalCardRef.current.style.transform = "";
+      const el = modalCardRef.current;
+      if (el) { el.style.bottom = ""; el.style.maxHeight = ""; el.style.overflowY = ""; }
     };
   }, [deleteOpen]);
   const [isExporting, setIsExporting] = useState(false);
@@ -570,11 +580,10 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={() => { setDeleteOpen(false); setDeleteInput(""); }}
           />
-          <div className="absolute inset-x-0 bottom-0 flex justify-center sm:inset-0 sm:items-center sm:p-4">
-            <div
-              ref={modalCardRef}
-              className="relative w-full max-w-md rounded-t-[28px] border border-border bg-card/98 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl transition-transform duration-200 ease-out sm:rounded-[28px] sm:pb-6"
-            >
+          <div
+            ref={modalCardRef}
+            className="fixed inset-x-4 bottom-0 mx-auto w-full max-w-md rounded-t-[28px] border border-border bg-card/98 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:pb-6"
+          >
               <div className="mb-5 flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-rose-500/20 bg-rose-500/10 text-rose-400">
                   <TriangleAlert className="h-5 w-5" aria-hidden="true" />
@@ -625,7 +634,6 @@ export function SettingsClient({ preferences: initialPrefs }: SettingsClientProp
                   {isDeleting ? "Borrando…" : "Confirmar borrado"}
                 </ActionButton>
               </div>
-            </div>
           </div>
         </div>
       )}
