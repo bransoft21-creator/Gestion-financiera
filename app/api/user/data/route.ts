@@ -26,6 +26,20 @@ export async function DELETE() {
 
     await deleteHouseholdFinancialData(membership.householdId, userProfile.id);
 
+    // Remove user from any shared households (keeps household + other members intact)
+    await prisma.householdMember.updateMany({
+      where: {
+        userProfileId: userProfile.id,
+        status: HouseholdMemberStatus.ACTIVE,
+        deletedAt: null,
+        household: { kind: HouseholdKind.HOUSEHOLD, deletedAt: null },
+      },
+      data: {
+        status: HouseholdMemberStatus.REMOVED,
+        deletedAt: new Date(),
+      },
+    });
+
     return ok({ deleted: true });
   } catch (error) {
     return handleApiError(error);
