@@ -5,10 +5,8 @@ import { join } from "node:path";
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 
-const meridianIcon = readFileSync(join(process.cwd(), "public/icons/Meridian.png")).toString("base64");
-
-// Generates the browser favicon from the same icon used in login/header.
 export default function Icon() {
+  const meridianIcon = readFileSync(join(process.cwd(), "public/icons/Meridian.png")).toString("base64");
   return new ImageResponse(
     (
       <img

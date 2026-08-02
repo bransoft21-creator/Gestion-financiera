@@ -57,6 +57,10 @@ const nextConfig: NextConfig = {
     allowedDevOrigins: ["192.168.0.9"],
   }),
 
+  outputFileTracingIncludes: {
+    "/**": ["./public/icons/Meridian.png"],
+  },
+
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "lh3.googleusercontent.com" },

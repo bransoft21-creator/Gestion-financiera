@@ -5,10 +5,8 @@ import { join } from "node:path";
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-const meridianIcon = readFileSync(join(process.cwd(), "public/icons/Meridian.png")).toString("base64");
-
-// Generates apple-touch-icon (180×180) from the same icon used in login/header.
 export default function AppleIcon() {
+  const meridianIcon = readFileSync(join(process.cwd(), "public/icons/Meridian.png")).toString("base64");
   return new ImageResponse(
     (
       <img
